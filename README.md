@@ -50,11 +50,16 @@ réclame une figure, et chacun reçoit cinq cartes.
 public/
   index.html              accueil du hub
   css/hub.css
+  sw.js                   service worker : installation et jeu hors connexion
+  manifest.webmanifest    identité « Insert Coin »
+  icons/
   shared/                 moteur de règles, partagé client ⇄ serveur
     engine.js             règles pures, alea injecté (parties rejouables)
     ai.js                 bots : profils de jeu et niveaux
   games/liars-saloon/
     index.html
+    manifest.webmanifest  identité « Liar's Saloon »
+    icons/
     css/{base,menu,table}.css
     js/{main,ui,offline,online,sfx}.js
 server/
@@ -96,6 +101,30 @@ Le dépôt se déploie tel quel sur Vercel : `public/` est servi en statique et
 > (des amis qui se rejoignent en même temps) cela fonctionne. Pour un usage
 > plus large, faites tourner `server/index.js` sur une machine unique
 > (Railway, Fly, Render, un VPS…), qui n'a aucune dépendance.
+
+---
+
+## Sur téléphone
+
+Le site est une **application installable** (PWA) : depuis le navigateur du
+téléphone, « Ajouter à l'écran d'accueil » (Safari : bouton Partager ;
+Chrome : menu ⋮) pose une icône qui ouvre le jeu en plein écran, sans barre
+d'adresse.
+
+Deux identités sont installables séparément : le hub **Insert Coin** depuis
+l'accueil, et **Liar's Saloon** depuis la page du jeu, chacun avec sa propre
+icône et son point d'entrée.
+
+Une fois la page visitée une première fois, `public/sw.js` met la coquille en
+cache : **le mode hors-ligne devient jouable sans aucune connexion**, en
+avion comme dans le métro. Le mode en ligne, lui, a évidemment besoin du
+réseau. La stratégie de cache est « réseau d'abord, cache en secours » : une
+mise à jour du site arrive dès que la connexion revient, sans risque de
+servir une version périmée.
+
+La mise en page s'adapte aux deux orientations. En paysage — où la hauteur
+est la ressource rare — le tapis se dimensionne sur la hauteur disponible et
+la barre du bas passe en ligne, pour rendre au jeu la place des boutons.
 
 ---
 

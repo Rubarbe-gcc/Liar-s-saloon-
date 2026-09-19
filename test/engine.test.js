@@ -448,6 +448,66 @@ test('une partie en ligne se joue de bout en bout contre le vrai serveur', async
     }
   });
 
+  await t.test('les ressources d\'installation sur mobile sont servies', async () => {
+    // Sans manifeste, sans icones ou sans service worker, le site reste une
+    // page web : il ne peut plus etre ajoute a l'ecran d'accueil ni jouer
+    // hors connexion.
+    const manifests = {
+      '/manifest.webmanifest': '/',
+      '/games/liars-saloon/manifest.webmanifest': '/games/liars-saloon/',
+    };
+
+    for (const [path, expectedStart] of Object.entries(manifests)) {
+      const res = await fetch(`${base}${path}`);
+      assert.equal(res.status, 200, `${path} introuvable`);
+
+      const m = JSON.parse(await res.text());
+      assert.equal(m.start_url, expectedStart);
+      assert.equal(m.display, 'standalone', `${path} doit s'ouvrir en plein ecran`);
+      assert.ok(m.name && m.short_name, `${path} doit porter un nom`);
+
+      const sizes = m.icons.map((i) => i.sizes);
+      assert.ok(sizes.includes('192x192'), `${path} : icone 192 manquante`);
+      assert.ok(sizes.includes('512x512'), `${path} : icone 512 manquante`);
+      assert.ok(m.icons.some((i) => i.purpose === 'maskable'),
+        `${path} : icone « maskable » manquante, Android recadrerait mal`);
+
+      // Chaque icone declaree doit exister et etre bien un PNG.
+      for (const icon of m.icons) {
+        const r = await fetch(`${base}${icon.src}`);
+        assert.equal(r.status, 200, `icone ${icon.src} introuvable`);
+        const head = Buffer.from(await r.arrayBuffer()).subarray(0, 8);
+        assert.deepEqual([...head], [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+          `${icon.src} n'est pas un PNG`);
+      }
+    }
+
+    // L'icone d'accueil iOS, qui ne figure dans aucun manifeste.
+    for (const apple of ['/icons/apple-touch-icon.png', '/games/liars-saloon/icons/apple-touch-icon.png']) {
+      assert.equal((await fetch(`${base}${apple}`)).status, 200, `${apple} introuvable`);
+    }
+
+    // Le service worker doit etre servi comme du JavaScript, sinon le
+    // navigateur refuse de l'enregistrer.
+    const sw = await fetch(`${base}/sw.js`);
+    assert.equal(sw.status, 200);
+    assert.match(sw.headers.get('content-type'), /javascript/);
+    const code = await sw.text();
+    assert.match(code, /addEventListener\('fetch'/, 'le service worker n\'intercepte rien');
+    assert.ok(code.includes("'/shared/engine.js'"),
+      'le moteur de jeu doit etre precache, sinon rien ne tourne hors connexion');
+  });
+
+  await t.test('les pages declarent de quoi s\'installer sur un telephone', async () => {
+    for (const page of ['/', '/games/liars-saloon/']) {
+      const html = await (await fetch(`${base}${page}`)).text();
+      assert.match(html, /<link rel="manifest"/, `${page} ne declare pas de manifeste`);
+      assert.match(html, /apple-touch-icon/, `${page} n'a pas d'icone iOS`);
+      assert.match(html, /viewport-fit=cover/, `${page} ignore les encoches`);
+      assert.match(html, /apple-mobile-web-app-capable/, `${page} ne s'ouvrira pas en plein ecran sur iOS`);
+    }
+  });
+
   await t.test('la traversee de repertoire est refusee', async () => {
     for (const bad of ['/../package.json', '/..%2fpackage.json', '/games/../../package.json']) {
       const r = await fetch(`${base}${bad}`, { redirect: 'manual' });

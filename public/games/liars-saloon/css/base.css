@@ -62,6 +62,8 @@ body{
 
 button,input{font:inherit;color:inherit;}
 button{background:none;border:0;cursor:pointer;}
+/* Supprime l'attente du double-tap sur mobile. */
+button,.card,.chip,.foe{touch-action:manipulation;}
 input{background:none;border:0;outline:none;}
 b,strong{font-weight:700;color:var(--gold-hi);}
 em{font-style:normal;}

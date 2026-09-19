@@ -1,0 +1,28 @@
+{
+  "name": "Insert Coin — salle d'arcade",
+  "short_name": "Insert Coin",
+  "description": "Des jeux faits maison, jouables tout de suite dans le navigateur.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#08070c",
+  "theme_color": "#08070c",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Liar's Saloon",
+      "short_name": "Saloon",
+      "url": "/games/liars-saloon/",
+      "icons": [{ "src": "/games/liars-saloon/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}

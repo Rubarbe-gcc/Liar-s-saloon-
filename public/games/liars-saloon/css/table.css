@@ -521,3 +521,73 @@
   .rl-cyl.is-spinning{animation-duration:.4s;}
   .shake{animation:none;}
 }
+
+/* ---------------------------------------------------------------- */
+/* Téléphone tenu à l'horizontale                                    */
+/* ---------------------------------------------------------------- */
+
+/* En paysage la hauteur est la ressource rare : le tapis se dimensionne
+   sur la hauteur disponible plutôt que sur la largeur, et la barre du bas
+   passe en ligne pour rendre au tapis les ~50px des boutons. */
+@media (orientation:landscape) and (max-height:540px){
+
+  .hud{padding:5px 12px 0;}
+  .hud-btn{width:30px;height:30px;font-size:.8rem;}
+  .hud-round-n{font-size:.8rem;}
+  .hud-mode{display:none;}
+
+  .opponents{padding:4px 10px 0;gap:clamp(8px,2vw,18px);}
+  .foe{width:clamp(78px,15vw,110px);padding:5px 7px 6px;gap:3px;}
+  .foe-av{width:26px;height:26px;font-size:.95rem;}
+  .foe-name{font-size:.66rem;}
+  .foe-profile{display:none;}
+  .foe-hand{height:13px;margin:0;}
+  .foe-chip{width:9px;height:13px;margin-left:-4px;}
+  .cham{width:5px;height:5px;}
+
+  .ticker{display:none;}
+
+  .felt{padding:3px 10px;}
+  /* Piloté par la hauteur : plus d'écrasement quand le flex manque de place. */
+  .felt-inner{width:auto;height:100%;max-width:92vw;border-width:clamp(5px,1vw,8px);}
+  .felt-brand{display:none;}
+  .demand{top:9%;}
+  .demand-card{font-size:clamp(1.1rem,3.4vh,1.6rem);}
+  .demand-label{font-size:.5rem;}
+  .pile{width:clamp(30px,7vh,42px);height:clamp(44px,10vh,60px);}
+  .claim{bottom:15%;font-size:.66rem;padding:3px 11px;}
+
+  /* Barre du bas en ligne : identité, main, actions côte à côte. */
+  .seat-me{
+    flex-direction:row;align-items:center;justify-content:center;
+    gap:clamp(10px,2.5vw,22px);
+    padding:2px clamp(10px,3vw,22px) calc(4px + var(--safe-b));
+  }
+  .me-bar{flex-direction:column;align-items:flex-start;gap:4px;flex:none;}
+  .me-name{font-size:.72rem;}
+  .hand{--cw:clamp(38px,11vh,52px);padding-top:13px;min-height:0;gap:2px;}
+  .actions{flex-direction:column;gap:7px;flex:none;}
+  .actions .btn{min-width:clamp(96px,17vw,130px);padding:13px 14px;font-size:.74rem;}
+
+  /* Superpositions : dimensionnées sur la hauteur, elles aussi. */
+  .reveal{gap:10px;}
+  .reveal-head{font-size:.68rem;}
+  .reveal-cards{gap:10px;}
+  .reveal-cards .card{--cw:clamp(52px,15vh,76px);}
+  .reveal-verdict{font-size:clamp(1rem,4.4vh,1.5rem);}
+
+  .roulette{gap:8px;}
+  .rl-who{font-size:.76rem;}
+  .rl-who b{font-size:1rem;}
+  .rl-gun{width:min(150px,38vh);}
+  .rl-odds{font-size:.7rem;}
+  .rl-result{font-size:clamp(1.3rem,7vh,2.1rem);}
+
+  .banner-title{font-size:clamp(1.8rem,9vh,3rem);}
+  .endcard{padding:18px 22px;max-height:94vh;}
+  .end-crown{font-size:1.9rem;margin-bottom:2px;}
+  .end-sub{margin-bottom:12px;}
+  .end-stats{margin-bottom:14px;}
+  .rules{padding:22px 20px 24px;max-height:94vh;}
+  .rules-grid{gap:12px;margin-top:16px;}
+}

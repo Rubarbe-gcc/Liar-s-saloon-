@@ -357,11 +357,29 @@ function escapeHtml(s) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Installation sur l'appareil                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Enregistre le service worker : le jeu devient installable sur l'écran
+ * d'accueil et reste jouable sans réseau. Un échec ne doit jamais empêcher
+ * de jouer, d'où le simple avertissement en console.
+ */
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .catch((err) => console.warn('[pwa] service worker non enregistré :', err));
+  });
+}
+
+/* ------------------------------------------------------------------ */
 /* Demarrage                                                           */
 /* ------------------------------------------------------------------ */
 
 loadPrefs();
 bind();
+registerServiceWorker();
 syncForms();
 spawnDust();
 
