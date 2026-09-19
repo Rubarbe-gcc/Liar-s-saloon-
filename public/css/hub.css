@@ -1,0 +1,215 @@
+/* =====================================================================
+   INSERT COIN — hub de jeux.
+   ===================================================================== */
+
+:root{
+  --ink:#08070c;
+  --ink-2:#0e0d16;
+  --panel:#141320;
+  --line:rgba(255,255,255,.08);
+  --text:#e8e6f0;
+  --dim:#9a95b4;
+  --faint:#5f5a78;
+  --neon:#ff4d8d;
+  --neon-2:#4dd7ff;
+  --neon-3:#ffd84d;
+  --font-display:"Bodoni MT",Didot,Georgia,"Times New Roman",serif;
+  --font-ui:"Avenir Next","Segoe UI",system-ui,-apple-system,sans-serif;
+  --font-num:"SF Mono",ui-monospace,"Cascadia Mono",Menlo,monospace;
+  --ease:cubic-bezier(.22,.9,.28,1);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  min-height:100vh;
+  background:var(--ink);
+  color:var(--text);
+  font-family:var(--font-ui);
+  line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+a{color:inherit;text-decoration:none;}
+:focus-visible{outline:2px solid var(--neon-2);outline-offset:4px;border-radius:6px;}
+
+/* ---------------------------------------------------------------- */
+/* Fond                                                              */
+/* ---------------------------------------------------------------- */
+
+.bg{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+/* Grille en perspective, facon salle d'arcade */
+.bg-grid{
+  position:absolute;inset:-50% -50% 0;
+  background-image:
+    linear-gradient(rgba(255,77,141,.16) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(77,215,255,.11) 1px,transparent 1px);
+  background-size:52px 52px;
+  transform:perspective(420px) rotateX(64deg);
+  transform-origin:50% 100%;
+  mask-image:linear-gradient(to bottom,transparent 42%,#000 92%);
+  -webkit-mask-image:linear-gradient(to bottom,transparent 42%,#000 92%);
+  animation:grid-roll 9s linear infinite;
+}
+@keyframes grid-roll{to{background-position:0 52px,0 0;}}
+
+.bg-glow{position:absolute;border-radius:50%;filter:blur(90px);opacity:.34;}
+.glow-a{width:56vmax;height:56vmax;top:-22vmax;left:-14vmax;background:var(--neon);}
+.glow-b{width:48vmax;height:48vmax;top:-10vmax;right:-16vmax;background:var(--neon-2);}
+.bg-scan{
+  position:absolute;inset:0;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.24) 0 1px,transparent 1px 3px);
+  opacity:.45;
+}
+.bg-vig{position:absolute;inset:0;background:radial-gradient(ellipse 120% 80% at 50% 30%,transparent 42%,rgba(4,3,8,.86) 100%);}
+
+/* ---------------------------------------------------------------- */
+/* Mise en page                                                      */
+/* ---------------------------------------------------------------- */
+
+.wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 clamp(18px,4vw,32px);}
+
+/* En-tete */
+.hero{padding:clamp(56px,13vh,120px) 0 clamp(36px,7vh,64px);text-align:center;}
+
+.kicker{
+  display:inline-block;
+  font-size:.64rem;letter-spacing:.42em;text-transform:uppercase;
+  color:var(--faint);
+  padding:6px 16px;border:1px solid var(--line);border-radius:999px;
+  margin-bottom:26px;
+}
+
+.logo{
+  font-family:var(--font-display);
+  font-size:clamp(2.9rem,12vw,6.4rem);
+  font-weight:900;line-height:.92;letter-spacing:.02em;
+  text-transform:uppercase;
+}
+.logo span{display:block;}
+.logo .l1{
+  color:transparent;
+  -webkit-text-stroke:1.5px rgba(255,255,255,.28);
+  font-size:.46em;letter-spacing:.34em;padding-left:.34em;
+}
+.logo .l2{
+  background:linear-gradient(180deg,#fff 6%,var(--neon-3) 34%,var(--neon) 74%,#8e1c4c);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 0 28px rgba(255,77,141,.55));
+  animation:neon 4.5s ease-in-out infinite;
+}
+@keyframes neon{
+  0%,100%{filter:drop-shadow(0 0 24px rgba(255,77,141,.45));}
+  46%{filter:drop-shadow(0 0 46px rgba(255,120,170,.75));}
+  53%{filter:drop-shadow(0 0 16px rgba(255,77,141,.3));}
+}
+
+.tagline{
+  margin-top:20px;font-size:clamp(.92rem,2.4vw,1.08rem);color:var(--dim);
+  max-width:46ch;margin-left:auto;margin-right:auto;
+}
+
+.coin{
+  margin-top:34px;
+  display:inline-flex;align-items:center;gap:10px;
+  font-family:var(--font-num);font-size:.72rem;letter-spacing:.3em;text-transform:uppercase;
+  color:var(--neon-3);
+  animation:blink 1.5s steps(2) infinite;
+}
+@keyframes blink{50%{opacity:.18;}}
+
+/* ---------------------------------------------------------------- */
+/* Galerie                                                           */
+/* ---------------------------------------------------------------- */
+
+.section-head{
+  display:flex;align-items:baseline;gap:16px;
+  margin-bottom:24px;
+}
+.section-head h2{
+  font-size:.74rem;letter-spacing:.32em;text-transform:uppercase;color:var(--dim);font-weight:600;
+}
+.section-head i{flex:1;height:1px;background:linear-gradient(90deg,var(--line),transparent);}
+.section-head b{font-family:var(--font-num);font-size:.7rem;color:var(--faint);font-weight:400;}
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(258px,1fr));
+  gap:20px;
+  padding-bottom:clamp(50px,9vh,90px);
+}
+
+.game{
+  position:relative;
+  display:flex;flex-direction:column;
+  border-radius:15px;overflow:hidden;
+  background:linear-gradient(165deg,var(--panel),var(--ink-2));
+  border:1px solid var(--line);
+  transition:transform .3s var(--ease),border-color .3s,box-shadow .3s;
+}
+.game:not(.is-soon):hover{
+  transform:translateY(-7px);
+  border-color:rgba(255,255,255,.2);
+  box-shadow:0 22px 48px rgba(0,0,0,.6), 0 0 44px var(--tint,rgba(255,77,141,.22));
+}
+
+/* Vignette : illustration en CSS pur, propre a chaque jeu */
+.game-art{
+  position:relative;
+  aspect-ratio:16/10;
+  display:grid;place-items:center;
+  font-size:clamp(2.6rem,8vw,3.4rem);
+  overflow:hidden;
+  background:var(--art,linear-gradient(140deg,#2a1810,#140b07));
+}
+.game-art::after{
+  content:"";position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 30%,transparent 30%,rgba(0,0,0,.6) 100%);
+}
+.game-art span{position:relative;z-index:1;filter:drop-shadow(0 6px 16px rgba(0,0,0,.7));}
+.game:not(.is-soon):hover .game-art span{animation:art-pop .55s var(--ease);}
+@keyframes art-pop{0%{transform:scale(1);}45%{transform:scale(1.16) rotate(-5deg);}100%{transform:scale(1);}}
+
+.game-body{padding:17px 18px 19px;display:flex;flex-direction:column;gap:7px;flex:1;}
+.game-title{font-size:1.06rem;font-weight:700;letter-spacing:.01em;}
+.game-desc{font-size:.83rem;color:var(--dim);flex:1;}
+
+.game-meta{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.tag{
+  font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;
+  padding:3px 9px;border-radius:999px;
+  background:rgba(255,255,255,.055);border:1px solid var(--line);color:var(--dim);
+}
+.tag.is-hot{background:rgba(255,77,141,.14);border-color:rgba(255,77,141,.34);color:#ff9dc0;}
+
+/* Bandeau d'angle */
+.ribbon{
+  position:absolute;top:12px;right:12px;z-index:2;
+  font-size:.58rem;letter-spacing:.16em;text-transform:uppercase;font-weight:700;
+  padding:4px 10px;border-radius:999px;
+  background:rgba(8,7,12,.82);backdrop-filter:blur(6px);
+  border:1px solid rgba(255,255,255,.18);
+}
+.ribbon.is-new{color:#0c0a10;background:var(--neon-3);border-color:var(--neon-3);}
+
+/* Emplacement a venir */
+.game.is-soon{opacity:.42;border-style:dashed;cursor:default;}
+.game.is-soon .game-art{background:repeating-linear-gradient(45deg,#14131f 0 12px,#0e0d16 12px 24px);font-size:2rem;}
+
+/* ---------------------------------------------------------------- */
+/* Pied de page                                                      */
+/* ---------------------------------------------------------------- */
+
+.foot{
+  border-top:1px solid var(--line);
+  padding:26px 0 40px;
+  display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;
+  font-size:.74rem;color:var(--faint);
+}
+.foot a{color:var(--dim);transition:color .2s;}
+.foot a:hover{color:var(--neon-2);}
+
+@media (prefers-reduced-motion:reduce){
+  .bg-grid,.logo .l2,.coin{animation:none;}
+  .game:hover{transform:none;}
+}
