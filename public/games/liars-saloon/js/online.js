@@ -10,6 +10,8 @@ import * as ui from './ui.js';
 import { sfx } from './sfx.js';
 
 const RECONNECT_MAX = 15000;
+/** Au-dela, on cesse de rassurer l'utilisateur et on lui dit quoi faire. */
+const ATTEMPTS_BEFORE_GIVING_UP = 4;
 
 let ws = null;
 let myId = null;
@@ -17,6 +19,7 @@ let room = null;           // dernier etat de salon recu
 let wantConnection = false;
 let reconnectDelay = 800;
 let reconnectTimer = null;
+let failedAttempts = 0;
 let heartbeat = null;
 let identity = { name: '', avatar: '🤠' };
 
@@ -57,6 +60,7 @@ export function connect(who) {
 
   ws.addEventListener('open', () => {
     reconnectDelay = 800;
+    failedAttempts = 0;
     listeners.status('online');
     send({ t: 'hello', name: identity.name, avatar: identity.avatar });
     clearInterval(heartbeat);
@@ -74,7 +78,10 @@ export function connect(who) {
   ws.addEventListener('close', () => {
     clearInterval(heartbeat);
     ws = null;
-    if (wantConnection) { listeners.status('offline'); scheduleReconnect(); }
+    if (!wantConnection) return;
+    failedAttempts += 1;
+    listeners.status(failedAttempts >= ATTEMPTS_BEFORE_GIVING_UP ? 'unreachable' : 'offline');
+    scheduleReconnect();
   });
 
   ws.addEventListener('error', () => { /* le close qui suit gere la suite */ });
@@ -82,6 +89,7 @@ export function connect(who) {
 
 export function disconnect() {
   wantConnection = false;
+  failedAttempts = 0;
   clearTimeout(reconnectTimer);
   clearInterval(heartbeat);
   if (ws) { try { ws.close(); } catch { /* deja ferme */ } }

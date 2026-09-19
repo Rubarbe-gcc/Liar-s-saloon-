@@ -175,6 +175,9 @@ net.on('status', (state, detail) => {
   if (state === 'connecting') setStatus('Connexion au saloon…');
   else if (state === 'online') setStatus('Connecté — prêt à jouer.', 'is-live');
   else if (state === 'offline') setStatus('Connexion perdue. Nouvelle tentative…', 'is-down');
+  else if (state === 'unreachable') {
+    setStatus('Serveur de jeu injoignable. Le mode hors-ligne, lui, fonctionne sans réseau.', 'is-down');
+  }
   else if (state === 'ended') endOnlineGame(detail);
 });
 
