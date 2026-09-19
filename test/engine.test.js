@@ -424,6 +424,30 @@ test('une partie en ligne se joue de bout en bout contre le vrai serveur', async
     assert.match(engine.headers.get('content-type'), /javascript/);
   });
 
+  await t.test('les pages chargent leurs feuilles de style sans barre oblique finale', async () => {
+    // Les chemins d'assets doivent etre racine-absolus : une URL sans barre
+    // oblique finale ferait sinon remonter les chemins relatifs d'un dossier,
+    // et la page s'afficherait entierement sans style.
+    const pages = {
+      '/games/liars-saloon': '/games/liars-saloon/',
+      '/': '/',
+    };
+    for (const [bare, withSlash] of Object.entries(pages)) {
+      for (const url of [bare, withSlash]) {
+        const html = await (await fetch(`${base}${url}`)).text();
+        const refs = [...html.matchAll(/(?:href|src)="([^"]+\.(?:css|js))"/g)].map((m) => m[1]);
+        assert.ok(refs.length > 0, `${url} ne reference aucun asset`);
+
+        for (const ref of refs) {
+          assert.ok(ref.startsWith('/'),
+            `${url} reference « ${ref} » en relatif : la page casserait sans barre oblique finale`);
+          const res = await fetch(`${base}${ref}`);
+          assert.equal(res.status, 200, `${ref} introuvable (depuis ${url})`);
+        }
+      }
+    }
+  });
+
   await t.test('la traversee de repertoire est refusee', async () => {
     for (const bad of ['/../package.json', '/..%2fpackage.json', '/games/../../package.json']) {
       const r = await fetch(`${base}${bad}`, { redirect: 'manual' });

@@ -10,7 +10,7 @@
 <meta property="og:type" content="website">
 <title>Insert Coin — salle d'arcade</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🕹️</text></svg>">
-<link rel="stylesheet" href="css/hub.css">
+<link rel="stylesheet" href="/css/hub.css">
 </head>
 <body>
 
@@ -84,7 +84,7 @@ const frag = document.createDocumentFragment();
 for (const g of GAMES) {
   const a = document.createElement('a');
   a.className = 'game';
-  a.href = `games/${g.slug}/`;
+  a.href = `/games/${g.slug}/`;
   a.style.setProperty('--tint', g.tint || 'rgba(255,77,141,.22)');
 
   a.innerHTML =
