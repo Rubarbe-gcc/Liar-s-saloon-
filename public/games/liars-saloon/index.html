@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#140b07">
+<meta name="description" content="Liar's Saloon — jeu de bluff et de roulette russe, en solo contre des bots ou en ligne entre amis.">
+<title>Liar's Saloon</title>
+<link rel="icon" href="/games/liars-saloon/icons/icon-192.png">
+<link rel="manifest" href="/games/liars-saloon/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/games/liars-saloon/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Saloon">
+<link rel="stylesheet" href="/games/liars-saloon/css/base.css">
+<link rel="stylesheet" href="/games/liars-saloon/css/menu.css">
+<link rel="stylesheet" href="/games/liars-saloon/css/table.css">
+</head>
+<body>
+
+<!-- Ambiance : lampes a huile, poussiere en suspension, vignettage -->
+<div class="saloon-bg" aria-hidden="true">
+  <div class="bg-wood"></div>
+  <div class="bg-lamp lamp-a"></div>
+  <div class="bg-lamp lamp-b"></div>
+  <div class="bg-dust" id="dust"></div>
+  <div class="bg-vignette"></div>
+</div>
+
+<!-- ============================ MENU ============================ -->
+<section class="screen is-active" id="screen-menu">
+  <div class="menu-wrap">
+    <header class="brand">
+      <div class="brand-sub">— établissement de jeu &amp; de mauvaise foi —</div>
+      <h1 class="brand-title"><span>LIAR'S</span><em>SALOON</em></h1>
+      <div class="brand-rule"><i></i><span>♠ ♥ ♣ ♦</span><i></i></div>
+      <p class="brand-tag">Six chambres. Une balle. Mentez bien.</p>
+    </header>
+
+    <nav class="menu-nav">
+      <button class="btn btn-hero" data-go="offline">
+        <span class="btn-ic">🤠</span>
+        <span class="btn-txt"><b>Partie hors-ligne</b><i>Contre des adversaires artificiels</i></span>
+      </button>
+      <button class="btn btn-hero" data-go="online">
+        <span class="btn-ic">🌐</span>
+        <span class="btn-txt"><b>Jouer en ligne</b><i>Créez un salon, partagez le code</i></span>
+      </button>
+      <div class="menu-row">
+        <button class="btn btn-ghost" data-go="rules"><span class="btn-ic">📜</span> Règles</button>
+        <button class="btn btn-ghost" id="btn-sound"><span class="btn-ic">🔊</span> Son</button>
+      </div>
+    </nav>
+    <footer class="menu-foot">Aucune donnée ne quitte votre machine en mode hors-ligne.</footer>
+  </div>
+</section>
+
+<!-- ========================= MODE SOLO ========================== -->
+<section class="screen" id="screen-offline">
+  <div class="panel">
+    <button class="panel-back" data-go="menu">‹ Retour</button>
+    <h2 class="panel-title">Table privée</h2>
+    <p class="panel-sub">Installez-vous. La maison fournit le revolver.</p>
+
+    <div class="field">
+      <label for="in-name">Votre nom</label>
+      <div class="ident-row">
+        <button class="avatar-pick" id="pick-avatar" type="button" title="Changer d'avatar">🤠</button>
+        <input id="in-name" type="text" maxlength="16" placeholder="L'Étranger" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Adversaires</label>
+      <div class="chip-row" id="opt-bots" role="radiogroup" aria-label="Nombre d'adversaires">
+        <button class="chip" data-val="1" role="radio">1</button>
+        <button class="chip is-on" data-val="2" role="radio" aria-checked="true">2</button>
+        <button class="chip" data-val="3" role="radio">3</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Niveau</label>
+      <div class="chip-row" id="opt-diff" role="radiogroup" aria-label="Difficulté">
+        <button class="chip" data-val="facile" role="radio">Novice</button>
+        <button class="chip is-on" data-val="normal" role="radio" aria-checked="true">Habitué</button>
+        <button class="chip" data-val="brutal" role="radio">Impitoyable</button>
+      </div>
+    </div>
+
+    <button class="btn btn-gold btn-wide" id="btn-start-offline">Distribuer les cartes</button>
+  </div>
+</section>
+
+<!-- ========================= MODE EN LIGNE ====================== -->
+<section class="screen" id="screen-online">
+  <div class="panel">
+    <button class="panel-back" data-go="menu">‹ Retour</button>
+    <h2 class="panel-title">Salon en ligne</h2>
+    <p class="panel-sub" id="online-status">Connexion au saloon…</p>
+
+    <div id="online-gate">
+      <div class="field">
+        <label for="in-name-net">Votre nom</label>
+        <div class="ident-row">
+          <button class="avatar-pick" id="pick-avatar-net" type="button" title="Changer d'avatar">🤠</button>
+          <input id="in-name-net" type="text" maxlength="16" placeholder="L'Étranger" autocomplete="off" spellcheck="false">
+        </div>
+      </div>
+
+      <button class="btn btn-gold btn-wide" id="btn-create-room">Ouvrir une table</button>
+
+      <div class="or-rule"><i></i><span>ou</span><i></i></div>
+
+      <div class="field">
+        <label for="in-code">Rejoindre avec un code</label>
+        <div class="join-row">
+          <input id="in-code" class="code-input" type="text" maxlength="4" placeholder="ABCD"
+                 autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
+          <button class="btn btn-ghost" id="btn-join-room">Entrer</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="online-room" hidden>
+      <div class="room-code">
+        <span class="room-code-label">Code de la table</span>
+        <button class="room-code-value" id="room-code" title="Copier le code">····</button>
+        <span class="room-code-hint">Cliquez pour copier</span>
+      </div>
+      <ul class="seat-list" id="seat-list"></ul>
+      <p class="room-note" id="room-note">Il faut au moins deux joueurs.</p>
+      <div class="room-actions">
+        <button class="btn btn-ghost" id="btn-leave-room">Quitter</button>
+        <button class="btn btn-gold" id="btn-launch-room">Lancer la partie</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== TABLE ============================ -->
+<section class="screen screen-table" id="screen-table">
+  <header class="hud">
+    <button class="hud-btn" id="btn-quit" title="Quitter la partie">✕</button>
+    <div class="hud-round">
+      <span class="hud-round-n" id="hud-round">Manche 1</span>
+      <span class="hud-mode" id="hud-mode">hors-ligne</span>
+    </div>
+    <button class="hud-btn" id="btn-rules-ingame" title="Règles">?</button>
+  </header>
+
+  <!-- Adversaires disposes autour du tapis -->
+  <div class="opponents" id="opponents"></div>
+
+  <!-- Tapis -->
+  <div class="felt">
+    <div class="felt-inner">
+      <div class="demand">
+        <span class="demand-label">La table demande</span>
+        <strong class="demand-card" id="demand-card">ROI</strong>
+      </div>
+      <div class="pile" id="pile" aria-hidden="true"></div>
+      <div class="claim" id="claim" hidden></div>
+      <div class="felt-brand">LIAR'S SALOON</div>
+    </div>
+  </div>
+
+  <!-- Journal -->
+  <div class="ticker" id="ticker"></div>
+
+  <!-- Main du joueur -->
+  <div class="seat-me">
+    <div class="me-bar">
+      <div class="me-id">
+        <span class="me-av" id="me-av">🤠</span>
+        <span class="me-name" id="me-name">Vous</span>
+      </div>
+      <div class="cylinder" id="me-cylinder" title="Votre barillet"></div>
+      <div class="timer" id="timer" hidden><svg viewBox="0 0 36 36"><circle class="t-bg" cx="18" cy="18" r="16"/><circle class="t-fg" id="timer-arc" cx="18" cy="18" r="16"/></svg><span id="timer-n">30</span></div>
+    </div>
+    <div class="hand" id="hand"></div>
+    <div class="actions">
+      <button class="btn btn-play" id="btn-play" disabled>Poser <span id="play-count"></span></button>
+      <button class="btn btn-liar" id="btn-liar" disabled>MENTEUR !</button>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== SUPERPOSITIONS ====================== -->
+
+<div class="overlay" id="ov-banner" hidden aria-live="polite">
+  <div class="banner">
+    <div class="banner-kicker" id="banner-kicker"></div>
+    <div class="banner-title" id="banner-title"></div>
+    <div class="banner-sub" id="banner-sub"></div>
+  </div>
+</div>
+
+<div class="overlay ov-dark" id="ov-reveal" hidden>
+  <div class="reveal">
+    <div class="reveal-head" id="reveal-head"></div>
+    <div class="reveal-cards" id="reveal-cards"></div>
+    <div class="reveal-verdict" id="reveal-verdict"></div>
+  </div>
+</div>
+
+<div class="overlay ov-dark" id="ov-roulette" hidden>
+  <div class="roulette">
+    <div class="rl-who" id="rl-who"></div>
+    <div class="rl-gun">
+      <svg viewBox="0 0 200 200" class="rl-cyl" id="rl-cyl" aria-hidden="true">
+        <circle class="rl-ring" cx="100" cy="100" r="88"/>
+        <circle class="rl-core" cx="100" cy="100" r="22"/>
+        <g id="rl-chambers"></g>
+      </svg>
+      <div class="rl-hammer" id="rl-hammer"></div>
+    </div>
+    <div class="rl-odds" id="rl-odds"></div>
+    <div class="rl-result" id="rl-result"></div>
+  </div>
+</div>
+
+<div class="overlay ov-dark" id="ov-end" hidden>
+  <div class="endcard">
+    <div class="end-crown" id="end-crown">☠</div>
+    <h2 class="end-title" id="end-title"></h2>
+    <p class="end-sub" id="end-sub"></p>
+    <table class="end-stats"><tbody id="end-stats"></tbody></table>
+    <div class="end-actions">
+      <button class="btn btn-ghost" id="btn-end-menu">Menu</button>
+      <button class="btn btn-gold" id="btn-end-again">Rejouer</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay ov-dark" id="ov-rules" hidden>
+  <div class="rules">
+    <button class="rules-close" id="btn-rules-close">✕</button>
+    <h2>Règles du saloon</h2>
+
+    <div class="rules-grid">
+      <section>
+        <h3><span>1</span> Le paquet</h3>
+        <p>Vingt cartes : six <b>Rois</b>, six <b>Dames</b>, six <b>As</b> et deux <b>Jokers</b>.
+        À chaque manche, la table réclame une seule de ces trois figures, et chacun reçoit cinq cartes.</p>
+      </section>
+      <section>
+        <h3><span>2</span> Poser</h3>
+        <p>À votre tour, posez <b>une à trois cartes face cachée</b> en annonçant qu'il s'agit
+        toutes de la carte demandée. Rien ne vous oblige à dire vrai. Le <b>Joker</b>, lui,
+        compte toujours comme la bonne carte.</p>
+      </section>
+      <section>
+        <h3><span>3</span> Accuser</h3>
+        <p>Plutôt que de poser, criez <b>« Menteur ! »</b>. On retourne la dernière pose :
+        si elle contenait la moindre carte illégitime, le poseur avait menti.
+        <b>Sinon c'est vous qui vous êtes trompé.</b></p>
+      </section>
+      <section>
+        <h3><span>4</span> Le revolver</h3>
+        <p>Celui qui a tort porte le canon à sa tempe. Six chambres, <b>une seule balle</b>,
+        et le barillet ne se recharge jamais : plus vous survivez, plus le prochain clic
+        devient improbable… jusqu'à ne plus l'être du tout.</p>
+      </section>
+      <section>
+        <h3><span>5</span> Manche suivante</h3>
+        <p>Après chaque coup de percuteur, on redistribue et la table réclame une
+        nouvelle figure. Si plus personne n'a de cartes à poser, la manche s'achève
+        sans victime.</p>
+      </section>
+      <section>
+        <h3><span>6</span> Victoire</h3>
+        <p>Le <b>dernier assis à la table</b> ramasse la mise. Il n'y a pas de second.</p>
+      </section>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script type="module" src="/games/liars-saloon/js/main.js"></script>
+</body>
+</html>

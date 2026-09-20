@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#08070c">
+<meta name="description" content="Insert Coin — une petite salle d'arcade en ligne. Des jeux faits maison, jouables tout de suite dans le navigateur.">
+<meta property="og:title" content="Insert Coin">
+<meta property="og:description" content="Une petite salle d'arcade en ligne. Des jeux faits maison, jouables tout de suite.">
+<meta property="og:type" content="website">
+<title>Insert Coin — salle d'arcade</title>
+<link rel="icon" href="/icons/icon-192.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Insert Coin">
+<meta property="og:image" content="/icons/icon-512.png">
+<link rel="stylesheet" href="/css/hub.css">
+</head>
+<body>
+
+<div class="bg" aria-hidden="true">
+  <div class="bg-glow glow-a"></div>
+  <div class="bg-glow glow-b"></div>
+  <div class="bg-grid"></div>
+  <div class="bg-scan"></div>
+  <div class="bg-vig"></div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">salle d'arcade · maison</div>
+    <h1 class="logo">
+      <span class="l1">Insert</span>
+      <span class="l2">Coin</span>
+    </h1>
+    <p class="tagline">
+      Des jeux faits maison, jouables tout de suite dans le navigateur.
+      Rien à installer, rien à créer comme compte.
+    </p>
+    <div class="coin">▸ Choisissez votre machine</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="section-head">
+    <h2>Machines disponibles</h2>
+    <i></i>
+    <b id="count">—</b>
+  </div>
+
+  <div class="grid" id="grid"></div>
+</main>
+
+<footer class="wrap">
+  <div class="foot">
+    <span>Insert Coin — arcade personnelle</span>
+    <span><a href="https://github.com/Rubarbe-gcc/Liar-s-saloon-" rel="noopener">Code source</a></span>
+  </div>
+</footer>
+
+<script type="module">
+/**
+ * Catalogue du hub.
+ *
+ * Ajouter un jeu = ajouter une entree ici et deposer ses fichiers dans
+ * `public/games/<slug>/`. Rien d'autre a toucher.
+ */
+const GAMES = [
+  {
+    slug: 'liars-saloon',
+    title: "Liar's Saloon",
+    desc: "Bluff, accusations et roulette russe autour d'un tapis vert. Seul contre la machine, ou entre amis avec un code de table.",
+    icon: '🎴',
+    tags: ['Bluff', 'Solo & en ligne', '2–4 joueurs'],
+    art: 'linear-gradient(140deg,#6d3d24,#1d4436 52%,#0c0705)',
+    tint: 'rgba(232,183,92,.26)',
+    badge: 'nouveau',
+    ready: true,
+  },
+];
+
+/** Emplacements vides, pour donner sa forme a la galerie. */
+const SOON = 2;
+
+const grid = document.getElementById('grid');
+const frag = document.createDocumentFragment();
+
+for (const g of GAMES) {
+  const a = document.createElement('a');
+  a.className = 'game';
+  a.href = `/games/${g.slug}/`;
+  a.style.setProperty('--tint', g.tint || 'rgba(255,77,141,.22)');
+
+  a.innerHTML =
+    (g.badge ? `<span class="ribbon is-new">${esc(g.badge)}</span>` : '') +
+    `<div class="game-art" style="--art:${g.art}"><span>${g.icon}</span></div>` +
+    `<div class="game-body">` +
+      `<h3 class="game-title">${esc(g.title)}</h3>` +
+      `<p class="game-desc">${esc(g.desc)}</p>` +
+      `<div class="game-meta">${
+        g.tags.map((t, i) => `<span class="tag${i === 0 ? ' is-hot' : ''}">${esc(t)}</span>`).join('')
+      }</div>` +
+    `</div>`;
+  frag.appendChild(a);
+}
+
+for (let i = 0; i < SOON; i++) {
+  const d = document.createElement('div');
+  d.className = 'game is-soon';
+  d.innerHTML =
+    '<div class="game-art"><span>🕹️</span></div>' +
+    '<div class="game-body">' +
+      '<h3 class="game-title">Emplacement libre</h3>' +
+      '<p class="game-desc">La prochaine machine arrive bientôt.</p>' +
+    '</div>';
+  frag.appendChild(d);
+}
+
+grid.appendChild(frag);
+document.getElementById('count').textContent =
+  `${GAMES.length} jeu${GAMES.length > 1 ? 'x' : ''}`;
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+/* Service worker : rend le site installable et jouable sans réseau.
+   Un échec ici ne doit jamais empêcher de jouer. */
+if ('serviceWorker' in navigator) {
+  addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js', { scope: '/' })
+      .catch((err) => console.warn('[pwa] service worker non enregistré :', err));
+  });
+}
+</script>
+</body>
+</html>

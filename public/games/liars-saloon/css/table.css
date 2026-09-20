@@ -1,0 +1,593 @@
+/* =====================================================================
+   La table : tapis, adversaires, main du joueur, revelation, roulette.
+   ===================================================================== */
+
+.screen-table{
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  justify-content:space-between;
+  padding:0;
+  gap:0;
+  overflow:hidden;
+}
+.screen-table.is-active{display:flex;}
+
+/* ---------------------------------------------------------------- */
+/* Bandeau superieur                                                  */
+/* ---------------------------------------------------------------- */
+
+.hud{
+  flex:none;width:100%;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:clamp(10px,2vh,16px) clamp(12px,3vw,22px) 0;
+  z-index:5;
+}
+.hud-btn{
+  width:34px;height:34px;border-radius:50%;
+  display:grid;place-items:center;
+  color:var(--text-faint);font-size:.9rem;font-weight:700;
+  background:rgba(0,0,0,.34);border:1px solid var(--line);
+  transition:color .2s,border-color .2s,background .2s;
+}
+.hud-btn:hover{color:var(--gold-hi);border-color:var(--ring);background:rgba(232,183,92,.1);}
+.hud-round{text-align:center;display:flex;flex-direction:column;gap:2px;}
+.hud-round-n{font-family:var(--font-display);font-size:.98rem;font-weight:700;color:var(--gold);letter-spacing:.1em;}
+.hud-mode{font-size:.58rem;letter-spacing:.22em;text-transform:uppercase;color:var(--text-faint);}
+
+/* ---------------------------------------------------------------- */
+/* Adversaires                                                        */
+/* ---------------------------------------------------------------- */
+
+.opponents{
+  flex:none;width:100%;
+  display:flex;align-items:flex-start;justify-content:center;
+  gap:clamp(10px,3vw,30px);
+  padding:clamp(8px,1.6vh,16px) 12px 0;
+  z-index:4;
+}
+
+.foe{
+  position:relative;
+  width:clamp(96px,23vw,132px);
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:10px 8px 9px;
+  border-radius:12px;
+  background:linear-gradient(170deg,rgba(52,31,19,.72),rgba(14,8,5,.8));
+  border:1px solid var(--line);
+  box-shadow:0 6px 18px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,225,170,.09);
+  transition:border-color .3s,box-shadow .3s,opacity .4s,filter .4s,transform .3s var(--ease);
+}
+
+/* Tour actif : halo de lampe */
+.foe.is-turn{
+  border-color:var(--ring);
+  box-shadow:0 0 0 1px rgba(232,183,92,.3), 0 0 30px rgba(232,183,92,.3), 0 8px 22px rgba(0,0,0,.5);
+  transform:translateY(-4px);
+}
+.foe.is-turn::before{
+  content:"";position:absolute;inset:-2px;border-radius:13px;pointer-events:none;
+  background:linear-gradient(120deg,transparent,rgba(232,183,92,.18),transparent);
+  animation:sweep 2.2s linear infinite;
+}
+@keyframes sweep{0%{opacity:.2;}50%{opacity:.8;}100%{opacity:.2;}}
+
+.foe.is-dead{opacity:.42;filter:grayscale(1);transform:none;}
+.foe.is-dead .foe-av::after{
+  content:"☠";position:absolute;inset:0;display:grid;place-items:center;
+  font-size:1.5rem;color:var(--blood-hi);text-shadow:0 0 14px rgba(255,77,85,.7);
+  background:rgba(8,4,3,.62);border-radius:50%;
+}
+.foe.is-gone{opacity:.3;filter:grayscale(1) blur(.4px);}
+
+.foe-av{
+  position:relative;
+  width:clamp(38px,9vw,46px);height:clamp(38px,9vw,46px);
+  display:grid;place-items:center;
+  font-size:clamp(1.25rem,4vw,1.5rem);
+  border-radius:50%;
+  background:radial-gradient(circle at 34% 28%,rgba(255,220,160,.2),rgba(0,0,0,.5));
+  border:1px solid rgba(232,183,92,.28);
+}
+.foe-name{
+  font-size:.74rem;font-weight:700;letter-spacing:.02em;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  color:var(--text);
+}
+.foe-profile{font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-faint);}
+
+/* Dos de cartes en eventail, indiquant la taille de la main */
+.foe-hand{display:flex;justify-content:center;height:20px;margin:2px 0 1px;}
+.foe-chip{
+  width:13px;height:19px;border-radius:2px;
+  background:linear-gradient(150deg,#7b1d22,#430e11);
+  border:1px solid rgba(232,183,92,.4);
+  box-shadow:0 1px 3px rgba(0,0,0,.6);
+  margin-left:-5px;
+  animation:chip-in .3s var(--ease-back) both;
+}
+.foe-chip:first-child{margin-left:0;}
+@keyframes chip-in{from{opacity:0;transform:translateY(-8px) rotate(-12deg);}to{opacity:1;transform:none;}}
+.foe-hand-empty{font-size:.6rem;color:var(--text-faint);letter-spacing:.1em;font-style:italic;line-height:20px;}
+
+/* Bulle d'annonce au-dessus de l'avatar */
+.foe-say{
+  position:absolute;top:-13px;left:50%;transform:translateX(-50%);
+  padding:3px 10px;border-radius:999px;white-space:nowrap;
+  font-size:.64rem;font-weight:800;letter-spacing:.08em;
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold-lo));color:#2a1a06;
+  box-shadow:0 3px 12px rgba(0,0,0,.5);
+  animation:say-in .34s var(--ease-back) both;
+  z-index:2;
+}
+.foe-say.is-liar{background:linear-gradient(180deg,#ff6b72,#8c161b);color:#fff;}
+@keyframes say-in{from{opacity:0;transform:translate(-50%,7px) scale(.8);}to{opacity:1;transform:translate(-50%,0) scale(1);}}
+
+/* ---------------------------------------------------------------- */
+/* Barillet                                                           */
+/* ---------------------------------------------------------------- */
+
+.cylinder{display:flex;gap:3px;align-items:center;}
+.cham{
+  width:7px;height:7px;border-radius:50%;
+  background:rgba(0,0,0,.6);
+  border:1px solid rgba(232,183,92,.36);
+  transition:all .3s var(--ease);
+}
+/* Chambre deja essayee : elle ne peut plus tuer */
+.cham.is-spent{background:rgba(232,183,92,.08);border-color:rgba(232,183,92,.14);opacity:.45;}
+.cham.is-live{background:radial-gradient(circle at 34% 30%,#ffd98a,#9c7328);box-shadow:0 0 6px rgba(232,183,92,.5);}
+.cham.is-hot{animation:cham-pulse 1.1s ease-in-out infinite;}
+@keyframes cham-pulse{0%,100%{box-shadow:0 0 5px rgba(255,77,85,.4);}50%{box-shadow:0 0 14px rgba(255,77,85,.9);}}
+.cham.is-fatal{background:radial-gradient(circle at 34% 30%,#ff8f96,var(--blood));border-color:var(--blood-hi);}
+
+/* ---------------------------------------------------------------- */
+/* Tapis                                                              */
+/* ---------------------------------------------------------------- */
+
+.felt{
+  flex:1 1 auto;width:100%;
+  display:grid;place-items:center;
+  padding:clamp(6px,1.6vh,18px) 14px;
+  min-height:0;
+  z-index:3;
+}
+.felt-inner{
+  position:relative;
+  width:min(560px,92vw);
+  aspect-ratio:16/9;
+  max-height:100%;
+  border-radius:50%/34%;
+  display:grid;place-items:center;
+  /* Cuir du rebord + feutrine centrale */
+  background:
+    radial-gradient(ellipse at 50% 34%, rgba(255,214,150,.09), transparent 62%),
+    radial-gradient(ellipse at center, var(--felt-1) 0%, var(--felt-2) 63%, var(--felt-edge) 100%);
+  border:clamp(7px,1.6vw,12px) solid transparent;
+  background-origin:border-box;
+  box-shadow:
+    inset 0 0 60px rgba(0,0,0,.6),
+    inset 0 2px 0 rgba(255,255,255,.05),
+    0 22px 50px rgba(0,0,0,.6);
+}
+/* Rebord de cuir clouté */
+.felt-inner::before{
+  content:"";position:absolute;inset:calc(-1 * clamp(7px,1.6vw,12px));
+  border-radius:50%/34%;
+  background:linear-gradient(160deg,#6d3d24,#3b1d11 55%,#24110a);
+  box-shadow:inset 0 1px 0 rgba(255,200,140,.18), 0 0 0 1px rgba(0,0,0,.6);
+  z-index:-1;
+}
+/* Fine ligne doree interieure */
+.felt-inner::after{
+  content:"";position:absolute;inset:9px;border-radius:50%/34%;
+  border:1px solid rgba(232,183,92,.15);pointer-events:none;
+}
+
+.felt-brand{
+  position:absolute;bottom:11%;left:50%;transform:translateX(-50%);
+  font-family:var(--font-display);font-size:.56rem;letter-spacing:.42em;
+  color:rgba(232,183,92,.16);text-transform:uppercase;white-space:nowrap;
+  pointer-events:none;
+}
+
+/* Carte demandee */
+.demand{
+  position:absolute;top:13%;left:50%;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:1px;text-align:center;
+}
+.demand-label{font-size:.56rem;letter-spacing:.26em;text-transform:uppercase;color:rgba(232,183,92,.5);}
+.demand-card{
+  font-family:var(--font-display);
+  font-size:clamp(1.5rem,5.6vw,2.2rem);font-weight:900;letter-spacing:.14em;
+  background:linear-gradient(180deg,#fff3d4,var(--gold) 55%,var(--gold-lo));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 2px 10px rgba(232,183,92,.45));
+}
+.demand-card.is-new{animation:demand-pop .55s var(--ease-back) both;}
+@keyframes demand-pop{
+  0%{opacity:0;transform:scale(.4) rotate(-9deg);filter:blur(4px);}
+  60%{transform:scale(1.14) rotate(2deg);filter:blur(0);}
+  100%{opacity:1;transform:none;}
+}
+
+/* Pile de cartes posees */
+.pile{
+  position:absolute;top:50%;left:50%;transform:translate(-50%,-42%);
+  width:clamp(44px,11vw,58px);height:clamp(64px,16vw,85px);
+}
+.pile-card{
+  position:absolute;inset:0;border-radius:5px;
+  background:
+    repeating-linear-gradient(45deg,rgba(255,255,255,.05) 0 3px,transparent 3px 6px),
+    linear-gradient(150deg,#7b1d22,#430e11);
+  border:1px solid rgba(232,183,92,.34);
+  box-shadow:0 2px 7px rgba(0,0,0,.55);
+  animation:pile-toss .42s var(--ease) both;
+}
+@keyframes pile-toss{
+  0%{opacity:0;transform:translateY(110px) scale(.7) rotate(0deg);}
+  100%{opacity:1;}
+}
+.pile-empty{
+  position:absolute;inset:0;border-radius:6px;
+  border:1px dashed rgba(232,183,92,.16);
+}
+
+/* Annonce de la derniere pose */
+.claim{
+  position:absolute;bottom:22%;left:50%;transform:translateX(-50%);
+  padding:5px 15px;border-radius:999px;white-space:nowrap;
+  font-size:.76rem;font-weight:700;letter-spacing:.06em;
+  background:rgba(8,4,3,.74);border:1px solid var(--ring);color:var(--gold-hi);
+  box-shadow:0 4px 16px rgba(0,0,0,.5);
+  animation:say-in .34s var(--ease-back) both;
+}
+.claim[hidden]{display:none;}
+.claim b{color:#fff;}
+
+/* ---------------------------------------------------------------- */
+/* Journal defilant                                                   */
+/* ---------------------------------------------------------------- */
+
+.ticker{
+  flex:none;
+  height:1.7em;width:100%;
+  display:grid;place-items:center;
+  padding:0 16px;
+  font-size:.74rem;line-height:1.7;font-style:italic;color:var(--text-faint);
+  text-align:center;overflow:hidden;
+  z-index:4;
+}
+.ticker span{
+  display:block;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  animation:ticker-in .34s var(--ease) both;
+}
+@keyframes ticker-in{from{opacity:0;transform:translateY(7px);}to{opacity:1;transform:none;}}
+
+/* ---------------------------------------------------------------- */
+/* Place du joueur                                                    */
+/* ---------------------------------------------------------------- */
+
+.seat-me{
+  flex:none;width:100%;
+  display:flex;flex-direction:column;align-items:center;gap:clamp(6px,1.4vh,11px);
+  padding:clamp(8px,1.6vh,14px) 14px calc(clamp(10px,2vh,18px) + var(--safe-b));
+  background:linear-gradient(0deg,rgba(6,3,2,.92) 30%,transparent);
+  z-index:5;
+}
+
+.me-bar{display:flex;align-items:center;gap:14px;}
+.me-id{display:flex;align-items:center;gap:7px;}
+.me-av{font-size:1.15rem;}
+.me-name{font-size:.82rem;font-weight:700;color:var(--gold-hi);letter-spacing:.03em;}
+
+/* Minuteur circulaire */
+.timer{position:relative;width:30px;height:30px;display:grid;place-items:center;}
+.timer[hidden]{display:none;}
+.timer svg{position:absolute;inset:0;transform:rotate(-90deg);}
+.timer circle{fill:none;stroke-width:2.5;}
+.t-bg{stroke:rgba(232,183,92,.14);}
+.t-fg{
+  stroke:var(--gold);stroke-linecap:round;
+  stroke-dasharray:100.5;
+  transition:stroke-dashoffset .95s linear,stroke .4s;
+}
+.timer.is-urgent .t-fg{stroke:var(--blood-hi);}
+.timer.is-urgent{animation:cham-pulse .9s ease-in-out infinite;}
+.timer span{font-family:var(--font-num);font-size:.64rem;font-weight:700;color:var(--text-dim);}
+
+/* Main */
+.hand{
+  --cw:clamp(50px,13.5vw,70px);
+  display:flex;justify-content:center;align-items:flex-end;
+  gap:clamp(3px,1.2vw,9px);
+  min-height:calc(var(--cw) * 1.46 + 16px);
+  padding-top:16px;
+  perspective:900px;
+}
+.hand .card{
+  cursor:pointer;
+  animation:deal-in .45s var(--ease-back) both;
+}
+@keyframes deal-in{
+  0%{opacity:0;transform:translateY(46px) rotate(var(--tilt,0deg)) scale(.82);}
+  100%{opacity:1;transform:rotate(var(--tilt,0deg));}
+}
+.hand .card:hover{transform:translateY(-12px) rotate(var(--tilt,0deg)) scale(1.04);z-index:3;}
+.hand .card.is-picked{
+  transform:translateY(-22px) rotate(var(--tilt,0deg)) scale(1.06);
+  z-index:4;
+}
+.hand .card.is-picked .card-front{
+  box-shadow:inset 0 0 0 2px var(--gold-hi), 0 0 26px rgba(232,183,92,.55), 0 10px 22px rgba(0,0,0,.5);
+}
+/* Badge d'ordre de selection */
+.pick-no{
+  position:absolute;top:-9px;right:-7px;
+  width:20px;height:20px;border-radius:50%;
+  display:grid;place-items:center;
+  font-family:var(--font-num);font-size:.66rem;font-weight:800;
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold-lo));color:#2a1a06;
+  box-shadow:0 2px 8px rgba(0,0,0,.55);
+  animation:say-in .22s var(--ease-back) both;
+  z-index:5;
+}
+.hand.is-locked .card{cursor:default;pointer-events:none;opacity:.62;}
+.hand-empty{
+  display:grid;place-items:center;
+  min-height:calc(var(--cw,62px) * 1.46);
+  font-size:.8rem;font-style:italic;color:var(--text-faint);letter-spacing:.06em;
+}
+
+/* Cartes qui partent vers le tapis */
+.card.is-tossed{animation:toss-out .4s var(--ease) both;}
+@keyframes toss-out{
+  to{opacity:0;transform:translateY(-160px) scale(.6) rotate(12deg);}
+}
+
+/* Actions */
+.actions{display:flex;gap:10px;}
+.actions .btn{min-width:clamp(120px,32vw,156px);justify-content:center;padding:12px 18px;}
+
+.btn-play{
+  color:#2a1a06;
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold) 48%,var(--gold-lo));
+  border-color:#6d4f18;font-weight:800;letter-spacing:.06em;text-transform:uppercase;font-size:.82rem;
+  text-shadow:0 1px 0 rgba(255,255,255,.28);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.42), 0 4px 14px rgba(0,0,0,.5);
+}
+.btn-liar{
+  color:#ffe9ea;
+  background:linear-gradient(180deg,#d8353c,var(--blood) 52%,#6d1216);
+  border-color:#7d1c20;font-weight:900;letter-spacing:.1em;font-size:.82rem;
+  text-shadow:0 1px 2px rgba(0,0,0,.5);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 4px 14px rgba(0,0,0,.5);
+}
+.btn-liar:not(:disabled){animation:liar-throb 2.1s ease-in-out infinite;}
+@keyframes liar-throb{
+  0%,100%{box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 4px 14px rgba(0,0,0,.5), 0 0 0 rgba(255,77,85,0);}
+  50%{box-shadow:inset 0 1px 0 rgba(255,255,255,.22), 0 4px 14px rgba(0,0,0,.5), 0 0 24px rgba(255,77,85,.45);}
+}
+
+/* ---------------------------------------------------------------- */
+/* Revelation                                                         */
+/* ---------------------------------------------------------------- */
+
+.reveal{display:flex;flex-direction:column;align-items:center;gap:clamp(16px,3.4vh,26px);text-align:center;}
+.reveal-head{font-size:.82rem;letter-spacing:.16em;text-transform:uppercase;color:var(--text-dim);}
+.reveal-head b{color:var(--gold-hi);}
+.reveal-cards{display:flex;gap:clamp(10px,3vw,20px);perspective:1100px;}
+.reveal-cards .card{--cw:clamp(72px,19vw,104px);}
+.reveal-verdict{
+  font-family:var(--font-display);
+  font-size:clamp(1.3rem,5vw,2.1rem);font-weight:800;letter-spacing:.05em;
+  min-height:1.3em;
+  opacity:0;transition:opacity .4s;
+}
+.reveal-verdict.show{opacity:1;animation:pop-in .42s var(--ease-back) both;}
+.reveal-verdict.is-lie{color:var(--blood-hi);text-shadow:0 0 28px rgba(255,77,85,.5);}
+.reveal-verdict.is-truth{color:var(--truth-hi);text-shadow:0 0 28px rgba(121,227,154,.45);}
+
+/* ---------------------------------------------------------------- */
+/* Roulette                                                           */
+/* ---------------------------------------------------------------- */
+
+.roulette{display:flex;flex-direction:column;align-items:center;gap:clamp(12px,2.6vh,20px);text-align:center;}
+.rl-who{font-size:.94rem;letter-spacing:.1em;color:var(--text-dim);}
+.rl-who b{font-family:var(--font-display);font-size:1.3rem;color:var(--gold-hi);letter-spacing:.04em;}
+
+.rl-gun{position:relative;width:clamp(180px,52vw,250px);aspect-ratio:1;}
+.rl-cyl{width:100%;height:100%;filter:drop-shadow(0 10px 30px rgba(0,0,0,.7));}
+.rl-ring{fill:#18100b;stroke:var(--gold-lo);stroke-width:5;}
+.rl-core{fill:#0c0705;stroke:rgba(232,183,92,.5);stroke-width:3;}
+.rl-hole{fill:#070403;stroke:rgba(232,183,92,.42);stroke-width:2.5;transition:all .3s;}
+.rl-hole.spent{fill:#241a10;stroke:rgba(232,183,92,.16);}
+.rl-hole.armed{fill:#2a0b0d;stroke:var(--blood-hi);stroke-width:3.5;}
+
+.rl-cyl.is-spinning{animation:cyl-spin 1.5s cubic-bezier(.16,.72,.24,1) both;}
+@keyframes cyl-spin{
+  0%{transform:rotate(0);}
+  100%{transform:rotate(1080deg);}
+}
+
+/* Chien du revolver */
+.rl-hammer{
+  position:absolute;top:-8%;left:50%;transform:translateX(-50%);
+  width:0;height:0;
+  border-left:11px solid transparent;border-right:11px solid transparent;
+  border-top:20px solid var(--gold);
+  filter:drop-shadow(0 2px 6px rgba(0,0,0,.8));
+}
+.rl-hammer.is-cocked{animation:hammer-fall .22s var(--ease) both;}
+@keyframes hammer-fall{
+  0%{transform:translateX(-50%) translateY(-14px);}
+  100%{transform:translateX(-50%) translateY(0);}
+}
+
+.rl-odds{font-family:var(--font-num);font-size:.84rem;color:var(--text-faint);letter-spacing:.1em;}
+.rl-odds b{color:var(--gold);}
+.rl-result{
+  font-family:var(--font-display);
+  font-size:clamp(1.7rem,7vw,3rem);font-weight:900;letter-spacing:.1em;
+  min-height:1.2em;
+  opacity:0;
+}
+.rl-result.show{opacity:1;animation:result-slam .45s var(--ease-back) both;}
+@keyframes result-slam{0%{opacity:0;transform:scale(2.4);filter:blur(10px);}100%{opacity:1;transform:none;filter:blur(0);}}
+.rl-result.is-click{color:var(--truth-hi);text-shadow:0 0 30px rgba(121,227,154,.5);}
+.rl-result.is-bang{color:var(--blood-hi);text-shadow:0 0 44px rgba(255,77,85,.75);}
+
+/* Flash et secousse au coup de feu */
+.muzzle{position:fixed;inset:0;z-index:300;pointer-events:none;background:#fff;animation:muzzle .42s ease-out both;}
+@keyframes muzzle{0%{opacity:.95;}22%{opacity:.25;}100%{opacity:0;}}
+.shake{animation:shake .5s cubic-bezier(.36,.07,.19,.97) both;}
+@keyframes shake{
+  10%,90%{transform:translate3d(-3px,1px,0);}
+  20%,80%{transform:translate3d(6px,-3px,0);}
+  30%,50%,70%{transform:translate3d(-9px,2px,0);}
+  40%,60%{transform:translate3d(9px,-2px,0);}
+}
+
+/* ---------------------------------------------------------------- */
+/* Fin de partie                                                      */
+/* ---------------------------------------------------------------- */
+
+.endcard{
+  width:min(440px,100%);
+  padding:clamp(28px,5vw,38px) clamp(22px,5vw,32px);
+  text-align:center;
+  background:linear-gradient(170deg,rgba(52,31,19,.97),rgba(16,9,6,.98));
+  border:1px solid var(--ring);border-radius:16px;
+  box-shadow:0 30px 80px rgba(0,0,0,.7), inset 0 1px 0 rgba(255,225,170,.14);
+  animation:pop-in .45s var(--ease-back) both;
+  max-height:88vh;overflow-y:auto;
+}
+.end-crown{font-size:3rem;line-height:1;margin-bottom:6px;animation:crown-in .7s var(--ease-back) both;}
+@keyframes crown-in{0%{opacity:0;transform:translateY(-26px) scale(.4) rotate(-22deg);}100%{opacity:1;transform:none;}}
+.end-title{
+  font-family:var(--font-display);font-size:clamp(1.5rem,6vw,2.2rem);font-weight:900;letter-spacing:.05em;
+  background:linear-gradient(180deg,var(--gold-hi),var(--gold) 50%,var(--gold-lo));
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.end-title.is-loss{background:linear-gradient(180deg,#ff9ba1,var(--blood) 55%,#6d1216);-webkit-background-clip:text;background-clip:text;}
+.end-sub{font-size:.85rem;color:var(--text-dim);font-style:italic;margin-top:6px;margin-bottom:22px;}
+
+.end-stats{width:100%;border-collapse:collapse;margin-bottom:24px;font-size:.78rem;}
+.end-stats tr{border-bottom:1px solid rgba(232,183,92,.1);}
+.end-stats tr:last-child{border-bottom:0;}
+.end-stats td{padding:8px 4px;text-align:left;color:var(--text-dim);}
+.end-stats td:first-child{width:26px;font-size:1.05rem;}
+.end-stats td:nth-child(2){color:var(--text);font-weight:600;}
+.end-stats td:last-child{text-align:right;font-family:var(--font-num);font-size:.72rem;color:var(--text-faint);}
+.end-stats tr.is-winner td:nth-child(2){color:var(--gold-hi);}
+.end-stats tr.is-out{opacity:.5;}
+.end-actions{display:grid;grid-template-columns:1fr 1.3fr;gap:10px;}
+
+/* Confettis de victoire */
+.confetti{position:fixed;inset:0;z-index:250;pointer-events:none;overflow:hidden;}
+.conf{position:absolute;width:8px;height:13px;border-radius:1px;animation:conf-fall linear both;}
+@keyframes conf-fall{
+  0%{transform:translateY(-10vh) rotate(0);opacity:1;}
+  100%{transform:translateY(112vh) rotate(var(--spin,720deg));opacity:.1;}
+}
+
+/* ---------------------------------------------------------------- */
+/* Adaptations                                                        */
+/* ---------------------------------------------------------------- */
+
+/* Ecrans bas : on resserre le tapis pour garder la main visible */
+@media (max-height:680px){
+  .felt-inner{width:min(430px,86vw);}
+  .foe{padding:7px 6px 6px;}
+  .ticker{height:1.5em;font-size:.68rem;}
+  .brand-title em{font-size:clamp(3rem,13vw,4.6rem);}
+}
+@media (max-height:560px){
+  .opponents{padding-top:4px;}
+  .foe-profile{display:none;}
+  .felt-brand{display:none;}
+}
+
+/* Large : on ecarte les adversaires autour du tapis */
+@media (min-width:900px) and (min-height:720px){
+  .opponents{gap:46px;}
+  .felt-inner{width:min(620px,70vw);}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .foe.is-turn::before,.btn-liar:not(:disabled),.cham.is-hot,.timer.is-urgent{animation:none;}
+  .rl-cyl.is-spinning{animation-duration:.4s;}
+  .shake{animation:none;}
+}
+
+/* ---------------------------------------------------------------- */
+/* Téléphone tenu à l'horizontale                                    */
+/* ---------------------------------------------------------------- */
+
+/* En paysage la hauteur est la ressource rare : le tapis se dimensionne
+   sur la hauteur disponible plutôt que sur la largeur, et la barre du bas
+   passe en ligne pour rendre au tapis les ~50px des boutons. */
+@media (orientation:landscape) and (max-height:540px){
+
+  .hud{padding:5px 12px 0;}
+  .hud-btn{width:30px;height:30px;font-size:.8rem;}
+  .hud-round-n{font-size:.8rem;}
+  .hud-mode{display:none;}
+
+  .opponents{padding:4px 10px 0;gap:clamp(8px,2vw,18px);}
+  .foe{width:clamp(78px,15vw,110px);padding:5px 7px 6px;gap:3px;}
+  .foe-av{width:26px;height:26px;font-size:.95rem;}
+  .foe-name{font-size:.66rem;}
+  .foe-profile{display:none;}
+  .foe-hand{height:13px;margin:0;}
+  .foe-chip{width:9px;height:13px;margin-left:-4px;}
+  .cham{width:5px;height:5px;}
+
+  .ticker{display:none;}
+
+  .felt{padding:3px 10px;}
+  /* Piloté par la hauteur : plus d'écrasement quand le flex manque de place. */
+  .felt-inner{width:auto;height:100%;max-width:92vw;border-width:clamp(5px,1vw,8px);}
+  .felt-brand{display:none;}
+  .demand{top:9%;}
+  .demand-card{font-size:clamp(1.1rem,3.4vh,1.6rem);}
+  .demand-label{font-size:.5rem;}
+  .pile{width:clamp(30px,7vh,42px);height:clamp(44px,10vh,60px);}
+  .claim{bottom:15%;font-size:.66rem;padding:3px 11px;}
+
+  /* Barre du bas en ligne : identité, main, actions côte à côte. */
+  .seat-me{
+    flex-direction:row;align-items:center;justify-content:center;
+    gap:clamp(10px,2.5vw,22px);
+    padding:2px clamp(10px,3vw,22px) calc(4px + var(--safe-b));
+  }
+  .me-bar{flex-direction:column;align-items:flex-start;gap:4px;flex:none;}
+  .me-name{font-size:.72rem;}
+  .hand{--cw:clamp(38px,11vh,52px);padding-top:13px;min-height:0;gap:2px;}
+  .actions{flex-direction:column;gap:7px;flex:none;}
+  .actions .btn{min-width:clamp(96px,17vw,130px);padding:13px 14px;font-size:.74rem;}
+
+  /* Superpositions : dimensionnées sur la hauteur, elles aussi. */
+  .reveal{gap:10px;}
+  .reveal-head{font-size:.68rem;}
+  .reveal-cards{gap:10px;}
+  .reveal-cards .card{--cw:clamp(52px,15vh,76px);}
+  .reveal-verdict{font-size:clamp(1rem,4.4vh,1.5rem);}
+
+  .roulette{gap:8px;}
+  .rl-who{font-size:.76rem;}
+  .rl-who b{font-size:1rem;}
+  .rl-gun{width:min(150px,38vh);}
+  .rl-odds{font-size:.7rem;}
+  .rl-result{font-size:clamp(1.3rem,7vh,2.1rem);}
+
+  .banner-title{font-size:clamp(1.8rem,9vh,3rem);}
+  .endcard{padding:18px 22px;max-height:94vh;}
+  .end-crown{font-size:1.9rem;margin-bottom:2px;}
+  .end-sub{margin-bottom:12px;}
+  .end-stats{margin-bottom:14px;}
+  .rules{padding:22px 20px 24px;max-height:94vh;}
+  .rules-grid{gap:12px;margin-top:16px;}
+}
