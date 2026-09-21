@@ -609,3 +609,86 @@ test('une partie en ligne se joue de bout en bout contre le vrai serveur', async
     c.close();
   });
 });
+
+/* ================================================================== */
+/* Adaptateur Vercel                                                  */
+/* ================================================================== */
+
+test('l\'adaptateur Vercel fait tourner une partie complete', async (t) => {
+  // `api/ws.js` est le fichier que Vercel deploie. On l'importe tel quel et
+  // on le fait ecouter sur un port : si une partie s'y joue de bout en bout,
+  // c'est que l'adaptateur et la logique de salon s'accordent.
+  const { default: server } = await import('../api/ws.js');
+
+  await new Promise((res) => server.listen(0, '127.0.0.1', res));
+  const port = server.address().port;
+  t.after(() => new Promise((res) => server.close(res)));
+
+  await t.test('la sonde HTTP repond', async () => {
+    const res = await fetch(`http://127.0.0.1:${port}/api/ws`);
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.ok, true);
+    assert.equal(body.transport, 'websocket');
+    assert.equal(typeof body.rooms, 'number');
+  });
+
+  await t.test('deux joueurs jouent jusqu\'au bout', async () => {
+    const url = `ws://127.0.0.1:${port}/api/ws`;
+    const host = new Client(url);
+    const guest = new Client(url);
+    await Promise.all([host.ready(), guest.ready()]);
+
+    const hostId = (await host.wait((m) => m.t === 'welcome')).id;
+    await guest.wait((m) => m.t === 'welcome');
+
+    host.send({ t: 'create', name: 'Hote', avatar: '🎩' });
+    const room = await host.wait((m) => m.t === 'room');
+    assert.equal(room.code.length, 4);
+
+    guest.send({ t: 'join', code: room.code, name: 'Invite', avatar: '🌹' });
+    const full = await guest.wait((m) => m.t === 'room' && m.players.length === 2);
+
+    host.send({ t: 'start' });
+    await Promise.all([
+      host.wait((m) => m.t === 'begin'),
+      guest.wait((m) => m.t === 'begin'),
+    ]);
+
+    const first = await host.wait((m) => m.t === 'state');
+    // La main adverse ne doit pas davantage fuiter par ce transport.
+    const theirs = first.view.players.find((p) => p.id !== hostId);
+    assert.equal(theirs.hand, null);
+
+    const clients = { [hostId]: host };
+    clients[full.players.find((p) => p.id !== hostId).id] = guest;
+
+    let view = first.view;
+    let guard = 0;
+    while (view.phase !== 'gameOver' && guard++ < 400) {
+      if (view.phase !== 'playing') {
+        const nxt = await host.wait((m) => m.t === 'state' && m.view !== view, 9000);
+        view = nxt.view;
+        host.inbox.length = 0; guest.inbox.length = 0; host.inbox.push(nxt);
+        continue;
+      }
+      const actor = clients[view.turnId];
+      if (!actor) break;
+
+      const canChallenge = view.lastPlay && view.lastPlay.playerId !== view.turnId;
+      if (canChallenge && guard % 3 === 0) actor.send({ t: 'challenge' });
+      else actor.send({ t: 'play', indices: [0] });
+
+      const next = await host.wait((m) => m.t === 'state' && m.view !== view, 9000);
+      view = next.view;
+      host.inbox.length = 0; guest.inbox.length = 0; host.inbox.push(next);
+    }
+
+    assert.ok(guard < 400, 'la partie doit se terminer');
+    assert.equal(view.phase, 'gameOver');
+    assert.ok(view.winnerId, 'un vainqueur doit etre designe');
+
+    host.close();
+    guest.close();
+  });
+});
