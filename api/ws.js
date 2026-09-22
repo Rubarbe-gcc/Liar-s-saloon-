@@ -17,7 +17,7 @@
 
 import http from 'node:http';
 import { WebSocketServer } from 'ws';
-import { handleOpen, handleMessage, handleClose, sweep, stats } from '../server/saloon.js';
+import { handleOpen, handleMessage, handleClose, sweep, stats } from '../server/hub.js';
 
 /**
  * Une requête HTTP ordinaire sur /api/ws répond par une sonde de santé.

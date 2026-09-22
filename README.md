@@ -3,8 +3,12 @@
 Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
 `public/games/`, le site d'accueil les présente.
 
-**Jeu actuel : Liar's Saloon** — bluff, accusations et roulette russe.
-Jouable seul contre des bots, ou entre amis avec un code de table.
+**Les jeux**
+
+- **ZÉNITH** — jeu de combat à cartes. Dix-huit combattants, équipes de
+  trois, ki à gérer et éléments qui se dominent. Solo ou en ligne.
+- **Liar's Saloon** — bluff, accusations et roulette russe. Seul contre des
+  bots, ou entre amis avec un code de table.
 
 ---
 
@@ -21,8 +25,34 @@ n'utilise que les modules fournis par Node (≥ 18), y compris son
 implémentation WebSocket, écrite à la main dans `server/wsproto.js`.
 
 ```bash
-npm test                   # règles, bots, et une partie en ligne complète
+npm test                   # 56 tests : règles, équilibrage, bots, parties en ligne
 ```
+
+---
+
+## ZÉNITH — comment ça marche
+
+Deux équipes de trois. Les cartes arrivent toutes seules en main ; chacune
+coûte du ki, qui remonte d'autant plus vite que le combattant est rapide.
+
+- **Frappe** rend plus de ki qu'elle n'en coûte, **Souffle** frappe à
+  distance, **Spéciale** fait mal, **Ultime** ne part qu'une fois par
+  combattant.
+- L'**esquive** (30 ki) annule entièrement le prochain coup reçu. C'est la
+  seule parade contre une Ultime.
+- Cycle élémentaire : 🔥 bat ⚡ bat 🌑 bat 🍃 bat ❄️ bat 🔥. En avantage on
+  frappe 30 % plus fort.
+- **Changer** de combattant reprend l'avantage élémentaire, mais vide la main
+  et impose six secondes de recharge.
+
+Le combat avance par ticks de 100 ms. Les joueurs n'attendent pas leur tour :
+ils envoient des intentions que le moteur applique au tick suivant. C'est ce
+qui donne la nervosité d'un jeu d'action tout en restant synchronisable sur
+le réseau, les actions étant discrètes.
+
+L'équilibrage est tenu par les tests : chaque combattant dispose du même
+budget de points, et une simulation vérifie qu'aucun n'écrase ni ne subit le
+roster, et que les trois niveaux de difficulté sont bien ordonnés.
 
 ---
 
@@ -53,9 +83,10 @@ public/
   sw.js                   service worker : installation et jeu hors connexion
   manifest.webmanifest    identité « Insert Coin »
   icons/
-  shared/                 moteur de règles, partagé client ⇄ serveur
-    engine.js             règles pures, alea injecté (parties rejouables)
-    ai.js                 bots : profils de jeu et niveaux
+  shared/                 moteurs de règles, partagés client ⇄ serveur
+    engine.js             Liar's Saloon : règles pures, aléa injecté
+    ai.js                 Liar's Saloon : bots
+    zenith/               ZÉNITH : roster, moteur de combat, adversaires
   games/liars-saloon/
     index.html
     manifest.webmanifest  identité « Liar's Saloon »
@@ -65,19 +96,23 @@ public/
 server/
   index.js                serveur autonome : statique + WebSocket
   wsproto.js              RFC 6455 minimal, sans dépendance
-  saloon.js               salons et arbitrage, indépendants du transport
+  hub.js                  routeur : dirige chaque connexion vers son jeu
+  saloon.js               salons de Liar's Saloon
+  zenith.js               arènes de ZÉNITH
 api/
   ws.js                   même logique, exposée comme Function Vercel
 test/
-  engine.test.js
+  engine.test.js          Liar's Saloon
+  zenith.test.js          ZÉNITH
 ```
 
 Deux principes structurent le tout :
 
-- **Un seul moteur de règles.** `shared/engine.js` ne connaît ni le DOM ni
-  Node. Le mode hors-ligne le fait tourner dans l'onglet ; le mode en ligne
-  le fait tourner sur le serveur. Les deux produisent les mêmes évènements,
-  donc l'interface est identique dans les deux cas.
+- **Un seul moteur de règles par jeu.** Les modules de `public/shared/` ne
+  connaissent ni le DOM ni Node. Le mode hors-ligne les fait tourner dans
+  l'onglet ; le mode en ligne les fait tourner sur le serveur. Les deux
+  produisent les mêmes états, donc l'interface est identique dans les deux
+  cas — et les règles ne peuvent pas diverger entre les modes.
 - **Le client ne décide rien en ligne.** Il envoie des intentions, le serveur
   valide et renvoie à chaque joueur une vue filtrée : votre main vous est
   visible, celle des autres se résume à un nombre de cartes. La position de

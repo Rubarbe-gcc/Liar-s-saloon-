@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#070310">
+<meta name="description" content="ZÉNITH — jeu de combat à cartes. 18 combattants, équipes de trois, en solo ou en ligne.">
+<title>ZÉNITH</title>
+<link rel="icon" href="/games/zenith/icons/icon-192.png">
+<link rel="manifest" href="/games/zenith/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/games/zenith/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Zénith">
+<link rel="stylesheet" href="/games/zenith/css/zenith.css">
+</head>
+<body>
+
+<div class="bg" aria-hidden="true">
+  <div class="bg-aurora a1"></div>
+  <div class="bg-aurora a2"></div>
+  <div class="bg-grid"></div>
+  <div class="bg-vig"></div>
+</div>
+
+<!-- ============================ MENU ============================ -->
+<section class="screen is-active" id="s-menu">
+  <div class="menu">
+    <header class="logo">
+      <div class="logo-kicker">dix-huit combattants · équipes de trois</div>
+      <h1 class="logo-title">ZÉNITH</h1>
+      <div class="logo-rule"><i></i><span>🔥 ⚡ 🌑 🍃 ❄️</span><i></i></div>
+      <p class="logo-tag">Frappez. Esquivez. Dépassez votre limite.</p>
+    </header>
+
+    <nav class="menu-nav">
+      <button class="btn btn-big" data-go="solo">
+        <span class="bi">⚔️</span>
+        <span class="bt"><b>Combat solo</b><i>Affrontez l'ordinateur</i></span>
+      </button>
+      <button class="btn btn-big" data-go="online">
+        <span class="bi">🌐</span>
+        <span class="bt"><b>Combat en ligne</b><i>Un code, un adversaire</i></span>
+      </button>
+      <div class="menu-row">
+        <button class="btn btn-thin" data-go="roster"><span class="bi">📖</span> Roster</button>
+        <button class="btn btn-thin" data-go="rules"><span class="bi">❓</span> Règles</button>
+        <button class="btn btn-thin" id="b-sound"><span class="bi">🔊</span> Son</button>
+      </div>
+      <a class="menu-back" href="/">‹ Retour à l'arcade</a>
+    </nav>
+  </div>
+</section>
+
+<!-- ======================= SÉLECTION D'ÉQUIPE =================== -->
+<section class="screen" id="s-team">
+  <div class="pick">
+    <header class="pick-head">
+      <button class="pick-back" data-go="menu">‹</button>
+      <div>
+        <h2 class="pick-title">Votre équipe</h2>
+        <p class="pick-sub" id="pick-sub">Choisissez trois combattants.</p>
+      </div>
+    </header>
+
+    <div class="squad" id="squad"></div>
+
+    <div class="pick-tools">
+      <div class="chip-row" id="opt-level" role="radiogroup" aria-label="Difficulté">
+        <button class="chip" data-val="recrue" role="radio">Recrue</button>
+        <button class="chip is-on" data-val="guerrier" role="radio" aria-checked="true">Guerrier</button>
+        <button class="chip" data-val="legende" role="radio">Légende</button>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="b-random">🎲 Au hasard</button>
+    </div>
+
+    <div class="roster" id="roster"></div>
+
+    <div class="pick-actions">
+      <button class="btn btn-go" id="b-fight" disabled>Au combat</button>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= SALON EN LIGNE ===================== -->
+<section class="screen" id="s-online">
+  <div class="panel">
+    <button class="pick-back" data-go="menu">‹</button>
+    <h2 class="pick-title">Combat en ligne</h2>
+    <p class="pick-sub" id="net-status">Connexion…</p>
+
+    <div id="net-gate">
+      <label class="field-label" for="in-name">Votre nom</label>
+      <input id="in-name" class="field" type="text" maxlength="14" placeholder="Challenger" autocomplete="off">
+      <button class="btn btn-go btn-wide" id="b-create">Ouvrir une arène</button>
+      <div class="or"><i></i><span>ou</span><i></i></div>
+      <label class="field-label" for="in-code">Code de l'arène</label>
+      <div class="join">
+        <input id="in-code" class="field code" type="text" maxlength="4" placeholder="ABCD"
+               autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <button class="btn btn-ghost" id="b-join">Entrer</button>
+      </div>
+    </div>
+
+    <div id="net-room" hidden>
+      <div class="arena-code">
+        <span>Code de l'arène</span>
+        <button id="room-code" title="Copier le lien">····</button>
+        <i>Touchez pour copier l'invitation</i>
+      </div>
+      <ul class="fighters-list" id="net-players"></ul>
+      <p class="pick-sub" id="net-note"></p>
+      <div class="pick-actions two">
+        <button class="btn btn-ghost" id="b-leave">Quitter</button>
+        <button class="btn btn-go" id="b-launch" disabled>Lancer</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== COMBAT =========================== -->
+<section class="screen screen-fight" id="s-fight">
+  <button class="fight-quit" id="b-quit" title="Abandonner">✕</button>
+
+  <!-- Adversaire -->
+  <div class="side foe-side">
+    <div class="portraits" id="foe-portraits"></div>
+    <div class="vitals">
+      <div class="vname" id="foe-name">—</div>
+      <div class="bar hp"><i id="foe-hp"></i><b id="foe-hp-ghost"></b></div>
+    </div>
+  </div>
+
+  <!-- Arène -->
+  <div class="arena" id="arena">
+    <div class="avatar foe-av" id="foe-avatar">🎭</div>
+    <div class="clash" id="clash"></div>
+    <div class="avatar me-av" id="me-avatar">🥊</div>
+    <div class="combo" id="combo" hidden></div>
+    <div class="announce" id="announce" hidden></div>
+  </div>
+
+  <!-- Joueur -->
+  <div class="side me-side">
+    <div class="vitals">
+      <div class="vname" id="me-name">—</div>
+      <div class="bar hp"><i id="me-hp"></i><b id="me-hp-ghost"></b></div>
+      <div class="bar ki"><i id="me-ki"></i><span id="me-ki-n">0</span></div>
+    </div>
+    <div class="portraits mine" id="me-portraits"></div>
+  </div>
+
+  <!-- Commandes -->
+  <div class="controls">
+    <button class="dodge" id="b-dodge">
+      <span>ESQUIVE</span><i>30 ki</i>
+    </button>
+    <div class="hand" id="hand"></div>
+  </div>
+</section>
+
+<!-- ======================== SUPERPOSITIONS ====================== -->
+
+<div class="ov" id="ov-roster" hidden>
+  <div class="sheet">
+    <button class="sheet-close" data-close="ov-roster">✕</button>
+    <h2>Les dix-huit</h2>
+    <div class="codex" id="codex"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-rules" hidden>
+  <div class="sheet">
+    <button class="sheet-close" data-close="ov-rules">✕</button>
+    <h2>Comment se bat-on ?</h2>
+    <div class="rules-grid">
+      <section><h3><span>1</span> Les cartes</h3><p>Elles arrivent toutes seules dans votre main, jusqu'à quatre. <b>Frappe</b> est rapide et redonne du ki, <b>Souffle</b> frappe à distance, <b>Spéciale</b> fait très mal, <b>Ultime</b> ne part qu'une fois par combattant.</p></section>
+      <section><h3><span>2</span> Le ki</h3><p>Chaque carte en coûte. Il remonte tout seul, d'autant plus vite que votre combattant est rapide. Sans ki, pas de coups — et pas d'esquive.</p></section>
+      <section><h3><span>3</span> L'esquive</h3><p>Pour 30 ki, vous annulez entièrement le prochain coup reçu. C'est la seule parade contre une Ultime. Utilisez-la au bon moment : la fenêtre est courte.</p></section>
+      <section><h3><span>4</span> Les éléments</h3><p>🔥 bat ⚡ bat 🌑 bat 🍃 bat ❄️ bat 🔥. En avantage vous frappez <b>30 % plus fort</b> ; en désavantage, 20 % moins.</p></section>
+      <section><h3><span>5</span> Changer</h3><p>Touchez un coéquipier pour l'envoyer au front, notamment pour reprendre l'avantage élémentaire. Attention : cela <b>vide votre main</b> et impose six secondes de recharge.</p></section>
+      <section><h3><span>6</span> Gagner</h3><p>Mettez les <b>trois</b> combattants adverses à terre. Enchaîner les coups sans laisser de répit augmente vos dégâts.</p></section>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ov-end" hidden>
+  <div class="endcard">
+    <div class="end-mark" id="end-mark">🏆</div>
+    <h2 class="end-title" id="end-title"></h2>
+    <p class="end-sub" id="end-sub"></p>
+    <table class="end-stats"><tbody id="end-stats"></tbody></table>
+    <div class="pick-actions two">
+      <button class="btn btn-ghost" id="b-end-menu">Menu</button>
+      <button class="btn btn-go" id="b-end-again">Revanche</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script type="module" src="/games/zenith/js/main.js"></script>
+</body>
+</html>

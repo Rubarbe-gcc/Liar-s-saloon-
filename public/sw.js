@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -33,6 +33,18 @@ const SHELL = [
   '/games/liars-saloon/icons/icon-192.png',
   '/shared/engine.js',
   '/shared/ai.js',
+  '/games/zenith/',
+  '/games/zenith/manifest.webmanifest',
+  '/games/zenith/css/zenith.css',
+  '/games/zenith/js/main.js',
+  '/games/zenith/js/ui.js',
+  '/games/zenith/js/offline.js',
+  '/games/zenith/js/online.js',
+  '/games/zenith/js/sfx.js',
+  '/games/zenith/icons/icon-192.png',
+  '/shared/zenith/fighters.js',
+  '/shared/zenith/battle.js',
+  '/shared/zenith/ai.js',
 ];
 
 self.addEventListener('install', (event) => {
