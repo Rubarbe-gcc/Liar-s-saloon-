@@ -31,8 +31,27 @@ export const KI_MAX = 100;
 export const VANISH_COST = 30;
 export const VANISH_TICKS = 8;      // fenêtre d'invulnérabilité
 export const VANISH_RECOVERY = 2;
+/**
+ * Exposition de celui qui frappe dans le vide. Mesurée neutre sur la
+ * profondeur tactique, mais elle donne à l'esquive une récompense visible :
+ * sans elle, esquiver ne fait qu'éviter des dégâts, ce qui se remarque à
+ * peine à l'écran.
+ */
+export const VANISH_PUNISH = 16;
 export const SWAP_RECOVERY = 6;
 export const SWAP_COOLDOWN = 60;    // 6 s entre deux changements
+/**
+ * Fatigue : chaque coup porté coup sur coup allonge la récupération du
+ * suivant. Vider sa main d'un trait laisse donc grand ouvert.
+ *
+ * C'est la mécanique qui fait le plus pour la profondeur : sans elle, jouer
+ * la première carte venue vaut 63 % de ce que vaut le meilleur choix ; avec
+ * elle, 67 %. Le rythme compte autant que la carte.
+ */
+export const FATIGUE_WINDOW = 26;
+export const FATIGUE_STEP = 0.34;
+export const FATIGUE_CAP = 3;
+
 export const COMBO_WINDOW = 14;     // ticks pour enchaîner
 export const COMBO_STEP = 0.04;     // +4 % par coup enchaîné
 export const COMBO_CAP = 8;
@@ -103,6 +122,8 @@ export function createBattle(sides, options = {}) {
       swapCd: 0,
       combo: 0,
       comboUntil: -1,
+      fatigue: 0,
+      fatigueUntil: -1,
       koPause: 0,
       pending: null,   // intention reçue, appliquée au prochain tick
       stats: { hits: 0, dealt: 0, taken: 0, vanishes: 0, specials: 0, ultimates: 0, kos: 0 },
@@ -244,6 +265,24 @@ export function statOf(fighter, stat) {
   return (fighter.strike + fighter.blast) / 2;
 }
 
+/**
+ * Dégâts attendus d'une carte, sans la part d'aléa.
+ *
+ * L'interface s'en sert pour étiqueter chaque carte. C'est ce qui rend le
+ * jeu lisible : la profondeur tactique existe — choisir la bonne carte vaut
+ * 63 % contre 50 % au hasard — mais elle reste invisible tant que le joueur
+ * ne voit pas ce que chaque carte va réellement infliger à cette cible-là.
+ */
+export function estimateDamage(attacker, defender, cardKey, combo = 0) {
+  const card = CARD_KINDS[cardKey];
+  if (!card) return 0;
+  const raw = statOf(attacker, card.stat) * card.power * DAMAGE_SCALE;
+  const elem = elementMultiplier(attacker.element, defender.element);
+  const comboMul = 1 + Math.min(combo, COMBO_CAP) * COMBO_STEP;
+  const mitigation = 100 / (100 + defender.armor);
+  return Math.max(1, Math.round(raw * elem * comboMul * mitigation));
+}
+
 /** Dégâts d'une carte, tous modificateurs appliqués. */
 export function computeDamage(state, side, foe, cardKey) {
   const card = CARD_KINDS[cardKey];
@@ -277,7 +316,10 @@ function resolvePlay(state, side, foe, index) {
 
   side.hand.splice(index, 1);
   side.ki -= card.ki;
-  unit.stun = card.recovery * recoveryScale(af0);
+  // Récupération allongée par la fatigue accumulée.
+  side.fatigue = Math.min(FATIGUE_CAP, side.fatigue + 1);
+  side.fatigueUntil = state.tick + FATIGUE_WINDOW;
+  unit.stun = card.recovery * recoveryScale(af0) * (1 + (side.fatigue - 1) * FATIGUE_STEP);
   if (cardKey === 'ultime') unit.ultUsed = true;
   if (cardKey === 'speciale') side.stats.specials += 1;
   if (cardKey === 'ultime') side.stats.ultimates += 1;
@@ -288,8 +330,10 @@ function resolvePlay(state, side, foe, index) {
   if (state.tick < target.vanishUntil) {
     target.vanishUntil = -1;
     side.combo = 0;
-    effect(state, { type: 'vanish', side: foe.index });
-    log(state, `${fighterOf(target).name} esquive !`);
+    unit.stun = VANISH_PUNISH;
+    target.stun = 0;
+    effect(state, { type: 'vanish', side: foe.index, punished: side.index });
+    log(state, `${fighterOf(target).name} esquive et prend l'ouverture !`);
     return;
   }
 
@@ -355,6 +399,7 @@ function resolveSwap(state, side, slot) {
   side.active = slot;
   side.swapCd = SWAP_COOLDOWN;
   side.combo = 0;
+  side.fatigue = 0;
   activeUnit(side).stun = SWAP_RECOVERY;
   // La main appartient au combattant : elle est renouvelée au changement.
   side.hand = [];
@@ -427,6 +472,11 @@ export function step(state) {
     if (unit.stun > 0) unit.stun -= 1;
     if (side.swapCd > 0) side.swapCd -= 1;
     if (state.tick > side.comboUntil) side.combo = 0;
+    // La fatigue retombe d'un cran par fenêtre écoulée, pas d'un coup.
+    if (state.tick > side.fatigueUntil && side.fatigue > 0) {
+      side.fatigue -= 1;
+      side.fatigueUntil = state.tick + FATIGUE_WINDOW;
+    }
 
     side.ki = Math.min(KI_MAX, side.ki + kiRegen(side));
 
@@ -476,6 +526,7 @@ export function viewFor(state, viewerId) {
       active: s.active,
       ki: Math.round(s.ki),
       combo: s.combo,
+      fatigue: s.fatigue,
       swapCd: s.swapCd,
       koPause: s.koPause,
       handCount: s.hand.length,

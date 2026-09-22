@@ -7,8 +7,8 @@
  * le moteur a produits pendant ce tick.
  */
 
-import { ELEMENTS, getFighter, CARD_KINDS } from '../../../shared/zenith/fighters.js';
-import { cardName, VANISH_COST, KI_MAX } from '../../../shared/zenith/battle.js';
+import { ELEMENTS, getFighter, CARD_KINDS, elementMultiplier } from '../../../shared/zenith/fighters.js';
+import { cardName, estimateDamage, VANISH_COST, KI_MAX } from '../../../shared/zenith/battle.js';
 import { sfx } from './sfx.js';
 
 const $ = (id) => document.getElementById(id);
@@ -87,7 +87,8 @@ export function render(view) {
 
   renderSide(foe, 'foe', false);
   renderSide(me, 'me', true);
-  renderHand(view, me);
+  renderMatchup(me, foe);
+  renderHand(view, me, foe);
   renderCombo(me);
 
   lastView = view;
@@ -139,13 +140,15 @@ function renderSide(side, prefix, mine) {
   }
 }
 
-function renderHand(view, side) {
+function renderHand(view, side, foe) {
   const host = $('hand');
   const unit = side.team[side.active];
+  const foeUnit = foe.team[foe.active];
   const busy = unit.stun > 0 || unit.ko || side.koPause > 0;
   const hand = side.hand || [];
 
-  const sig = hand.join(',') + `|${Math.floor(side.ki / 5)}|${busy}|${unit.ultUsed}`;
+  const sig = hand.join(',') + `|${Math.floor(side.ki / 5)}|${busy}|${unit.ultUsed}`
+    + `|${unit.fighterId}|${foeUnit.fighterId}|${side.combo}`;
   if (host.dataset.sig === sig) return;
   host.dataset.sig = sig;
 
@@ -156,10 +159,20 @@ function renderHand(view, side) {
     const card = CARD_KINDS[key];
     const unusable = side.ki < card.ki || busy || (key === 'ultime' && unit.ultUsed);
     const colors = { frappe: '#ff8a5c', souffle: '#5eead4', speciale: '#a78bfa', ultime: '#ffd84d' };
+
+    // Dégâts attendus sur la cible actuelle : c'est ce qui transforme le
+    // choix d'une carte en décision plutôt qu'en réflexe.
+    const me = getFighter(unit.fighterId);
+    const them = getFighter(foeUnit.fighterId);
+    const dmg = estimateDamage(me, them, key, side.combo);
+    const mult = elementMultiplier(me.element, them.element);
+    const cls = mult > 1 ? ' fort' : (mult < 1 ? ' faible' : '');
+
     html += `<button class="acard${unusable ? ' off' : ''}${key === 'ultime' ? ' ult' : ''}"
         style="--c:${colors[key]}" data-card="${i}">
       <span class="acard-g">${card.glyph}</span>
       <span class="acard-l">${esc(cardLabel(unit, key))}</span>
+      <span class="acard-dmg${cls}">${dmg}</span>
       <span class="acard-k">${card.ki} ki</span>
     </button>`;
   }
@@ -172,6 +185,23 @@ function cardLabel(unit, key) {
   const f = getFighter(unit.fighterId);
   const name = key === 'ultime' ? f.ultimate.name : f.special.name;
   return name.length > 16 ? `${name.slice(0, 15)}…` : name;
+}
+
+/** Rapport de force élémentaire entre les deux combattants actifs. */
+function renderMatchup(me, foe) {
+  const a = getFighter(me.team[me.active].fighterId);
+  const b = getFighter(foe.team[foe.active].fighterId);
+  const mult = elementMultiplier(a.element, b.element);
+  const el = $('matchup');
+  const sig = `${a.element}>${b.element}`;
+  if (el.dataset.sig === sig) return;
+  el.dataset.sig = sig;
+
+  const ea = ELEMENTS[a.element], eb = ELEMENTS[b.element];
+  const fleche = mult > 1 ? '▲' : (mult < 1 ? '▼' : '=');
+  const mot = mult > 1 ? 'avantage' : (mult < 1 ? 'désavantage' : 'neutre');
+  el.className = `matchup ${mult > 1 ? 'fort' : (mult < 1 ? 'faible' : '')}`;
+  el.innerHTML = `<span>${ea.glyph}</span><b>${fleche} ${mot}</b><span>${eb.glyph}</span>`;
 }
 
 function renderCombo(side) {

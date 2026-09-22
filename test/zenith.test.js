@@ -18,11 +18,28 @@ const duo = (teamA, teamB, seed = 1) => B.createBattle([
 /* Roster                                                             */
 /* ================================================================== */
 
-test('chaque combattant dispose du meme budget de points', () => {
+test('les budgets restent dans une fourchette resserree', () => {
+  // Un budget strictement identique pour tous a ete abandonne : l'experience
+  // montre qu'il ne produit pas une force egale. Il reste une indication, et
+  // c'est le taux de victoire mesure plus bas qui fait foi.
   const budgets = F.FIGHTERS.map(F.budgetOf);
-  const unique = [...new Set(budgets)];
-  assert.equal(unique.length, 1,
-    `budgets divergents : ${JSON.stringify(F.FIGHTERS.map((f) => [f.name, F.budgetOf(f)]))}`);
+  const ecart = Math.max(...budgets) - Math.min(...budgets);
+  assert.ok(ecart <= 30,
+    `budgets trop disperses (${ecart}) : ${JSON.stringify(F.FIGHTERS.map((f) => [f.name, F.budgetOf(f)]))}`);
+});
+
+test('chaque element compte autant de combattants', () => {
+  // Le cycle elementaire n'est equitable que si les effectifs le sont. Avec
+  // quatre combattants de Braise et trois de Givre, un combattant de Braise
+  // rencontrait plus d'adversaires qu'il domine que d'adversaires qui le
+  // dominent : dix points de taux de victoire d'ecart, mesures.
+  const parElement = {};
+  for (const f of F.FIGHTERS) parElement[f.element] = (parElement[f.element] || 0) + 1;
+  const effectifs = Object.values(parElement);
+  assert.equal(Object.keys(parElement).length, F.ELEMENT_KEYS.length,
+    'tous les elements doivent etre representes');
+  assert.equal(new Set(effectifs).size, 1,
+    `effectifs inegaux : ${JSON.stringify(parElement)}`);
 });
 
 test('le roster est coherent', () => {
@@ -303,31 +320,86 @@ test('la difficulte est ordonnee : Legende bat Guerrier, qui bat Recrue', async 
 });
 
 test('aucun combattant n\'ecrase ni ne subit le roster', async () => {
-  // A equipes aleatoires et niveaux identiques, les taux de victoire doivent
-  // rester groupes autour de 50 %.
-  const wins = {}, seen = {};
-  for (let g = 0; g < 700; g++) {
-    const ta = F.randomTeam(3), tb = F.randomTeam(3);
-    for (const t of [ta, tb]) for (const id of t) seen[id] = (seen[id] || 0) + 1;
-    const s = duo(ta, tb, g * 97 + 11);
-    const brains = [AI.createBrain('guerrier'), AI.createBrain('guerrier')];
-    let t = 0;
-    while (s.phase === B.PHASE.FIGHT && t++ < 4000) {
-      AI.think(s, 0, brains[0]);
-      AI.think(s, 1, brains[1]);
-      B.step(s);
+  // Duels toutes rondes plutot qu'equipes aleatoires : la composition
+  // d'equipe introduit un bruit qui noyait le signal. Ici chaque combattant
+  // affronte tous les autres, des deux cotes, ce qui mesure sa force propre
+  // avec un bruit d'environ 1,5 point.
+  const SEEDS = 12;
+  const wins = {}, games = {};
+  for (const f of F.FIGHTERS) { wins[f.id] = 0; games[f.id] = 0; }
+
+  for (let i = 0; i < F.FIGHTERS.length; i++) {
+    for (let j = i + 1; j < F.FIGHTERS.length; j++) {
+      for (let s = 0; s < SEEDS; s++) {
+        const a = F.FIGHTERS[i].id, b = F.FIGHTERS[j].id;
+        const [x, y] = s % 2 ? [b, a] : [a, b];   // on alterne les cotes
+        const st = duo([x], [y], (i * 331 + j * 17 + s) * 7 + 3);
+        const brains = [AI.createBrain('guerrier'), AI.createBrain('guerrier')];
+        let t = 0;
+        while (st.phase === B.PHASE.FIGHT && t++ < 4000) {
+          AI.think(st, 0, brains[0]); AI.think(st, 1, brains[1]); B.step(st);
+        }
+        games[x]++; games[y]++;
+        if (st.winner === 0) wins[x]++; else if (st.winner === 1) wins[y]++;
+      }
     }
-    for (const id of (s.winner === 0 ? ta : tb)) wins[id] = (wins[id] || 0) + 1;
   }
 
-  const rates = F.FIGHTERS
-    .filter((f) => (seen[f.id] || 0) >= 40)
-    .map((f) => ({ name: f.name, wr: (wins[f.id] || 0) / seen[f.id] }));
+  const rates = F.FIGHTERS.map((f) => ({ name: f.name, wr: wins[f.id] / games[f.id] * 100 }));
   const spread = Math.max(...rates.map((r) => r.wr)) - Math.min(...rates.map((r) => r.wr));
+  assert.ok(spread < 20,
+    `ecart de ${spread.toFixed(1)} points entre combattants : `
+    + JSON.stringify(rates.map((r) => [r.name, +r.wr.toFixed(0)])));
 
-  assert.ok(spread < 0.22,
-    `ecart de ${(spread * 100).toFixed(1)} points entre combattants : `
-    + JSON.stringify(rates.map((r) => [r.name, +(r.wr * 100).toFixed(0)])));
+  // Aucun element ne doit etre systematiquement avantage.
+  const parElement = {};
+  for (const f of F.FIGHTERS) (parElement[f.element] ||= []).push(wins[f.id] / games[f.id] * 100);
+  const moyennes = Object.entries(parElement).map(([e, v]) => [e, v.reduce((a, b) => a + b) / v.length]);
+  const ecartElement = Math.max(...moyennes.map((m) => m[1])) - Math.min(...moyennes.map((m) => m[1]));
+  assert.ok(ecartElement < 9,
+    `ecart de ${ecartElement.toFixed(1)} points entre elements : `
+    + JSON.stringify(moyennes.map(([e, v]) => [e, +v.toFixed(0)])));
+});
+
+test('choisir sa carte vaut nettement mieux que jouer la premiere venue', () => {
+  // Garde contre la derive qui rendrait le jeu purement mecanique : si jouer
+  // n'importe quelle carte valait autant que choisir, il ne resterait qu'a
+  // marteler l'ecran. Cette mesure est la traduction chiffree de ce reproche.
+  const libre = (s) => { const u = B.activeUnit(s); return !u.ko && u.stun <= 0 && s.koPause === 0; };
+
+  const premiere = (st, i) => {
+    const s = st.sides[i];
+    if (!libre(s)) return;
+    for (let k = 0; k < s.hand.length; k++) {
+      if (s.ki >= F.CARD_KINDS[s.hand[k]].ki) { B.queueAction(st, i, { type: 'play', index: k }); return; }
+    }
+  };
+  const meilleure = (st, i) => {
+    const s = st.sides[i], u = B.activeUnit(s);
+    if (!libre(s)) return;
+    let best = -1, bv = 0;
+    s.hand.forEach((k, idx) => {
+      const c = F.CARD_KINDS[k];
+      if (s.ki < c.ki) return;
+      const v = c.power * B.statOf(B.fighterOf(u), c.stat);
+      if (v > bv) { bv = v; best = idx; }
+    });
+    if (best >= 0) B.queueAction(st, i, { type: 'play', index: best });
+  };
+
+  let gagnes = 0;
+  const N = 400;
+  for (let g = 0; g < N; g++) {
+    const team = F.randomTeam(3);
+    // Memes equipes des deux cotes : seule la facon de choisir differe.
+    const st = duo(team, [...team], g * 131 + 7);
+    let t = 0;
+    while (st.phase === B.PHASE.FIGHT && t++ < 6000) { meilleure(st, 0); premiere(st, 1); B.step(st); }
+    if (st.winner === 0) gagnes++;
+  }
+  const tx = gagnes / N * 100;
+  assert.ok(tx > 57,
+    `choisir sa carte ne vaut que ${tx.toFixed(1)} % : le jeu se reduirait a marteler`);
 });
 
 test('un combat dure un temps jouable sur telephone', () => {

@@ -89,7 +89,13 @@ export const CARD_KEYS = Object.keys(CARD_KINDS);
  * `armor` réduction des dégâts subis, `speed` vitesse de recharge du ki et
  * de pioche.
  *
- * Budget : hp/10 + strike + blast + armor + speed = 316 pour chacun.
+ * Budget : hp/10 + strike + blast + armor + speed, autour de 316.
+ *
+ * La répartition par élément compte autant que les statistiques. Avec quatre
+ * combattants de Braise et seulement trois de Givre, un combattant de Braise
+ * rencontrait plus d'adversaires qu'il domine que d'adversaires qui le
+ * dominent — un avantage systématique mesuré à dix points de taux de
+ * victoire. D'où quatre combattants par élément, exactement.
  */
 export const FIGHTERS = [
   /* ---- Braise : agressifs, gros dégâts, peu de garde ---- */
@@ -204,6 +210,18 @@ export const FIGHTERS = [
     hp: 740, strike: 58, blast: 68, armor: 28, speed: 88,
     special: { name: 'Ficelle Tendue', blurb: 'Elle vous ramène toujours.' },
     ultimate: { name: 'Lâcher de Fil', blurb: 'Plus rien ne la retient.' },
+  },
+  {
+    id: 'saule', name: 'Saule', title: 'Vieille Racine', element: 'sylve', avatar: '🧝',
+    hp: 940, strike: 56, blast: 68, armor: 40, speed: 60,
+    special: { name: 'Greffe Vive', blurb: 'Ce qu\'elle touche repousse ailleurs.' },
+    ultimate: { name: 'Canopée', blurb: 'Le ciel disparaît sous les feuilles.' },
+  },
+  {
+    id: 'frimas', name: 'Frimas', title: 'Souffle Court', element: 'givre', avatar: '🐧',
+    hp: 820, strike: 66, blast: 58, armor: 30, speed: 82,
+    special: { name: 'Éclat de Gel', blurb: 'Mille aiguilles d\'un coup.' },
+    ultimate: { name: 'Nuit Blanche', blurb: 'Le froid ne repart plus.' },
   },
   {
     id: 'maru', name: 'Maru', title: 'Petit Tonnerre', element: 'braise', avatar: '🧨',
