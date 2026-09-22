@@ -21,7 +21,7 @@
 export const ELEMENTS = {
   braise: { key: 'braise', label: 'Braise', glyph: '🔥', color: '#ff5a3c', beats: 'orage' },
   orage:  { key: 'orage',  label: 'Orage',  glyph: '⚡', color: '#ffd23c', beats: 'abysse' },
-  abysse: { key: 'abysse', label: 'Abysse', glyph: '🌑', color: '#a855f7', beats: 'sylve' },
+  abysse: { key: 'abysse', label: 'Abysse', glyph: '🔮', color: '#a855f7', beats: 'sylve' },
   sylve:  { key: 'sylve',  label: 'Sylve',  glyph: '🍃', color: '#4ade80', beats: 'givre' },
   givre:  { key: 'givre',  label: 'Givre',  glyph: '❄️', color: '#38bdf8', beats: 'braise' },
 };

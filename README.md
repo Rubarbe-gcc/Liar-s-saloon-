@@ -25,7 +25,7 @@ n'utilise que les modules fournis par Node (≥ 18), y compris son
 implémentation WebSocket, écrite à la main dans `server/wsproto.js`.
 
 ```bash
-npm test                   # 56 tests : règles, équilibrage, bots, parties en ligne
+npm test                   # 61 tests : règles, équilibrage, bots, parties en ligne
 ```
 
 ---
@@ -44,6 +44,12 @@ coûte du ki, qui remonte d'autant plus vite que le combattant est rapide.
   frappe 30 % plus fort.
 - **Changer** de combattant reprend l'avantage élémentaire, mais vide la main
   et impose six secondes de recharge.
+
+Les combattants sont dessinés en **pixel art**, générés à partir de grilles
+de 16×16 décrites en données plutôt qu'en images : cinq poses — repos, garde,
+frappe, encaisse, vaincu — déclinées en trois carrures selon les statistiques,
+et colorées par une palette propre à chacun. Aucun fichier à charger, donc
+rien qui manque hors connexion.
 
 Le combat avance par ticks de 100 ms. Les joueurs n'attendent pas leur tour :
 ils envoient des intentions que le moteur applique au tick suivant. C'est ce
@@ -86,7 +92,7 @@ public/
   shared/                 moteurs de règles, partagés client ⇄ serveur
     engine.js             Liar's Saloon : règles pures, aléa injecté
     ai.js                 Liar's Saloon : bots
-    zenith/               ZÉNITH : roster, moteur de combat, adversaires
+    zenith/               ZÉNITH : roster, moteur, adversaires, sprites
   games/liars-saloon/
     index.html
     manifest.webmanifest  identité « Liar's Saloon »

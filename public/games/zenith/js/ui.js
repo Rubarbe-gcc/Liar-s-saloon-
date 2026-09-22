@@ -9,6 +9,7 @@
 
 import { ELEMENTS, getFighter, CARD_KINDS, elementMultiplier } from '../../../shared/zenith/fighters.js';
 import { cardName, estimateDamage, VANISH_COST, KI_MAX } from '../../../shared/zenith/battle.js';
+import { spriteSvg } from '../../../shared/zenith/sprites.js';
 import { sfx } from './sfx.js';
 
 const $ = (id) => document.getElementById(id);
@@ -32,7 +33,7 @@ export function fighterCard(f, { picked = false } = {}) {
   const el = ELEMENTS[f.element];
   return `<button class="card-f${picked ? ' picked' : ''}" data-fid="${f.id}"
       style="--el:${el.color}" title="${esc(f.name)} — ${esc(f.title)}">
-    <span class="card-f-av">${f.avatar}</span>
+    <span class="card-f-av">${spriteSvg(f, 'repos')}</span>
     <span class="card-f-name">${esc(f.name)}</span>
     <span class="card-f-el">${el.glyph}</span>
     <span class="card-f-stats"><i>${f.hp}</i>·<i>${f.strike}</i>·<i>${f.blast}</i></span>
@@ -44,7 +45,7 @@ export function codexCard(f) {
   const stat = (v, l) => `<span class="cx-stat"><b>${v}</b><i>${l}</i></span>`;
   return `<div class="cx" style="--el:${el.color}">
     <div class="cx-top">
-      <span class="cx-av">${f.avatar}</span>
+      <span class="cx-av">${spriteSvg(f, 'garde')}</span>
       <span class="cx-id">
         <span class="cx-name">${esc(f.name)} ${el.glyph}</span>
         <span class="cx-title">${esc(f.title)}</span>
@@ -73,7 +74,12 @@ export function resetFight() {
   $('announce').hidden = true;
   $('hand').innerHTML = '';
   ['foe-avatar', 'me-avatar'].forEach((id) => {
-    $(id).className = `avatar ${id === 'foe-avatar' ? 'foe-av' : 'me-av'}`;
+    const el = $(id);
+    el.className = `avatar ${id === 'foe-avatar' ? 'foe-av' : 'me-av'}`;
+    el.innerHTML = '';
+    delete el.dataset.pose;
+    delete el.dataset.fid;
+    clearTimeout(el._pose);
   });
 }
 
@@ -106,8 +112,9 @@ function renderSide(side, prefix, mine) {
     const ue = ELEMENTS[uf.element];
     const cls = ['pt', i === side.active ? 'active' : '', u.ko ? 'dead' : '',
       mine && side.swapCd > 0 && i !== side.active && !u.ko ? 'locked' : ''].filter(Boolean).join(' ');
+    const pose = u.ko ? 'vaincu' : 'repos';
     return `<div class="${cls}" style="--el:${ue.color}" data-slot="${i}"
-        title="${esc(uf.name)} — ${ue.label}">${uf.avatar}
+        title="${esc(uf.name)} — ${ue.label}">${spriteSvg(uf, pose)}
         <span class="mini"><i style="width:${(u.hp / u.maxHp) * 100}%"></i></span>
       </div>`;
   }).join('');
@@ -115,7 +122,7 @@ function renderSide(side, prefix, mine) {
 
   // Nom et barres
   const nameEl = $(`${prefix}-name`);
-  const label = `${f.avatar} ${esc(f.name)} <small>${el.glyph} ${el.label}</small>`;
+  const label = `${esc(f.name)} <small>${el.glyph} ${el.label}</small>`;
   if (nameEl.innerHTML !== label) nameEl.innerHTML = label;
 
   const pct = (unit.hp / unit.maxHp) * 100;
@@ -124,9 +131,11 @@ function renderSide(side, prefix, mine) {
   bar.classList.toggle('low', pct <= 30);
   $(`${prefix}-hp-ghost`).style.width = `${pct}%`;
 
-  // Avatar : état d'esquive, KO
+  // Sprite : la pose au repos découle de l'état, les poses d'action sont
+  // déclenchées par les effets du moteur.
   const av = $(`${prefix}-avatar`);
-  if (av.textContent !== f.avatar) av.textContent = f.avatar;
+  const repos = unit.ko ? 'vaincu' : (unit.vanishing ? 'garde' : (unit.stun > 0 ? 'garde' : 'repos'));
+  setPose(av, f, repos, { base: true });
   av.classList.toggle('ghost', !!unit.vanishing);
   av.classList.toggle('gone', unit.ko);
 
@@ -215,6 +224,36 @@ function renderCombo(side) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Sprites                                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Applique une pose à un sprite. On mémorise la pose de repos dans l'élément
+ * pour pouvoir y revenir sans rejouer tout le rendu, et on ne réécrit le SVG
+ * que lorsqu'il change vraiment : `render` passe ici à chaque tick.
+ */
+function setPose(el, fighter, pose, { base = false } = {}) {
+  if (base) el.dataset.repos = pose;
+  const sig = `${fighter.id}:${pose}`;
+  if (el.dataset.pose === sig) return;
+  el.dataset.pose = sig;
+  el.dataset.fid = fighter.id;
+  el.innerHTML = spriteSvg(fighter, pose);
+}
+
+/** Pose passagère, puis retour automatique à la pose de repos. */
+function poseFor(el, pose, ms) {
+  const f = getFighter(el.dataset.fid);
+  if (!f) return;
+  setPose(el, f, pose);
+  clearTimeout(el._pose);
+  el._pose = setTimeout(() => {
+    const cur = getFighter(el.dataset.fid);
+    if (cur) setPose(el, cur, el.dataset.repos || 'repos');
+  }, ms);
+}
+
+/* ------------------------------------------------------------------ */
 /* Effets ponctuels                                                    */
 /* ------------------------------------------------------------------ */
 
@@ -237,6 +276,10 @@ export function playEffects(effects, view) {
 function hit(e, mine) {
   const attacker = mine ? $('me-avatar') : $('foe-avatar');
   const victim = mine ? $('foe-avatar') : $('me-avatar');
+
+  // Poses : l'un frappe, l'autre encaisse, le temps de l'animation.
+  poseFor(attacker, 'frappe', 320);
+  poseFor(victim, 'encaisse', 340);
 
   attacker.classList.remove('strike');
   void attacker.offsetWidth;
@@ -268,6 +311,7 @@ function hit(e, mine) {
 }
 
 function dodged(mine) {
+  poseFor(mine ? $('me-avatar') : $('foe-avatar'), 'garde', 420);
   spawn(`<div class="fx fx-dodge ${mine ? 'at-me' : 'at-foe'}">${mine ? 'ESQUIVE !' : 'ESQUIVÉ'}</div>`, 1000);
   sfx.dodge();
 }

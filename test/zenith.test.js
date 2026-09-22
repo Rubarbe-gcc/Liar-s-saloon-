@@ -556,3 +556,58 @@ test('le routeur dirige chaque jeu vers son module', async (t) => {
   assert.ok(zen.includes('z:welcome'), `attendu « z:welcome », recu ${JSON.stringify(zen)}`);
   assert.ok(zen.includes('z:hello'), 'la bascule doit traiter le message d\'origine');
 });
+
+
+/* ================================================================== */
+/* Personnages en pixel art                                           */
+/* ================================================================== */
+
+test('chaque combattant possede ses cinq poses, en SVG valide', async () => {
+  const S = await import('../public/shared/zenith/sprites.js');
+  for (const f of F.FIGHTERS) {
+    for (const pose of S.POSES) {
+      const svg = S.spriteSvg(f, pose);
+      assert.match(svg, /^<svg /, `${f.name}/${pose} : pas un SVG`);
+      assert.match(svg, /viewBox="0 0 16 16"/, `${f.name}/${pose} : grille inattendue`);
+      assert.ok(svg.includes('<rect'), `${f.name}/${pose} : silhouette vide`);
+      // Aucune couleur ne doit rester indefinie, sous peine de pixels noirs.
+      assert.ok(!svg.includes('fill="undefined"') && !svg.includes('fill=""'),
+        `${f.name}/${pose} : couleur manquante`);
+    }
+  }
+});
+
+test('deux combattants ne se ressemblent jamais exactement', () => {
+  // Sans variation individuelle, tous les combattants d'un meme element
+  // seraient rigoureusement identiques a l'ecran.
+  return import('../public/shared/zenith/sprites.js').then((S) => {
+    const vus = new Map();
+    for (const f of F.FIGHTERS) {
+      const svg = S.spriteSvg(f, 'repos');
+      const jumeau = vus.get(svg);
+      assert.ok(!jumeau, `${f.name} et ${jumeau} sont identiques au pixel pres`);
+      vus.set(svg, f.name);
+    }
+    // Et la teinte doit rester reconnaissable par element.
+    const parElement = {};
+    for (const f of F.FIGHTERS) (parElement[f.element] ||= []).push(S.paletteFor(f)[5]);
+    for (const [el, couleurs] of Object.entries(parElement)) {
+      assert.equal(new Set(couleurs).size, couleurs.length,
+        `${el} : deux combattants partagent exactement la meme teinte`);
+    }
+  });
+});
+
+test('la carrure decoule des statistiques', async () => {
+  const S = await import('../public/shared/zenith/sprites.js');
+  const carrures = {};
+  for (const f of F.FIGHTERS) (carrures[S.buildOf(f)] ||= []).push(f.name);
+  // Les trois carrures doivent etre utilisees, sans quoi elles ne servent a rien.
+  for (const b of ['leste', 'franc', 'massif']) {
+    assert.ok((carrures[b] || []).length > 0, `aucun combattant en carrure « ${b} »`);
+  }
+  const rapide = F.FIGHTERS.find((f) => f.speed >= 90);
+  const lourd = F.FIGHTERS.find((f) => f.hp >= 1200);
+  if (rapide) assert.equal(S.buildOf(rapide), 'leste');
+  if (lourd) assert.equal(S.buildOf(lourd), 'massif');
+});

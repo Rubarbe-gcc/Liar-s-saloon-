@@ -79,9 +79,10 @@ function renderSquad() {
 
   const done = prefs.team.length === TEAM_SIZE;
   $('b-fight').disabled = !done;
+  const reste = TEAM_SIZE - prefs.team.length;
   $('pick-sub').textContent = done
     ? 'Équipe prête.'
-    : `Choisissez ${TEAM_SIZE - prefs.team.length} combattant(s) de plus.`;
+    : (reste === 1 ? 'Encore un combattant.' : `Encore ${reste} combattants.`);
   $('pick-sub').className = `pick-sub${done ? ' ok' : ''}`;
 
   // En ligne, l'équipe est transmise dès qu'elle est complète.
