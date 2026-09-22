@@ -598,6 +598,44 @@ test('deux combattants ne se ressemblent jamais exactement', () => {
   });
 });
 
+test('chaque element porte une coiffe qui lui est propre', async () => {
+  const S = await import('../public/shared/zenith/sprites.js');
+  // Deux combattants de meme carrure mais d'elements differents doivent
+  // presenter des silhouettes distinctes : c'est la coiffe qui doit les
+  // separer, pas seulement la couleur.
+  const parElement = {};
+  for (const f of F.FIGHTERS) {
+    const cle = `${S.buildOf(f)}`;
+    (parElement[f.element] ||= {})[cle] = f;
+  }
+
+  const silhouettes = new Map();
+  for (const [element, parCarrure] of Object.entries(parElement)) {
+    for (const [carrure, f] of Object.entries(parCarrure)) {
+      // On compare la forme seule, couleurs ignorees.
+      const forme = S.composeGrid(f, 'repos').join('|');
+      const autre = silhouettes.get(`${carrure}:${forme}`);
+      assert.ok(!autre || autre === element,
+        `${element} et ${autre} partagent la meme silhouette en carrure ${carrure}`);
+      silhouettes.set(`${carrure}:${forme}`, element);
+    }
+  }
+});
+
+test('la coiffe ne masque jamais le visage', async () => {
+  const S = await import('../public/shared/zenith/sprites.js');
+  for (const f of F.FIGHTERS) {
+    for (const pose of S.POSES) {
+      if (pose === 'vaincu') continue;   // a terre, plus de tete dressee
+      const grille = S.composeGrid(f, pose);
+      assert.ok(grille.some((r) => r.includes('7')),
+        `${f.name}/${pose} : les yeux sont recouverts par la coiffe`);
+      assert.ok(grille.some((r) => r.includes('2')),
+        `${f.name}/${pose} : plus aucun pixel de peau visible`);
+    }
+  }
+});
+
 test('la carrure decoule des statistiques', async () => {
   const S = await import('../public/shared/zenith/sprites.js');
   const carrures = {};
