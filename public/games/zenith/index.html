@@ -121,45 +121,73 @@
 
 <!-- =========================== COMBAT =========================== -->
 <section class="screen screen-fight" id="s-fight">
-  <button class="fight-quit" id="b-quit" title="Abandonner">✕</button>
+  <header class="tbar">
+    <button class="fight-quit" id="b-quit" title="Abandonner">✕</button>
+    <span class="tbar-turn" id="turn-n">Tour 1</span>
+    <span class="tbar-state" id="turn-state">À vous de jouer</span>
+  </header>
 
   <!-- Adversaire -->
   <div class="side foe-side">
     <div class="portraits" id="foe-portraits"></div>
     <div class="vitals">
       <div class="vname" id="foe-name">—</div>
-      <div class="bar hp"><i id="foe-hp"></i><b id="foe-hp-ghost"></b></div>
+      <div class="bar hp"><i id="foe-hp"></i></div>
+      <div class="vsub"><span id="foe-ki-n">ki 0</span><span id="foe-status"></span></div>
     </div>
   </div>
 
   <!-- Arène -->
   <div class="arena" id="arena">
-    <div class="avatar foe-av" id="foe-avatar">🎭</div>
+    <div class="avatar foe-av" id="foe-avatar"></div>
     <div class="clash" id="clash"></div>
-    <div class="avatar me-av" id="me-avatar">🥊</div>
+    <div class="avatar me-av" id="me-avatar"></div>
     <div class="matchup" id="matchup"></div>
-    <div class="combo" id="combo" hidden></div>
     <div class="announce" id="announce" hidden></div>
   </div>
+
+  <!-- Journal du tour -->
+  <div class="ticker" id="ticker"></div>
 
   <!-- Joueur -->
   <div class="side me-side">
     <div class="vitals">
       <div class="vname" id="me-name">—</div>
-      <div class="bar hp"><i id="me-hp"></i><b id="me-hp-ghost"></b></div>
+      <div class="bar hp"><i id="me-hp"></i></div>
       <div class="bar ki"><i id="me-ki"></i><span id="me-ki-n">0</span></div>
+      <div class="vsub"><span id="me-status"></span></div>
     </div>
     <div class="portraits mine" id="me-portraits"></div>
   </div>
 
-  <!-- Commandes -->
-  <div class="controls">
-    <button class="dodge" id="b-dodge">
-      <span>ESQUIVE</span><i>30 ki</i>
-    </button>
-    <div class="hand" id="hand"></div>
+  <!-- Menu de commandes -->
+  <div class="menu-cmd" id="menu-cmd">
+    <div class="cmd-grid" id="cmd-moves"></div>
+    <div class="cmd-row">
+      <button class="cmd cmd-guard" id="b-guard">
+        <span class="cmd-g">🛡️</span>
+        <span class="cmd-l">Garde</span>
+        <span class="cmd-s">−55 % dégâts · +20 ki</span>
+      </button>
+      <button class="cmd cmd-swap" id="b-swap">
+        <span class="cmd-g">🔄</span>
+        <span class="cmd-l">Changer</span>
+        <span class="cmd-s">passe avant les coups</span>
+      </button>
+    </div>
+    <div class="cmd-wait" id="cmd-wait" hidden>⏳ L'adversaire réfléchit…</div>
   </div>
 </section>
+
+<!-- Choix du remplaçant -->
+<div class="ov" id="ov-swap" hidden>
+  <div class="sheet sheet-sm">
+    <button class="sheet-close" data-close="ov-swap">✕</button>
+    <h2>Qui envoyer ?</h2>
+    <p class="pick-sub">Le changement s'effectue avant les attaques du tour.</p>
+    <div class="swap-list" id="swap-list"></div>
+  </div>
+</div>
 
 <!-- ======================== SUPERPOSITIONS ====================== -->
 
@@ -176,12 +204,12 @@
     <button class="sheet-close" data-close="ov-rules">✕</button>
     <h2>Comment se bat-on ?</h2>
     <div class="rules-grid">
-      <section><h3><span>1</span> Les cartes</h3><p>Elles arrivent toutes seules dans votre main, jusqu'à quatre. <b>Frappe</b> est rapide et redonne du ki, <b>Souffle</b> frappe à distance, <b>Spéciale</b> fait très mal, <b>Ultime</b> ne part qu'une fois par combattant.</p></section>
-      <section><h3><span>2</span> Le ki</h3><p>Chaque carte en coûte. Il remonte tout seul, d'autant plus vite que votre combattant est rapide. Sans ki, pas de coups — et pas d'esquive.</p></section>
-      <section><h3><span>3</span> L'esquive</h3><p>Pour 30 ki, vous annulez entièrement le prochain coup reçu. C'est la seule parade contre une Ultime. Utilisez-la au bon moment : la fenêtre est courte.</p></section>
-      <section><h3><span>4</span> Les éléments</h3><p>🔥 bat ⚡ bat 🌑 bat 🍃 bat ❄️ bat 🔥. En avantage vous frappez <b>30 % plus fort</b> ; en désavantage, 20 % moins.</p></section>
-      <section><h3><span>5</span> Changer</h3><p>Touchez un coéquipier pour l'envoyer au front, notamment pour reprendre l'avantage élémentaire. Attention : cela <b>vide votre main</b> et impose six secondes de recharge.</p></section>
-      <section><h3><span>6</span> Gagner</h3><p>Mettez les <b>trois</b> combattants adverses à terre. Enchaîner les coups sans laisser de répit augmente vos dégâts.</p></section>
+      <section><h3><span>1</span> Un tour, une commande</h3><p>À chaque tour, les deux camps choisissent <b>en aveugle</b> : attaque, garde ou changement. Puis tout se résout d'un coup. Personne ne voit le choix de l'autre avant.</p></section>
+      <section><h3><span>2</span> L'ordre de résolution</h3><p>Les <b>changements</b> passent en premier, les <b>gardes</b> ensuite, puis les attaques <b>du plus rapide au plus lent</b>. C'est pourquoi la vitesse compte autant que la force.</p></section>
+      <section><h3><span>3</span> Les quatre coups</h3><p><b>Frappe</b> est gratuite et rend du ki. <b>Souffle</b> coûte 18 et frappe plus fort. <b>Spéciale</b> coûte 38 et inflige une altération. <b>Ultime</b> coûte 72 et ne part qu'une fois par combattant.</p></section>
+      <section><h3><span>4</span> Le ki</h3><p>Chaque combattant gagne <b>14 ki par tour</b>, plus 20 s'il se met en garde. La garde amortit <b>55 %</b> des dégâts du tour : c'est un investissement, pas une perte de temps.</p></section>
+      <section><h3><span>5</span> Éléments et altérations</h3><p>🔥 bat ⚡ bat 🔮 bat 🍃 bat ❄️ bat 🔥 : <b>+30 %</b> en avantage, −20 % en désavantage. Chaque élément pose son altération — brûlure, paralysie, gel, drain, sève.</p></section>
+      <section><h3><span>6</span> Gagner</h3><p>Mettez les <b>trois</b> combattants adverses à terre. Changer coûte le tour mais ne coûte pas de ki : c'est la façon de reprendre l'avantage élémentaire.</p></section>
     </div>
   </div>
 </div>

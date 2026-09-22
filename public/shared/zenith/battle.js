@@ -1,63 +1,137 @@
 /**
- * ZÉNITH — moteur de combat.
+ * ZÉNITH — moteur de combat au tour par tour.
  *
- * Module ISO (aucune API navigateur ni Node) : il fait tourner aussi bien
- * une partie locale contre l'ordinateur qu'un affrontement en ligne arbitré
- * par le serveur.
+ * Module ISO (aucune API navigateur ni Node) : il fait tourner aussi bien une
+ * partie locale contre l'ordinateur qu'un affrontement en ligne arbitré par
+ * le serveur.
  *
- * Le combat avance par ticks de durée fixe. Les joueurs n'agissent pas
- * « chacun leur tour » : ils envoient des intentions à tout moment, que le
- * moteur applique au tick suivant. C'est ce qui donne la nervosité d'un jeu
- * d'action tout en restant parfaitement synchronisable sur le réseau, les
- * actions étant discrètes.
+ * Déroulement d'un tour, dans l'esprit des jeux de rôle classiques :
+ *   1. les deux camps choisissent leur commande, sans voir celle de l'autre ;
+ *   2. les changements de combattant se résolvent d'abord ;
+ *   3. les actions se résolvent ensuite par ordre de vitesse ;
+ *   4. les altérations d'état s'appliquent en fin de tour.
+ *
+ * Aucun tirage ne décide de ce que l'on peut faire : toutes les commandes
+ * sont disponibles en permanence, seule la réserve de ki les limite. C'est
+ * ce qui distingue ce moteur de la version à cartes qui l'a précédé, où la
+ * main tirée au hasard réduisait le choix à un réflexe.
  */
 
-import {
-  getFighter, elementMultiplier, CARD_KINDS, CARD_KEYS,
-} from './fighters.js';
+import { getFighter, elementMultiplier } from './fighters.js';
 
-/* ------------------------------------------------------------------ */
-/* Constantes de rythme                                                */
-/* ------------------------------------------------------------------ */
-
-export const TICK_MS = 100;
-export const HAND_MAX = 4;
 export const TEAM_SIZE = 3;
-
-/** Multiplicateur global des dégâts, calibré pour des combats de ~90 s. */
-export const DAMAGE_SCALE = 2.2;
-
 export const KI_MAX = 100;
-export const VANISH_COST = 30;
-export const VANISH_TICKS = 8;      // fenêtre d'invulnérabilité
-export const VANISH_RECOVERY = 2;
+
 /**
- * Exposition de celui qui frappe dans le vide. Mesurée neutre sur la
- * profondeur tactique, mais elle donne à l'esquive une récompense visible :
- * sans elle, esquiver ne fait qu'éviter des dégâts, ce qui se remarque à
- * peine à l'écran.
- */
-export const VANISH_PUNISH = 16;
-export const SWAP_RECOVERY = 6;
-export const SWAP_COOLDOWN = 60;    // 6 s entre deux changements
-/**
- * Fatigue : chaque coup porté coup sur coup allonge la récupération du
- * suivant. Vider sa main d'un trait laisse donc grand ouvert.
+ * Ki regagné en fin de tour par le combattant en lice, quoi qu'il ait fait.
  *
- * C'est la mécanique qui fait le plus pour la profondeur : sans elle, jouer
- * la première carte venue vaut 63 % de ce que vaut le meilleur choix ; avec
- * elle, 67 %. Le rythme compte autant que la carte.
+ * Ce revenu fixe est ce qui rend le jeu tactique. Dans une version
+ * antérieure, le ki ne venait que de la Frappe : dépenser réduisait ses
+ * revenus futurs, si bien que marteler la commande gratuite restait toujours
+ * la meilleure ligne et qu'aucun arbitrage ne se posait. Avec un revenu
+ * indépendant de l'action, la question devient « quand dépenser, et pour
+ * quoi » — et épargner trois tours pour une Ultime devient une vraie option.
  */
-export const FATIGUE_WINDOW = 26;
-export const FATIGUE_STEP = 0.34;
-export const FATIGUE_CAP = 3;
+export const KI_PAR_TOUR = 14;
 
-export const COMBO_WINDOW = 14;     // ticks pour enchaîner
-export const COMBO_STEP = 0.04;     // +4 % par coup enchaîné
-export const COMBO_CAP = 8;
-export const KO_SWAP_DELAY = 10;    // temps mort quand un combattant tombe
+/** Au-delà, le combat est tranché aux points de vie restants. */
+export const MAX_TURNS = 60;
 
-export const PHASE = { FIGHT: 'fight', OVER: 'over' };
+export const PHASE = {
+  CHOOSE: 'choose',   // en attente des commandes
+  RESOLVE: 'resolve', // résolution en cours (état transitoire)
+  OVER: 'over',
+};
+
+/* ------------------------------------------------------------------ */
+/* Commandes                                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Les quatre offensives, plus la garde et le changement.
+ *
+ * `stat` désigne la statistique employée ; `mixte` prend la moyenne de la
+ * force et du souffle, de sorte qu'à investissement offensif égal les profils
+ * spécialisés et polyvalents se valent.
+ */
+export const MOVES = {
+  frappe: {
+    key: 'frappe', label: 'Frappe', glyph: '👊',
+    stat: 'strike', power: 1.0, ki: 0, kiGain: 5,
+    blurb: 'Attaque au corps à corps. Ne coûte rien et rapporte un peu de ki.',
+  },
+  souffle: {
+    key: 'souffle', label: 'Souffle', glyph: '💠',
+    stat: 'blast', power: 1.35, ki: 18, kiGain: 0,
+    blurb: 'Décharge d\'énergie, plus puissante mais coûteuse.',
+  },
+  speciale: {
+    key: 'speciale', label: 'Spéciale', glyph: '✦',
+    stat: 'mixte', power: 1.75, ki: 38, kiGain: 0, applique: true,
+    blurb: 'Technique signature : inflige en plus l\'altération de son élément.',
+  },
+  ultime: {
+    // Sa puissance doit franchement dépasser celle de la Spéciale rapportée
+    // au ki dépensé, sans quoi personne n'a de raison d'épargner pour elle :
+    // à 3,2 pour 72 ki, elle rendait moins que la Spéciale à 1,75 pour 38,
+    // qui inflige en plus une altération. Elle n'était jamais jouée.
+    key: 'ultime', label: 'Ultime', glyph: '☄️',
+    stat: 'mixte', power: 4.6, ki: 72, kiGain: 0, uneFois: true,
+    blurb: 'Coup décisif. Une seule fois par combattant et par combat.',
+  },
+};
+
+export const MOVE_KEYS = Object.keys(MOVES);
+
+/** Garde : on encaisse moitié moins, et l'on récupère du ki. */
+export const GUARD_REDUCTION = 0.45;
+export const GUARD_KI = 20;
+
+/* ------------------------------------------------------------------ */
+/* Altérations d'état                                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Chaque élément inflige la sienne. Elles donnent au cycle élémentaire un
+ * second rôle : au-delà des dégâts, choisir son combattant décide de ce que
+ * l'on impose à l'adversaire.
+ */
+export const STATUS = {
+  brulure: {
+    key: 'brulure', label: 'Brûlure', glyph: '🔥', tours: 3,
+    blurb: 'Perd des points de vie à chaque tour.',
+  },
+  paralysie: {
+    key: 'paralysie', label: 'Paralysie', glyph: '⚡', tours: 3,
+    blurb: 'Vitesse réduite de moitié : agit après presque tout le monde.',
+  },
+  gel: {
+    key: 'gel', label: 'Gel', glyph: '❄️', tours: 2,
+    blurb: 'Risque de perdre son tour.',
+  },
+  drain: {
+    key: 'drain', label: 'Drain', glyph: '🔮', tours: 3,
+    blurb: 'Perd du ki à chaque tour.',
+  },
+  seve: {
+    key: 'seve', label: 'Sève', glyph: '🍃', tours: 3,
+    blurb: 'Soigne celui qui l\'a posée à chacun de ses coups.',
+  },
+};
+
+/** Altération infligée par la Spéciale de chaque élément. */
+export const ELEMENT_STATUS = {
+  braise: 'brulure',
+  orage: 'paralysie',
+  givre: 'gel',
+  abysse: 'drain',
+  sylve: 'seve',
+};
+
+const BRULURE_PART = 0.07;   // des points de vie maximum, par tour
+const DRAIN_KI = 14;         // ki perdu par tour
+const GEL_RISQUE = 0.35;     // probabilité de perdre son tour
+const SEVE_PART = 0.3;       // soin, en part des dégâts infligés
 
 /* ------------------------------------------------------------------ */
 /* Aléa                                                                */
@@ -75,6 +149,30 @@ export function makeRng(seed = Date.now()) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Statistiques                                                        */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Résout la statistique d'une commande.
+ *
+ * « mixte » prend la moyenne de la force et du souffle. Ce choix n'est pas
+ * cosmétique : si les techniques retenaient seulement le meilleur score, un
+ * combattant tout en force frapperait plus fort au corps à corps *et*
+ * lancerait d'aussi bonnes spéciales qu'un polyvalent ayant investi autant
+ * de points — il n'y aurait plus de compromis.
+ */
+export function statOf(fighter, stat) {
+  if (stat !== 'mixte') return fighter[stat];
+  return (fighter.strike + fighter.blast) / 2;
+}
+
+/** Vitesse effective, paralysie comprise. Elle décide de l'ordre du tour. */
+export function speedOf(unit) {
+  const base = getFighter(unit.fighterId).speed;
+  return unit.status && unit.status.key === 'paralysie' ? base / 2 : base;
+}
+
+/* ------------------------------------------------------------------ */
 /* Création                                                            */
 /* ------------------------------------------------------------------ */
 
@@ -85,10 +183,11 @@ function makeUnit(fighterId) {
     fighterId,
     hp: f.hp,
     maxHp: f.hp,
-    stun: 0,
-    vanishUntil: -1,
-    ultUsed: false,
+    ki: 30,
     ko: false,
+    status: null,      // { key, tours, from }
+    guard: false,
+    ultUsed: false,
   };
 }
 
@@ -99,13 +198,12 @@ function makeUnit(fighterId) {
 export function createBattle(sides, options = {}) {
   if (sides.length !== 2) throw new Error('un combat oppose exactement deux camps');
   const seed = options.seed ?? Math.floor(Math.random() * 2 ** 31);
-  const rng = makeRng(seed);
 
-  const state = {
+  return {
     seed,
-    rng,
-    tick: 0,
-    phase: PHASE.FIGHT,
+    rng: makeRng(seed),
+    turn: 1,
+    phase: PHASE.CHOOSE,
     winner: null,
     effects: [],
     log: [],
@@ -116,25 +214,10 @@ export function createBattle(sides, options = {}) {
       isBot: !!s.isBot,
       team: s.team.slice(0, TEAM_SIZE).map(makeUnit),
       active: 0,
-      ki: 50,
-      hand: [],
-      drawTimer: 0,
-      swapCd: 0,
-      combo: 0,
-      comboUntil: -1,
-      fatigue: 0,
-      fatigueUntil: -1,
-      koPause: 0,
-      pending: null,   // intention reçue, appliquée au prochain tick
-      stats: { hits: 0, dealt: 0, taken: 0, vanishes: 0, specials: 0, ultimates: 0, kos: 0 },
+      queued: null,
+      stats: { coups: 0, degats: 0, subis: 0, gardes: 0, speciales: 0, ultimes: 0, kos: 0 },
     })),
   };
-
-  // Main de départ, pour que le combat démarre immédiatement.
-  for (const side of state.sides) {
-    for (let i = 0; i < HAND_MAX - 1; i++) drawCard(state, side);
-  }
-  return state;
 }
 
 /* ------------------------------------------------------------------ */
@@ -145,229 +228,167 @@ export const activeUnit = (side) => side.team[side.active];
 export const fighterOf = (unit) => getFighter(unit.fighterId);
 export const aliveCount = (side) => side.team.filter((u) => !u.ko).length;
 
-/** Vitesse de régénération du ki, par tick. */
-function kiRegen(side) {
-  const f = fighterOf(activeUnit(side));
-  return 0.55 + f.speed * 0.011;
-}
-
-/**
- * Facteur d'immobilisation : un combattant rapide récupère plus vite, ce qui
- * lui rend en fréquence d'action ce qu'il n'a pas en endurance.
- */
-export function recoveryScale(fighter) {
-  return 1.3 - fighter.speed * 0.006;
-}
-
-/** Nombre de ticks entre deux pioches. */
-function drawInterval(side) {
-  const f = fighterOf(activeUnit(side));
-  return Math.max(6, Math.round(22 - f.speed * 0.11));
-}
-
 function log(state, text) {
-  state.log.push({ tick: state.tick, text });
-  if (state.log.length > 60) state.log.shift();
+  state.log.push({ turn: state.turn, text });
+  if (state.log.length > 80) state.log.shift();
 }
 
 function effect(state, e) {
-  state.effects.push({ tick: state.tick, ...e });
+  state.effects.push({ turn: state.turn, ...e });
 }
 
 /* ------------------------------------------------------------------ */
-/* Pioche                                                              */
+/* Commandes disponibles                                               */
 /* ------------------------------------------------------------------ */
 
 /**
- * Tire une carte. Les ultimes sont rares et ne tombent qu'une fois le ki
- * bien rempli, pour qu'elles restent un aboutissement et non une loterie.
+ * Ce que le camp peut faire ce tour-ci, et pourquoi il ne peut pas le reste.
+ * L'interface s'en sert directement : aucune commande n'est jamais cachée,
+ * seulement désactivée avec sa raison.
  */
-function drawCard(state, side) {
-  if (side.hand.length >= HAND_MAX) return null;
+export function availableCommands(state, sideIndex) {
+  const side = state.sides[sideIndex];
   const unit = activeUnit(side);
-  const r = state.rng();
 
-  let kind;
-  if (!unit.ultUsed && side.ki >= 70 && r < 0.07) kind = 'ultime';
-  else if (r < 0.28) kind = 'speciale';
-  else if (r < 0.62) kind = 'souffle';
-  else kind = 'frappe';
+  const moves = MOVE_KEYS.map((key) => {
+    const m = MOVES[key];
+    let raison = null;
+    if (m.uneFois && unit.ultUsed) raison = 'déjà utilisée';
+    else if (unit.ki < m.ki) raison = 'ki insuffisant';
+    return { key, ki: m.ki, utilisable: !raison, raison };
+  });
 
-  side.hand.push(kind);
-  return kind;
+  const swaps = side.team.map((u, slot) => ({
+    slot,
+    utilisable: !u.ko && slot !== side.active,
+    raison: u.ko ? 'hors de combat' : (slot === side.active ? 'déjà en lice' : null),
+  }));
+
+  return { moves, garde: { utilisable: true }, swaps };
 }
 
 /* ------------------------------------------------------------------ */
-/* Intentions                                                          */
+/* Choix                                                               */
 /* ------------------------------------------------------------------ */
 
 /**
- * Enregistre l'intention d'un camp. Elle sera appliquée au tick suivant,
- * ce qui garantit que les deux camps sont traités de la même façon quel
- * que soit l'ordre d'arrivée des messages réseau.
+ * Enregistre la commande d'un camp. Le tour ne se résout que lorsque les deux
+ * l'ont fait : ni l'un ni l'autre ne voit le choix adverse avant.
  *
- * @param {'play'|'vanish'|'swap'} type
+ * @param {{type:'move',move:string}|{type:'guard'}|{type:'swap',slot:number}} cmd
  */
-export function queueAction(state, sideIndex, action) {
-  if (state.phase !== PHASE.FIGHT) return { ok: false, error: 'phase' };
+export function choose(state, sideIndex, cmd) {
+  if (state.phase !== PHASE.CHOOSE) return { ok: false, error: 'phase' };
   const side = state.sides[sideIndex];
   if (!side) return { ok: false, error: 'camp inconnu' };
+  if (side.queued) return { ok: false, error: 'déjà choisi' };
 
   const unit = activeUnit(side);
-  if (unit.ko || unit.stun > 0 || side.koPause > 0) return { ok: false, error: 'occupé' };
+  if (unit.ko) return { ok: false, error: 'ko' };
 
-  if (action.type === 'play') {
-    const i = action.index;
-    if (!Number.isInteger(i) || i < 0 || i >= side.hand.length) return { ok: false, error: 'carte' };
-    const card = CARD_KINDS[side.hand[i]];
-    if (side.ki < card.ki) return { ok: false, error: 'ki' };
-    side.pending = { type: 'play', index: i };
+  if (cmd.type === 'move') {
+    const m = MOVES[cmd.move];
+    if (!m) return { ok: false, error: 'commande inconnue' };
+    if (m.uneFois && unit.ultUsed) return { ok: false, error: 'déjà utilisée' };
+    if (unit.ki < m.ki) return { ok: false, error: 'ki' };
+    side.queued = { type: 'move', move: cmd.move };
     return { ok: true };
   }
 
-  if (action.type === 'vanish') {
-    if (side.ki < VANISH_COST) return { ok: false, error: 'ki' };
-    side.pending = { type: 'vanish' };
+  if (cmd.type === 'guard') {
+    side.queued = { type: 'guard' };
     return { ok: true };
   }
 
-  if (action.type === 'swap') {
-    const s = action.slot;
-    if (!Number.isInteger(s) || s < 0 || s >= side.team.length) return { ok: false, error: 'slot' };
-    if (s === side.active) return { ok: false, error: 'déjà actif' };
-    if (side.team[s].ko) return { ok: false, error: 'ko' };
-    if (side.swapCd > 0) return { ok: false, error: 'recharge' };
-    side.pending = { type: 'swap', slot: s };
+  if (cmd.type === 'swap') {
+    const slot = cmd.slot;
+    if (!Number.isInteger(slot) || slot < 0 || slot >= side.team.length) {
+      return { ok: false, error: 'slot' };
+    }
+    if (slot === side.active) return { ok: false, error: 'déjà en lice' };
+    if (side.team[slot].ko) return { ok: false, error: 'ko' };
+    side.queued = { type: 'swap', slot };
     return { ok: true };
   }
 
-  return { ok: false, error: 'action inconnue' };
+  return { ok: false, error: 'commande inconnue' };
 }
+
+/** Les deux camps ont-ils choisi ? */
+export const pretARésoudre = (state) =>
+  state.phase === PHASE.CHOOSE && state.sides.every((s) => s.queued || activeUnit(s).ko);
 
 /* ------------------------------------------------------------------ */
 /* Résolution                                                          */
 /* ------------------------------------------------------------------ */
 
-/**
- * Résout la statistique d'une carte.
- *
- * « mixte » prend la moyenne de la force et du souffle : les techniques
- * signature puisent dans les deux. Ce choix n'est pas cosmétique. Si elles
- * retenaient seulement le meilleur score, un combattant tout en force
- * frapperait plus fort au corps à corps *et* lancerait d'aussi bonnes
- * spéciales qu'un polyvalent ayant investi autant de points — il n'y aurait
- * plus de compromis. Avec la moyenne, à investissement offensif égal les
- * dégâts attendus s'équivalent, et chaque profil garde son terrain : la
- * brute au corps à corps, le polyvalent au souffle.
- */
-export function statOf(fighter, stat) {
-  if (stat !== 'mixte') return fighter[stat];
-  return (fighter.strike + fighter.blast) / 2;
-}
-
-/**
- * Dégâts attendus d'une carte, sans la part d'aléa.
- *
- * L'interface s'en sert pour étiqueter chaque carte. C'est ce qui rend le
- * jeu lisible : la profondeur tactique existe — choisir la bonne carte vaut
- * 63 % contre 50 % au hasard — mais elle reste invisible tant que le joueur
- * ne voit pas ce que chaque carte va réellement infliger à cette cible-là.
- */
-export function estimateDamage(attacker, defender, cardKey, combo = 0) {
-  const card = CARD_KINDS[cardKey];
-  if (!card) return 0;
-  const raw = statOf(attacker, card.stat) * card.power * DAMAGE_SCALE;
+/** Dégâts attendus d'une commande, sans la part d'aléa. */
+export function estimateDamage(attacker, defender, moveKey, { garde = false } = {}) {
+  const m = MOVES[moveKey];
+  if (!m) return 0;
+  const raw = statOf(attacker, m.stat) * m.power * 2.2;
   const elem = elementMultiplier(attacker.element, defender.element);
-  const comboMul = 1 + Math.min(combo, COMBO_CAP) * COMBO_STEP;
   const mitigation = 100 / (100 + defender.armor);
-  return Math.max(1, Math.round(raw * elem * comboMul * mitigation));
+  const g = garde ? GUARD_REDUCTION : 1;
+  return Math.max(1, Math.round(raw * elem * mitigation * g));
 }
 
-/** Dégâts d'une carte, tous modificateurs appliqués. */
-export function computeDamage(state, side, foe, cardKey) {
-  const card = CARD_KINDS[cardKey];
-  const att = activeUnit(side);
-  const def = activeUnit(foe);
-  const af = fighterOf(att);
-  const df = fighterOf(def);
-
-  const raw = statOf(af, card.stat) * card.power * DAMAGE_SCALE;
-  const elem = elementMultiplier(af.element, df.element);
-  const combo = 1 + Math.min(side.combo, COMBO_CAP) * COMBO_STEP;
-  const mitigation = 100 / (100 + df.armor);
-  const jitter = 0.95 + state.rng() * 0.1;
-
-  return {
-    amount: Math.max(1, Math.round(raw * elem * combo * mitigation * jitter)),
-    elem,
-    combo,
-  };
-}
-
-function resolvePlay(state, side, foe, index) {
+function appliquerDegats(state, side, foe, moveKey) {
   const unit = activeUnit(side);
-  const cardKey = side.hand[index];
-  if (!cardKey) return;
-  const card = CARD_KINDS[cardKey];
-  const af0 = fighterOf(unit);
+  const cible = activeUnit(foe);
+  const af = fighterOf(unit);
+  const df = fighterOf(cible);
+  const m = MOVES[moveKey];
 
-  if (side.ki < card.ki) return;
-  if (cardKey === 'ultime' && unit.ultUsed) return;
+  const elem = elementMultiplier(af.element, df.element);
+  const jitter = 0.95 + state.rng() * 0.1;
+  const base = estimateDamage(af, df, moveKey, { garde: cible.guard });
+  const montant = Math.max(1, Math.round(base * jitter));
 
-  side.hand.splice(index, 1);
-  side.ki -= card.ki;
-  // Récupération allongée par la fatigue accumulée.
-  side.fatigue = Math.min(FATIGUE_CAP, side.fatigue + 1);
-  side.fatigueUntil = state.tick + FATIGUE_WINDOW;
-  unit.stun = card.recovery * recoveryScale(af0) * (1 + (side.fatigue - 1) * FATIGUE_STEP);
-  if (cardKey === 'ultime') unit.ultUsed = true;
-  if (cardKey === 'speciale') side.stats.specials += 1;
-  if (cardKey === 'ultime') side.stats.ultimates += 1;
+  cible.hp = Math.max(0, cible.hp - montant);
+  unit.ki = Math.min(KI_MAX, unit.ki - m.ki + m.kiGain);
 
-  const target = activeUnit(foe);
-
-  // Esquive : le coup passe à travers, et l'esquiveur reprend la main.
-  if (state.tick < target.vanishUntil) {
-    target.vanishUntil = -1;
-    side.combo = 0;
-    unit.stun = VANISH_PUNISH;
-    target.stun = 0;
-    effect(state, { type: 'vanish', side: foe.index, punished: side.index });
-    log(state, `${fighterOf(target).name} esquive et prend l'ouverture !`);
-    return;
-  }
-
-  const { amount, elem } = computeDamage(state, side, foe, cardKey);
-  target.hp = Math.max(0, target.hp - amount);
-  target.stun = Math.max(target.stun, card.hitstun * recoveryScale(fighterOf(target)));
-
-  side.ki = Math.min(KI_MAX, side.ki + card.kiGain);
-  side.combo = state.tick <= side.comboUntil ? side.combo + 1 : 1;
-  side.comboUntil = state.tick + COMBO_WINDOW;
-  side.stats.hits += 1;
-  side.stats.dealt += amount;
-  foe.stats.taken += amount;
+  side.stats.coups += 1;
+  side.stats.degats += montant;
+  foe.stats.subis += montant;
+  if (moveKey === 'speciale') side.stats.speciales += 1;
+  if (moveKey === 'ultime') { side.stats.ultimes += 1; unit.ultUsed = true; }
 
   effect(state, {
-    type: 'hit', side: side.index, card: cardKey, amount, elem,
-    combo: side.combo, name: cardName(unit, cardKey),
+    type: 'hit', side: side.index, move: moveKey, amount: montant,
+    elem, garde: cible.guard, name: moveName(unit, moveKey),
   });
+  log(state, `${af.name} utilise ${moveName(unit, moveKey)} — ${montant} dégâts.`
+    + (elem > 1 ? ' C\'est très efficace !' : (elem < 1 ? ' Ce n\'est pas très efficace…' : '')));
 
-  if (target.hp === 0) knockOut(state, foe, side);
+  // Sève : l'attaquant se soigne d'une part des dégâts infligés.
+  if (unit.status && unit.status.key === 'seve') {
+    const soin = Math.round(montant * SEVE_PART);
+    unit.hp = Math.min(unit.maxHp, unit.hp + soin);
+    effect(state, { type: 'heal', side: side.index, amount: soin });
+  }
+
+  // La Spéciale impose l'altération de son élément.
+  if (m.applique) {
+    const cle = ELEMENT_STATUS[af.element];
+    if (cle === 'seve') {
+      unit.status = { key: 'seve', tours: STATUS.seve.tours };
+      effect(state, { type: 'status', side: side.index, status: 'seve' });
+      log(state, `${af.name} s'entoure de sève.`);
+    } else if (cle && !cible.ko) {
+      cible.status = { key: cle, tours: STATUS[cle].tours };
+      effect(state, { type: 'status', side: foe.index, status: cle });
+      log(state, `${df.name} subit ${STATUS[cle].label} !`);
+    }
+  }
+
+  if (cible.hp === 0) mettreAuTapis(state, foe, side);
 }
 
-/** Nom affiché d'une carte : les spéciales et ultimes portent celui du combattant. */
-export function cardName(unit, cardKey) {
-  const f = fighterOf(unit);
-  if (cardKey === 'speciale') return f.special.name;
-  if (cardKey === 'ultime') return f.ultimate.name;
-  return CARD_KINDS[cardKey].label;
-}
-
-function knockOut(state, side, killer) {
+function mettreAuTapis(state, side, killer) {
   const unit = activeUnit(side);
   unit.ko = true;
-  unit.stun = 0;
+  unit.status = null;
   killer.stats.kos += 1;
   effect(state, { type: 'ko', side: side.index, fighter: unit.fighterId });
   log(state, `${fighterOf(unit).name} est hors de combat.`);
@@ -379,124 +400,177 @@ function knockOut(state, side, killer) {
     log(state, `${killer.name} remporte le combat.`);
     return;
   }
-  // Le camp reste sonné le temps que le suivant entre en lice.
-  side.koPause = KO_SWAP_DELAY;
+  // Le camp doit envoyer un remplaçant : on le fait entrer immédiatement,
+  // sans lui faire perdre son tour suivant.
+  const suivant = side.team.findIndex((u) => !u.ko);
+  side.active = suivant;
+  effect(state, { type: 'enter', side: side.index, fighter: side.team[suivant].fighterId });
+  log(state, `${fighterOf(side.team[suivant]).name} entre en lice.`);
 }
 
-function resolveVanish(state, side) {
+function resoudreGarde(state, side) {
   const unit = activeUnit(side);
-  if (side.ki < VANISH_COST) return;
-  side.ki -= VANISH_COST;
-  unit.vanishUntil = state.tick + VANISH_TICKS;
-  unit.stun = VANISH_RECOVERY;
-  side.stats.vanishes += 1;
-  effect(state, { type: 'vanish-start', side: side.index });
+  unit.guard = true;
+  unit.ki = Math.min(KI_MAX, unit.ki + GUARD_KI);
+  side.stats.gardes += 1;
+  effect(state, { type: 'guard', side: side.index });
+  log(state, `${fighterOf(unit).name} se met en garde.`);
 }
 
-function resolveSwap(state, side, slot) {
-  if (side.swapCd > 0 || side.team[slot].ko) return;
-  const from = activeUnit(side);
+function resoudreChangement(state, side, slot) {
+  if (side.team[slot].ko) return;
+  const sortant = activeUnit(side);
   side.active = slot;
-  side.swapCd = SWAP_COOLDOWN;
-  side.combo = 0;
-  side.fatigue = 0;
-  activeUnit(side).stun = SWAP_RECOVERY;
-  // La main appartient au combattant : elle est renouvelée au changement.
-  side.hand = [];
-  side.drawTimer = 0;
   effect(state, {
     type: 'swap', side: side.index,
-    from: from.fighterId, to: activeUnit(side).fighterId,
+    from: sortant.fighterId, to: activeUnit(side).fighterId,
   });
-  log(state, `${side.name} envoie ${fighterOf(activeUnit(side)).name}.`);
+  log(state, `${side.name} rappelle ${fighterOf(sortant).name} et envoie ${fighterOf(activeUnit(side)).name}.`);
 }
-
-/** Fait entrer le combattant suivant après un KO. */
-function bringNext(state, side) {
-  const next = side.team.findIndex((u) => !u.ko);
-  if (next < 0) return;
-  side.active = next;
-  side.hand = [];
-  side.drawTimer = 0;
-  side.combo = 0;
-  activeUnit(side).stun = 0;
-  effect(state, { type: 'enter', side: side.index, fighter: activeUnit(side).fighterId });
-  log(state, `${fighterOf(activeUnit(side)).name} entre en lice.`);
-}
-
-/* ------------------------------------------------------------------ */
-/* Boucle                                                              */
-/* ------------------------------------------------------------------ */
 
 /**
- * Avance le combat d'un tick. Les deux camps sont traités symétriquement :
- * on applique d'abord les intentions, puis on fait s'écouler le temps.
+ * Résout le tour complet. À n'appeler que lorsque les deux camps ont choisi.
+ * @returns {{ok:boolean, effects:Array}}
  */
-export function step(state) {
-  if (state.phase !== PHASE.FIGHT) return state.effects;
+export function resolveTurn(state) {
+  if (state.phase !== PHASE.CHOOSE) return { ok: false, effects: [] };
+  if (!pretARésoudre(state)) return { ok: false, effects: [] };
+
   state.effects = [];
-  state.tick += 1;
+  state.phase = PHASE.RESOLVE;
 
-  const [a, b] = state.sides;
+  // La garde ne vaut que pour le tour en cours.
+  for (const s of state.sides) activeUnit(s).guard = false;
 
-  // 1. Intentions, dans un ordre fixe mais compensé par la simultanéité :
-  //    aucune ne dépend du résultat de l'autre au même tick.
-  const pendings = [
-    [a, b, a.pending],
-    [b, a, b.pending],
-  ];
-  a.pending = null;
-  b.pending = null;
-
-  for (const [side, foe, action] of pendings) {
-    if (!action) continue;
-    const unit = activeUnit(side);
-    if (unit.ko || unit.stun > 0 || side.koPause > 0) continue;
-
-    if (action.type === 'play') resolvePlay(state, side, foe, action.index);
-    else if (action.type === 'vanish') resolveVanish(state, side);
-    else if (action.type === 'swap') resolveSwap(state, side, action.slot);
-
-    if (state.phase !== PHASE.FIGHT) return state.effects;
+  // 1. Les changements passent avant tout le reste : c'est ce qui permet
+  //    d'anticiper un coup plutôt que de le subir.
+  for (const side of state.sides) {
+    if (side.queued && side.queued.type === 'swap') {
+      resoudreChangement(state, side, side.queued.slot);
+      side.queued = null;
+    }
   }
 
-  // 2. Écoulement du temps.
+  // 2. Les gardes s'établissent ensuite, avant les coups qu'elles amortissent.
   for (const side of state.sides) {
-    if (side.koPause > 0) {
-      side.koPause -= 1;
-      if (side.koPause === 0) bringNext(state, side);
+    if (side.queued && side.queued.type === 'guard') {
+      resoudreGarde(state, side);
+      side.queued = null;
+    }
+  }
+
+  // 3. Les attaques, par ordre de vitesse décroissante.
+  const attaquants = state.sides
+    .filter((s) => s.queued && s.queued.type === 'move')
+    .sort((a, b) => {
+      const va = speedOf(activeUnit(a));
+      const vb = speedOf(activeUnit(b));
+      if (vb !== va) return vb - va;
+      return state.rng() < 0.5 ? -1 : 1;   // égalité tranchée au hasard
+    });
+
+  for (const side of attaquants) {
+    const cmd = side.queued;
+    side.queued = null;
+    if (state.phase === PHASE.OVER) break;
+
+    const unit = activeUnit(side);
+    if (unit.ko) continue;
+
+    // Le gel peut coûter le tour.
+    if (unit.status && unit.status.key === 'gel' && state.rng() < GEL_RISQUE) {
+      effect(state, { type: 'frozen', side: side.index });
+      log(state, `${fighterOf(unit).name} est figé et ne peut pas agir.`);
       continue;
     }
 
-    const unit = activeUnit(side);
-    if (unit.stun > 0) unit.stun -= 1;
-    if (side.swapCd > 0) side.swapCd -= 1;
-    if (state.tick > side.comboUntil) side.combo = 0;
-    // La fatigue retombe d'un cran par fenêtre écoulée, pas d'un coup.
-    if (state.tick > side.fatigueUntil && side.fatigue > 0) {
-      side.fatigue -= 1;
-      side.fatigueUntil = state.tick + FATIGUE_WINDOW;
-    }
+    const m = MOVES[cmd.move];
+    // La situation a pu changer depuis le choix : on revérifie.
+    if (!m || unit.ki < m.ki || (m.uneFois && unit.ultUsed)) continue;
 
-    side.ki = Math.min(KI_MAX, side.ki + kiRegen(side));
-
-    side.drawTimer += 1;
-    if (side.drawTimer >= drawInterval(side)) {
-      side.drawTimer = 0;
-      drawCard(state, side);
-    }
+    appliquerDegats(state, side, state.sides[1 - side.index], cmd.move);
   }
 
-  return state.effects;
+  // 4. Altérations de fin de tour.
+  if (state.phase !== PHASE.OVER) finDeTour(state);
+
+  // 5. Tour suivant.
+  if (state.phase !== PHASE.OVER) {
+    state.turn += 1;
+    state.phase = PHASE.CHOOSE;
+    for (const s of state.sides) s.queued = null;
+
+    if (state.turn > MAX_TURNS) trancherAuxPoints(state);
+  }
+
+  return { ok: true, effects: state.effects };
 }
 
-/** Avance de plusieurs ticks d'un coup, en accumulant les effets. */
-export function advance(state, ticks) {
-  const all = [];
-  for (let i = 0; i < ticks && state.phase === PHASE.FIGHT; i++) {
-    all.push(...step(state));
+function finDeTour(state) {
+  // Revenu de ki, versé à tous avant les altérations.
+  for (const side of state.sides) {
+    const unit = activeUnit(side);
+    if (!unit.ko) unit.ki = Math.min(KI_MAX, unit.ki + KI_PAR_TOUR);
   }
-  return all;
+
+  for (const side of state.sides) {
+    const unit = activeUnit(side);
+    if (unit.ko || !unit.status) continue;
+    const st = unit.status;
+
+    if (st.key === 'brulure') {
+      const perte = Math.max(1, Math.round(unit.maxHp * BRULURE_PART));
+      unit.hp = Math.max(0, unit.hp - perte);
+      effect(state, { type: 'status-tick', side: side.index, status: 'brulure', amount: perte });
+      log(state, `${fighterOf(unit).name} souffre de sa brûlure (${perte}).`);
+      if (unit.hp === 0) {
+        mettreAuTapis(state, side, state.sides[1 - side.index]);
+        if (state.phase === PHASE.OVER) return;
+        continue;
+      }
+    } else if (st.key === 'drain') {
+      const perte = Math.min(unit.ki, DRAIN_KI);
+      unit.ki -= perte;
+      effect(state, { type: 'status-tick', side: side.index, status: 'drain', amount: perte });
+    }
+
+    st.tours -= 1;
+    if (st.tours <= 0) {
+      effect(state, { type: 'status-end', side: side.index, status: st.key });
+      log(state, `${fighterOf(unit).name} se remet de ${STATUS[st.key].label}.`);
+      unit.status = null;
+    }
+  }
+}
+
+/** Au-delà de la limite de tours, on départage aux points de vie restants. */
+function trancherAuxPoints(state) {
+  const part = (s) => s.team.reduce((a, u) => a + u.hp / u.maxHp, 0);
+  const a = part(state.sides[0]), b = part(state.sides[1]);
+  state.phase = PHASE.OVER;
+  state.winner = a === b ? null : (a > b ? 0 : 1);
+  effect(state, { type: 'timeout', winner: state.winner });
+  log(state, 'Le combat s\'achève sur la limite de tours.');
+}
+
+/** Nom affiché d'une commande : les techniques portent celui du combattant. */
+export function moveName(unit, moveKey) {
+  const f = fighterOf(unit);
+  if (moveKey === 'speciale') return f.special.name;
+  if (moveKey === 'ultime') return f.ultimate.name;
+  return MOVES[moveKey].label;
+}
+
+/** Abandon ou déconnexion : la victoire revient à celui qui reste. */
+export function forfeit(state, sideIndex) {
+  if (state.phase === PHASE.OVER) return [];
+  state.effects = [];
+  for (const u of state.sides[sideIndex].team) { u.ko = true; u.hp = 0; }
+  state.phase = PHASE.OVER;
+  state.winner = 1 - sideIndex;
+  effect(state, { type: 'forfeit', side: sideIndex });
+  log(state, `${state.sides[sideIndex].name} abandonne.`);
+  return state.effects;
 }
 
 /* ------------------------------------------------------------------ */
@@ -504,44 +578,42 @@ export function advance(state, ticks) {
 /* ------------------------------------------------------------------ */
 
 /**
- * Projette l'état pour un camp. Contrairement à un jeu de bluff, tout est
- * public dans un combat : on masque seulement la main adverse, qui donnerait
- * une information de timing indue.
+ * Projette l'état pour un camp. Tout est public dans un combat au tour par
+ * tour, à une exception près : la commande déjà choisie par l'adversaire,
+ * qui ruinerait l'anticipation.
  */
 export function viewFor(state, viewerId) {
   const me = state.sides.findIndex((s) => s.id === viewerId);
   const mine = me < 0 ? 0 : me;
 
   return {
-    tick: state.tick,
+    turn: state.turn,
     phase: state.phase,
     winner: state.winner,
     viewerSide: mine,
-    tickMs: TICK_MS,
+    maxTurns: MAX_TURNS,
     sides: state.sides.map((s, i) => ({
       index: i,
       id: s.id,
       name: s.name,
       isBot: s.isBot,
       active: s.active,
-      ki: Math.round(s.ki),
-      combo: s.combo,
-      fatigue: s.fatigue,
-      swapCd: s.swapCd,
-      koPause: s.koPause,
-      handCount: s.hand.length,
-      hand: i === mine ? [...s.hand] : null,
+      // On indique qu'un choix est fait, jamais lequel.
+      aChoisi: !!s.queued,
       stats: s.stats,
       team: s.team.map((u) => ({
         fighterId: u.fighterId,
         hp: u.hp,
         maxHp: u.maxHp,
-        stun: u.stun,
-        vanishing: state.tick < u.vanishUntil,
-        ultUsed: u.ultUsed,
+        ki: Math.round(u.ki),
         ko: u.ko,
+        guard: u.guard,
+        ultUsed: u.ultUsed,
+        status: u.status ? { key: u.status.key, tours: u.status.tours } : null,
+        vitesse: u.ko ? 0 : Math.round(speedOf(u)),
       })),
     })),
-    log: state.log.slice(-5),
+    commandes: availableCommands(state, mine),
+    log: state.log.slice(-6),
   };
 }

@@ -1,27 +1,21 @@
 /**
- * ZÉNITH — combat hors-ligne.
+ * ZÉNITH — combat hors-ligne, au tour par tour.
  *
- * Le moteur tourne dans l'onglet, cadencé par une boucle à intervalle fixe.
- * L'horloge est calée sur le temps réel plutôt que sur le nombre d'appels :
- * si l'onglet passe en arrière-plan, on rattrape les ticks manquants au
- * retour au lieu de laisser le combat dériver.
+ * Le moteur tourne dans l'onglet. Le joueur choisit sa commande, l'ordinateur
+ * choisit la sienne sans la voir, puis le tour se résout.
  */
 
 import {
-  createBattle, step, queueAction, viewFor, TICK_MS, PHASE,
+  createBattle, choose, resolveTurn, viewFor, PHASE, pretARésoudre,
 } from '../../../shared/zenith/battle.js';
 import { createBrain, think, makeOpponent } from '../../../shared/zenith/ai.js';
 import * as ui from './ui.js';
 
 let state = null;
 let brain = null;
-let timer = null;
-let lastAt = 0;
 let exitTo = () => {};
 let onFinish = () => {};
-
-/** Plafond de rattrapage : au-delà, on repart du temps présent. */
-const MAX_CATCHUP = 12;
+let occupe = false;
 
 export function start({ team, level, onExit, onDone }) {
   stop();
@@ -36,56 +30,47 @@ export function start({ team, level, onExit, onDone }) {
   brain = createBrain(level);
 
   ui.resetFight();
-  ui.bindActions(act);
+  ui.bindCommands(commande);
   ui.render(viewFor(state, 'me'));
-  ui.announce('COMBAT !', '#ffd84d');
-
-  lastAt = performance.now();
-  timer = setInterval(loop, TICK_MS);
+  ui.annonce('COMBAT !', '#ffd84d');
 }
 
-export function stop() {
-  if (timer) { clearInterval(timer); timer = null; }
-  state = null;
-}
-
+export function stop() { state = null; occupe = false; }
 export function isRunning() { return !!state; }
 
-function act(action) {
-  if (!state || state.phase !== PHASE.FIGHT) return;
-  const res = queueAction(state, 0, action);
-  if (!res.ok && res.error === 'ki') ui.toast('Pas assez de ki.');
-  else if (!res.ok && res.error === 'recharge') ui.toast('Changement en recharge.');
-}
+/** Commande envoyée par le joueur. */
+async function commande(cmd) {
+  if (!state || occupe || state.phase !== PHASE.CHOOSE) return;
 
-function loop() {
-  if (!state) return;
-  const now = performance.now();
-  let due = Math.floor((now - lastAt) / TICK_MS);
-  if (due <= 0) return;
-  if (due > MAX_CATCHUP) due = 1;      // l'onglet revient d'arrière-plan
-  lastAt += due * TICK_MS;
-
-  for (let i = 0; i < due && state.phase === PHASE.FIGHT; i++) {
-    think(state, 1, brain);
-    const effects = step(state);
-    const view = viewFor(state, 'me');
-    if (effects.length) ui.playEffects(effects, view);
+  const res = choose(state, 0, cmd);
+  if (!res.ok) {
+    ui.toast(res.error === 'ki' ? 'Pas assez de ki.'
+      : res.error === 'déjà utilisée' ? 'Ultime déjà employée.'
+      : 'Commande impossible.');
+    return;
   }
 
-  const view = viewFor(state, 'me');
-  ui.render(view);
+  occupe = true;
+  ui.render(viewFor(state, 'me'));
+
+  // L'ordinateur choisit sans avoir vu notre commande : le moteur ne la lui
+  // expose pas, et nous lui laissons un court temps de réflexion.
+  await ui.sleep(340);
+  think(state, 1, brain);
+
+  if (!pretARésoudre(state)) { occupe = false; return; }
+
+  const { effects } = resolveTurn(state);
+  await ui.playEffects(effects, viewFor(state, 'me'));
+  occupe = false;
 
   if (state.phase === PHASE.OVER) {
-    const final = view;
+    const finale = viewFor(state, 'me');
+    await ui.sleep(700);
     stop();
-    setTimeout(() => finish(final), 1200);
+    ui.showEnd(finale, {
+      onMenu: () => { ui.hideEnd(); exitTo(); },
+      onAgain: () => { ui.hideEnd(); onFinish(); },
+    });
   }
-}
-
-function finish(view) {
-  ui.showEnd(view, {
-    onMenu: () => { ui.hideEnd(); exitTo(); },
-    onAgain: () => { ui.hideEnd(); onFinish(); },
-  });
 }

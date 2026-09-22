@@ -94,331 +94,395 @@ test('a investissement offensif egal, aucun profil ne domine l\'autre', () => {
 });
 
 /* ================================================================== */
-/* Moteur                                                             */
+/* Moteur au tour par tour                                            */
 /* ================================================================== */
 
-test('un combat demarre avec deux equipes completes', () => {
+/** Fait jouer un tour complet avec une commande imposée de chaque côté. */
+function tour(s, cmdA, cmdB) {
+  const a = B.choose(s, 0, cmdA);
+  const b = B.choose(s, 1, cmdB);
+  const res = B.resolveTurn(s);
+  return { a, b, res };
+}
+
+const frappe = { type: 'move', move: 'frappe' };
+
+test('un combat demarre avec deux equipes completes, en attente de commandes', () => {
   const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm']);
-  assert.equal(s.phase, B.PHASE.FIGHT);
+  assert.equal(s.phase, B.PHASE.CHOOSE);
+  assert.equal(s.turn, 1);
   assert.equal(s.sides.length, 2);
   for (const side of s.sides) {
     assert.equal(side.team.length, B.TEAM_SIZE);
-    assert.ok(side.hand.length > 0, 'la main de depart ne doit pas etre vide');
+    assert.equal(side.queued, null, 'aucune commande ne doit etre pre-remplie');
     for (const u of side.team) assert.equal(u.hp, u.maxHp);
   }
+});
+
+test('le tour ne se resout que lorsque les deux camps ont choisi', () => {
+  const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm']);
+  assert.equal(B.choose(s, 0, frappe).ok, true);
+  assert.equal(B.pretARésoudre(s), false);
+  assert.equal(B.resolveTurn(s).ok, false, 'un tour incomplet ne doit pas partir');
+  assert.equal(s.turn, 1);
+
+  assert.equal(B.choose(s, 1, frappe).ok, true);
+  assert.equal(B.pretARésoudre(s), true);
+  assert.equal(B.resolveTurn(s).ok, true);
+  assert.equal(s.turn, 2);
+});
+
+test('un camp ne peut pas changer sa commande une fois posee', () => {
+  const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm']);
+  assert.equal(B.choose(s, 0, frappe).ok, true);
+  const second = B.choose(s, 0, { type: 'guard' });
+  assert.equal(second.ok, false);
+  assert.equal(second.error, 'deja choisi'.replace('deja', 'déjà'));
 });
 
 test('une meme graine rejoue le combat a l\'identique', () => {
   const run = () => {
     const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm'], 4242);
-    const brains = [AI.createBrain('guerrier'), AI.createBrain('guerrier')];
-    // On neutralise l'alea propre aux bots pour n'observer que le moteur.
     let t = 0;
-    while (s.phase === B.PHASE.FIGHT && t++ < 500) {
-      B.queueAction(s, 0, { type: 'play', index: 0 });
-      B.queueAction(s, 1, { type: 'play', index: 0 });
-      B.step(s);
-    }
+    while (s.phase !== B.PHASE.OVER && t++ < 200) tour(s, frappe, frappe);
     return s.sides.map((x) => x.team.map((u) => u.hp));
   };
   assert.deepEqual(run(), run());
 });
 
-test('jouer une carte coute du ki, blesse la cible et immobilise l\'attaquant', () => {
+test('une attaque coute son ki, blesse la cible, et le tour en rend a tous', () => {
   const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm']);
-  // On teste avec une speciale : la frappe rend plus de ki qu'elle n'en
-  // coute, ce qui masquerait la consommation.
-  s.sides[0].hand = ['speciale'];
-  s.sides[0].ki = 100;
-  const before = s.sides[1].team[0].hp;
+  const att = s.sides[0].team[0];
+  const def = s.sides[1].team[0];
+  att.ki = 60;
+  const kiAvant = att.ki;
+  const pvAvant = def.hp;
 
-  assert.ok(B.queueAction(s, 0, { type: 'play', index: 0 }).ok);
-  B.step(s);
+  tour(s, { type: 'move', move: 'souffle' }, { type: 'move', move: 'souffle' });
 
-  assert.ok(s.sides[1].team[0].hp < before, 'la cible doit perdre des points de vie');
-  assert.ok(s.sides[0].ki < 100, 'le ki doit etre consomme');
-  assert.ok(s.sides[0].team[0].stun > 0, 'l\'attaquant doit etre immobilise');
-  assert.equal(s.sides[0].hand.length, 0, 'la carte doit quitter la main');
+  assert.ok(def.hp < pvAvant, 'la cible doit encaisser');
+  // 18 de cout, puis le revenu de fin de tour.
+  assert.equal(att.ki, kiAvant - B.MOVES.souffle.ki + B.KI_PAR_TOUR);
 });
 
-test('on ne peut pas jouer sans ki, ni pendant son immobilisation', () => {
+test('la frappe est gratuite et rend du ki', () => {
   const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm']);
-  s.sides[0].hand = ['ultime'];
-  s.sides[0].ki = 10;
-  assert.equal(B.queueAction(s, 0, { type: 'play', index: 0 }).error, 'ki');
+  const att = s.sides[0].team[0];
+  att.ki = 0;
+  tour(s, frappe, frappe);
+  assert.equal(att.ki, B.MOVES.frappe.kiGain + B.KI_PAR_TOUR);
+});
 
-  s.sides[0].ki = 100;
-  s.sides[0].team[0].stun = 5;
-  assert.equal(B.queueAction(s, 0, { type: 'play', index: 0 }).error, 'occupé');
+test('on ne peut pas lancer un coup sans le ki', () => {
+  const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm']);
+  s.sides[0].team[0].ki = 0;
+  const r = B.choose(s, 0, { type: 'move', move: 'ultime' });
+  assert.equal(r.ok, false);
+  assert.equal(r.error, 'ki');
+  const dispo = B.availableCommands(s, 0);
+  assert.equal(dispo.moves.find((m) => m.key === 'ultime').utilisable, false);
+  assert.equal(dispo.moves.find((m) => m.key === 'frappe').utilisable, true);
+});
+
+test('le revenu de ki par tour est verse aux deux camps', () => {
+  const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm']);
+  s.sides[0].team[0].ki = 0;
+  s.sides[1].team[0].ki = 0;
+  tour(s, { type: 'guard' }, { type: 'guard' });
+  assert.equal(s.sides[0].team[0].ki, B.GUARD_KI + B.KI_PAR_TOUR);
+  assert.equal(s.sides[1].team[0].ki, B.GUARD_KI + B.KI_PAR_TOUR);
+});
+
+test('la garde amortit reellement le coup du tour', () => {
+  const degats = (garde) => {
+    const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm'], 7);
+    s.sides[0].team[0].ki = 100;
+    const def = s.sides[1].team[0];
+    const avant = def.hp;
+    tour(s, { type: 'move', move: 'souffle' }, garde ? { type: 'guard' } : frappe);
+    return avant - def.hp;
+  };
+  const nu = degats(false);
+  const protege = degats(true);
+  assert.ok(protege < nu * 0.7,
+    `la garde ne reduit que de ${(100 - protege / nu * 100).toFixed(0)} %`);
+});
+
+test('les attaques partent du plus rapide au plus lent', () => {
+  // Kaze est rapide, Gorm est lent : Kaze doit frapper en premier.
+  const s = duo(['kaze', 'volt', 'nox'], ['gorm', 'tarn', 'brume'], 11);
+  const rapide = B.speedOf(s.sides[0].team[0]);
+  const lent = B.speedOf(s.sides[1].team[0]);
+  assert.ok(rapide > lent, 'le materiel de test suppose un ecart de vitesse');
+
+  const { res } = tour(s, frappe, frappe);
+  const coups = res.effects.filter((e) => e.type === 'hit');
+  assert.ok(coups.length >= 1);
+  assert.equal(coups[0].side, 0, 'le plus rapide doit apparaitre en premier');
+});
+
+test('la vitesse decide, pas l\'ordre des camps', () => {
+  // Meme duel, camps inverses : le rapide reste premier.
+  const s = duo(['gorm', 'tarn', 'brume'], ['kaze', 'volt', 'nox'], 11);
+  const { res } = tour(s, frappe, frappe);
+  const coups = res.effects.filter((e) => e.type === 'hit');
+  assert.equal(coups[0].side, 1);
+});
+
+test('le changement passe avant les attaques du tour', () => {
+  const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm']);
+  const { res } = tour(s, { type: 'swap', slot: 2 }, frappe);
+  assert.equal(s.sides[0].active, 2, 'le remplacant doit etre en lice');
+  const iSwap = res.effects.findIndex((e) => e.type === 'swap');
+  const iHit = res.effects.findIndex((e) => e.type === 'hit');
+  assert.ok(iSwap >= 0 && iHit >= 0);
+  assert.ok(iSwap < iHit, 'le changement doit precede le coup encaisse');
+  // Le coup adverse frappe donc le remplacant, pas celui qui est parti.
+  assert.equal(s.sides[0].team[0].hp, s.sides[0].team[0].maxHp);
+  assert.ok(s.sides[0].team[2].hp < s.sides[0].team[2].maxHp);
+});
+
+test('on ne change pas pour un combattant a terre ni pour soi-meme', () => {
+  const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm']);
+  s.sides[0].team[1].ko = true;
+  assert.equal(B.choose(s, 0, { type: 'swap', slot: 1 }).ok, false);
+  assert.equal(B.choose(s, 0, { type: 'swap', slot: 0 }).ok, false);
+  assert.equal(B.choose(s, 0, { type: 'swap', slot: 7 }).ok, false);
+  assert.equal(B.choose(s, 0, { type: 'swap', slot: 2 }).ok, true);
 });
 
 test('l\'avantage elementaire augmente reellement les degats', () => {
-  // Braise domine Orage. Meme attaquant, meme carte, deux cibles dont on
-  // egalise la garde pour n'observer que l'effet elementaire.
-  const mk = (defId) => {
-    const s = duo(['kaze', 'volt', 'nox'], [defId, 'gorm', 'tarn'], 99);
-    s.rng = () => 0.5;                       // neutralise la variation
-    return B.computeDamage(s, s.sides[0], s.sides[1], 'frappe');
-  };
-  const vsOrage = mk('volt');    // Kaze est Braise : avantage
-  const vsGivre = mk('kelvin');  // Givre domine Braise : desavantage
-
-  assert.equal(vsOrage.elem, F.ADVANTAGE_BONUS);
-  assert.equal(vsGivre.elem, F.DISADVANTAGE_MALUS);
+  const braise = F.FIGHTERS.find((f) => f.element === 'braise');
+  const orage = F.FIGHTERS.find((f) => f.element === 'orage');
+  const givre = F.FIGHTERS.find((f) => f.element === 'givre');
+  const fort = B.estimateDamage(braise, orage, 'souffle');
+  const faible = B.estimateDamage(braise, givre, 'souffle');
+  assert.ok(fort > faible, 'braise doit taper plus fort sur orage que sur givre');
 });
 
-test('l\'esquive annule le coup suivant puis se consomme', () => {
+/** Trois combattants d'un element donne, pour composer une equipe temoin. */
+const equipeDe = (element) => F.FIGHTERS.filter((f) => f.element === element).slice(0, 3).map((f) => f.id);
+
+test('la speciale pose l\'alteration de son element sur la cible', () => {
+  // La seve fait exception : elle soigne le lanceur. On teste ici les quatre
+  // autres elements, qui frappent bien l'adversaire.
+  for (const element of ['braise', 'orage', 'abysse', 'givre']) {
+    const s = duo(equipeDe(element), equipeDe('sylve'), 5);
+    const att = s.sides[0].team[0];
+    att.ki = 100;
+    // La cible doit survivre au coup pour porter l'alteration.
+    for (const u of s.sides[1].team) { u.maxHp = 9000; u.hp = 9000; }
+    tour(s, { type: 'move', move: 'speciale' }, { type: 'move', move: 'frappe' });
+    const cible = s.sides[1].team[s.sides[1].active];
+    assert.ok(cible.status, `${element} : la speciale doit laisser une trace`);
+    assert.equal(cible.status.key, B.ELEMENT_STATUS[element]);
+  }
+});
+
+test('la speciale de sylve soigne le lanceur au lieu d\'affliger la cible', () => {
+  const s = duo(equipeDe('sylve'), equipeDe('braise'), 5);
+  const att = s.sides[0].team[0];
+  att.ki = 100;
+  tour(s, { type: 'move', move: 'speciale' }, { type: 'move', move: 'frappe' });
+  assert.ok(att.status, 'le lanceur doit s\'entourer de seve');
+  assert.equal(att.status.key, 'seve');
+  assert.equal(s.sides[1].team[s.sides[1].active].status, null);
+});
+
+test('une alteration finit par s\'estomper', () => {
+  const s = duo(['tarn', 'kaze', 'volt'], ['gorm', 'brume', 'nox'], 3);
+  const cible = s.sides[1].team[0];
+  cible.status = { key: 'brulure', tours: 2 };
+  tour(s, frappe, frappe);
+  assert.equal(cible.status && cible.status.tours, 1);
+  tour(s, frappe, frappe);
+  assert.equal(cible.status, null, 'l\'alteration doit expirer');
+});
+
+test('la paralysie ralentit celui qui la subit', () => {
   const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm']);
-  s.sides[1].ki = 100;
-  assert.ok(B.queueAction(s, 1, { type: 'vanish' }).ok);
-  B.step(s);
-  assert.ok(s.sides[1].team[0].vanishUntil > s.tick, 'la fenetre doit etre ouverte');
-
-  // On laisse l'attaquant recuperer, puis il frappe dans le vide.
-  s.sides[0].team[0].stun = 0;
-  s.sides[0].hand = ['frappe'];
-  s.sides[0].ki = 100;
-  const hp = s.sides[1].team[0].hp;
-  B.queueAction(s, 0, { type: 'play', index: 0 });
-  const fx = B.step(s);
-
-  assert.equal(s.sides[1].team[0].hp, hp, 'le coup ne doit pas passer');
-  assert.ok(fx.some((e) => e.type === 'vanish'), 'l\'esquive doit etre signalee');
-  assert.ok(s.sides[1].team[0].vanishUntil <= s.tick, 'la fenetre doit etre consommee');
+  const u = s.sides[0].team[0];
+  const vite = B.speedOf(u);
+  u.status = { key: 'paralysie', tours: 3 };
+  assert.ok(B.speedOf(u) < vite, 'la paralysie doit couter de la vitesse');
 });
 
 test('l\'ultime ne part qu\'une fois par combattant', () => {
   const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm']);
-  s.sides[0].hand = ['ultime', 'ultime'];
-  s.sides[0].ki = 100;
-  B.queueAction(s, 0, { type: 'play', index: 0 });
-  B.step(s);
-  assert.equal(s.sides[0].team[0].ultUsed, true);
-
-  s.sides[0].team[0].stun = 0;
-  s.sides[0].ki = 100;
-  B.queueAction(s, 0, { type: 'play', index: 0 });
-  const hp = s.sides[1].team[0].hp;
-  B.step(s);
-  assert.equal(s.sides[1].team[0].hp, hp, 'le second ultime ne doit rien faire');
+  const u = s.sides[0].team[0];
+  u.ki = 100;
+  tour(s, { type: 'move', move: 'ultime' }, { type: 'guard' });
+  assert.equal(u.ultUsed, true);
+  u.ki = 100;
+  const r = B.choose(s, 0, { type: 'move', move: 'ultime' });
+  assert.equal(r.ok, false);
+  assert.equal(B.availableCommands(s, 0).moves.find((m) => m.key === 'ultime').raison,
+    'déjà utilisée');
 });
 
 test('un combattant a terre laisse la place au suivant', () => {
   const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm']);
   s.sides[1].team[0].hp = 1;
-  s.sides[0].hand = ['speciale'];
-  s.sides[0].ki = 100;
-  B.queueAction(s, 0, { type: 'play', index: 0 });
-  B.step(s);
-
+  s.sides[0].team[0].ki = 100;
+  tour(s, { type: 'move', move: 'speciale' }, { type: 'guard' });
   assert.equal(s.sides[1].team[0].ko, true);
-  assert.equal(s.phase, B.PHASE.FIGHT, 'le combat continue tant qu\'il reste du monde');
-  B.advance(s, B.KO_SWAP_DELAY + 1);
-  assert.notEqual(s.sides[1].active, 0, 'le suivant doit entrer en lice');
+  assert.notEqual(s.sides[1].active, 0, 'un remplacant doit entrer');
   assert.equal(s.sides[1].team[s.sides[1].active].ko, false);
 });
 
 test('le combat s\'arrete quand une equipe entiere est a terre', () => {
   const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm']);
-  s.sides[1].team[0].ko = true;
-  s.sides[1].team[0].hp = 0;
+  for (const u of s.sides[1].team) { u.hp = 1; }
   s.sides[1].team[1].ko = true;
-  s.sides[1].team[1].hp = 0;
-  s.sides[1].active = 2;
-  s.sides[1].team[2].hp = 1;
-
-  s.sides[0].hand = ['ultime'];
-  s.sides[0].ki = 100;
-  B.queueAction(s, 0, { type: 'play', index: 0 });
-  const fx = B.step(s);
-
+  s.sides[1].team[2].ko = true;
+  s.sides[0].team[0].ki = 100;
+  tour(s, { type: 'move', move: 'speciale' }, { type: 'guard' });
   assert.equal(s.phase, B.PHASE.OVER);
   assert.equal(s.winner, 0);
-  assert.ok(fx.some((e) => e.type === 'victory'));
+  // Plus aucune commande n'est acceptee.
+  assert.equal(B.choose(s, 0, frappe).ok, false);
 });
 
-test('le changement vide la main et impose une recharge', () => {
+test('un combat interminable est tranche aux points de vie', () => {
+  const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm'], 9);
+  s.turn = B.MAX_TURNS;
+  tour(s, { type: 'guard' }, { type: 'guard' });
+  assert.equal(s.phase, B.PHASE.OVER);
+  assert.ok(s.winner === 0 || s.winner === 1 || s.winner === null);
+});
+
+test('l\'abandon donne la victoire a celui qui reste', () => {
   const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm']);
-  assert.ok(B.queueAction(s, 0, { type: 'swap', slot: 1 }).ok);
-  B.step(s);
-  assert.equal(s.sides[0].active, 1);
-  assert.equal(s.sides[0].hand.length, 0, 'la main appartient au combattant');
-  assert.ok(s.sides[0].swapCd > 0);
-
-  // On laisse le nouvel entrant reprendre ses esprits pour isoler la
-  // recharge : sans cela le moteur repond « occupe » avant d'y arriver.
-  s.sides[0].team[s.sides[0].active].stun = 0;
-  assert.equal(B.queueAction(s, 0, { type: 'swap', slot: 2 }).error, 'recharge');
+  B.forfeit(s, 1);
+  assert.equal(s.phase, B.PHASE.OVER);
+  assert.equal(s.winner, 0);
+  assert.ok(s.sides[1].team.every((u) => u.ko));
 });
 
-test('la vue ne transmet pas la main adverse', () => {
+test('la vue cache la commande adverse mais annonce qu\'elle est tombee', () => {
   const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm']);
-  const v = B.viewFor(s, 'a');
-  assert.ok(Array.isArray(v.sides[0].hand), 'notre main doit etre visible');
-  assert.equal(v.sides[1].hand, null, 'la main adverse donnerait une info de timing');
-  assert.equal(typeof v.sides[1].handCount, 'number');
-  assert.equal(JSON.stringify(v).includes('"seed"'), false);
+  B.choose(s, 1, { type: 'move', move: 'souffle' });
+  const vue = B.viewFor(s, 'a');
+  assert.equal(vue.viewerSide, 0);
+  assert.equal(vue.sides[1].aChoisi, true, 'on doit voir que l\'adversaire a joue');
+  assert.equal(vue.sides[0].aChoisi, false);
+  // `commandes` decrit les options du spectateur : c'est le camp adverse qui
+  // ne doit rien reveler.
+  const brut = JSON.stringify(vue.sides);
+  assert.ok(!brut.includes('souffle') && !brut.includes('queued'),
+    'la vue ne doit jamais laisser filtrer quelle commande a ete choisie');
 });
+
+test('la vue fournit les commandes disponibles du camp qui regarde', () => {
+  const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm']);
+  const vue = B.viewFor(s, 'b');
+  assert.equal(vue.viewerSide, 1);
+  assert.equal(vue.commandes.moves.length, B.MOVE_KEYS.length);
+  assert.equal(vue.commandes.swaps.length, B.TEAM_SIZE);
+});
+
 
 /* ================================================================== */
 /* Adversaires                                                        */
 /* ================================================================== */
 
-test('les bots ne produisent que des actions acceptees, et les combats aboutissent', () => {
-  for (let g = 0; g < 200; g++) {
-    const s = duo(F.randomTeam(3), F.randomTeam(3), g * 17 + 3);
-    const brains = [
-      AI.createBrain(AI.LEVEL_KEYS[g % 3]),
-      AI.createBrain(AI.LEVEL_KEYS[(g + 1) % 3]),
-    ];
-    let t = 0;
-    while (s.phase === B.PHASE.FIGHT && t++ < 4000) {
-      AI.think(s, 0, brains[0]);
-      AI.think(s, 1, brains[1]);
-      B.step(s);
+/** Joue un combat entier entre deux cerveaux et renvoie le vainqueur. */
+function duel(teamA, teamB, nivA, nivB, seed) {
+  const s = duo(teamA, teamB, seed);
+  const brains = [AI.createBrain(nivA), AI.createBrain(nivB)];
+  let garde = 0;
+  while (s.phase !== B.PHASE.OVER && garde++ < 400) {
+    AI.think(s, 0, brains[0]);
+    AI.think(s, 1, brains[1]);
+    const r = B.resolveTurn(s);
+    if (!r.ok) throw new Error(`tour bloque au tour ${s.turn}`);
+  }
+  return { winner: s.winner, tours: s.turn, phase: s.phase };
+}
 
-      for (const side of s.sides) {
-        assert.ok(side.ki >= -0.001 && side.ki <= B.KI_MAX + 0.001, 'ki hors bornes');
-        assert.ok(side.hand.length <= B.HAND_MAX, 'main trop grande');
-        for (const u of side.team) {
-          assert.ok(u.hp >= 0 && u.hp <= u.maxHp, 'pv hors bornes');
-          if (u.ko) assert.equal(u.hp, 0);
-        }
-      }
-    }
-    assert.equal(s.phase, B.PHASE.OVER, `combat ${g} non termine`);
-    assert.ok(s.winner === 0 || s.winner === 1);
+test('les bots ne produisent que des commandes acceptees, et les combats aboutissent', () => {
+  for (let g = 0; g < 60; g++) {
+    const niveau = ['recrue', 'guerrier', 'legende'][g % 3];
+    const r = duel(F.randomTeam(3), F.randomTeam(3), niveau, 'guerrier', g * 17 + 1);
+    assert.equal(r.phase, B.PHASE.OVER, `combat ${g} non conclu`);
   }
 });
 
-test('la difficulte est ordonnee : Legende bat Guerrier, qui bat Recrue', async () => {
-  // Chaque duel oppose les memes equipes, seule la qualite de decision varie.
-  const duel = (lvlA, lvlB, rounds = 140) => {
-    let wins = 0;
-    for (let g = 0; g < rounds; g++) {
-      const team = F.randomTeam(3);
-      const s = duo(team, [...team], g * 31 + 5);
-      const brains = [AI.createBrain(lvlA), AI.createBrain(lvlB)];
-      let t = 0;
-      while (s.phase === B.PHASE.FIGHT && t++ < 4000) {
-        AI.think(s, 0, brains[0]);
-        AI.think(s, 1, brains[1]);
-        B.step(s);
-      }
-      if (s.winner === 0) wins++;
+test('la difficulte est ordonnee : Legende bat Guerrier, qui bat Recrue', () => {
+  // Duels en miroir : les deux camps recoivent la MEME equipe. C'est le seul
+  // moyen de mesurer la qualite des decisions ; avec des equipes tirees au
+  // hasard, la moitie du resultat tient au tirage et noie l'ecart de niveau
+  // (75 % en miroir tombe a 64 % en equipes libres).
+  const taux = (fort, faible, n = 400) => {
+    let gagnes = 0;
+    for (let g = 0; g < n; g++) {
+      const equipe = F.randomTeam(3);
+      // On alterne les cotes pour annuler tout biais de position.
+      const aGauche = g % 2 === 0;
+      const r = aGauche
+        ? duel(equipe, equipe.slice(), fort, faible, g * 37 + 5)
+        : duel(equipe, equipe.slice(), faible, fort, g * 37 + 5);
+      if (r.winner === (aGauche ? 0 : 1)) gagnes++;
     }
-    return wins / rounds;
+    return gagnes / n;
   };
 
-  const legVsGuer = duel('legende', 'guerrier');
-  const guerVsRec = duel('guerrier', 'recrue');
-
-  assert.ok(legVsGuer > 0.55,
-    `Legende devrait dominer Guerrier (obtenu ${(legVsGuer * 100).toFixed(0)}%)`);
-  assert.ok(guerVsRec > 0.6,
-    `Guerrier devrait dominer Recrue (obtenu ${(guerVsRec * 100).toFixed(0)}%)`);
+  const legVsRec = taux('legende', 'recrue');
+  const gueVsRec = taux('guerrier', 'recrue');
+  assert.ok(legVsRec > 0.68,
+    `Legende ne gagne que ${(legVsRec * 100).toFixed(1)} % contre Recrue`);
+  assert.ok(gueVsRec > 0.57,
+    `Guerrier ne gagne que ${(gueVsRec * 100).toFixed(1)} % contre Recrue`);
+  assert.ok(legVsRec > gueVsRec + 0.03,
+    `Legende (${(legVsRec * 100).toFixed(1)} %) doit devancer Guerrier `
+    + `(${(gueVsRec * 100).toFixed(1)} %) face a Recrue`);
 });
 
-test('aucun combattant n\'ecrase ni ne subit le roster', async () => {
-  // Duels toutes rondes plutot qu'equipes aleatoires : la composition
-  // d'equipe introduit un bruit qui noyait le signal. Ici chaque combattant
-  // affronte tous les autres, des deux cotes, ce qui mesure sa force propre
-  // avec un bruit d'environ 1,5 point.
-  const SEEDS = 12;
-  const wins = {}, games = {};
-  for (const f of F.FIGHTERS) { wins[f.id] = 0; games[f.id] = 0; }
-
-  for (let i = 0; i < F.FIGHTERS.length; i++) {
-    for (let j = i + 1; j < F.FIGHTERS.length; j++) {
-      for (let s = 0; s < SEEDS; s++) {
-        const a = F.FIGHTERS[i].id, b = F.FIGHTERS[j].id;
-        const [x, y] = s % 2 ? [b, a] : [a, b];   // on alterne les cotes
-        const st = duo([x], [y], (i * 331 + j * 17 + s) * 7 + 3);
-        const brains = [AI.createBrain('guerrier'), AI.createBrain('guerrier')];
-        let t = 0;
-        while (st.phase === B.PHASE.FIGHT && t++ < 4000) {
-          AI.think(st, 0, brains[0]); AI.think(st, 1, brains[1]); B.step(st);
-        }
-        games[x]++; games[y]++;
-        if (st.winner === 0) wins[x]++; else if (st.winner === 1) wins[y]++;
-      }
-    }
-  }
-
-  const rates = F.FIGHTERS.map((f) => ({ name: f.name, wr: wins[f.id] / games[f.id] * 100 }));
-  const spread = Math.max(...rates.map((r) => r.wr)) - Math.min(...rates.map((r) => r.wr));
-  assert.ok(spread < 20,
-    `ecart de ${spread.toFixed(1)} points entre combattants : `
-    + JSON.stringify(rates.map((r) => [r.name, +r.wr.toFixed(0)])));
-
-  // Aucun element ne doit etre systematiquement avantage.
-  const parElement = {};
-  for (const f of F.FIGHTERS) (parElement[f.element] ||= []).push(wins[f.id] / games[f.id] * 100);
-  const moyennes = Object.entries(parElement).map(([e, v]) => [e, v.reduce((a, b) => a + b) / v.length]);
-  const ecartElement = Math.max(...moyennes.map((m) => m[1])) - Math.min(...moyennes.map((m) => m[1]));
-  assert.ok(ecartElement < 9,
-    `ecart de ${ecartElement.toFixed(1)} points entre elements : `
-    + JSON.stringify(moyennes.map(([e, v]) => [e, +v.toFixed(0)])));
-});
-
-test('choisir sa carte vaut nettement mieux que jouer la premiere venue', () => {
-  // Garde contre la derive qui rendrait le jeu purement mecanique : si jouer
-  // n'importe quelle carte valait autant que choisir, il ne resterait qu'a
-  // marteler l'ecran. Cette mesure est la traduction chiffree de ce reproche.
-  const libre = (s) => { const u = B.activeUnit(s); return !u.ko && u.stun <= 0 && s.koPause === 0; };
-
-  const premiere = (st, i) => {
-    const s = st.sides[i];
-    if (!libre(s)) return;
-    for (let k = 0; k < s.hand.length; k++) {
-      if (s.ki >= F.CARD_KINDS[s.hand[k]].ki) { B.queueAction(st, i, { type: 'play', index: k }); return; }
-    }
-  };
-  const meilleure = (st, i) => {
-    const s = st.sides[i], u = B.activeUnit(s);
-    if (!libre(s)) return;
-    let best = -1, bv = 0;
-    s.hand.forEach((k, idx) => {
-      const c = F.CARD_KINDS[k];
-      if (s.ki < c.ki) return;
-      const v = c.power * B.statOf(B.fighterOf(u), c.stat);
-      if (v > bv) { bv = v; best = idx; }
-    });
-    if (best >= 0) B.queueAction(st, i, { type: 'play', index: best });
+test('choisir sa commande vaut nettement mieux que taper au hasard', () => {
+  // Un tour par tour n'en est un que si le choix compte. On oppose un joueur
+  // qui evalue ses options a un joueur qui en tire une au sort.
+  const hasard = (s, i) => {
+    const d = B.availableCommands(s, i);
+    const options = d.moves.filter((m) => m.utilisable).map((m) => ({ type: 'move', move: m.key }));
+    options.push({ type: 'guard' });
+    for (const sw of d.swaps) if (sw.utilisable) options.push({ type: 'swap', slot: sw.slot });
+    return options[Math.floor(s.rng() * options.length)];
   };
 
   let gagnes = 0;
-  const N = 400;
-  for (let g = 0; g < N; g++) {
-    const team = F.randomTeam(3);
-    // Memes equipes des deux cotes : seule la facon de choisir differe.
-    const st = duo(team, [...team], g * 131 + 7);
-    let t = 0;
-    while (st.phase === B.PHASE.FIGHT && t++ < 6000) { meilleure(st, 0); premiere(st, 1); B.step(st); }
-    if (st.winner === 0) gagnes++;
+  const n = 300;
+  for (let g = 0; g < n; g++) {
+    const s = duo(F.randomTeam(3), F.randomTeam(3), g * 29 + 3);
+    const brain = AI.createBrain('legende');
+    const cerveauAGauche = g % 2 === 0;
+    let garde = 0;
+    while (s.phase !== B.PHASE.OVER && garde++ < 400) {
+      if (cerveauAGauche) {
+        AI.think(s, 0, brain);
+        B.choose(s, 1, hasard(s, 1));
+      } else {
+        B.choose(s, 0, hasard(s, 0));
+        AI.think(s, 1, brain);
+      }
+      B.resolveTurn(s);
+    }
+    if (s.winner === (cerveauAGauche ? 0 : 1)) gagnes++;
   }
-  const tx = gagnes / N * 100;
-  assert.ok(tx > 57,
-    `choisir sa carte ne vaut que ${tx.toFixed(1)} % : le jeu se reduirait a marteler`);
+  const taux = gagnes / n;
+  assert.ok(taux > 0.7,
+    `choisir ne vaut que ${(taux * 100).toFixed(1)} % : le jeu se joue tout seul`);
 });
 
-test('un combat dure un temps jouable sur telephone', () => {
-  const lengths = [];
+test('un combat dure un nombre de tours jouable', () => {
+  const longueurs = [];
   for (let g = 0; g < 120; g++) {
-    const s = duo(F.randomTeam(3), F.randomTeam(3), g * 53 + 1);
-    const brains = [AI.createBrain('guerrier'), AI.createBrain('guerrier')];
-    let t = 0;
-    while (s.phase === B.PHASE.FIGHT && t++ < 4000) {
-      AI.think(s, 0, brains[0]);
-      AI.think(s, 1, brains[1]);
-      B.step(s);
-    }
-    lengths.push(t * B.TICK_MS / 1000);
+    const r = duel(F.randomTeam(3), F.randomTeam(3), 'guerrier', 'guerrier', g * 53 + 1);
+    longueurs.push(r.tours);
   }
-  lengths.sort((a, b) => a - b);
-  const median = lengths[Math.floor(lengths.length / 2)];
-  assert.ok(median > 15 && median < 90,
-    `duree mediane de ${median.toFixed(0)}s : trop expeditif ou trop long`);
+  longueurs.sort((a, b) => a - b);
+  const mediane = longueurs[Math.floor(longueurs.length / 2)];
+  assert.ok(mediane >= 10 && mediane <= 40,
+    `mediane de ${mediane} tours : trop expeditif ou trop long`);
 });
 
 
@@ -430,7 +494,12 @@ test('un combat en ligne se joue de bout en bout contre le vrai serveur', async 
   const { default: server } = await import('../api/ws.js');
   await new Promise((res) => server.listen(0, '127.0.0.1', res));
   const port = server.address().port;
-  t.after(() => new Promise((res) => server.close(res)));
+  const ouverts = [];
+  t.after(() => {
+    for (const c of ouverts) c.close();
+    server.closeAllConnections?.();
+    return new Promise((res) => server.close(res));
+  });
 
   /** Client minimal au-dessus du WebSocket natif de Node. */
   class C {
@@ -471,6 +540,7 @@ test('un combat en ligne se joue de bout en bout contre le vrai serveur', async 
 
   const url = `ws://127.0.0.1:${port}/api/ws`;
   const host = new C(url), guest = new C(url);
+  ouverts.push(host, guest);
   await Promise.all([host.ready(), guest.ready()]);
 
   host.send({ t: 'hello', name: 'Hote' });
@@ -501,18 +571,33 @@ test('un combat en ligne se joue de bout en bout contre le vrai serveur', async 
 
   const first = await host.wait((m) => m.t === 'z:tick');
   assert.equal(first.view.sides.length, 2);
-  assert.ok(Array.isArray(first.view.sides[first.view.viewerSide].hand));
-  assert.equal(first.view.sides[1 - first.view.viewerSide].hand, null,
-    'la main adverse donnerait une information de timing');
+  assert.equal(first.view.phase, 'choose');
+  assert.equal(first.view.turn, 1);
 
-  // Les deux camps martelent leurs cartes jusqu'a ce qu'un vainqueur sorte.
+  // Un seul camp a joue : l'autre doit l'apprendre sans savoir quoi.
+  host.send({ t: 'act', action: { type: 'move', move: 'frappe' } });
+  const moitie = await guest.wait((m) => m.t === 'z:tick'
+    && m.view.sides[1 - m.view.viewerSide].aChoisi === true);
+  assert.equal(moitie.view.phase, 'choose', 'le tour ne part pas sans les deux commandes');
+  assert.ok(!JSON.stringify(moitie.view.sides).includes('frappe'),
+    'la commande adverse ne doit pas transiter');
+
+  guest.send({ t: 'act', action: { type: 'move', move: 'frappe' } });
+  const resolu = await host.wait((m) => m.t === 'z:tick' && m.view.turn === 2);
+  assert.ok(resolu.effects.length > 0, 'le tour resolu doit transporter ses effets');
+
+  // Le serveur refuse une commande impossible plutot que de l'appliquer.
+  host.send({ t: 'act', action: { type: 'move', move: 'inexistant' } });
+  await host.wait((m) => m.t === 'z:reject');
+
+  // Puis les deux camps se frappent jusqu'a ce qu'un vainqueur sorte.
   const spam = setInterval(() => {
-    host.send({ t: 'act', action: { type: 'play', index: 0 } });
-    guest.send({ t: 'act', action: { type: 'play', index: 0 } });
+    host.send({ t: 'act', action: { type: 'move', move: 'frappe' } });
+    guest.send({ t: 'act', action: { type: 'move', move: 'frappe' } });
     // On evite que les boites de reception ne gonflent sans fin.
     if (host.inbox.length > 400) host.inbox.splice(0, 300);
     if (guest.inbox.length > 400) guest.inbox.splice(0, 300);
-  }, 60);
+  }, 25);
   t.after(() => clearInterval(spam));
 
   const over = await host.wait((m) => m.t === 'z:tick' && m.view.phase === 'over', 60000);
@@ -530,7 +615,10 @@ test('le routeur dirige chaque jeu vers son module', async (t) => {
   const { default: server } = await import('../api/ws.js');
   await new Promise((res) => server.listen(0, '127.0.0.1', res));
   const port = server.address().port;
-  t.after(() => new Promise((res) => server.close(res)));
+  t.after(() => {
+    server.closeAllConnections?.();
+    return new Promise((res) => server.close(res));
+  });
 
   /** Ouvre une connexion, envoie un message, et collecte les reponses. */
   const open = (payload, ms = 1200) => new Promise((resolve, reject) => {

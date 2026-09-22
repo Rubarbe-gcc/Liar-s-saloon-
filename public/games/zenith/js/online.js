@@ -86,12 +86,19 @@ function handle(m) {
     case 'z:welcome': myId = m.id; return;
     case 'z:hello': name = m.name; return;
     case 'z:room': room = m; return on.room(m);
-    case 'z:begin': ui.resetFight(); ui.bindActions(act); return on.begin();
+    case 'z:begin': ui.resetFight(); ui.bindCommands(envoyer); return on.begin();
 
     case 'z:tick': {
-      if (m.effects && m.effects.length) ui.playEffects(m.effects, m.view);
-      ui.render(m.view);
-      if (m.view.phase === 'over') on.over(m.view);
+      // Le serveur envoie l'état après chaque choix, et les effets du tour
+      // lorsqu'il vient de se résoudre.
+      if (m.effects && m.effects.length) {
+        ui.playEffects(m.effects, m.view).then(() => {
+          if (m.view.phase === 'over') on.over(m.view);
+        });
+      } else {
+        ui.render(m.view);
+        if (m.view.phase === 'over') on.over(m.view);
+      }
       return;
     }
 
@@ -118,4 +125,4 @@ export function startMatch() { send({ t: 'start' }); }
 export function backToLobby() { send({ t: 'lobby' }); }
 export function leaveRoom() { send({ t: 'leave' }); room = null; }
 
-function act(action) { send({ t: 'act', action }); }
+function envoyer(cmd) { send({ t: 'act', action: cmd }); }

@@ -281,15 +281,19 @@ function bind() {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      for (const id of ['ov-roster', 'ov-rules']) if (!$(id).hidden) { $(id).hidden = true; return; }
+      for (const id of ['ov-swap', 'ov-roster', 'ov-rules']) {
+        if (!$(id).hidden) { $(id).hidden = true; return; }
+      }
     }
     if (current !== 'fight') return;
-    // Raccourcis clavier : 1-4 pour les cartes, espace pour esquiver.
+    // Raccourcis : 1-4 pour les quatre coups, G pour la garde, C pour changer.
     if (e.key >= '1' && e.key <= '4') {
-      const b = document.querySelector(`.acard[data-card="${Number(e.key) - 1}"]`);
+      const b = document.querySelectorAll('.cmd-move')[Number(e.key) - 1];
       if (b && !b.classList.contains('off')) b.click();
     }
-    if (e.key === ' ' || e.key === 'Shift') { e.preventDefault(); if (!$('b-dodge').disabled) $('b-dodge').click(); }
+    const touche = e.key.toLowerCase();
+    if (touche === 'g') { e.preventDefault(); $('b-guard').click(); }
+    if (touche === 'c') { e.preventDefault(); $('b-swap').click(); }
   });
 
   document.addEventListener('pointerdown', unlock, { once: true });

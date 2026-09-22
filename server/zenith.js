@@ -2,13 +2,17 @@
  * ZÉNITH — arènes en ligne.
  *
  * Même principe que les salons de Liar's Saloon : le serveur est l'autorité,
- * le client n'envoie que des intentions. La différence est que le combat est
- * temps réel — le serveur fait donc tourner l'horloge et diffuse l'état à
- * chaque tick, plutôt que d'attendre une action.
+ * le client n'envoie que des intentions. Le combat est au tour par tour et les
+ * deux camps choisissent en aveugle : le serveur encaisse les deux commandes,
+ * puis résout le tour et diffuse l'état avec les effets à jouer.
+ *
+ * Un tour sans réponse ne doit pas figer l'arène : passé le délai, le camp
+ * muet frappe d'office. Mieux vaut un coup par défaut qu'un combat suspendu.
  */
 
 import {
-  createBattle, step, queueAction, viewFor, TICK_MS, PHASE, TEAM_SIZE,
+  createBattle, choose, resolveTurn, pretARésoudre, forfeit,
+  viewFor, PHASE, TEAM_SIZE,
 } from '../public/shared/zenith/battle.js';
 import { getFighter, randomTeam } from '../public/shared/zenith/fighters.js';
 
@@ -17,6 +21,8 @@ const CODE_LEN = 4;
 const SEATS = 2;
 const ARENA_TTL = 30 * 60 * 1000;
 const MATCH_TTL = 15 * 60 * 1000;
+/** Délai laissé à chaque camp pour choisir sa commande. */
+export const TURN_MS = 30 * 1000;
 
 /** @type {Map<string, Arena>} */
 const arenas = new Map();
@@ -129,22 +135,25 @@ class Arena {
     this.touch();
     this.broadcast({ t: 'z:begin' });
     this.pushState([]);
-    this.timer = setInterval(() => this.tick(), TICK_MS);
+    this.armTurn();
     return { ok: true };
   }
 
-  tick() {
-    if (!this.battle) return this.stopClock();
-    const effects = step(this.battle);
-    this.pushState(effects);
+  /** Relance le chronomètre du tour en cours. */
+  armTurn() {
+    this.stopClock();
+    if (!this.battle || this.battle.phase !== PHASE.CHOOSE) return;
+    this.timer = setTimeout(() => this.timeout(), TURN_MS);
+  }
 
-    if (this.battle.phase === PHASE.OVER) {
-      this.stopClock();
-      this.touch();
-      // On garde l'état final : les clients l'affichent, puis reviennent au
-      // vestiaire de leur propre initiative.
-      setTimeout(() => { this.resetToLobby(); }, 8000);
+  /** Personne n'a répondu à temps : les camps muets frappent. */
+  timeout() {
+    this.timer = null;
+    if (!this.battle || this.battle.phase !== PHASE.CHOOSE) return;
+    for (let i = 0; i < this.battle.sides.length; i++) {
+      choose(this.battle, i, { type: 'move', move: 'frappe' });
     }
+    this.resolve();
   }
 
   pushState(effects) {
@@ -155,33 +164,54 @@ class Arena {
   }
 
   act(id, action) {
-    if (!this.battle || this.battle.phase !== PHASE.FIGHT) return;
+    if (!this.battle || this.battle.phase !== PHASE.CHOOSE) return;
     const i = this.indexOf(id);
     if (i < 0) return;
-    const res = queueAction(this.battle, i, action);
-    if (!res.ok) this.send(id, { t: 'z:reject', reason: res.error });
+    const res = choose(this.battle, i, action || {});
+    if (!res.ok) return this.send(id, { t: 'z:reject', reason: res.error });
     this.touch();
+
+    // L'adversaire doit savoir que le choix est tombé, sans savoir lequel :
+    // viewFor ne laisse filtrer que le fait d'avoir choisi.
+    if (!pretARésoudre(this.battle)) return this.pushState([]);
+    this.resolve();
+  }
+
+  /** Les deux commandes sont là : on joue le tour. */
+  resolve() {
+    const { effects } = resolveTurn(this.battle);
+    this.touch();
+    this.pushState(effects);
+
+    if (this.battle.phase === PHASE.OVER) {
+      this.stopClock();
+      // On garde l'état final : les clients l'affichent, puis reviennent au
+      // vestiaire de leur propre initiative.
+      setTimeout(() => { this.resetToLobby(); }, 8000);
+      return;
+    }
+    this.armTurn();
   }
 
   resetToLobby() {
+    this.stopClock();
     this.battle = null;
     for (const s of this.seats) s.team = null;
     this.broadcast(this.lobby());
   }
 
-  stopClock() { if (this.timer) { clearInterval(this.timer); this.timer = null; } }
+  stopClock() { if (this.timer) { clearTimeout(this.timer); this.timer = null; } }
 
   /** Un départ en plein combat donne la victoire à celui qui reste. */
   drop(id) {
-    const wasFighting = !!this.battle && this.battle.phase === PHASE.FIGHT;
+    const wasFighting = !!this.battle && this.battle.phase !== PHASE.OVER;
     const i = this.indexOf(id);
     this.remove(id);
 
     if (wasFighting && i >= 0) {
       this.stopClock();
       const b = this.battle;
-      b.phase = PHASE.OVER;
-      b.winner = 1 - i;
+      forfeit(b, i);
       this.battle = null;
       for (const seat of this.seats) {
         this.send(seat.id, { t: 'z:forfeit', view: viewFor(b, seat.id) });

@@ -1,25 +1,33 @@
 /**
- * ZÉNITH — rendu du combat.
+ * ZÉNITH — rendu du combat au tour par tour.
  *
- * Le combat étant temps réel, l'interface ne rejoue pas une séquence
- * d'évènements comme dans un jeu au tour par tour : elle redessine l'état à
- * chaque tick, et superpose les effets ponctuels (dégâts, esquives, KO) que
- * le moteur a produits pendant ce tick.
+ * Deux entrées seulement :
+ *   · `render(view)`            dessine l'état courant ;
+ *   · `playEffects(effets, v)`  rejoue ce qui vient de se passer.
+ *
+ * Le combat étant au tour par tour, l'interface peut prendre son temps :
+ * chaque effet est joué l'un après l'autre, avec une pause, plutôt que
+ * superposé comme dans un jeu d'action.
  */
 
-import { ELEMENTS, getFighter, CARD_KINDS, elementMultiplier } from '../../../shared/zenith/fighters.js';
-import { cardName, estimateDamage, VANISH_COST, KI_MAX } from '../../../shared/zenith/battle.js';
+import {
+  ELEMENTS, getFighter, elementMultiplier,
+} from '../../../shared/zenith/fighters.js';
+import {
+  MOVES, MOVE_KEYS, STATUS, moveName, estimateDamage, KI_MAX,
+} from '../../../shared/zenith/battle.js';
 import { spriteSvg } from '../../../shared/zenith/sprites.js';
 import { sfx } from './sfx.js';
 
 const $ = (id) => document.getElementById(id);
 const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+export const sleep = (ms) => new Promise((r) => setTimeout(r, reduced ? Math.min(ms, 90) : ms));
 
-let onAction = () => {};
-export function bindActions(fn) { onAction = fn; }
+let onCommand = () => {};
+let verrou = false;          // vrai pendant la résolution d'un tour
+let vue = null;
 
-let lastView = null;
-let lastHp = {};        // pour détecter les variations et animer
+export function bindCommands(fn) { onCommand = fn; }
 
 export const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -28,7 +36,6 @@ export const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
 /* Fragments partagés                                                  */
 /* ------------------------------------------------------------------ */
 
-/** Carte de combattant, utilisée par la sélection et le codex. */
 export function fighterCard(f, { picked = false } = {}) {
   const el = ELEMENTS[f.element];
   return `<button class="card-f${picked ? ' picked' : ''}" data-fid="${f.id}"
@@ -63,16 +70,16 @@ export function codexCard(f) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Rendu du combat                                                     */
+/* Rendu                                                               */
 /* ------------------------------------------------------------------ */
 
 export function resetFight() {
-  lastView = null;
-  lastHp = {};
+  vue = null;
+  verrou = false;
   $('clash').innerHTML = '';
-  $('combo').hidden = true;
   $('announce').hidden = true;
-  $('hand').innerHTML = '';
+  $('cmd-moves').innerHTML = '';
+  $('ticker').innerHTML = '';
   ['foe-avatar', 'me-avatar'].forEach((id) => {
     const el = $(id);
     el.className = `avatar ${id === 'foe-avatar' ? 'foe-av' : 'me-av'}`;
@@ -83,21 +90,26 @@ export function resetFight() {
   });
 }
 
-/**
- * Redessine tout l'état. Appelée à chaque tick : elle doit rester bon marché,
- * d'où les comparaisons avant écriture dans le DOM.
- */
-export function render(view) {
-  const me = view.sides[view.viewerSide];
-  const foe = view.sides[1 - view.viewerSide];
+export function render(v) {
+  vue = v;
+  const me = v.sides[v.viewerSide];
+  const foe = v.sides[1 - v.viewerSide];
 
   renderSide(foe, 'foe', false);
   renderSide(me, 'me', true);
   renderMatchup(me, foe);
-  renderHand(view, me, foe);
-  renderCombo(me);
+  renderMenu(v, me, foe);
 
-  lastView = view;
+  $('turn-n').textContent = `Tour ${v.turn}`;
+  const etat = $('turn-state');
+  if (v.phase === 'over') etat.textContent = 'Combat terminé';
+  else if (verrou) etat.textContent = 'Résolution…';
+  else if (me.aChoisi) etat.textContent = 'En attente de l\'adversaire';
+  else etat.textContent = 'À vous de jouer';
+
+  const dernier = v.log && v.log.length ? v.log[v.log.length - 1].text : '';
+  const t = $('ticker');
+  if (t.dataset.last !== dernier) { t.dataset.last = dernier; t.innerHTML = `<span>${esc(dernier)}</span>`; }
 }
 
 function renderSide(side, prefix, mine) {
@@ -105,22 +117,18 @@ function renderSide(side, prefix, mine) {
   const f = getFighter(unit.fighterId);
   const el = ELEMENTS[f.element];
 
-  // Portraits de l'équipe
   const host = $(`${prefix}-portraits`);
-  const want = side.team.map((u, i) => {
+  const html = side.team.map((u, i) => {
     const uf = getFighter(u.fighterId);
     const ue = ELEMENTS[uf.element];
-    const cls = ['pt', i === side.active ? 'active' : '', u.ko ? 'dead' : '',
-      mine && side.swapCd > 0 && i !== side.active && !u.ko ? 'locked' : ''].filter(Boolean).join(' ');
-    const pose = u.ko ? 'vaincu' : 'repos';
+    const cls = ['pt', i === side.active ? 'active' : '', u.ko ? 'dead' : ''].filter(Boolean).join(' ');
     return `<div class="${cls}" style="--el:${ue.color}" data-slot="${i}"
-        title="${esc(uf.name)} — ${ue.label}">${spriteSvg(uf, pose)}
+        title="${esc(uf.name)} — ${ue.label}">${spriteSvg(uf, u.ko ? 'vaincu' : 'repos')}
         <span class="mini"><i style="width:${(u.hp / u.maxHp) * 100}%"></i></span>
       </div>`;
   }).join('');
-  if (host.dataset.sig !== want) { host.dataset.sig = want; host.innerHTML = want; }
+  if (host.dataset.sig !== html) { host.dataset.sig = html; host.innerHTML = html; }
 
-  // Nom et barres
   const nameEl = $(`${prefix}-name`);
   const label = `${esc(f.name)} <small>${el.glyph} ${el.label}</small>`;
   if (nameEl.innerHTML !== label) nameEl.innerHTML = label;
@@ -129,74 +137,27 @@ function renderSide(side, prefix, mine) {
   const bar = $(`${prefix}-hp`);
   bar.style.width = `${pct}%`;
   bar.classList.toggle('low', pct <= 30);
-  $(`${prefix}-hp-ghost`).style.width = `${pct}%`;
 
-  // Sprite : la pose au repos découle de l'état, les poses d'action sont
-  // déclenchées par les effets du moteur.
+  // Altération en cours, avec le nombre de tours restants.
+  const st = $(`${prefix}-status`);
+  if (unit.status) {
+    const s = STATUS[unit.status.key];
+    st.innerHTML = `<b class="st st-${unit.status.key}" title="${esc(s.blurb)}">`
+      + `${s.glyph} ${s.label} <i>${unit.status.tours}</i></b>`;
+  } else st.innerHTML = '';
+
   const av = $(`${prefix}-avatar`);
-  const repos = unit.ko ? 'vaincu' : (unit.vanishing ? 'garde' : (unit.stun > 0 ? 'garde' : 'repos'));
-  setPose(av, f, repos, { base: true });
-  av.classList.toggle('ghost', !!unit.vanishing);
+  setPose(av, f, unit.ko ? 'vaincu' : (unit.guard ? 'garde' : 'repos'), { base: true });
   av.classList.toggle('gone', unit.ko);
 
   if (mine) {
-    $('me-ki').style.width = `${(side.ki / KI_MAX) * 100}%`;
-    $('me-ki-n').textContent = String(Math.round(side.ki));
-    const dodge = $('b-dodge');
-    const busy = unit.stun > 0 || unit.ko || side.koPause > 0;
-    dodge.disabled = side.ki < VANISH_COST || busy || unit.vanishing;
-    dodge.classList.toggle('ready', !dodge.disabled);
+    $('me-ki').style.width = `${(unit.ki / KI_MAX) * 100}%`;
+    $('me-ki-n').textContent = String(unit.ki);
+  } else {
+    $('foe-ki-n').textContent = `ki ${unit.ki}`;
   }
 }
 
-function renderHand(view, side, foe) {
-  const host = $('hand');
-  const unit = side.team[side.active];
-  const foeUnit = foe.team[foe.active];
-  const busy = unit.stun > 0 || unit.ko || side.koPause > 0;
-  const hand = side.hand || [];
-
-  const sig = hand.join(',') + `|${Math.floor(side.ki / 5)}|${busy}|${unit.ultUsed}`
-    + `|${unit.fighterId}|${foeUnit.fighterId}|${side.combo}`;
-  if (host.dataset.sig === sig) return;
-  host.dataset.sig = sig;
-
-  let html = '';
-  for (let i = 0; i < 4; i++) {
-    const key = hand[i];
-    if (!key) { html += '<div class="acard slot-empty-card"></div>'; continue; }
-    const card = CARD_KINDS[key];
-    const unusable = side.ki < card.ki || busy || (key === 'ultime' && unit.ultUsed);
-    const colors = { frappe: '#ff8a5c', souffle: '#5eead4', speciale: '#a78bfa', ultime: '#ffd84d' };
-
-    // Dégâts attendus sur la cible actuelle : c'est ce qui transforme le
-    // choix d'une carte en décision plutôt qu'en réflexe.
-    const me = getFighter(unit.fighterId);
-    const them = getFighter(foeUnit.fighterId);
-    const dmg = estimateDamage(me, them, key, side.combo);
-    const mult = elementMultiplier(me.element, them.element);
-    const cls = mult > 1 ? ' fort' : (mult < 1 ? ' faible' : '');
-
-    html += `<button class="acard${unusable ? ' off' : ''}${key === 'ultime' ? ' ult' : ''}"
-        style="--c:${colors[key]}" data-card="${i}">
-      <span class="acard-g">${card.glyph}</span>
-      <span class="acard-l">${esc(cardLabel(unit, key))}</span>
-      <span class="acard-dmg${cls}">${dmg}</span>
-      <span class="acard-k">${card.ki} ki</span>
-    </button>`;
-  }
-  host.innerHTML = html;
-}
-
-/** Libellé court : les spéciales portent le nom de la technique. */
-function cardLabel(unit, key) {
-  if (key === 'frappe' || key === 'souffle') return CARD_KINDS[key].label;
-  const f = getFighter(unit.fighterId);
-  const name = key === 'ultime' ? f.ultimate.name : f.special.name;
-  return name.length > 16 ? `${name.slice(0, 15)}…` : name;
-}
-
-/** Rapport de force élémentaire entre les deux combattants actifs. */
 function renderMatchup(me, foe) {
   const a = getFighter(me.team[me.active].fighterId);
   const b = getFighter(foe.team[foe.active].fighterId);
@@ -213,25 +174,51 @@ function renderMatchup(me, foe) {
   el.innerHTML = `<span>${ea.glyph}</span><b>${fleche} ${mot}</b><span>${eb.glyph}</span>`;
 }
 
-function renderCombo(side) {
-  const el = $('combo');
-  if (side.combo >= 2) {
-    el.hidden = false;
-    el.innerHTML = `${side.combo}<small> ENCHAÎNÉS</small>`;
-  } else {
-    el.hidden = true;
+/**
+ * Menu de commandes. Chaque attaque annonce les dégâts qu'elle infligera à la
+ * cible actuelle : sans ce chiffre, le joueur ne peut pas arbitrer entre une
+ * Frappe gratuite et un Souffle à dix-huit points de ki.
+ */
+function renderMenu(v, me, foe) {
+  const unit = me.team[me.active];
+  const foeUnit = foe.team[foe.active];
+  const af = getFighter(unit.fighterId);
+  const df = getFighter(foeUnit.fighterId);
+  const fige = verrou || v.phase !== 'choose' || me.aChoisi || unit.ko;
+
+  const sig = `${unit.fighterId}|${df.id}|${unit.ki}|${unit.ultUsed}|${fige}|${v.turn}`;
+  const host = $('cmd-moves');
+  if (host.dataset.sig !== sig) {
+    host.dataset.sig = sig;
+    host.innerHTML = MOVE_KEYS.map((key) => {
+      const m = MOVES[key];
+      const dispo = v.commandes.moves.find((x) => x.key === key) || { utilisable: false };
+      const off = !dispo.utilisable || fige;
+      const degats = estimateDamage(af, df, key);
+      const mult = elementMultiplier(af.element, df.element);
+      const cls = mult > 1 ? ' fort' : (mult < 1 ? ' faible' : '');
+      const couleurs = { frappe: '#ff8a5c', souffle: '#5eead4', speciale: '#a78bfa', ultime: '#ffd84d' };
+      return `<button class="cmd cmd-move${off ? ' off' : ''}${key === 'ultime' ? ' ult' : ''}"
+          style="--c:${couleurs[key]}" data-move="${key}"
+          title="${esc(m.blurb)}${dispo.raison ? ` — ${dispo.raison}` : ''}">
+        <span class="cmd-g">${m.glyph}</span>
+        <span class="cmd-l">${esc(moveName(unit, key))}</span>
+        <span class="cmd-dmg${cls}">${degats}</span>
+        <span class="cmd-s">${m.ki ? `${m.ki} ki` : 'gratuit'}${dispo.raison ? ` · ${dispo.raison}` : ''}</span>
+      </button>`;
+    }).join('');
   }
+
+  $('b-guard').classList.toggle('off', fige);
+  const peutChanger = v.commandes.swaps.some((s) => s.utilisable);
+  $('b-swap').classList.toggle('off', fige || !peutChanger);
+  $('cmd-wait').hidden = !(me.aChoisi && v.phase === 'choose');
 }
 
 /* ------------------------------------------------------------------ */
 /* Sprites                                                             */
 /* ------------------------------------------------------------------ */
 
-/**
- * Applique une pose à un sprite. On mémorise la pose de repos dans l'élément
- * pour pouvoir y revenir sans rejouer tout le rendu, et on ne réécrit le SVG
- * que lorsqu'il change vraiment : `render` passe ici à chaque tick.
- */
 function setPose(el, fighter, pose, { base = false } = {}) {
   if (base) el.dataset.repos = pose;
   const sig = `${fighter.id}:${pose}`;
@@ -241,7 +228,6 @@ function setPose(el, fighter, pose, { base = false } = {}) {
   el.innerHTML = spriteSvg(fighter, pose);
 }
 
-/** Pose passagère, puis retour automatique à la pose de repos. */
 function poseFor(el, pose, ms) {
   const f = getFighter(el.dataset.fid);
   if (!f) return;
@@ -254,72 +240,95 @@ function poseFor(el, pose, ms) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Effets ponctuels                                                    */
+/* Résolution du tour                                                  */
 /* ------------------------------------------------------------------ */
 
-/** Joue les effets produits par le moteur pendant le dernier tick. */
-export function playEffects(effects, view) {
-  for (const e of effects) {
-    const mine = e.side === view.viewerSide;
-    switch (e.type) {
-      case 'hit': hit(e, mine); break;
-      case 'vanish': dodged(!mine); break;
-      case 'vanish-start': sfx.dodge(); break;
-      case 'swap': sfx.swap(); break;
-      case 'ko': knockout(e, !mine); break;
-      case 'enter': announce(`${getFighter(e.fighter).name.toUpperCase()} !`, '#a78bfa'); break;
-      default: break;
+/** Rejoue les effets du tour, l'un après l'autre, puis affiche l'état final. */
+export async function playEffects(effets, finale) {
+  verrou = true;
+  if (vue) render(vue);
+
+  for (const e of effets || []) {
+    try { await jouerEffet(e, finale); }
+    catch (err) { console.error('effet', e.type, err); }
+  }
+
+  verrou = false;
+  render(finale);
+}
+
+async function jouerEffet(e, v) {
+  const mien = e.side === v.viewerSide;
+  switch (e.type) {
+    case 'swap':
+      sfx.swap();
+      annonce(`${getFighter(e.to).name} entre !`, '#a78bfa');
+      return sleep(650);
+
+    case 'guard':
+      sfx.tap();
+      poseFor(mien ? $('me-avatar') : $('foe-avatar'), 'garde', 900);
+      return sleep(420);
+
+    case 'hit': {
+      const att = mien ? $('me-avatar') : $('foe-avatar');
+      const vic = mien ? $('foe-avatar') : $('me-avatar');
+      poseFor(att, 'frappe', 420);
+      poseFor(vic, 'encaisse', 460);
+      att.classList.remove('strike'); void att.offsetWidth; att.classList.add('strike');
+      vic.classList.remove('hurt'); void vic.offsetWidth; vic.classList.add('hurt');
+
+      if (e.move === 'speciale' || e.move === 'ultime') {
+        spawn(`<div class="fx fx-name">${esc(e.name)}</div>`, 1100);
+        await sleep(360);
+      }
+      const at = mien ? 'at-foe' : 'at-me';
+      const cls = e.elem > 1 ? 'crit' : (e.elem < 1 ? 'weak' : '');
+      spawn(`<div class="fx fx-num ${cls} ${at}">${e.amount}${e.garde ? '<i>garde</i>' : ''}</div>`, 1100);
+      spawn(`<div class="shock ${at}"></div>`, 460);
+
+      if (e.move === 'ultime') { sfx.ultimate(); flash(); shake(); }
+      else if (e.move === 'speciale') { sfx.special(); shake(); }
+      else if (e.move === 'souffle') sfx.blast();
+      else sfx.punch();
+      return sleep(640);
     }
+
+    case 'heal':
+      spawn(`<div class="fx fx-heal ${mien ? 'at-me' : 'at-foe'}">+${e.amount}</div>`, 1000);
+      return sleep(320);
+
+    case 'status': {
+      const s = STATUS[e.status];
+      annonce(`${s.glyph} ${s.label} !`, '#ffd84d');
+      sfx.swap();
+      return sleep(700);
+    }
+
+    case 'status-tick':
+      spawn(`<div class="fx fx-num weak ${mien ? 'at-me' : 'at-foe'}">${e.amount}</div>`, 900);
+      return sleep(360);
+
+    case 'frozen':
+      annonce('Figé !', '#38bdf8');
+      return sleep(700);
+
+    case 'ko':
+      sfx.ko(); shake();
+      annonce(mien ? 'Vous perdez un combattant' : 'Adversaire à terre', mien ? '#ff3d68' : '#ffd84d');
+      return sleep(900);
+
+    case 'enter':
+      annonce(`${getFighter(e.fighter).name} entre en lice`, '#a78bfa');
+      return sleep(700);
+
+    case 'timeout':
+      annonce('Limite de tours', '#93a3c4');
+      return sleep(800);
+
+    default:
+      return undefined;
   }
-}
-
-function hit(e, mine) {
-  const attacker = mine ? $('me-avatar') : $('foe-avatar');
-  const victim = mine ? $('foe-avatar') : $('me-avatar');
-
-  // Poses : l'un frappe, l'autre encaisse, le temps de l'animation.
-  poseFor(attacker, 'frappe', 320);
-  poseFor(victim, 'encaisse', 340);
-
-  attacker.classList.remove('strike');
-  void attacker.offsetWidth;
-  attacker.classList.add('strike');
-
-  victim.classList.remove('hurt');
-  void victim.offsetWidth;
-  victim.classList.add('hurt');
-
-  // Nombre de dégâts, ancré sur la victime et coloré selon l'élément.
-  const at = mine ? 'at-foe' : 'at-me';
-  const cls = e.elem > 1 ? 'crit' : (e.elem < 1 ? 'weak' : '');
-  spawn(`<div class="fx fx-num ${cls} ${at}">${e.amount}</div>`, 1000);
-  spawn(`<div class="shock ${at}"></div>`, 460);
-
-  // Le nom de la technique, lui, reste au centre : c'est une annonce.
-  if (e.card === 'speciale' || e.card === 'ultime') {
-    spawn(`<div class="fx fx-name">${esc(e.name)}</div>`, 980);
-  }
-  if (e.card === 'ultime') {
-    sfx.ultimate();
-    flash();
-    shake();
-  } else if (e.card === 'speciale') sfx.special();
-  else if (e.card === 'souffle') sfx.blast();
-  else sfx.punch();
-
-  if (e.combo >= 2) sfx.combo(e.combo);
-}
-
-function dodged(mine) {
-  poseFor(mine ? $('me-avatar') : $('foe-avatar'), 'garde', 420);
-  spawn(`<div class="fx fx-dodge ${mine ? 'at-me' : 'at-foe'}">${mine ? 'ESQUIVE !' : 'ESQUIVÉ'}</div>`, 1000);
-  sfx.dodge();
-}
-
-function knockout(e, mine) {
-  sfx.ko();
-  shake();
-  announce(mine ? 'K.O. !' : 'À TERRE', mine ? '#ffd84d' : '#ff3d68');
 }
 
 function spawn(html, ms) {
@@ -327,21 +336,19 @@ function spawn(html, ms) {
   const box = document.createElement('div');
   box.innerHTML = html;
   const node = box.firstElementChild;
-  // Léger décalage aléatoire pour que deux coups rapprochés ne se superposent pas.
-  node.style.marginLeft = `${(Math.random() * 60 - 30).toFixed(0)}px`;
-  node.style.marginTop = `${(Math.random() * 40 - 20).toFixed(0)}px`;
+  node.style.marginLeft = `${(Math.random() * 40 - 20).toFixed(0)}px`;
   host.appendChild(node);
   setTimeout(() => node.remove(), ms);
 }
 
-export function announce(text, color = '#ffd84d') {
+export function annonce(text, color = '#ffd84d') {
   const el = $('announce');
   el.textContent = text;
   el.style.color = color;
   el.style.textShadow = `0 0 26px ${color}`;
   el.hidden = false;
   clearTimeout(el._t);
-  el._t = setTimeout(() => { el.hidden = true; }, 1100);
+  el._t = setTimeout(() => { el.hidden = true; }, 1000);
 }
 
 function flash() {
@@ -364,33 +371,32 @@ function shake() {
 /* Fin de combat                                                       */
 /* ------------------------------------------------------------------ */
 
-export function showEnd(view, { onMenu, onAgain, againLabel = 'Revanche' }) {
-  const won = view.winner === view.viewerSide;
-  const me = view.sides[view.viewerSide];
-  const foe = view.sides[1 - view.viewerSide];
+export function showEnd(v, { onMenu, onAgain, againLabel = 'Revanche' }) {
+  const won = v.winner === v.viewerSide;
+  const me = v.sides[v.viewerSide];
+  const foe = v.sides[1 - v.viewerSide];
 
-  $('end-mark').textContent = won ? '🏆' : '💀';
+  $('end-mark').textContent = won ? '🏆' : (v.winner === null ? '⚖️' : '💀');
   const t = $('end-title');
   t.className = `end-title${won ? '' : ' lost'}`;
-  t.textContent = won ? 'VICTOIRE' : 'DÉFAITE';
+  t.textContent = won ? 'VICTOIRE' : (v.winner === null ? 'MATCH NUL' : 'DÉFAITE');
   $('end-sub').textContent = won
-    ? 'Vous avez tenu jusqu\'au bout.'
-    : `${foe.name} reste debout.`;
+    ? `Emporté en ${v.turn} tours.`
+    : (v.winner === null ? 'Personne n\'a cédé.' : `${foe.name} reste debout.`);
 
   const row = (l, a, b) => `<tr><td>${l}</td><td>${a} · ${b}</td></tr>`;
   $('end-stats').innerHTML =
-    row('Coups portés', me.stats.hits, foe.stats.hits)
-    + row('Dégâts infligés', me.stats.dealt, foe.stats.dealt)
-    + row('Spéciales', me.stats.specials, foe.stats.specials)
-    + row('Ultimes', me.stats.ultimates, foe.stats.ultimates)
-    + row('Esquives', me.stats.vanishes, foe.stats.vanishes)
-    + `<tr><td colspan="2" style="text-align:center;color:var(--faint);font-size:.7rem;padding-top:10px">vous · adversaire</td></tr>`;
+    row('Coups portés', me.stats.coups, foe.stats.coups)
+    + row('Dégâts infligés', me.stats.degats, foe.stats.degats)
+    + row('Gardes', me.stats.gardes, foe.stats.gardes)
+    + row('Spéciales', me.stats.speciales, foe.stats.speciales)
+    + row('Ultimes', me.stats.ultimes, foe.stats.ultimes)
+    + '<tr><td colspan="2" style="text-align:center;color:var(--faint);font-size:.7rem;padding-top:10px">vous · adversaire</td></tr>';
 
   $('b-end-again').textContent = againLabel;
   $('b-end-menu').onclick = onMenu;
   $('b-end-again').onclick = onAgain;
   $('ov-end').hidden = false;
-
   if (won) sfx.win(); else sfx.lose();
 }
 
@@ -409,19 +415,56 @@ export function toast(text, ms = 1900) {
 /* Entrées                                                             */
 /* ------------------------------------------------------------------ */
 
-$('hand').addEventListener('click', (e) => {
-  const b = e.target.closest('.acard[data-card]');
+$('cmd-moves').addEventListener('click', (e) => {
+  const b = e.target.closest('.cmd-move[data-move]');
   if (!b || b.classList.contains('off')) return;
-  onAction({ type: 'play', index: Number(b.dataset.card) });
+  sfx.tap();
+  onCommand({ type: 'move', move: b.dataset.move });
 });
 
-$('b-dodge').addEventListener('click', () => {
-  if ($('b-dodge').disabled) return;
-  onAction({ type: 'vanish' });
+$('b-guard').addEventListener('click', () => {
+  if ($('b-guard').classList.contains('off')) return;
+  sfx.tap();
+  onCommand({ type: 'guard' });
 });
 
-$('me-portraits').addEventListener('click', (e) => {
-  const p = e.target.closest('.pt[data-slot]');
-  if (!p || p.classList.contains('active') || p.classList.contains('dead')) return;
-  onAction({ type: 'swap', slot: Number(p.dataset.slot) });
+$('b-swap').addEventListener('click', () => {
+  if ($('b-swap').classList.contains('off') || !vue) return;
+  sfx.tap();
+  ouvrirChangement();
+});
+
+/** Feuille de choix du remplaçant. */
+function ouvrirChangement() {
+  const me = vue.sides[vue.viewerSide];
+  const foe = vue.sides[1 - vue.viewerSide];
+  const df = getFighter(foe.team[foe.active].fighterId);
+
+  $('swap-list').innerHTML = me.team.map((u, slot) => {
+    const f = getFighter(u.fighterId);
+    const el = ELEMENTS[f.element];
+    const dispo = vue.commandes.swaps.find((s) => s.slot === slot) || {};
+    const mult = elementMultiplier(f.element, df.element);
+    const note = mult > 1 ? '<b class="fort">▲ avantage</b>'
+      : (mult < 1 ? '<b class="faible">▼ désavantage</b>' : '<b>= neutre</b>');
+    return `<button class="swap-item${dispo.utilisable ? '' : ' off'}" data-slot="${slot}"
+        style="--el:${el.color}">
+      <span class="swap-av">${spriteSvg(f, u.ko ? 'vaincu' : 'repos')}</span>
+      <span class="swap-id">
+        <span class="swap-name">${esc(f.name)} ${el.glyph}</span>
+        <span class="swap-note">${dispo.raison ? esc(dispo.raison) : note}</span>
+      </span>
+      <span class="swap-hp"><b>${Math.max(0, Math.ceil(u.hp))}</b>
+        <i style="--p:${(u.hp / u.maxHp) * 100}%"></i></span>
+    </button>`;
+  }).join('');
+  $('ov-swap').hidden = false;
+}
+
+$('swap-list').addEventListener('click', (e) => {
+  const b = e.target.closest('.swap-item[data-slot]');
+  if (!b || b.classList.contains('off')) return;
+  $('ov-swap').hidden = true;
+  sfx.swap();
+  onCommand({ type: 'swap', slot: Number(b.dataset.slot) });
 });
