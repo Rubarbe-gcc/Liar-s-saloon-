@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v7';
+const VERSION = 'v8';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -48,6 +48,20 @@ const SHELL = [
   '/shared/zenith/ai.js',
   '/shared/zenith/sprites.js',
   '/shared/zenith/roue.js',
+  '/games/echo/',
+  '/games/echo/manifest.webmanifest',
+  '/games/echo/css/echo.css',
+  '/games/echo/js/main.js',
+  '/games/echo/js/ui.js',
+  '/games/echo/js/audio.js',
+  '/games/echo/js/offline.js',
+  '/games/echo/js/online.js',
+  '/games/echo/js/regles.js',
+  '/games/echo/icons/icon-192.png',
+  '/shared/mimic/analyse.js',
+  '/shared/mimic/sons.js',
+  '/shared/mimic/partie.js',
+  '/shared/mimic/bots.js',
 ];
 
 self.addEventListener('install', (event) => {

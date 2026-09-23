@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0512">
+<meta name="description" content="ÉCHO — jeu de fête à la voix. On entend un son, tout le monde l'imite en même temps, et la roue s'occupe du reste.">
+<title>ÉCHO</title>
+<link rel="icon" href="/games/echo/icons/icon-192.png">
+<link rel="manifest" href="/games/echo/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/games/echo/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Écho">
+<link rel="stylesheet" href="/games/echo/css/echo.css">
+</head>
+<body>
+
+<div class="bg" aria-hidden="true">
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div class="blob b3"></div>
+  <div class="vig"></div>
+</div>
+
+<!-- ============================ MENU ============================ -->
+<section class="screen is-active" id="s-menu">
+  <div class="menu">
+    <div class="logo">
+      <span class="logo-kicker">Jeu de fête à la voix</span>
+      <h1 class="logo-title">ÉCHO</h1>
+      <div class="logo-rule"><i></i><span>1 à 5</span><i></i></div>
+      <p class="logo-tag">Un son. Tout le monde l'imite. En même temps.</p>
+    </div>
+
+    <nav class="menu-nav">
+      <button class="btn btn-big" data-go="solo">
+        <span class="bi">🎤</span>
+        <span class="bt"><b>Contre la machine</b><i>Des imitateurs qui chantent pour de vrai</i></span>
+      </button>
+      <button class="btn btn-big" data-go="online">
+        <span class="bi">🎉</span>
+        <span class="bt"><b>Entre amis</b><i>Un code de salon, jusqu'à cinq voix</i></span>
+      </button>
+      <div class="menu-row">
+        <button class="btn btn-thin" data-go="sons"><span class="bi">🔊</span> Les sons</button>
+        <button class="btn btn-thin" data-go="rules"><span class="bi">❓</span> Règles</button>
+      </div>
+    </nav>
+
+    <a class="menu-back" href="/">‹ Retour aux jeux</a>
+  </div>
+</section>
+
+<!-- ========================= RÉGLAGES SOLO ====================== -->
+<section class="screen" id="s-setup">
+  <div class="panel">
+    <header class="pick-head">
+      <button class="pick-back" data-go="menu">‹</button>
+      <div>
+        <h2 class="pick-title">Contre la machine</h2>
+        <p class="pick-sub">Ils imitent vraiment. Vous les entendrez.</p>
+      </div>
+    </header>
+
+    <div class="field-label">Combien d'adversaires</div>
+    <div class="chip-row" id="opt-nb" role="radiogroup" aria-label="Adversaires">
+      <button class="chip" data-val="1" role="radio">1</button>
+      <button class="chip is-on" data-val="2" role="radio" aria-checked="true">2</button>
+      <button class="chip" data-val="3" role="radio">3</button>
+      <button class="chip" data-val="4" role="radio">4</button>
+    </div>
+
+    <div class="field-label">Leur niveau</div>
+    <div class="chip-row" id="opt-niveau" role="radiogroup" aria-label="Niveau"></div>
+
+    <p class="pick-sub mic-note" id="mic-note">
+      Le jeu a besoin du microphone. Il vous sera demandé au premier
+      enregistrement, jamais avant.
+    </p>
+
+    <div class="pick-actions">
+      <button class="btn btn-go" id="b-start">Commencer</button>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= SALON EN LIGNE ===================== -->
+<section class="screen" id="s-online">
+  <div class="panel">
+    <button class="pick-back" data-go="menu">‹</button>
+    <h2 class="pick-title">Entre amis</h2>
+    <p class="pick-sub" id="net-status">Connexion…</p>
+
+    <div id="net-gate">
+      <div class="field-label">Votre nom</div>
+      <input class="field" id="in-name" maxlength="14" placeholder="Comment on vous appelle" autocomplete="nickname">
+      <button class="btn btn-go btn-wide" id="b-create">Ouvrir un salon</button>
+      <div class="or"><i></i><span>ou</span><i></i></div>
+      <div class="join">
+        <input class="field code" id="in-code" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off">
+        <button class="btn btn-ghost" id="b-join">Entrer</button>
+      </div>
+    </div>
+
+    <div id="net-room" hidden>
+      <div class="arena-code">
+        <span>Code du salon</span>
+        <button id="room-code" title="Copier">····</button>
+        <i>Touchez pour copier</i>
+      </div>
+      <div class="net-list" id="net-players"></div>
+      <div class="pick-actions two">
+        <button class="btn btn-ghost" id="b-leave">Quitter</button>
+        <button class="btn btn-go" id="b-launch" disabled>Lancer</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== PARTIE =========================== -->
+<section class="screen screen-jeu" id="s-jeu">
+  <header class="jbar">
+    <button class="jquit" id="b-quit" title="Quitter">✕</button>
+    <span class="jbar-manche" id="j-manche">Manche 1</span>
+    <span class="jbar-phase" id="j-phase">Écoutez</span>
+  </header>
+
+  <!-- La consigne : quel son, et ce qu'on attend -->
+  <div class="consigne" id="consigne">
+    <span class="cons-glyph" id="cons-glyph">🔊</span>
+    <div class="cons-txt">
+      <b id="cons-nom">—</b>
+      <span id="cons-indice"></span>
+      <span class="cons-att" id="cons-att"></span>
+    </div>
+  </div>
+
+  <!-- La scène : visualisation, compte à rebours, vumètre -->
+  <div class="scene" id="scene">
+    <div class="onde" id="onde" aria-hidden="true"></div>
+    <div class="compte" id="compte" hidden></div>
+    <div class="scene-txt" id="scene-txt"></div>
+    <div class="vu" id="vu" hidden><i id="vu-barre"></i></div>
+  </div>
+
+  <!-- Le tableau des joueurs -->
+  <div class="tableau" id="tableau"></div>
+
+  <!-- Les commandes, qui changent selon la phase -->
+  <div class="actions" id="actions"></div>
+</section>
+
+<!-- ======================== SUPERPOSITIONS ====================== -->
+<div class="ov" id="ov-roue" hidden>
+  <div class="sheet sheet-sm">
+    <h2 id="roue-titre">La roue</h2>
+    <div class="roue-scene" id="roue-scene"></div>
+    <p class="pick-sub" id="roue-dit"></p>
+    <div class="cible-list" id="cible-list" hidden></div>
+    <div class="pick-actions two" id="roue-actions"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-sons" hidden>
+  <div class="sheet">
+    <button class="sheet-close" data-close="ov-sons">✕</button>
+    <h2>Les dix-huit sons</h2>
+    <p class="pick-sub">Aucun n'est un enregistrement : tous sont calculés au
+      moment où ils sonnent. Touchez pour écouter.</p>
+    <div class="sons-grid" id="sons-grid"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-rules" hidden>
+  <div class="sheet">
+    <button class="sheet-close" data-close="ov-rules">✕</button>
+    <h2 id="rules-titre">Comment ça se joue</h2>
+    <div class="rules-tabs" id="rules-tabs" role="tablist">
+      <button class="rtab is-on" data-page="manche" role="tab" aria-selected="true">🎤 La manche</button>
+      <button class="rtab" data-page="note" role="tab" aria-selected="false">📊 La note</button>
+      <button class="rtab" data-page="roue" role="tab" aria-selected="false">🎡 La roue</button>
+    </div>
+    <div class="rules-page is-on" id="rp-manche"></div>
+    <div class="rules-page" id="rp-note"></div>
+    <div class="rules-page" id="rp-roue"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-fin" hidden>
+  <div class="sheet sheet-sm endcard">
+    <div class="end-mark" id="end-mark">🏆</div>
+    <h2 class="end-title" id="end-title">—</h2>
+    <p class="end-sub" id="end-sub"></p>
+    <div class="podium" id="podium"></div>
+    <div class="pick-actions two">
+      <button class="btn btn-ghost" id="b-end-menu">Menu</button>
+      <button class="btn btn-go" id="b-end-again">Rejouer</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script type="module" src="/games/echo/js/main.js"></script>
+</body>
+</html>

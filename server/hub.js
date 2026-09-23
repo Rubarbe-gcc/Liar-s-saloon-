@@ -14,8 +14,9 @@
 
 import * as saloon from './saloon.js';
 import * as zenith from './zenith.js';
+import * as echo from './mimic.js';
 
-const GAMES = { saloon, zenith };
+const GAMES = { saloon, zenith, echo };
 const DEFAULT_GAME = 'saloon';
 
 /** Jeu auquel chaque connexion est rattachée. */
@@ -65,5 +66,12 @@ export function sweep() {
 }
 
 export function stats() {
-  return { ...saloon.stats(), ...zenith.stats() };
+  // Construit depuis la table des jeux : ajouter un jeu ne doit pas demander
+  // de penser à modifier cette ligne-ci.
+  const out = {};
+  for (const [key, game] of Object.entries(GAMES)) {
+    try { Object.assign(out, game.stats()); }
+    catch (err) { console.error(`[hub] stats ${key}`, err); }
+  }
+  return out;
 }

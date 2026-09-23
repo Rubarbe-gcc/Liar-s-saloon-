@@ -1,0 +1,20 @@
+{
+  "name": "ÉCHO — jeu de fête à la voix",
+  "short_name": "Écho",
+  "description": "Un son, tout le monde l'imite en même temps, et la roue s'occupe du reste.",
+  "id": "/games/echo/",
+  "start_url": "/games/echo/",
+  "scope": "/games/echo/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0512",
+  "theme_color": "#0a0512",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["games"],
+  "icons": [
+    { "src": "/games/echo/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/games/echo/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/games/echo/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
