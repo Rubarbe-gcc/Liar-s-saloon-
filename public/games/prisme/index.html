@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0a0713">
+<meta name="description" content="PRISME — jeu de combat solo. Récoltez le ki sur le champ d'orbes, enchaînez les attaques spéciales et menez six héros au bout de l'expédition.">
+<title>PRISME</title>
+<link rel="icon" href="/games/prisme/icons/icon-192.png">
+<link rel="manifest" href="/games/prisme/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/games/prisme/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Prisme">
+<link rel="stylesheet" href="/games/prisme/css/prisme.css">
+</head>
+<body>
+
+<div class="bg" aria-hidden="true">
+  <div class="bg-ray r1"></div>
+  <div class="bg-ray r2"></div>
+  <div class="bg-ray r3"></div>
+  <div class="bg-grid"></div>
+  <div class="bg-vig"></div>
+</div>
+
+<!-- ============================== MENU ============================== -->
+<section class="screen is-active" id="s-menu">
+  <div class="menu">
+    <header class="logo">
+      <div class="logo-kicker">expédition solo · quinze rencontres</div>
+      <h1 class="logo-title" id="logo-title">PRISME</h1>
+      <div class="logo-rule"><i></i><span id="logo-glyphes">◆ ❋ ✦ ✳ ◈</span><i></i></div>
+      <p class="logo-tag">Ramassez la lumière. Frappez avec.</p>
+    </header>
+
+    <nav class="menu-nav">
+      <button class="btn btn-big" data-go="nouvelle">
+        <span class="bi">✦</span>
+        <span class="bt"><b>Nouvelle expédition</b><i>Six héros, cinq secteurs</i></span>
+      </button>
+      <button class="btn btn-big" id="b-reprendre" hidden>
+        <span class="bi">⏵</span>
+        <span class="bt"><b>Reprendre</b><i id="reprendre-note">—</i></span>
+      </button>
+      <div class="menu-row">
+        <button class="btn btn-thin" data-go="garnison"><span class="bi">📖</span> Garnison</button>
+        <button class="btn btn-thin" data-go="regles"><span class="bi">❓</span> Règles</button>
+        <button class="btn btn-thin" id="b-son"><span class="bi">🔊</span> Son</button>
+      </div>
+      <a class="menu-back" href="/">‹ Retour à l'arcade</a>
+    </nav>
+  </div>
+</section>
+
+<!-- ============================= ÉQUIPE ============================= -->
+<section class="screen" id="s-equipe">
+  <div class="pick">
+    <header class="pick-head">
+      <button class="pick-back" data-go="menu" aria-label="Retour">‹</button>
+      <div>
+        <h2 class="pick-title">Votre expédition</h2>
+        <p class="pick-sub" id="equipe-sub">Choisissez six héros. Le premier mène.</p>
+      </div>
+    </header>
+
+    <div class="squad" id="squad"></div>
+
+    <div class="meneur-note" id="meneur-note">—</div>
+
+    <div class="pick-tools">
+      <div class="chip-row" id="opt-diff" role="radiogroup" aria-label="Difficulté"></div>
+      <button class="btn btn-ghost btn-sm" id="b-hasard">🎲 Au hasard</button>
+    </div>
+
+    <div class="chip-row chip-filtres" id="opt-filtre" role="radiogroup" aria-label="Filtrer"></div>
+
+    <div class="roster" id="roster"></div>
+
+    <div class="pick-actions">
+      <button class="btn btn-go" id="b-partir" disabled>Partir en expédition</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== CARTE ============================= -->
+<section class="screen" id="s-carte">
+  <div class="carte">
+    <header class="carte-head">
+      <div class="carte-secteur" id="carte-secteur">—</div>
+      <h2 class="carte-titre" id="carte-titre">—</h2>
+      <p class="carte-texte" id="carte-texte">—</p>
+    </header>
+
+    <div class="carte-piste" id="carte-piste" aria-hidden="true"></div>
+
+    <div class="carte-vie">
+      <div class="jauge jauge-vie">
+        <i class="jauge-fond"></i>
+        <i class="jauge-remplie" id="carte-vie-barre"></i>
+        <b id="carte-vie-texte">—</b>
+      </div>
+      <div class="carte-objets" id="carte-objets">🧪 ×0</div>
+    </div>
+
+    <div class="carte-ennemis" id="carte-ennemis"></div>
+
+    <div class="pick-actions two">
+      <button class="btn btn-ghost" id="b-abandonner">Abandonner</button>
+      <button class="btn btn-go" id="b-engager">Engager</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============================= COMBAT ============================= -->
+<section class="screen screen-combat" id="s-combat">
+  <div class="arene" id="arene">
+
+    <div class="hud-haut">
+      <button class="hud-btn" id="b-quitter" aria-label="Quitter le combat">‹</button>
+      <div class="hud-info">
+        <b id="hud-lieu">—</b>
+        <i id="hud-tour">Tour 1</i>
+      </div>
+      <button class="hud-btn hud-potion" id="b-potion" aria-label="Utiliser une potion">🧪<em id="potion-n">0</em></button>
+    </div>
+
+    <div class="scene" id="scene">
+      <div class="ennemis" id="ennemis"></div>
+      <div class="heros-scene" id="heros-scene"></div>
+      <div class="effets" id="effets" aria-hidden="true"></div>
+    </div>
+
+    <div class="barre-equipe">
+      <div class="jauge jauge-vie grande">
+        <i class="jauge-fond"></i>
+        <i class="jauge-fantome" id="vie-fantome"></i>
+        <i class="jauge-remplie" id="vie-barre"></i>
+        <b id="vie-texte">—</b>
+      </div>
+      <div class="etats" id="etats"></div>
+    </div>
+
+    <div class="rotation" id="rotation"></div>
+
+    <div class="zone-basse">
+      <div class="consigne" id="consigne">—</div>
+
+      <div class="plateau-enveloppe">
+        <div class="plateau" id="plateau"></div>
+        <svg class="trace" id="trace" viewBox="0 0 600 500" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <div class="ki-flottant" id="ki-flottant" hidden><b>0</b> ki</div>
+      </div>
+
+      <div class="valider" id="valider" hidden>
+        <button class="btn-plat" id="b-effacer">Effacer</button>
+        <button class="btn-plat est-vif" id="b-valider">Ramasser <b id="valider-n">0</b></button>
+      </div>
+
+      <div class="actions" id="actions" hidden></div>
+    </div>
+
+  </div>
+
+  <div class="cutin" id="cutin" hidden aria-hidden="true">
+    <div class="cutin-rayons"></div>
+    <div class="cutin-portrait" id="cutin-portrait"></div>
+    <div class="cutin-nom"><b id="cutin-nom">—</b><i id="cutin-sous">—</i></div>
+  </div>
+
+  <div class="banniere" id="banniere" hidden aria-hidden="true"><b>—</b></div>
+  <div class="flash" id="flash" aria-hidden="true"></div>
+</section>
+
+<!-- ============================== ÉVEIL ============================= -->
+<section class="screen" id="s-eveil">
+  <div class="eveil">
+    <header class="eveil-head">
+      <div class="eveil-kicker">secteur franchi</div>
+      <h2 class="eveil-titre">Choisissez un éveil</h2>
+      <p class="pick-sub">Un seul. Il vous suivra jusqu'à la fin de l'expédition.</p>
+    </header>
+    <div class="eveil-cartes" id="eveil-cartes"></div>
+  </div>
+</section>
+
+<!-- =============================== FIN ============================== -->
+<section class="screen" id="s-fin">
+  <div class="fin">
+    <div class="fin-sceau" id="fin-sceau">✦</div>
+    <h2 class="fin-titre" id="fin-titre">—</h2>
+    <p class="fin-texte" id="fin-texte">—</p>
+    <ul class="fin-stats" id="fin-stats"></ul>
+    <div class="pick-actions two">
+      <button class="btn btn-ghost" data-go="menu">Menu</button>
+      <button class="btn btn-go" id="b-rejouer">Repartir</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============================= GARNISON =========================== -->
+<section class="screen" id="s-garnison">
+  <div class="pick">
+    <header class="pick-head">
+      <button class="pick-back" data-go="menu" aria-label="Retour">‹</button>
+      <div>
+        <h2 class="pick-title">Garnison</h2>
+        <p class="pick-sub">Quinze héros, trois par affinité.</p>
+      </div>
+    </header>
+    <div class="roster roster-large" id="garnison"></div>
+  </div>
+</section>
+
+<!-- ============================== RÈGLES ============================ -->
+<section class="screen" id="s-regles">
+  <div class="pick">
+    <header class="pick-head">
+      <button class="pick-back" data-go="menu" aria-label="Retour">‹</button>
+      <div>
+        <h2 class="pick-title" id="regles-titre">Règles</h2>
+        <p class="pick-sub" id="regles-sous">—</p>
+      </div>
+    </header>
+    <div class="regles" id="regles"></div>
+    <div class="pick-actions two">
+      <button class="btn btn-ghost" id="b-regle-prec">‹ Précédent</button>
+      <button class="btn btn-ghost" id="b-regle-suiv">Suivant ›</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== FICHE ============================= -->
+<div class="fiche" id="fiche" hidden>
+  <div class="fiche-boite" role="dialog" aria-modal="true" aria-labelledby="fiche-nom">
+    <button class="fiche-fermer" id="fiche-fermer" aria-label="Fermer">×</button>
+    <div class="fiche-corps" id="fiche-corps"></div>
+  </div>
+</div>
+
+<script type="module" src="/games/prisme/js/main.js"></script>
+</body>
+</html>

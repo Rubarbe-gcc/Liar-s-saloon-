@@ -1,0 +1,20 @@
+{
+  "name": "PRISME — expédition solo",
+  "short_name": "Prisme",
+  "description": "Récoltez le ki sur le champ d'orbes, enchaînez les attaques spéciales et menez six héros au bout de l'expédition.",
+  "id": "/games/prisme/",
+  "start_url": "/games/prisme/",
+  "scope": "/games/prisme/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0713",
+  "theme_color": "#0a0713",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["games"],
+  "icons": [
+    { "src": "/games/prisme/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/games/prisme/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/games/prisme/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

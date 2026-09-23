@@ -5,8 +5,13 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
 
 **Les jeux**
 
-- **ZÉNITH** — jeu de combat à cartes. Dix-huit combattants, équipes de
-  trois, ki à gérer et éléments qui se dominent. Solo ou en ligne.
+- **PRISME** — combat solo. Un champ d'orbes à parcourir pour récolter le ki,
+  six héros qui partagent une seule barre de vie, quinze rencontres à la
+  suite.
+- **ÉCHO** — jeu de fête à la voix. On entend un son, tout le monde l'imite
+  au micro, la roue distribue points et sabotages.
+- **ZÉNITH** — jeu de combat au tour par tour. Trente combattants, équipes de
+  trois, rôles et éléments qui se dominent. Solo ou en ligne.
 - **Liar's Saloon** — bluff, accusations et roulette russe. Seul contre des
   bots, ou entre amis avec un code de table.
 
@@ -25,8 +30,63 @@ n'utilise que les modules fournis par Node (≥ 18), y compris son
 implémentation WebSocket, écrite à la main dans `server/wsproto.js`.
 
 ```bash
-npm test                   # 61 tests : règles, équilibrage, bots, parties en ligne
+npm test                   # règles, équilibrage, bots, parties en ligne
 ```
+
+---
+
+## PRISME — comment ça marche
+
+Un jeu solo au tour par tour, dans la lignée des jeux de combat à orbes.
+L'expédition tient en quinze rencontres réparties sur cinq secteurs, et
+l'équipe de six héros partage **une seule barre de vie** qui ne se remplit
+pas entre deux combats.
+
+Chaque tour suit toujours le même fil :
+
+1. Une **rotation de trois héros** entre en scène ; les deux rotations
+   alternent d'un tour à l'autre.
+2. L'adversaire annonce **qui il vise** et **après combien de héros** il
+   frappera.
+3. Chacun, dans l'ordre choisi par le joueur, trace un chemin sur le **champ
+   d'orbes** — huit directions, jamais deux fois la même orbe, neuf orbes au
+   plus — et récolte son ki : les orbes de sa propre affinité et les orbes
+   prismatiques comptent double.
+4. À douze de ki l'attaque **spéciale** s'arme, à dix-huit l'**ultime**
+   s'ouvre ; la jauge se vide en fin de tour, garder du ki n'existe pas.
+
+L'ordre de passage est donc la vraie décision : celui qui joue avant la
+fenêtre ennemie peut poser une garde, celui qui joue après frappe une bête
+déjà entravée.
+
+Cinq affinités forment un cycle fermé (avantage ×1.5, désavantage ×0.7), et
+trois rôles — assaut, colosse, soutien — lisibles au glyphe sur chaque carte.
+Le **meneur** dope toute la garnison, et deux héros d'une même rotation qui
+partagent une étiquette **résonnent**. Entre deux secteurs, un **éveil** à
+choisir parmi trois.
+
+L'équilibrage est mesuré, pas deviné : un conseiller joue des expéditions
+entières en tête de série fixe, et les réglages sont choisis pour que le
+palier *Guerrier* se gagne environ deux fois sur trois en jouant bien, le
+palier *Apprenti* presque toujours, et l'*Ascension* rarement.
+
+Les héros et les bêtes sont dessinés en **pixel art paramétrique** : des
+grilles de 16×16 décrites en données, colorées par l'affinité et décalées en
+teinte pour chaque personnage. Le reste de l'animation — l'élan, le cut-in,
+l'encaissement, la chute — est affaire de transformations CSS déclenchées par
+les événements que renvoie le moteur : rien n'apparaît à l'écran qui ne soit
+passé par une règle.
+
+---
+
+## ÉCHO — comment ça marche
+
+On entend un son de trois secondes ; tout le monde l'imite en même temps au
+micro. Le moteur compare ensuite chaque prise au modèle sur trois axes —
+mélodie (45 %), rythme (35 %) et attaques (20 %) — par autocorrélation de
+hauteur et corrélation d'enveloppes. À partir de la deuxième manche, une roue
+distribue bonus et sabotages : la prise du saboté est saturée, hachée ou
+renvoyée en écho avant d'être notée.
 
 ---
 
@@ -92,25 +152,39 @@ public/
   shared/                 moteurs de règles, partagés client ⇄ serveur
     engine.js             Liar's Saloon : règles pures, aléa injecté
     ai.js                 Liar's Saloon : bots
+    hasard.js             aléa déterministe, partagé par les jeux
     zenith/               ZÉNITH : roster, moteur, adversaires, sprites
+    mimic/                ÉCHO : analyse du son, sons de référence, manches
+    prisme/               PRISME : affinités, orbes, héros, bestiaire,
+                          combat, expédition, sprites, conseiller
   games/liars-saloon/
     index.html
     manifest.webmanifest  identité « Liar's Saloon »
     icons/
     css/{base,menu,table}.css
     js/{main,ui,offline,online,sfx}.js
+  games/zenith/           même forme : index, manifest, icônes, css, js
+  games/echo/
+  games/prisme/
+    js/{main,scene,regles,sfx}.js   navigation, combat animé, règles, sons
 server/
   index.js                serveur autonome : statique + WebSocket
   wsproto.js              RFC 6455 minimal, sans dépendance
   hub.js                  routeur : dirige chaque connexion vers son jeu
   saloon.js               salons de Liar's Saloon
   zenith.js               arènes de ZÉNITH
+  mimic.js                salons d'ÉCHO
 api/
   ws.js                   même logique, exposée comme Function Vercel
 test/
   engine.test.js          Liar's Saloon
   zenith.test.js          ZÉNITH
+  echo.test.js            ÉCHO
+  prisme.test.js          PRISME
 ```
+
+PRISME n'a pas de module serveur : c'est un jeu solo, tout tient dans
+l'onglet.
 
 Deux principes structurent le tout :
 
@@ -152,9 +226,9 @@ téléphone, « Ajouter à l'écran d'accueil » (Safari : bouton Partager ;
 Chrome : menu ⋮) pose une icône qui ouvre le jeu en plein écran, sans barre
 d'adresse.
 
-Deux identités sont installables séparément : le hub **Insert Coin** depuis
-l'accueil, et **Liar's Saloon** depuis la page du jeu, chacun avec sa propre
-icône et son point d'entrée.
+Chaque jeu est installable séparément, avec sa propre icône et son propre
+point d'entrée : le hub **Insert Coin** depuis l'accueil, puis **PRISME**,
+**ÉCHO**, **ZÉNITH** et **Liar's Saloon** depuis leurs pages.
 
 Une fois la page visitée une première fois, `public/sw.js` met la coquille en
 cache : **le mode hors-ligne devient jouable sans aucune connexion**, en
