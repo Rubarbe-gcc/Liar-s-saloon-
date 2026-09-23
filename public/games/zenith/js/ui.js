@@ -17,6 +17,7 @@ import {
   MOVES, MOVE_KEYS, STATUS, moveName, estimateDamage, KI_MAX,
 } from '../../../shared/zenith/battle.js';
 import { spriteSvg } from '../../../shared/zenith/sprites.js';
+import { roueSvg, resumeMatchup } from '../../../shared/zenith/roue.js';
 import { sfx } from './sfx.js';
 
 const $ = (id) => document.getElementById(id);
@@ -107,6 +108,17 @@ export function render(v) {
   else if (me.aChoisi) etat.textContent = 'En attente de l\'adversaire';
   else etat.textContent = 'À vous de jouer';
 
+  // Charges de soutien restantes : une ressource rare, donc affichée.
+  const jauge = $('soutien-jauge');
+  const aCapacite = v.commandes.soutien && v.commandes.soutien.capacite;
+  const mienSoutien = me.team.some((u) => getFighter(u.fighterId).support);
+  jauge.hidden = !(aCapacite || mienSoutien);
+  if (!jauge.hidden) {
+    jauge.innerHTML = '🔆 ' + '◆'.repeat(me.soutiens) + '◇'.repeat(Math.max(0, 3 - me.soutiens));
+    jauge.title = `${me.soutiens} soutien${me.soutiens > 1 ? 's' : ''} restant`
+      + `${me.soutiens > 1 ? 's' : ''} pour tout le combat.`;
+  }
+
   const dernier = v.log && v.log.length ? v.log[v.log.length - 1].text : '';
   const t = $('ticker');
   if (t.dataset.last !== dernier) { t.dataset.last = dernier; t.innerHTML = `<span>${esc(dernier)}</span>`; }
@@ -140,11 +152,17 @@ function renderSide(side, prefix, mine) {
 
   // Altération en cours, avec le nombre de tours restants.
   const st = $(`${prefix}-status`);
+  const pastilles = [];
   if (unit.status) {
     const s = STATUS[unit.status.key];
-    st.innerHTML = `<b class="st st-${unit.status.key}" title="${esc(s.blurb)}">`
-      + `${s.glyph} ${s.label} <i>${unit.status.tours}</i></b>`;
-  } else st.innerHTML = '';
+    pastilles.push(`<b class="st st-${unit.status.key}" title="${esc(s.blurb)}">`
+      + `${s.glyph} ${s.label} <i>${unit.status.tours}</i></b>`);
+  }
+  if (unit.boost) {
+    pastilles.push(`<b class="st st-renfort" title="Dégâts ×${unit.boost.attaque.toFixed(2)}, `
+      + `encaissement amélioré">🔆 Renfort <i>${unit.boost.tours}</i></b>`);
+  }
+  st.innerHTML = pastilles.join('');
 
   const av = $(`${prefix}-avatar`);
   setPose(av, f, unit.ko ? 'vaincu' : (unit.guard ? 'garde' : 'repos'), { base: true });
@@ -172,6 +190,23 @@ function renderMatchup(me, foe) {
   const mot = mult > 1 ? 'avantage' : (mult < 1 ? 'désavantage' : 'neutre');
   el.className = `matchup ${mult > 1 ? 'fort' : (mult < 1 ? 'faible' : '')}`;
   el.innerHTML = `<span>${ea.glyph}</span><b>${fleche} ${mot}</b><span>${eb.glyph}</span>`;
+  el.title = resumeMatchup(a.element, b.element);
+
+  // La roue reste affichée : c'est ce qui permet d'anticiper un changement
+  // plutôt que de constater l'avantage après coup.
+  $('roue-mini').innerHTML = roueSvg({ moi: a.element, cible: b.element });
+}
+
+/** Feuille de la roue, ouverte depuis le rapport de force. */
+function ouvrirRoue() {
+  if (!vue) return;
+  const me = vue.sides[vue.viewerSide];
+  const foe = vue.sides[1 - vue.viewerSide];
+  const a = getFighter(me.team[me.active].fighterId);
+  const b = getFighter(foe.team[foe.active].fighterId);
+  $('roue-grande').innerHTML = roueSvg({ moi: a.element, cible: b.element, labels: true });
+  $('roue-dit').textContent = resumeMatchup(a.element, b.element);
+  $('ov-roue').hidden = false;
 }
 
 /**
@@ -212,7 +247,45 @@ function renderMenu(v, me, foe) {
   $('b-guard').classList.toggle('off', fige);
   const peutChanger = v.commandes.swaps.some((s) => s.utilisable);
   $('b-swap').classList.toggle('off', fige || !peutChanger);
+  renderSoutien(v, me, fige);
   $('cmd-wait').hidden = !(me.aChoisi && v.phase === 'choose');
+}
+
+/**
+ * Bouton de soutien. Il n'apparaît que pour les combattants qui en portent
+ * un, et annonce ce qu'il fera : combien de points de vie il rend, ou de
+ * combien il augmente les dégâts — et surtout combien de charges il reste,
+ * puisqu'il n'y en a que trois pour tout le combat.
+ */
+function renderSoutien(v, me, fige) {
+  const b = $('b-soutien');
+  const d = v.commandes.soutien;
+  const cap = d && d.capacite;
+  b.hidden = !cap;
+  if (!cap) return;
+
+  const unit = me.team[me.active];
+  b.classList.toggle('off', fige || !d.utilisable);
+  b.classList.toggle('soutien-soin', cap.kind === 'soin');
+  b.dataset.kind = cap.kind;
+  $('soutien-g').textContent = cap.glyph;
+  $('soutien-l').textContent = cap.name;
+
+  if (cap.kind === 'soin') {
+    const cibles = cap.portee === 'equipe' ? me.team.filter((u) => !u.ko) : [
+      me.team.filter((u) => !u.ko).reduce((a, c) => (a.hp / a.maxHp <= c.hp / c.maxHp ? a : c)),
+    ];
+    const rendu = cibles.reduce((a, u) => a + Math.min(u.maxHp - u.hp, Math.round(u.maxHp * cap.part)), 0);
+    $('soutien-n').textContent = `+${Math.round(rendu)}`;
+  } else {
+    $('soutien-n').textContent = `×${cap.attaque.toFixed(2).replace(/0$/, '')}`;
+  }
+
+  const portee = cap.portee === 'equipe' ? 'tout le camp' : 'un allié';
+  $('soutien-s').textContent = d.raison
+    ? `${cap.ki} ki · ${d.raison}`
+    : `${cap.ki} ki · ${portee} · ${d.restants} charge${d.restants > 1 ? 's' : ''}`;
+  b.title = `${cap.blurb} Il en reste ${d.restants} pour tout le combat.`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -297,6 +370,23 @@ async function jouerEffet(e, v) {
     case 'heal':
       spawn(`<div class="fx fx-heal ${mien ? 'at-me' : 'at-foe'}">+${e.amount}</div>`, 1000);
       return sleep(320);
+
+    case 'soin': {
+      sfx.win();
+      annonce(`${e.glyph} ${e.name}`, '#4ade80');
+      const total = e.cibles.reduce((a, c) => a + c.amount, 0);
+      spawn(`<div class="fx fx-heal ${mien ? 'at-me' : 'at-foe'}">+${total}</div>`, 1200);
+      return sleep(820);
+    }
+
+    case 'renfort':
+      sfx.special();
+      annonce(`${e.glyph} ${e.name}`, '#ffd84d');
+      poseFor(mien ? $('me-avatar') : $('foe-avatar'), 'garde', 800);
+      return sleep(820);
+
+    case 'renfort-fin':
+      return undefined;
 
     case 'status': {
       const s = STATUS[e.status];
@@ -427,6 +517,15 @@ $('b-guard').addEventListener('click', () => {
   sfx.tap();
   onCommand({ type: 'guard' });
 });
+
+$('b-soutien').addEventListener('click', () => {
+  if ($('b-soutien').classList.contains('off')) return;
+  sfx.tap();
+  onCommand({ type: 'soutien' });
+});
+
+$('matchup').addEventListener('click', ouvrirRoue);
+$('roue-mini').addEventListener('click', ouvrirRoue);
 
 $('b-swap').addEventListener('click', () => {
   if ($('b-swap').classList.contains('off') || !vue) return;

@@ -18,14 +18,28 @@ const duo = (teamA, teamB, seed = 1) => B.createBattle([
 /* Roster                                                             */
 /* ================================================================== */
 
-test('les budgets restent dans une fourchette resserree', () => {
-  // Un budget strictement identique pour tous a ete abandonne : l'experience
-  // montre qu'il ne produit pas une force egale. Il reste une indication, et
-  // c'est le taux de victoire mesure plus bas qui fait foi.
-  const budgets = F.FIGHTERS.map(F.budgetOf);
-  const ecart = Math.max(...budgets) - Math.min(...budgets);
-  assert.ok(ecart <= 30,
-    `budgets trop disperses (${ecart}) : ${JSON.stringify(F.FIGHTERS.map((f) => [f.name, F.budgetOf(f)]))}`);
+test('chaque combattant tient son budget, decote des soutiens comprise', () => {
+  // Le budget facture la durabilite sur les points de vie EFFECTIFS, armure
+  // comprise : points de vie et armure se multiplient dans l'encaissement,
+  // alors que l'ancienne formule les additionnait. A 316 points partout, la
+  // durabilite reelle allait de 781 a 2122 — un facteur 2,7 qui faisait des
+  // colosses un choix structurellement superieur.
+  for (const f of F.FIGHTERS) {
+    const ecart = F.budgetOf(f) - F.budgetCibleOf(f);
+    assert.ok(Math.abs(ecart) <= 2,
+      `${f.name} : ${F.budgetOf(f)} pour ${F.budgetCibleOf(f)} vise (ecart ${ecart})`);
+  }
+  // Un soutien paie sa capacite : il doit rester sous le budget d'un pur.
+  assert.ok(F.DECOTE_SOUTIEN > 0, 'la decote de soutien doit etre reelle');
+});
+
+test('les points de vie effectifs restent dans un rapport raisonnable', () => {
+  // Meme correctement facturee, une durabilite trop etalee revient a opposer
+  // des combattants de categories differentes.
+  const eff = F.FIGHTERS.map(F.effectiveHp);
+  const rapport = Math.max(...eff) / Math.min(...eff);
+  assert.ok(rapport <= 2.1,
+    `durabilite trop etalee : rapport ${rapport.toFixed(2)} entre le plus et le moins resistant`);
 });
 
 test('chaque element compte autant de combattants', () => {
@@ -162,7 +176,7 @@ test('une attaque coute son ki, blesse la cible, et le tour en rend a tous', () 
 
   assert.ok(def.hp < pvAvant, 'la cible doit encaisser');
   // 18 de cout, puis le revenu de fin de tour.
-  assert.equal(att.ki, kiAvant - B.MOVES.souffle.ki + B.KI_PAR_TOUR);
+  assert.equal(att.ki, kiAvant - B.MOVES.souffle.ki + B.kiParTour(att));
 });
 
 test('la frappe est gratuite et rend du ki', () => {
@@ -170,7 +184,7 @@ test('la frappe est gratuite et rend du ki', () => {
   const att = s.sides[0].team[0];
   att.ki = 0;
   tour(s, frappe, frappe);
-  assert.equal(att.ki, B.MOVES.frappe.kiGain + B.KI_PAR_TOUR);
+  assert.equal(att.ki, B.MOVES.frappe.kiGain + B.kiParTour(att));
 });
 
 test('on ne peut pas lancer un coup sans le ki', () => {
@@ -189,8 +203,8 @@ test('le revenu de ki par tour est verse aux deux camps', () => {
   s.sides[0].team[0].ki = 0;
   s.sides[1].team[0].ki = 0;
   tour(s, { type: 'guard' }, { type: 'guard' });
-  assert.equal(s.sides[0].team[0].ki, B.GUARD_KI + B.KI_PAR_TOUR);
-  assert.equal(s.sides[1].team[0].ki, B.GUARD_KI + B.KI_PAR_TOUR);
+  assert.equal(s.sides[0].team[0].ki, B.GUARD_KI + B.kiParTour(s.sides[0].team[0]));
+  assert.equal(s.sides[1].team[0].ki, B.GUARD_KI + B.kiParTour(s.sides[1].team[0]));
 });
 
 test('la garde amortit reellement le coup du tour', () => {
@@ -473,6 +487,136 @@ test('choisir sa commande vaut nettement mieux que taper au hasard', () => {
     `choisir ne vaut que ${(taux * 100).toFixed(1)} % : le jeu se joue tout seul`);
 });
 
+/**
+ * Tire une equipe de `n` combattants distincts dans `pool`, avec un tirage
+ * reproductible.
+ */
+function tireEquipe(rng, n, pool) {
+  const copie = [...pool];
+  const out = [];
+  for (let i = 0; i < n && copie.length; i++) {
+    out.push(copie.splice(Math.floor(rng() * copie.length), 1)[0].id);
+  }
+  return out;
+}
+
+/** Taux de victoire de chaque combattant du `pool`, sur `n` combats. */
+function tauxParCombattant(pool, n, graine = 4242) {
+  const st = new Map(pool.map((f) => [f.id, { j: 0, g: 0 }]));
+  const rng = B.makeRng(graine);
+  for (let g = 0; g < n; g++) {
+    const A = tireEquipe(rng, 3, pool), Bq = tireEquipe(rng, 3, pool);
+    const s = duo(A, Bq, g * 17 + 3);
+    const brains = [AI.createBrain('legende'), AI.createBrain('legende')];
+    let k = 0;
+    while (s.phase !== B.PHASE.OVER && k++ < 400) {
+      AI.think(s, 0, brains[0]); AI.think(s, 1, brains[1]); B.resolveTurn(s);
+    }
+    for (const [i, eq] of [[0, A], [1, Bq]]) {
+      for (const id of eq) { const e = st.get(id); e.j++; if (s.winner === i) e.g++; }
+    }
+  }
+  return [...st].map(([id, e]) => ({ id, t: e.g / e.j, j: e.j })).sort((a, b) => b.t - a.t);
+}
+
+test('aucun combattant n\'ecrase ni ne subit le roster', () => {
+  // Ce test avait disparu lors du passage au tour par tour, et son absence a
+  // laisse s'installer 45 points d'ecart entre le meilleur et le pire
+  // combattant : la vitesse, qui gouvernait la pioche en temps reel, ne
+  // decidait plus que de l'ordre des coups, et les profils resistants y ont
+  // gagne sans que rien ne le signale.
+  const t = tauxParCombattant(F.FIGHTERS, 1500);
+  const etendue = (t[0].t - t[t.length - 1].t) * 100;
+  const detail = t.slice(0, 3).concat(t.slice(-3))
+    .map((x) => `${x.id} ${(x.t * 100).toFixed(0)}%`).join(', ');
+  assert.ok(etendue <= 30, `etendue de ${etendue.toFixed(1)} points : ${detail}`);
+});
+
+test('aucun element n\'est structurellement avantage', () => {
+  // On clone les statistiques : seul l'element distingue encore les
+  // combattants, donc tout ecart vient du cycle et de ses alterations. Le
+  // premier releve donnait Braise a 62 % et Givre a 43 %, parce que la
+  // brulure valait deux fois le gel.
+  const parEl = new Map(F.ELEMENT_KEYS.map((e) => [e, { j: 0, g: 0 }]));
+  const rng = B.makeRng(999);
+  // Une equipe par element, pour que le tirage n'introduise pas de biais.
+  for (let g = 0; g < 900; g++) {
+    const A = tireEquipe(rng, 3, F.FIGHTERS), Bq = tireEquipe(rng, 3, F.FIGHTERS);
+    const s = duo(A, Bq, g * 23 + 5);
+    // Statistiques egalisees a la volee : c'est l'element qu'on isole.
+    for (const side of s.sides) {
+      for (const u of side.team) { u.hp = 650; u.maxHp = 650; }
+    }
+    const brains = [AI.createBrain('legende'), AI.createBrain('legende')];
+    let k = 0;
+    while (s.phase !== B.PHASE.OVER && k++ < 400) {
+      AI.think(s, 0, brains[0]); AI.think(s, 1, brains[1]); B.resolveTurn(s);
+    }
+    for (const [i, eq] of [[0, A], [1, Bq]]) {
+      for (const id of eq) {
+        const e = parEl.get(F.getFighter(id).element); e.j++; if (s.winner === i) e.g++;
+      }
+    }
+  }
+  const taux = [...parEl].map(([e, v]) => ({ e, t: v.g / v.j * 100 }));
+  const ecart = Math.max(...taux.map((x) => x.t)) - Math.min(...taux.map((x) => x.t));
+  assert.ok(ecart <= 14,
+    `ecart de ${ecart.toFixed(1)} points entre elements : `
+    + taux.map((x) => `${x.e} ${x.t.toFixed(1)}`).join(' '));
+});
+
+test('les soutiens valent les combattants purs, sans les depasser', () => {
+  // La decote de budget doit compenser la capacite, ni plus ni moins.
+  const t = tauxParCombattant(F.FIGHTERS, 1500);
+  const moyenne = (pred) => {
+    const a = t.filter((x) => pred(F.getFighter(x.id)));
+    return a.reduce((s, x) => s + x.t, 0) / a.length * 100;
+  };
+  const purs = moyenne((f) => !f.support);
+  const soins = moyenne((f) => f.support && f.support.kind === 'soin');
+  const renforts = moyenne((f) => f.support && f.support.kind === 'renfort');
+  for (const [nom, v] of [['soigneurs', soins], ['renforts', renforts]]) {
+    assert.ok(Math.abs(v - purs) <= 6,
+      `${nom} a ${v.toFixed(1)} % contre ${purs.toFixed(1)} % pour les combattants purs`);
+  }
+});
+
+test('jouer sa capacite de soutien rapporte vraiment', () => {
+  // Une capacite qui ne change rien au resultat n'est pas une capacite. Le
+  // renfort a d'abord ete mesure a exactement zero : il coutait un tour
+  // entier pour un multiplicateur qui ne payait qu'ensuite.
+  const soutiens = F.FIGHTERS.filter((f) => f.support);
+  const joue = (autorise) => {
+    let g = 0, j = 0;
+    const rng = B.makeRng(321);
+    for (let n = 0; n < 500; n++) {
+      const A = tireEquipe(rng, 3, F.FIGHTERS), Bq = tireEquipe(rng, 3, F.FIGHTERS);
+      const s = duo(A, Bq, n * 13 + 7);
+      const brains = [AI.createBrain('legende'), AI.createBrain('legende')];
+      let k = 0;
+      while (s.phase !== B.PHASE.OVER && k++ < 400) {
+        for (let i = 0; i < 2; i++) {
+          AI.think(s, i, brains[i]);
+          // Camp 0 bride : sa commande de soutien est remplacee par une frappe.
+          if (!autorise && i === 0 && s.sides[0].queued && s.sides[0].queued.type === 'soutien') {
+            s.sides[0].queued = { type: 'move', move: 'frappe' };
+          }
+        }
+        B.resolveTurn(s);
+      }
+      // On ne compte que les combats ou le camp 0 avait de quoi soutenir.
+      if (!A.some((id) => F.getFighter(id).support)) continue;
+      j++; if (s.winner === 0) g++;
+    }
+    return g / j * 100;
+  };
+  assert.ok(soutiens.length >= 10, 'il faut assez de soutiens pour mesurer');
+  const avec = joue(true), sans = joue(false);
+  assert.ok(avec > sans + 1.5,
+    `jouer le soutien ne rapporte que ${(avec - sans).toFixed(1)} points `
+    + `(${avec.toFixed(1)} % contre ${sans.toFixed(1)} %)`);
+});
+
 test('un combat dure un nombre de tours jouable', () => {
   const longueurs = [];
   for (let g = 0; g < 120; g++) {
@@ -483,6 +627,281 @@ test('un combat dure un nombre de tours jouable', () => {
   const mediane = longueurs[Math.floor(longueurs.length / 2)];
   assert.ok(mediane >= 10 && mediane <= 40,
     `mediane de ${mediane} tours : trop expeditif ou trop long`);
+});
+
+
+
+/* ================================================================== */
+/* Soutien : soin et renfort                                          */
+/* ================================================================== */
+
+/** Une équipe dont le premier combattant porte la capacité voulue. */
+function equipeAvec(kind, portee) {
+  const f = F.FIGHTERS.find((x) => x.support && x.support.kind === kind
+    && (!portee || x.support.portee === portee));
+  assert.ok(f, `aucun combattant ${kind}/${portee ?? '*'}`);
+  const autres = F.FIGHTERS.filter((x) => x.id !== f.id).slice(0, 2).map((x) => x.id);
+  return [f.id, ...autres];
+}
+
+test('chaque element possede un soigneur et un renfort', () => {
+  for (const el of F.ELEMENT_KEYS) {
+    const pack = F.FIGHTERS.filter((f) => f.element === el && f.support);
+    const genres = pack.map((f) => f.support.kind).sort();
+    assert.deepEqual(genres, ['renfort', 'soin'],
+      `${el} : ${JSON.stringify(pack.map((f) => f.name + '/' + f.support.kind))}`);
+  }
+});
+
+test('les capacites de soutien sont completes et coherentes', () => {
+  for (const f of F.FIGHTERS.filter((x) => x.support)) {
+    const c = f.support;
+    assert.ok(['soin', 'renfort'].includes(c.kind), `${f.name} : genre inconnu`);
+    assert.ok(['allie', 'equipe'].includes(c.portee), `${f.name} : portee inconnue`);
+    assert.ok(c.name && c.glyph && c.blurb, `${f.name} : capacite incomplete`);
+    assert.ok(c.ki >= 0 && c.ki <= B.KI_MAX, `${f.name} : cout de ki hors bornes`);
+    if (c.kind === 'soin') {
+      assert.ok(c.part > 0 && c.part < 0.5, `${f.name} : soin disproportionne (${c.part})`);
+      // Une portee d'equipe doit rendre moins par cible qu'un soin cible.
+      if (c.portee === 'equipe') assert.ok(c.part < 0.25, `${f.name} : soin d'equipe trop fort`);
+    } else {
+      assert.ok(c.attaque > 1 && c.attaque <= 1.35, `${f.name} : renfort disproportionne (${c.attaque})`);
+      assert.ok(c.tours >= 2 && c.tours <= 6, `${f.name} : renfort trop long`);
+    }
+  }
+});
+
+test('un camp ne dispose que de trois soutiens pour tout le combat', () => {
+  const s = duo(equipeAvec('soin'), ['kaze', 'volt', 'nox']);
+  assert.equal(s.sides[0].soutiens, B.SOUTIENS_MAX);
+  assert.equal(B.SOUTIENS_MAX, 3);
+
+  for (let i = 0; i < B.SOUTIENS_MAX; i++) {
+    const u = s.sides[0].team[s.sides[0].active];
+    u.ki = B.KI_MAX;
+    u.hp = Math.round(u.maxHp * 0.4);   // sans blessure, le soin ne rend rien
+    assert.equal(B.choose(s, 0, { type: 'soutien' }).ok, true, `soutien ${i + 1} refuse`);
+    B.choose(s, 1, { type: 'guard' });
+    B.resolveTurn(s);
+  }
+  assert.equal(s.sides[0].soutiens, 0);
+
+  s.sides[0].team[s.sides[0].active].ki = B.KI_MAX;
+  const r = B.choose(s, 0, { type: 'soutien' });
+  assert.equal(r.ok, false);
+  assert.equal(r.error, 'réserve épuisée');
+  assert.equal(B.availableCommands(s, 0).soutien.utilisable, false);
+});
+
+test('la reserve de soutien est par camp, pas par combattant', () => {
+  // Empiler deux soigneurs ne doit pas doubler la reserve.
+  const deux = F.FIGHTERS.filter((f) => f.support && f.support.kind === 'soin').slice(0, 2).map((f) => f.id);
+  const s = duo([...deux, 'kaze'], ['volt', 'nox', 'gorm']);
+  for (let i = 0; i < 3; i++) {
+    const u = s.sides[0].team[s.sides[0].active];
+    u.ki = B.KI_MAX; u.hp = Math.round(u.maxHp * 0.4);
+    B.choose(s, 0, { type: 'soutien' });
+    B.choose(s, 1, { type: 'guard' });
+    B.resolveTurn(s);
+  }
+  assert.equal(s.sides[0].soutiens, 0);
+  // Le second soigneur entre en lice : la reserve reste vide.
+  s.sides[0].active = 1;
+  s.sides[0].team[1].ki = B.KI_MAX;
+  assert.equal(B.choose(s, 0, { type: 'soutien' }).ok, false);
+});
+
+test('un soin cible rend des points de vie au plus mal en point', () => {
+  const s = duo(equipeAvec('soin', 'allie'), ['kaze', 'volt', 'nox']);
+  const soigneur = s.sides[0].team[0];
+  const blesse = s.sides[0].team[1];
+  soigneur.ki = B.KI_MAX;
+  soigneur.hp = soigneur.maxHp;             // intact
+  blesse.hp = Math.round(blesse.maxHp * 0.3); // le plus bas
+  const avant = blesse.hp;
+
+  B.choose(s, 0, { type: 'soutien' });
+  B.choose(s, 1, { type: 'guard' });
+  const { effects } = B.resolveTurn(s);
+
+  assert.ok(blesse.hp > avant, 'le plus mal en point doit etre soigne');
+  assert.equal(soigneur.hp, soigneur.maxHp, 'le soigneur intact ne gagne rien');
+  assert.ok(effects.some((e) => e.type === 'soin'), 'un effet de soin doit etre emis');
+});
+
+test('un soin d\'equipe touche tous les vivants, et jamais un combattant a terre', () => {
+  const s = duo(equipeAvec('soin', 'equipe'), ['kaze', 'volt', 'nox']);
+  const camp = s.sides[0];
+  camp.team[0].ki = B.KI_MAX;
+  for (const u of camp.team) u.hp = Math.round(u.maxHp * 0.5);
+  camp.team[2].ko = true;
+  camp.team[2].hp = 0;
+
+  B.choose(s, 0, { type: 'soutien' });
+  B.choose(s, 1, { type: 'guard' });
+  B.resolveTurn(s);
+
+  assert.ok(camp.team[0].hp > camp.team[0].maxHp * 0.5);
+  assert.ok(camp.team[1].hp > camp.team[1].maxHp * 0.5);
+  assert.equal(camp.team[2].hp, 0, 'un combattant a terre ne se releve pas');
+});
+
+test('un soin ne depasse jamais les points de vie maximum', () => {
+  const s = duo(equipeAvec('soin', 'allie'), ['kaze', 'volt', 'nox']);
+  const camp = s.sides[0];
+  camp.team[0].ki = B.KI_MAX;
+  for (const u of camp.team) u.hp = u.maxHp - 1;
+  B.choose(s, 0, { type: 'soutien' });
+  B.choose(s, 1, { type: 'guard' });
+  B.resolveTurn(s);
+  for (const u of camp.team) assert.ok(u.hp <= u.maxHp, 'sur-soin');
+});
+
+test('un renfort augmente reellement les degats, et finit par expirer', () => {
+  const equipe = equipeAvec('renfort', 'allie');
+  const cap = F.getFighter(equipe[0]).support;
+
+  const degats = (avecRenfort) => {
+    const s = duo(equipe, ['kaze', 'volt', 'nox'], 3);
+    const u = s.sides[0].team[0];
+    const cible = s.sides[1].team[0];
+    u.ki = B.KI_MAX;
+    if (avecRenfort) {
+      B.choose(s, 0, { type: 'soutien' });
+      B.choose(s, 1, { type: 'guard' });
+      B.resolveTurn(s);
+      assert.ok(u.boost, 'le renfort doit se poser');
+    }
+    u.ki = B.KI_MAX;
+    const avant = cible.hp;
+    B.choose(s, 0, { type: 'move', move: 'souffle' });
+    B.choose(s, 1, { type: 'move', move: 'frappe' });
+    B.resolveTurn(s);
+    return avant - cible.hp;
+  };
+
+  const nu = degats(false);
+  const renforce = degats(true);
+  assert.ok(renforce > nu, `renfort sans effet : ${renforce} contre ${nu}`);
+  // L'ordre de grandeur doit correspondre au multiplicateur annonce.
+  assert.ok(renforce < nu * (cap.attaque + 0.15),
+    `renfort disproportionne : ×${(renforce / nu).toFixed(2)} pour ×${cap.attaque} annonce`);
+});
+
+test('un renfort s\'use sur tout le camp, banc compris', () => {
+  const equipe = equipeAvec('renfort', 'equipe');
+  const s = duo(equipe, ['kaze', 'volt', 'nox']);
+  const camp = s.sides[0];
+  camp.team[0].ki = B.KI_MAX;
+  B.choose(s, 0, { type: 'soutien' });
+  B.choose(s, 1, { type: 'guard' });
+  B.resolveTurn(s);
+
+  for (const u of camp.team) assert.ok(u.boost, 'toute l\'equipe doit etre renforcee');
+  const restant = camp.team[1].boost.tours;
+
+  B.choose(s, 0, { type: 'move', move: 'frappe' });
+  B.choose(s, 1, { type: 'guard' });
+  B.resolveTurn(s);
+  assert.equal(camp.team[1].boost.tours, restant - 1,
+    'un combattant garde au banc ne doit pas conserver son renfort');
+});
+
+test('empiler des renforts reste sous plafond', () => {
+  const s = duo(equipeAvec('renfort', 'allie'), ['kaze', 'volt', 'nox']);
+  const u = s.sides[0].team[0];
+  for (let i = 0; i < B.SOUTIENS_MAX; i++) {
+    u.ki = B.KI_MAX;
+    B.choose(s, 0, { type: 'soutien' });
+    B.choose(s, 1, { type: 'guard' });
+    B.resolveTurn(s);
+  }
+  assert.ok(u.boost, 'le renfort doit tenir');
+  assert.ok(u.boost.attaque <= B.RENFORT_MAX,
+    `cumul hors plafond : ${u.boost.attaque} > ${B.RENFORT_MAX}`);
+});
+
+test('un combattant mis a terre perd son renfort', () => {
+  const s = duo(equipeAvec('renfort', 'allie'), ['kaze', 'volt', 'nox']);
+  const u = s.sides[0].team[0];
+  u.ki = B.KI_MAX;
+  B.choose(s, 0, { type: 'soutien' });
+  B.choose(s, 1, { type: 'guard' });
+  B.resolveTurn(s);
+  assert.ok(u.boost);
+
+  u.hp = 1;
+  s.sides[1].team[0].ki = B.KI_MAX;
+  B.choose(s, 0, { type: 'guard' });
+  B.choose(s, 1, { type: 'move', move: 'speciale' });
+  B.resolveTurn(s);
+  assert.equal(u.ko, true);
+  assert.equal(u.boost, null, 'le renfort doit tomber avec le combattant');
+});
+
+test('un combattant sans capacite ne peut pas jouer de soutien', () => {
+  const s = duo(['kaze', 'volt', 'nox'], ['gorm', 'tarn', 'brume']);
+  const d = B.availableCommands(s, 0);
+  assert.equal(d.soutien.capacite, null);
+  assert.equal(d.soutien.utilisable, false);
+  assert.equal(d.soutien.raison, 'pas de capacité');
+  assert.equal(B.choose(s, 0, { type: 'soutien' }).ok, false);
+});
+
+test('la vue expose la reserve de soutien et le renfort en cours', () => {
+  const s = duo(equipeAvec('renfort', 'allie'), ['kaze', 'volt', 'nox']);
+  s.sides[0].team[0].ki = B.KI_MAX;
+  B.choose(s, 0, { type: 'soutien' });
+  B.choose(s, 1, { type: 'guard' });
+  B.resolveTurn(s);
+
+  const vue = B.viewFor(s, 'a');
+  assert.equal(vue.sides[0].soutiens, B.SOUTIENS_MAX - 1);
+  assert.ok(vue.sides[0].team[0].boost, 'le renfort doit etre visible');
+  assert.ok(vue.commandes.soutien.capacite, 'la capacite doit etre decrite');
+});
+
+/* ================================================================== */
+/* Roue des elements                                                  */
+/* ================================================================== */
+
+test('la roue suit le cycle et le boucle', async () => {
+  const R = await import('../public/shared/zenith/roue.js');
+  const cycle = R.ordreCycle();
+  assert.equal(cycle.length, F.ELEMENT_KEYS.length);
+  assert.equal(new Set(cycle).size, cycle.length, 'element repete');
+  for (let i = 0; i < cycle.length; i++) {
+    const suivant = cycle[(i + 1) % cycle.length];
+    assert.equal(F.ELEMENTS[cycle[i]].beats, suivant,
+      `${cycle[i]} devrait dominer ${suivant}`);
+  }
+});
+
+test('la roue produit un SVG complet et nomme chaque element', async () => {
+  const R = await import('../public/shared/zenith/roue.js');
+  const svg = R.roueSvg({ moi: 'braise', cible: 'orage', labels: true });
+  assert.match(svg, /^<svg/);
+  assert.match(svg, /<\/svg>$/);
+  // Une fleche par element, et pas une de plus.
+  assert.equal((svg.match(/marker-end/g) || []).length, F.ELEMENT_KEYS.length);
+  for (const k of F.ELEMENT_KEYS) {
+    assert.ok(svg.includes(F.ELEMENTS[k].label.toUpperCase()), `${k} absent de la roue`);
+  }
+});
+
+test('la roue dit juste le rapport de force', async () => {
+  const R = await import('../public/shared/zenith/roue.js');
+  assert.match(R.resumeMatchup('braise', 'orage'), /domine/);
+  assert.match(R.resumeMatchup('orage', 'braise'), /domin[ée]/);
+  assert.match(R.resumeMatchup('braise', 'braise'), /aucun avantage/);
+  // Ce que dit la roue doit correspondre au moteur, pas a une table separee.
+  for (const a of F.ELEMENT_KEYS) for (const b of F.ELEMENT_KEYS) {
+    const m = F.elementMultiplier(a, b);
+    const dit = R.resumeMatchup(a, b);
+    if (m > 1) assert.match(dit, /augmentés/, `${a}>${b}`);
+    else if (m < 1) assert.match(dit, /réduits/, `${a}<${b}`);
+    else assert.match(dit, /aucun avantage/, `${a}=${b}`);
+  }
 });
 
 

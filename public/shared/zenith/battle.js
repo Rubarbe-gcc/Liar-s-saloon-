@@ -34,6 +34,26 @@ export const KI_MAX = 100;
  */
 export const KI_PAR_TOUR = 14;
 
+/** Vitesse de référence : celle qui touche exactement `KI_PAR_TOUR`. */
+export const VITESSE_REF = 70;
+
+/**
+ * Revenu de ki du tour, modulé par la vitesse.
+ *
+ * En temps réel, la vitesse gouvernait la pioche et la recharge : un
+ * combattant rapide payait ses points en ressources. Le tour par tour lui a
+ * retiré ce rôle — elle ne décidait plus que de l'ordre des coups, ce qui
+ * vaut peu — et les profils rapides se sont retrouvés à payer plein tarif
+ * une statistique devenue presque décorative. Lui rendre la main sur le ki
+ * lui redonne un prix honnête, sans réintroduire de temps réel.
+ */
+export function kiParTour(unit) {
+  // `speedOf` et non la vitesse de base : la paralysie doit donc peser aussi
+  // sur les revenus, pas seulement sur l'ordre des coups. Les deux systèmes
+  // restent ainsi cohérents — ralentir, c'est agir moins et gagner moins.
+  return KI_PAR_TOUR * (0.55 + 0.45 * speedOf(unit) / VITESSE_REF);
+}
+
 /** Au-delà, le combat est tranché aux points de vie restants. */
 export const MAX_TURNS = 60;
 
@@ -88,6 +108,26 @@ export const GUARD_REDUCTION = 0.45;
 export const GUARD_KI = 20;
 
 /* ------------------------------------------------------------------ */
+/* Soutien                                                             */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Nombre de soutiens dont dispose un camp pour tout le combat, toutes
+ * capacités confondues.
+ *
+ * C'est le garde-fou central. Un soin sans limite change la nature du jeu :
+ * dès qu'il rend plus de points de vie qu'un tour d'attaque n'en retire, la
+ * ligne gagnante devient « se soigner jusqu'à la limite de tours », et le
+ * combat cesse d'être un combat. Le plafonner par camp — et non par
+ * combattant — empêche aussi d'empiler deux soigneurs dans une équipe pour
+ * doubler la réserve.
+ */
+export const SOUTIENS_MAX = 3;
+
+/** Plafond de cumul d'un renfort, pour qu'empiler ne s'envole pas. */
+export const RENFORT_MAX = 1.5;
+
+/* ------------------------------------------------------------------ */
 /* Altérations d'état                                                  */
 /* ------------------------------------------------------------------ */
 
@@ -102,11 +142,11 @@ export const STATUS = {
     blurb: 'Perd des points de vie à chaque tour.',
   },
   paralysie: {
-    key: 'paralysie', label: 'Paralysie', glyph: '⚡', tours: 3,
-    blurb: 'Vitesse réduite de moitié : agit après presque tout le monde.',
+    key: 'paralysie', label: 'Paralysie', glyph: '⚡', tours: 4,
+    blurb: 'Vitesse réduite de moitié : agit plus tard, et gagne moins de ki.',
   },
   gel: {
-    key: 'gel', label: 'Gel', glyph: '❄️', tours: 2,
+    key: 'gel', label: 'Gel', glyph: '❄️', tours: 3,
     blurb: 'Risque de perdre son tour.',
   },
   drain: {
@@ -128,10 +168,22 @@ export const ELEMENT_STATUS = {
   sylve: 'seve',
 };
 
-const BRULURE_PART = 0.07;   // des points de vie maximum, par tour
-const DRAIN_KI = 14;         // ki perdu par tour
+/*
+ * Ces cinq nombres ont été réglés à la mesure, sur des combats opposant des
+ * combattants aux statistiques strictement identiques : seul l'élément y
+ * varie, donc tout écart de taux de victoire vient des altérations et de
+ * rien d'autre.
+ *
+ * Le premier relevé donnait Braise à 62 % et Givre à 43 % — dix-neuf points
+ * d'écart. La brûlure retirait 7 % des points de vie maximum par tour sur
+ * trois tours, soit un cinquième d'une barre de vie, quand le gel ne durait
+ * que deux tours et que la sève ne rendait presque rien. Après réglage,
+ * l'écart tombe à cinq points, soit quelques fois le bruit de mesure.
+ */
+const BRULURE_PART = 0.038;  // des points de vie maximum, par tour
+const DRAIN_KI = 11;         // ki perdu par tour
 const GEL_RISQUE = 0.35;     // probabilité de perdre son tour
-const SEVE_PART = 0.3;       // soin, en part des dégâts infligés
+const SEVE_PART = 0.5;       // soin, en part des dégâts infligés
 
 /* ------------------------------------------------------------------ */
 /* Aléa                                                                */
@@ -188,6 +240,7 @@ function makeUnit(fighterId) {
     status: null,      // { key, tours, from }
     guard: false,
     ultUsed: false,
+    boost: null,       // { attaque, armure, tours }
   };
 }
 
@@ -215,7 +268,11 @@ export function createBattle(sides, options = {}) {
       team: s.team.slice(0, TEAM_SIZE).map(makeUnit),
       active: 0,
       queued: null,
-      stats: { coups: 0, degats: 0, subis: 0, gardes: 0, speciales: 0, ultimes: 0, kos: 0 },
+      soutiens: SOUTIENS_MAX,
+      stats: {
+        coups: 0, degats: 0, subis: 0, gardes: 0,
+        speciales: 0, ultimes: 0, kos: 0, soins: 0, renforts: 0,
+      },
     })),
   };
 }
@@ -264,7 +321,21 @@ export function availableCommands(state, sideIndex) {
     raison: u.ko ? 'hors de combat' : (slot === side.active ? 'déjà en lice' : null),
   }));
 
-  return { moves, garde: { utilisable: true }, swaps };
+  const cap = getFighter(unit.fighterId).support || null;
+  let raisonSoutien = null;
+  if (!cap) raisonSoutien = 'pas de capacité';
+  else if (side.soutiens <= 0) raisonSoutien = 'réserve épuisée';
+  else if (unit.ki < cap.ki) raisonSoutien = 'ki insuffisant';
+
+  const soutien = {
+    capacite: cap,
+    ki: cap ? cap.ki : 0,
+    restants: side.soutiens,
+    utilisable: !raisonSoutien,
+    raison: raisonSoutien,
+  };
+
+  return { moves, garde: { utilisable: true }, swaps, soutien };
 }
 
 /* ------------------------------------------------------------------ */
@@ -300,6 +371,15 @@ export function choose(state, sideIndex, cmd) {
     return { ok: true };
   }
 
+  if (cmd.type === 'soutien') {
+    const cap = fighterOf(unit).support;
+    if (!cap) return { ok: false, error: 'pas de capacité' };
+    if (side.soutiens <= 0) return { ok: false, error: 'réserve épuisée' };
+    if (unit.ki < cap.ki) return { ok: false, error: 'ki' };
+    side.queued = { type: 'soutien' };
+    return { ok: true };
+  }
+
   if (cmd.type === 'swap') {
     const slot = cmd.slot;
     if (!Number.isInteger(slot) || slot < 0 || slot >= side.team.length) {
@@ -323,14 +403,23 @@ export const pretARésoudre = (state) =>
 /* ------------------------------------------------------------------ */
 
 /** Dégâts attendus d'une commande, sans la part d'aléa. */
-export function estimateDamage(attacker, defender, moveKey, { garde = false } = {}) {
+export function estimateDamage(
+  attacker, defender, moveKey,
+  { garde = false, attaque = 1, armure = 1 } = {},
+) {
   const m = MOVES[moveKey];
   if (!m) return 0;
-  const raw = statOf(attacker, m.stat) * m.power * 2.2;
+  const raw = statOf(attacker, m.stat) * m.power * 2.2 * attaque;
   const elem = elementMultiplier(attacker.element, defender.element);
-  const mitigation = 100 / (100 + defender.armor);
+  const mitigation = 100 / (100 + defender.armor * armure);
   const g = garde ? GUARD_REDUCTION : 1;
   return Math.max(1, Math.round(raw * elem * mitigation * g));
+}
+
+/** Multiplicateurs de renfort d'une unité, 1 quand elle n'en porte pas. */
+export function boostOf(unit) {
+  if (!unit || !unit.boost) return { attaque: 1, armure: 1 };
+  return { attaque: unit.boost.attaque, armure: unit.boost.armure };
 }
 
 function appliquerDegats(state, side, foe, moveKey) {
@@ -342,7 +431,11 @@ function appliquerDegats(state, side, foe, moveKey) {
 
   const elem = elementMultiplier(af.element, df.element);
   const jitter = 0.95 + state.rng() * 0.1;
-  const base = estimateDamage(af, df, moveKey, { garde: cible.guard });
+  const base = estimateDamage(af, df, moveKey, {
+    garde: cible.guard,
+    attaque: boostOf(unit).attaque,
+    armure: boostOf(cible).armure,
+  });
   const montant = Math.max(1, Math.round(base * jitter));
 
   cible.hp = Math.max(0, cible.hp - montant);
@@ -389,6 +482,7 @@ function mettreAuTapis(state, side, killer) {
   const unit = activeUnit(side);
   unit.ko = true;
   unit.status = null;
+  unit.boost = null;
   killer.stats.kos += 1;
   effect(state, { type: 'ko', side: side.index, fighter: unit.fighterId });
   log(state, `${fighterOf(unit).name} est hors de combat.`);
@@ -406,6 +500,76 @@ function mettreAuTapis(state, side, killer) {
   side.active = suivant;
   effect(state, { type: 'enter', side: side.index, fighter: side.team[suivant].fighterId });
   log(state, `${fighterOf(side.team[suivant]).name} entre en lice.`);
+}
+
+/**
+ * Joue la capacité de soutien du combattant en lice.
+ *
+ * Le soin ciblé va au plus mal en point, le renfort ciblé à celui qui est
+ * au front : dans les deux cas le choix utile est évident, et faire désigner
+ * la cible n'ajouterait qu'un écran de plus sans ajouter de décision.
+ */
+function resoudreSoutien(state, side) {
+  const unit = activeUnit(side);
+  const f = fighterOf(unit);
+  const cap = f.support;
+  if (!cap || side.soutiens <= 0 || unit.ki < cap.ki) return;
+
+  unit.ki = Math.min(KI_MAX, unit.ki - cap.ki);
+  side.soutiens -= 1;
+
+  const vivants = side.team
+    .map((u, slot) => ({ u, slot }))
+    .filter(({ u }) => !u.ko);
+
+  if (cap.kind === 'soin') {
+    // Portée « allié » : celui dont la part de points de vie est la plus
+    // basse. Se soigner soi-même reste possible, et souvent juste.
+    const cibles = cap.portee === 'equipe'
+      ? vivants
+      : [vivants.reduce((a, b) => (a.u.hp / a.u.maxHp <= b.u.hp / b.u.maxHp ? a : b))];
+
+    const rendus = [];
+    for (const { u, slot } of cibles) {
+      const soin = Math.max(1, Math.round(u.maxHp * cap.part));
+      const avant = u.hp;
+      u.hp = Math.min(u.maxHp, u.hp + soin);
+      rendus.push({ slot, amount: u.hp - avant });
+    }
+    side.stats.soins += 1;
+    effect(state, {
+      type: 'soin', side: side.index, name: cap.name, glyph: cap.glyph,
+      cibles: rendus, restants: side.soutiens,
+    });
+    const total = rendus.reduce((a, r) => a + r.amount, 0);
+    log(state, `${f.name} lance ${cap.name} — ${total} points de vie rendus.`);
+    return;
+  }
+
+  const cibles = cap.portee === 'equipe' ? vivants : [{ u: unit, slot: side.active }];
+  for (const { u } of cibles) {
+    // Le renfort rend aussi du ki. Sans cette contrepartie immédiate, il
+    // était mesuré perdant : dépenser un tour entier pour un multiplicateur
+    // qui ne paie qu'aux tours suivants rend moins que frapper tout de
+    // suite, et les combattants de renfort tombaient à 45 % de victoires
+    // même en gonflant le multiplicateur jusqu'à 1,42.
+    if (cap.kiRendu) u.ki = Math.min(KI_MAX, u.ki + cap.kiRendu);
+    // Empiler deux renforts multiplie, mais sous plafond : sans lui, trois
+    // renforts d'affilée feraient plus que doubler les dégâts du camp.
+    const a = u.boost ? u.boost.attaque : 1;
+    const d = u.boost ? u.boost.armure : 1;
+    u.boost = {
+      attaque: Math.min(RENFORT_MAX, a * cap.attaque),
+      armure: Math.min(RENFORT_MAX, d * cap.armure),
+      tours: cap.tours,
+    };
+  }
+  side.stats.renforts += 1;
+  effect(state, {
+    type: 'renfort', side: side.index, name: cap.name, glyph: cap.glyph,
+    slots: cibles.map((c) => c.slot), tours: cap.tours, restants: side.soutiens,
+  });
+  log(state, `${f.name} lance ${cap.name} — le camp frappe plus fort.`);
 }
 
 function resoudreGarde(state, side) {
@@ -459,9 +623,12 @@ export function resolveTurn(state) {
     }
   }
 
-  // 3. Les attaques, par ordre de vitesse décroissante.
+  // 3. Les actions, par ordre de vitesse décroissante. Le soutien y figure
+  //    au même titre qu'une attaque : un soigneur rapide agit avant
+  //    d'encaisser — et gaspille une partie de son soin ; un soigneur lent
+  //    soigne à bon escient, mais risque d'être mis à terre avant son tour.
   const attaquants = state.sides
-    .filter((s) => s.queued && s.queued.type === 'move')
+    .filter((s) => s.queued && (s.queued.type === 'move' || s.queued.type === 'soutien'))
     .sort((a, b) => {
       const va = speedOf(activeUnit(a));
       const vb = speedOf(activeUnit(b));
@@ -483,6 +650,8 @@ export function resolveTurn(state) {
       log(state, `${fighterOf(unit).name} est figé et ne peut pas agir.`);
       continue;
     }
+
+    if (cmd.type === 'soutien') { resoudreSoutien(state, side); continue; }
 
     const m = MOVES[cmd.move];
     // La situation a pu changer depuis le choix : on revérifie.
@@ -510,7 +679,20 @@ function finDeTour(state) {
   // Revenu de ki, versé à tous avant les altérations.
   for (const side of state.sides) {
     const unit = activeUnit(side);
-    if (!unit.ko) unit.ki = Math.min(KI_MAX, unit.ki + KI_PAR_TOUR);
+    if (!unit.ko) unit.ki = Math.min(KI_MAX, unit.ki + kiParTour(unit));
+  }
+
+  // Les renforts s'usent pour tout le camp, y compris sur le banc : sinon,
+  // il suffirait de mettre un combattant renforcé de côté pour le conserver.
+  for (const side of state.sides) {
+    for (const u of side.team) {
+      if (!u.boost) continue;
+      u.boost.tours -= 1;
+      if (u.boost.tours <= 0) {
+        u.boost = null;
+        effect(state, { type: 'renfort-fin', side: side.index });
+      }
+    }
   }
 
   for (const side of state.sides) {
@@ -600,6 +782,7 @@ export function viewFor(state, viewerId) {
       active: s.active,
       // On indique qu'un choix est fait, jamais lequel.
       aChoisi: !!s.queued,
+      soutiens: s.soutiens,
       stats: s.stats,
       team: s.team.map((u) => ({
         fighterId: u.fighterId,
@@ -610,6 +793,7 @@ export function viewFor(state, viewerId) {
         guard: u.guard,
         ultUsed: u.ultUsed,
         status: u.status ? { key: u.status.key, tours: u.status.tours } : null,
+        boost: u.boost ? { ...u.boost } : null,
         vitesse: u.ko ? 0 : Math.round(speedOf(u)),
       })),
     })),

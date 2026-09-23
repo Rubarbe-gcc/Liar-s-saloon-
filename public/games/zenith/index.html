@@ -142,7 +142,8 @@
     <div class="avatar foe-av" id="foe-avatar"></div>
     <div class="clash" id="clash"></div>
     <div class="avatar me-av" id="me-avatar"></div>
-    <div class="matchup" id="matchup"></div>
+    <button class="matchup" id="matchup" title="Voir la roue des éléments"></button>
+    <div class="roue-mini" id="roue-mini"></div>
     <div class="announce" id="announce" hidden></div>
   </div>
 
@@ -155,7 +156,7 @@
       <div class="vname" id="me-name">—</div>
       <div class="bar hp"><i id="me-hp"></i></div>
       <div class="bar ki"><i id="me-ki"></i><span id="me-ki-n">0</span></div>
-      <div class="vsub"><span id="me-status"></span></div>
+      <div class="vsub"><span id="me-status"></span><b class="soutien-jauge" id="soutien-jauge" hidden></b></div>
     </div>
     <div class="portraits mine" id="me-portraits"></div>
   </div>
@@ -174,12 +175,29 @@
         <span class="cmd-l">Changer</span>
         <span class="cmd-s">passe avant les coups</span>
       </button>
+      <button class="cmd cmd-soutien" id="b-soutien" hidden>
+        <span class="cmd-g" id="soutien-g">💚</span>
+        <span class="cmd-l" id="soutien-l">Soutien</span>
+        <span class="cmd-dmg" id="soutien-n"></span>
+        <span class="cmd-s" id="soutien-s"></span>
+      </button>
     </div>
     <div class="cmd-wait" id="cmd-wait" hidden>⏳ L'adversaire réfléchit…</div>
   </div>
 </section>
 
 <!-- Choix du remplaçant -->
+<div class="ov" id="ov-roue" hidden>
+  <div class="sheet sheet-sm">
+    <button class="sheet-close" data-close="ov-roue">✕</button>
+    <h2>La roue des éléments</h2>
+    <p class="pick-sub">Chaque élément domine le suivant : <b>+30 %</b> de dégâts en
+      avantage, <b>−20 %</b> en désavantage.</p>
+    <div class="roue-grande" id="roue-grande"></div>
+    <p class="roue-dit" id="roue-dit"></p>
+  </div>
+</div>
+
 <div class="ov" id="ov-swap" hidden>
   <div class="sheet sheet-sm">
     <button class="sheet-close" data-close="ov-swap">✕</button>

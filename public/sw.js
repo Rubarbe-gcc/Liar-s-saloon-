@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v4';
+const VERSION = 'v5';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -46,6 +46,7 @@ const SHELL = [
   '/shared/zenith/battle.js',
   '/shared/zenith/ai.js',
   '/shared/zenith/sprites.js',
+  '/shared/zenith/roue.js',
 ];
 
 self.addEventListener('install', (event) => {

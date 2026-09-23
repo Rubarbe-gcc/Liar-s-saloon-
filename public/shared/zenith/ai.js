@@ -9,19 +9,25 @@
 
 import { FIGHTERS, getFighter, elementMultiplier } from './fighters.js';
 import {
-  MOVES, MOVE_KEYS, STATUS, ELEMENT_STATUS, GUARD_KI, KI_MAX,
+  MOVES, MOVE_KEYS, STATUS, ELEMENT_STATUS, GUARD_KI, KI_MAX, SOUTIENS_MAX,
   activeUnit, fighterOf, choose, estimateDamage, speedOf, availableCommands,
+  boostOf,
 } from './battle.js';
 
 export const LEVELS = {
   recrue: {
     key: 'recrue', label: 'Recrue',
     // Joue presque au hasard, ne garde pas, ignore les éléments.
-    bruit: 0.9, garde: 0.05, change: 0.05, prevoyance: 0,
+    //
+    // Le bruit a dû être relevé de 0,9 à 2,2 après l'équilibrage du roster :
+    // sur des combattants devenus comparables, se tromper de priorité coûte
+    // moins cher qu'avant, et l'écart entre les trois niveaux s'était réduit
+    // à quatre points. Il est remonté à douze.
+    bruit: 2.2, garde: 0.05, change: 0.05, prevoyance: 0,
   },
   guerrier: {
     key: 'guerrier', label: 'Guerrier',
-    bruit: 0.3, garde: 0.35, change: 0.55, prevoyance: 0.6,
+    bruit: 0.55, garde: 0.3, change: 0.45, prevoyance: 0.45,
   },
   legende: {
     key: 'legende', label: 'Légende',
@@ -104,6 +110,98 @@ function valeurGarde(state, side, foe, lvl) {
   return v * lvl.garde * 2;
 }
 
+/** Le coup le plus fort que `att` puisse porter à `def` ce tour-ci. */
+function meilleurCoup(attUnit, defUnit) {
+  const af = fighterOf(attUnit);
+  const df = fighterOf(defUnit);
+  let best = 0;
+  for (const key of MOVE_KEYS) {
+    const m = MOVES[key];
+    if (attUnit.ki < m.ki) continue;
+    if (m.uneFois && attUnit.ultUsed) continue;
+    best = Math.max(best, estimateDamage(af, df, key, {
+      attaque: boostOf(attUnit).attaque,
+      armure: boostOf(defUnit).armure,
+    }));
+  }
+  return best;
+}
+
+/**
+ * Vaut-il mieux lancer sa capacité de soutien ?
+ *
+ * Seuls les points réellement rendus comptent : soigner un camp intact ne
+ * vaut rien, et c'est ce qui empêche l'ordinateur de gâcher ses trois charges
+ * au premier tour.
+ *
+ * Le coût d'opportunité — le coup auquel on renonce — ne se soustrait PAS
+ * ici : toutes les options du tour sont comparées sur la même échelle, donc
+ * l'attaque à laquelle on renonce est déjà en lice face à ce score. L'avoir
+ * retranché en plus revenait à la compter deux fois, et le soutien n'était
+ * alors jamais joué : mesuré à zéro usage sur 2400 combats.
+ */
+function valeurSoutien(state, side, foe, lvl) {
+  const unit = activeUnit(side);
+  const cap = fighterOf(unit).support;
+  if (!cap) return null;
+
+  const cible = activeUnit(foe);
+  const renonce = meilleurCoup(unit, cible);
+  const menace = meilleurCoup(cible, unit);
+  const vivants = side.team.filter((u) => !u.ko);
+
+  // Chaque charge dépensée est une charge en moins pour plus tard. On
+  // attend donc un gain franc, pas un gain marginal.
+  const rarete = 45 * (1 + (SOUTIENS_MAX - side.soutiens) * 0.6) * lvl.prevoyance;
+
+  if (cap.kind === 'soin') {
+    const cibles = cap.portee === 'equipe'
+      ? vivants
+      : [vivants.reduce((a, b) => (a.hp / a.maxHp <= b.hp / b.maxHp ? a : b))];
+
+    let rendu = 0;
+    for (const u of cibles) rendu += Math.min(u.maxHp - u.hp, u.maxHp * cap.part);
+
+    let v = rendu;
+    // Arracher le combattant en lice à un coup fatal vaut bien plus que les
+    // points de vie eux-mêmes.
+    const soinSurMoi = cibles.includes(unit) ? Math.min(unit.maxHp - unit.hp, unit.maxHp * cap.part) : 0;
+    if (menace >= unit.hp && soinSurMoi + unit.hp > menace) v += 480 * lvl.prevoyance;
+    // Soigner un camp presque intact gaspille une charge.
+    if (rendu < unit.maxHp * 0.08) v -= 320;
+
+    return v - rarete;
+  }
+
+  // Renfort : ce qu'il rapporte, c'est le supplément de dégâts sur sa durée,
+  // plus les coups qu'il amortit. Un seul combattant frappe par tour, donc
+  // une portée d'équipe ne multiplie pas les dégâts — elle survit aux
+  // changements, ce qui vaut un supplément modeste.
+  const tours = cap.tours;
+  const gainOffensif = (cap.attaque - 1) * renonce * tours * 0.9;
+  const gainDefensif = (1 - 1 / cap.armure) * menace * tours * 0.4;
+  const portee = cap.portee === 'equipe' ? 1.15 : 1;
+
+  // Le ki rendu se convertit en dégâts : 18 ki valent un Souffle. C'est le
+  // ki NET qui compte — la capacité en coûte aussi. L'avoir compté brut
+  // surestimait le renfort d'autant, et le rendait indistinguable d'une
+  // option neutre : jouer la capacité ou s'en priver donnait le même taux
+  // de victoire, à deux dixièmes de point près.
+  const cibles = cap.portee === 'equipe' ? vivants.length : 1;
+  const netSurMoi = Math.min(cap.kiRendu || 0, KI_MAX - unit.ki + cap.ki) - cap.ki;
+  const gainKi = netSurMoi * (renonce / Math.max(1, MOVES.souffle.ki))
+    + (cibles - 1) * (cap.kiRendu || 0) * 1.1;
+
+  let v = (gainOffensif + gainDefensif) * portee + gainKi;
+  // Renforcer un combattant qui ne verra pas la fin du renfort ne sert à
+  // rien : mieux vaut frapper ou se garder.
+  if (menace >= unit.hp) v -= 400;
+  // Renforcer ce qui l'est déjà ne rapporte presque plus.
+  if (unit.boost) v -= 260;
+
+  return v - rarete;
+}
+
 /** Vaut-il mieux changer de combattant ? */
 function meilleurChangement(state, side, foe, lvl) {
   const unit = activeUnit(side);
@@ -158,6 +256,11 @@ export function think(state, sideIndex, brain) {
     options.push({ cmd: { type: 'move', move: m.key }, v: valeurAttaque(state, side, foe, m.key, lvl) });
   }
   options.push({ cmd: { type: 'guard' }, v: valeurGarde(state, side, foe, lvl) });
+
+  if (dispo.soutien.utilisable) {
+    const v = valeurSoutien(state, side, foe, lvl);
+    if (v !== null) options.push({ cmd: { type: 'soutien' }, v });
+  }
 
   const chg = meilleurChangement(state, side, foe, lvl);
   if (chg && chg.v > 0) options.push({ cmd: { type: 'swap', slot: chg.slot }, v: chg.v });

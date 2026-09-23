@@ -281,7 +281,7 @@ function bind() {
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      for (const id of ['ov-swap', 'ov-roster', 'ov-rules']) {
+      for (const id of ['ov-swap', 'ov-roue', 'ov-roster', 'ov-rules']) {
         if (!$(id).hidden) { $(id).hidden = true; return; }
       }
     }
