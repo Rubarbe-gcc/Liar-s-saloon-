@@ -2,7 +2,9 @@
  * ZÉNITH — navigation, sélection d'équipe et branchement des deux modes.
  */
 
-import { FIGHTERS, getFighter, ELEMENTS, randomTeam } from '../../../shared/zenith/fighters.js';
+import {
+  FIGHTERS, getFighter, ELEMENTS, randomTeam, roleOf, ROLES, ROLE_KEYS,
+} from '../../../shared/zenith/fighters.js';
 import { TEAM_SIZE } from '../../../shared/zenith/battle.js';
 import { LEVELS } from '../../../shared/zenith/ai.js';
 import * as ui from './ui.js';
@@ -54,10 +56,31 @@ function goMenu() {
 /* Sélection d'équipe                                                  */
 /* ------------------------------------------------------------------ */
 
+/** Rôle sélectionné dans le filtre, ou 'tous'. */
+let filtreRole = 'tous';
+
 function renderRoster() {
-  $('roster').innerHTML = FIGHTERS
+  const vus = filtreRole === 'tous'
+    ? FIGHTERS
+    : FIGHTERS.filter((f) => roleOf(f).key === filtreRole);
+  $('roster').innerHTML = vus
     .map((f) => ui.fighterCard(f, { picked: prefs.team.includes(f.id) }))
     .join('');
+}
+
+/** Boutons de filtre, construits depuis la table des rôles. */
+function renderFiltreRoles() {
+  const host = $('opt-role');
+  const compte = (k) => FIGHTERS.filter((f) => roleOf(f).key === k).length;
+  host.innerHTML = `<button class="chip${filtreRole === 'tous' ? ' is-on' : ''}"
+      data-val="tous" role="radio" aria-checked="${filtreRole === 'tous'}">Tous</button>`
+    + ROLE_KEYS.map((k) => {
+      const r = ROLES[k];
+      return `<button class="chip chip-role${filtreRole === k ? ' is-on' : ''}"
+        style="--rc:${r.color}" data-val="${k}" role="radio"
+        aria-checked="${filtreRole === k}" title="${ui.esc(r.blurb)}">${r.glyph} ${r.label}
+        <b>${compte(k)}</b></button>`;
+    }).join('');
 }
 
 function renderSquad() {
@@ -73,6 +96,7 @@ function renderSquad() {
       <span class="slot-av">${f.avatar}</span>
       <span class="slot-name">${ui.esc(f.name)}</span>
       <span class="slot-el">${el.glyph} ${el.label}</span>
+      ${ui.roleBadge(f, { tempo: false })}
     </div>`;
   }
   host.innerHTML = html;
@@ -107,7 +131,7 @@ function drop(i) {
 function openSolo() {
   mode = 'solo';
   unlock();
-  renderSquad(); renderRoster();
+  renderFiltreRoles(); renderSquad(); renderRoster();
   setChips('opt-level', prefs.level);
   $('b-fight').textContent = 'Au combat';
   show('team');
@@ -206,13 +230,30 @@ function bind() {
     if (to === 'menu') return goMenu();
     if (to === 'solo') return openSolo();
     if (to === 'online') return openOnline();
+    if (to === 'rules') {
+      $('roles-legende').innerHTML = ROLE_KEYS.map((k) => {
+        const r = ROLES[k];
+        const n = FIGHTERS.filter((f) => roleOf(f).key === k).length;
+        return `<div class="rl" style="--rc:${r.color}"><b>${r.glyph} ${r.label}</b>`
+          + `<i>${n}</i><span>${ui.esc(r.blurb)}</span></div>`;
+      }).join('');
+      $('ov-rules').hidden = false;
+      return;
+    }
     if (to === 'roster') { $('codex').innerHTML = FIGHTERS.map(ui.codexCard).join(''); $('ov-roster').hidden = false; return; }
-    if (to === 'rules') { $('ov-rules').hidden = false; return; }
     return show(to);
   }));
 
   document.querySelectorAll('[data-close]').forEach((el) =>
     el.addEventListener('click', () => { $(el.dataset.close).hidden = true; }));
+
+  $('opt-role').addEventListener('click', (e) => {
+    const c = e.target.closest('.chip');
+    if (!c) return;
+    filtreRole = c.dataset.val;
+    renderFiltreRoles();
+    renderRoster();
+  });
 
   $('roster').addEventListener('click', (e) => {
     const b = e.target.closest('.card-f[data-fid]');
@@ -270,7 +311,7 @@ function bind() {
   // Le vestiaire renvoie vers la sélection d'équipe.
   $('net-players').addEventListener('click', () => {
     if (mode !== 'online') return;
-    renderSquad(); renderRoster();
+    renderFiltreRoles(); renderSquad(); renderRoster();
     $('b-fight').textContent = 'Valider l\'équipe';
     show('team');
   });

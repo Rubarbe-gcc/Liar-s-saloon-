@@ -251,6 +251,15 @@ a{color:inherit;text-decoration:none;}
 .portraits.mine .pt:not(.active):not(.dead){cursor:pointer;}
 .portraits.mine .pt:not(.active):not(.dead):hover{transform:translateY(-3px);}
 .pt .mini{position:absolute;bottom:2px;left:3px;right:3px;height:3px;border-radius:2px;background:rgba(0,0,0,.6);overflow:hidden;}
+.pt-role{
+  position:absolute;top:-4px;right:-4px;
+  width:16px;height:16px;border-radius:50%;
+  display:grid;place-items:center;font-size:.58rem;line-height:1;
+  background:color-mix(in srgb,var(--rc) 30%,rgba(6,3,14,.95));
+  border:1px solid var(--rc);
+  box-shadow:0 1px 4px rgba(0,0,0,.6);
+}
+.pt.dead .pt-role{opacity:.4;}
 .pt .mini i{display:block;height:100%;background:var(--hp);transition:width .3s;}
 .pt.locked{opacity:.5;}
 
@@ -456,6 +465,53 @@ a{color:inherit;text-decoration:none;}
   background:rgba(0,0,0,.6);border:1px solid var(--line);overflow:hidden;}
 .swap-hp i::after{content:"";position:absolute;inset:0;right:auto;width:var(--p);
   background:linear-gradient(90deg,#10b981,var(--hp));}
+
+/* Rôles -------------------------------------------------------------- */
+.role{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:1px 7px 1px 5px;border-radius:999px;
+  font-size:.55rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  background:color-mix(in srgb,var(--rc) 18%,rgba(0,0,0,.45));
+  border:1px solid color-mix(in srgb,var(--rc) 50%,transparent);
+  color:var(--rc);white-space:nowrap;
+}
+.role i{font-style:normal;font-size:1.05em;line-height:1;}
+.role u{
+  text-decoration:none;font-family:var(--f-num);font-size:.95em;
+  opacity:.7;margin-left:1px;
+}
+.card-f .role{margin:1px 0;font-size:.5rem;padding:1px 5px;}
+.slot .role{font-size:.5rem;padding:0 5px;}
+.vname .role{margin-left:2px;}
+.swap-name .role{margin-left:5px;font-size:.5rem;}
+.cx-id .role{align-self:flex-start;margin-top:2px;}
+
+.roles-titre{
+  font-family:var(--f-display);font-size:1.05rem;letter-spacing:.06em;
+  color:var(--aura-hi);text-align:center;margin:22px 0 4px;
+}
+.roles-legende{display:grid;gap:7px;margin-top:12px;}
+.rl{
+  display:grid;grid-template-columns:auto auto 1fr;align-items:baseline;gap:9px;
+  padding:7px 11px;border-radius:10px;
+  background:color-mix(in srgb,var(--rc) 9%,rgba(0,0,0,.35));
+  border-left:3px solid var(--rc);
+}
+.rl b{color:var(--rc);font-size:.78rem;letter-spacing:.03em;white-space:nowrap;}
+.rl i{font-family:var(--f-num);font-style:normal;font-size:.62rem;color:var(--faint);}
+.rl span{font-size:.7rem;color:var(--dim);line-height:1.35;}
+
+/* Filtre par rôle : trente combattants ne se balaient pas à l'œil. */
+.chip-roles{flex-wrap:wrap;justify-content:center;gap:5px;margin-top:4px;}
+/* Les pastilles de filtre tiennent sur une ligne chacune : sans `flex:none`
+   elles héritent du `flex:1` des autres rangées et s'étirent sur deux. */
+.chip-roles .chip{flex:none;white-space:nowrap;padding:5px 10px;font-size:.66rem;}
+.chip-role{--rc:var(--dim);border-color:color-mix(in srgb,var(--rc) 40%,transparent);}
+.chip-role.is-on{
+  background:color-mix(in srgb,var(--rc) 22%,rgba(0,0,0,.4));
+  border-color:var(--rc);color:var(--rc);
+}
+.chip-role b{font-family:var(--f-num);font-weight:400;opacity:.6;margin-left:3px;}
 
 /* Roue des éléments ------------------------------------------------- */
 .roue{width:100%;height:100%;display:block;overflow:visible;}

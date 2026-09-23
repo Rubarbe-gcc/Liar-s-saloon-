@@ -760,9 +760,20 @@ export function forfeit(state, sideIndex) {
 /* ------------------------------------------------------------------ */
 
 /**
- * Projette l'état pour un camp. Tout est public dans un combat au tour par
- * tour, à une exception près : la commande déjà choisie par l'adversaire,
- * qui ruinerait l'anticipation.
+ * Projette l'état pour un camp. Deux choses ne traversent jamais la vue :
+ *
+ *   · la commande déjà choisie par l'adversaire, qui ruinerait le choix en
+ *     aveugle ;
+ *   · sa réserve de ki, qui dit exactement ce qu'il peut se permettre — voir
+ *     qu'il lui manque quatre points pour son Ultime retire tout le sel de
+ *     la décision.
+ *
+ * Le ki reste néanmoins *déductible* : chaque camp part de trente, le revenu
+ * du tour se calcule depuis une vitesse publique, et toutes les dépenses
+ * passent par des commandes que l'on voit jouer. Le masquer demande donc de
+ * suivre le compte, pas de deviner — et c'est précisément pour cela que
+ * l'ordinateur, qui lit la réserve réelle, ne triche pas : un joueur attentif
+ * arrive au même chiffre.
  */
 export function viewFor(state, viewerId) {
   const me = state.sides.findIndex((s) => s.id === viewerId);
@@ -788,7 +799,7 @@ export function viewFor(state, viewerId) {
         fighterId: u.fighterId,
         hp: u.hp,
         maxHp: u.maxHp,
-        ki: Math.round(u.ki),
+        ki: i === mine ? Math.round(u.ki) : null,
         ko: u.ko,
         guard: u.guard,
         ultUsed: u.ultUsed,

@@ -11,7 +11,7 @@
  */
 
 import {
-  ELEMENTS, getFighter, elementMultiplier,
+  ELEMENTS, getFighter, elementMultiplier, roleOf, tempoOf,
 } from '../../../shared/zenith/fighters.js';
 import {
   MOVES, MOVE_KEYS, STATUS, moveName, estimateDamage, KI_MAX,
@@ -37,6 +37,20 @@ export const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
 /* Fragments partagés                                                  */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Pastille de rôle. C'est le seul repère qui dise, sans lire les chiffres,
+ * ce qu'un combattant est censé faire — et donc ce qui manquait pour
+ * composer une équipe autrement qu'au hasard.
+ */
+export function roleBadge(f, { tempo = true } = {}) {
+  const r = roleOf(f);
+  const t = tempo ? tempoOf(f) : null;
+  return `<span class="role" style="--rc:${r.color}" title="${esc(r.blurb)}">`
+    + `<i>${r.glyph}</i>${esc(r.label)}`
+    + (t ? `<u title="${esc(t.blurb)}">${t.glyph}</u>` : '')
+    + '</span>';
+}
+
 export function fighterCard(f, { picked = false } = {}) {
   const el = ELEMENTS[f.element];
   return `<button class="card-f${picked ? ' picked' : ''}" data-fid="${f.id}"
@@ -44,6 +58,7 @@ export function fighterCard(f, { picked = false } = {}) {
     <span class="card-f-av">${spriteSvg(f, 'repos')}</span>
     <span class="card-f-name">${esc(f.name)}</span>
     <span class="card-f-el">${el.glyph}</span>
+    ${roleBadge(f)}
     <span class="card-f-stats"><i>${f.hp}</i>·<i>${f.strike}</i>·<i>${f.blast}</i></span>
   </button>`;
 }
@@ -57,6 +72,7 @@ export function codexCard(f) {
       <span class="cx-id">
         <span class="cx-name">${esc(f.name)} ${el.glyph}</span>
         <span class="cx-title">${esc(f.title)}</span>
+        ${roleBadge(f)}
       </span>
     </div>
     <div class="cx-stats">
@@ -66,6 +82,8 @@ export function codexCard(f) {
     <div class="cx-moves">
       <b>✦ ${esc(f.special.name)}</b> — ${esc(f.special.blurb)}<br>
       <b>☄️ ${esc(f.ultimate.name)}</b> — ${esc(f.ultimate.blurb)}
+      ${f.support ? `<br><b style="color:${roleOf(f).color}">${f.support.glyph} `
+        + `${esc(f.support.name)}</b> — ${esc(f.support.blurb)}` : ''}
     </div>
   </div>`;
 }
@@ -134,15 +152,20 @@ function renderSide(side, prefix, mine) {
     const uf = getFighter(u.fighterId);
     const ue = ELEMENTS[uf.element];
     const cls = ['pt', i === side.active ? 'active' : '', u.ko ? 'dead' : ''].filter(Boolean).join(' ');
-    return `<div class="${cls}" style="--el:${ue.color}" data-slot="${i}"
-        title="${esc(uf.name)} — ${ue.label}">${spriteSvg(uf, u.ko ? 'vaincu' : 'repos')}
+    const ur = roleOf(uf);
+    // Le rôle marque le portrait : pendant le combat, c'est le seul endroit
+    // où l'on voit encore toute l'équipe, donc le seul où l'on peut décider
+    // d'un changement sans rouvrir une fiche.
+    return `<div class="${cls}" style="--el:${ue.color};--rc:${ur.color}" data-slot="${i}"
+        title="${esc(uf.name)} — ${ue.label} · ${esc(ur.label)}">${spriteSvg(uf, u.ko ? 'vaincu' : 'repos')}
+        <span class="pt-role">${ur.glyph}</span>
         <span class="mini"><i style="width:${(u.hp / u.maxHp) * 100}%"></i></span>
       </div>`;
   }).join('');
   if (host.dataset.sig !== html) { host.dataset.sig = html; host.innerHTML = html; }
 
   const nameEl = $(`${prefix}-name`);
-  const label = `${esc(f.name)} <small>${el.glyph} ${el.label}</small>`;
+  const label = `${esc(f.name)} <small>${el.glyph} ${el.label}</small>${roleBadge(f)}`;
   if (nameEl.innerHTML !== label) nameEl.innerHTML = label;
 
   const pct = (unit.hp / unit.maxHp) * 100;
@@ -172,7 +195,11 @@ function renderSide(side, prefix, mine) {
     $('me-ki').style.width = `${(unit.ki / KI_MAX) * 100}%`;
     $('me-ki-n').textContent = String(unit.ki);
   } else {
-    $('foe-ki-n').textContent = `ki ${unit.ki}`;
+    // Le ki adverse ne transite plus : on affiche que la réserve existe,
+    // pas ce qu'elle contient. À chacun de suivre le compte.
+    $('foe-ki-n').textContent = 'ki ?';
+    $('foe-ki-n').title = 'La réserve adverse est masquée. Elle se déduit : '
+      + 'trente au départ, plus le revenu de chaque tour, moins ce qu\'on le voit dépenser.';
   }
 }
 
@@ -550,7 +577,7 @@ function ouvrirChangement() {
         style="--el:${el.color}">
       <span class="swap-av">${spriteSvg(f, u.ko ? 'vaincu' : 'repos')}</span>
       <span class="swap-id">
-        <span class="swap-name">${esc(f.name)} ${el.glyph}</span>
+        <span class="swap-name">${esc(f.name)} ${el.glyph}${roleBadge(f, { tempo: false })}</span>
         <span class="swap-note">${dispo.raison ? esc(dispo.raison) : note}</span>
       </span>
       <span class="swap-hp"><b>${Math.max(0, Math.ceil(u.hp))}</b>

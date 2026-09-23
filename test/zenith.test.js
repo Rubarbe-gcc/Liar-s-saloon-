@@ -387,6 +387,51 @@ test('la vue cache la commande adverse mais annonce qu\'elle est tombee', () => 
     'la vue ne doit jamais laisser filtrer quelle commande a ete choisie');
 });
 
+test('la vue ne transmet jamais le ki adverse', () => {
+  const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm']);
+  // Une valeur reconnaissable, pour reperer toute fuite dans la vue.
+  for (const u of s.sides[1].team) u.ki = 77;
+  for (const u of s.sides[0].team) u.ki = 41;
+
+  for (const [id, moi, lui] of [['a', 0, 1], ['b', 1, 0]]) {
+    const vue = B.viewFor(s, id);
+    for (const u of vue.sides[moi].team) {
+      assert.equal(typeof u.ki, 'number', 'son propre ki doit rester lisible');
+    }
+    for (const u of vue.sides[lui].team) {
+      assert.equal(u.ki, null, 'le ki adverse doit etre masque');
+    }
+  }
+
+  // Et rien d'autre dans la vue ne doit laisser filtrer le chiffre.
+  const vue = B.viewFor(s, 'a');
+  const sansLesMiens = JSON.stringify({ ...vue, sides: [null, vue.sides[1]] });
+  assert.ok(!sansLesMiens.includes('77'), 'le ki adverse fuit ailleurs dans la vue');
+});
+
+test('le ki adverse reste deductible de ce qui est public', () => {
+  // Le masquer demande de suivre le compte, pas de deviner : c'est ce qui
+  // rend l'ordinateur — qui lit la reserve reelle — legitime.
+  const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm'], 8);
+  const adverse = s.sides[1].team[0];
+  let suivi = adverse.ki;   // trente au depart, valeur publique
+
+  // Tour 1 : l'adversaire se garde. Gain public : GUARD_KI, puis le revenu.
+  B.choose(s, 0, { type: 'move', move: 'frappe' });
+  B.choose(s, 1, { type: 'guard' });
+  B.resolveTurn(s);
+  suivi = Math.min(B.KI_MAX, Math.min(B.KI_MAX, suivi + B.GUARD_KI) + B.kiParTour(adverse));
+  assert.equal(Math.round(adverse.ki), Math.round(suivi));
+
+  // Tour 2 : il lance un Souffle. Cout public, revenu public.
+  B.choose(s, 0, { type: 'guard' });
+  B.choose(s, 1, { type: 'move', move: 'souffle' });
+  B.resolveTurn(s);
+  suivi = Math.min(B.KI_MAX, Math.min(B.KI_MAX, suivi - B.MOVES.souffle.ki) + B.kiParTour(adverse));
+  assert.equal(Math.round(adverse.ki), Math.round(suivi),
+    'le compte doit tomber juste a partir des seules informations publiques');
+});
+
 test('la vue fournit les commandes disponibles du camp qui regarde', () => {
   const s = duo(['kaze', 'volt', 'nox'], ['tarn', 'brume', 'gorm']);
   const vue = B.viewFor(s, 'b');
@@ -859,6 +904,78 @@ test('la vue expose la reserve de soutien et le renfort en cours', () => {
   assert.equal(vue.sides[0].soutiens, B.SOUTIENS_MAX - 1);
   assert.ok(vue.sides[0].team[0].boost, 'le renfort doit etre visible');
   assert.ok(vue.commandes.soutien.capacite, 'la capacite doit etre decrite');
+});
+
+/* ================================================================== */
+/* Roles                                                              */
+/* ================================================================== */
+
+test('chaque combattant recoit un role, et un seul', () => {
+  for (const f of F.FIGHTERS) {
+    const r = F.roleOf(f);
+    assert.ok(r, `${f.name} : aucun role`);
+    assert.ok(F.ROLES[r.key], `${f.name} : role inconnu ${r.key}`);
+    assert.ok(r.label && r.glyph && r.color && r.blurb, `${r.key} : fiche incomplete`);
+  }
+});
+
+test('le role se deduit des statistiques, jamais d\'une etiquette', () => {
+  // Un soutien reste un soutien, quelle que soit sa carrure.
+  for (const f of F.FIGHTERS.filter((x) => x.support)) {
+    assert.equal(F.roleOf(f).key, f.support.kind === 'soin' ? 'soigneur' : 'renfort',
+      `${f.name} : son role doit suivre sa capacite`);
+  }
+  // Un combattant purement offensif ne peut pas etre classe soutien.
+  for (const f of F.FIGHTERS.filter((x) => !x.support)) {
+    assert.ok(!['soigneur', 'renfort'].includes(F.roleOf(f).key),
+      `${f.name} : classe soutien sans capacite`);
+  }
+  // Et la classification doit reagir aux statistiques : on fabrique deux
+  // fiches extremes et on verifie qu'elles tombent du bon cote.
+  const cogneur = { id: 'x', element: 'braise', hp: 600, strike: 90, blast: 30, armor: 20, speed: 70 };
+  const artilleur = { id: 'y', element: 'braise', hp: 600, strike: 30, blast: 90, armor: 20, speed: 70 };
+  const mur = { id: 'z', element: 'braise', hp: 1400, strike: 55, blast: 55, armor: 60, speed: 70 };
+  assert.equal(F.roleOf(cogneur).key, 'assaut');
+  assert.equal(F.roleOf(artilleur).key, 'canon');
+  assert.equal(F.roleOf(mur).key, 'colosse');
+});
+
+test('tous les roles sont representes, sans qu\'aucun ecrase les autres', () => {
+  const compte = {};
+  for (const f of F.FIGHTERS) {
+    const k = F.roleOf(f).key;
+    compte[k] = (compte[k] || 0) + 1;
+  }
+  for (const k of F.ROLE_KEYS) {
+    assert.ok(compte[k] >= 3, `role ${k} : ${compte[k] || 0} combattant(s), c'est trop peu`);
+  }
+  const effectifs = Object.values(compte);
+  assert.ok(Math.max(...effectifs) <= F.FIGHTERS.length / 3,
+    `un role rassemble ${Math.max(...effectifs)} combattants sur ${F.FIGHTERS.length}`);
+});
+
+test('chaque element propose plusieurs roles', () => {
+  // Sans cela, choisir son element reviendrait a choisir son role, et le
+  // cycle elementaire cesserait d'etre une decision separee.
+  for (const el of F.ELEMENT_KEYS) {
+    const roles = new Set(F.FIGHTERS.filter((f) => f.element === el).map((f) => F.roleOf(f).key));
+    assert.ok(roles.size >= 4,
+      `${el} n'offre que ${roles.size} roles : ${[...roles].join(', ')}`);
+  }
+});
+
+test('le tempo distingue les rapides des lents, sans remplacer le role', () => {
+  const rapides = F.FIGHTERS.filter((f) => F.tempoOf(f)?.key === 'rapide');
+  const lents = F.FIGHTERS.filter((f) => F.tempoOf(f)?.key === 'lent');
+  assert.ok(rapides.length >= 4 && lents.length >= 4,
+    `tempo mal reparti : ${rapides.length} rapides, ${lents.length} lents`);
+  // Le plus rapide du roster doit etre marque rapide, le plus lent lent.
+  const tri = [...F.FIGHTERS].sort((a, b) => b.speed - a.speed);
+  assert.equal(F.tempoOf(tri[0]).key, 'rapide');
+  assert.equal(F.tempoOf(tri[tri.length - 1]).key, 'lent');
+  // Le tempo traverse les roles : un colosse peut etre rapide.
+  const roles = new Set(rapides.concat(lents).map((f) => F.roleOf(f).key));
+  assert.ok(roles.size >= 3, 'le tempo ne doit pas se confondre avec le role');
 });
 
 /* ================================================================== */

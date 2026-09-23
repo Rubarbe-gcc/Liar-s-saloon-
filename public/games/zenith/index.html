@@ -75,6 +75,10 @@
       <button class="btn btn-ghost btn-sm" id="b-random">🎲 Au hasard</button>
     </div>
 
+    <div class="chip-row chip-roles" id="opt-role" role="radiogroup" aria-label="Filtrer par rôle">
+      <button class="chip is-on" data-val="tous" role="radio" aria-checked="true">Tous</button>
+    </div>
+
     <div class="roster" id="roster"></div>
 
     <div class="pick-actions">
@@ -229,6 +233,9 @@
       <section><h3><span>5</span> Éléments et altérations</h3><p>🔥 bat ⚡ bat 🔮 bat 🍃 bat ❄️ bat 🔥 : <b>+30 %</b> en avantage, −20 % en désavantage. Chaque élément pose son altération — brûlure, paralysie, gel, drain, sève.</p></section>
       <section><h3><span>6</span> Gagner</h3><p>Mettez les <b>trois</b> combattants adverses à terre. Changer coûte le tour mais ne coûte pas de ki : c'est la façon de reprendre l'avantage élémentaire.</p></section>
     </div>
+    <h3 class="roles-titre">Les six rôles</h3>
+    <p class="pick-sub">Le rôle se déduit des statistiques : il ne ment jamais sur ce que fait le combattant.</p>
+    <div class="roles-legende" id="roles-legende"></div>
   </div>
 </div>
 

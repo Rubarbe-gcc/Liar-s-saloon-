@@ -391,6 +391,86 @@ export function budgetOf(f) {
 export const budgetCibleOf = (f) =>
   BUDGET_CIBLE - (f.support ? DECOTE_SOUTIEN : 0);
 
+/* ------------------------------------------------------------------ */
+/* Rôles                                                               */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Le rôle n'est pas une étiquette posée à la main : il se déduit des
+ * statistiques. Une fiche qui annoncerait « colosse » sans en avoir la
+ * durabilité mentirait au joueur dès qu'on retoucherait l'équilibrage, et
+ * l'équilibrage se retouche.
+ */
+export const ROLES = {
+  colosse: {
+    key: 'colosse', label: 'Colosse', glyph: '🛡', color: '#60a5fa',
+    blurb: 'Encaisse. Il tient la ligne pendant que le reste de l\'équipe frappe.',
+  },
+  assaut: {
+    key: 'assaut', label: 'Assaut', glyph: '👊', color: '#ff7a45',
+    blurb: 'Dégâts au corps à corps. Sa Frappe, gratuite, fait déjà mal.',
+  },
+  canon: {
+    key: 'canon', label: 'Canon', glyph: '💠', color: '#22d3ee',
+    blurb: 'Dégâts à distance. Il lui faut du ki, mais ses Souffles portent loin.',
+  },
+  polyvalent: {
+    key: 'polyvalent', label: 'Polyvalent', glyph: '⚖', color: '#c4b5fd',
+    blurb: 'Force et souffle à parts égales : il n\'a pas de mauvais tour.',
+  },
+  soigneur: {
+    key: 'soigneur', label: 'Soigneur', glyph: '💚', color: '#4ade80',
+    blurb: 'Rend des points de vie. Trois fois par combat, pas une de plus.',
+  },
+  renfort: {
+    key: 'renfort', label: 'Renfort', glyph: '🔆', color: '#ffd84d',
+    blurb: 'Augmente les dégâts du camp et rend du ki. Trois fois par combat.',
+  },
+};
+
+export const ROLE_KEYS = Object.keys(ROLES);
+
+/** Seuils de classement, exprimés en écart à la moyenne du roster. */
+const SEUIL_DURABILITE = 1.07;   // au-delà : colosse
+const SEUIL_SPECIALISATION = 0.15;
+
+/** Moyennes du roster, calculées une fois. */
+const MOY_EFF = FIGHTERS.reduce((a, f) => a + effectiveHp(f), 0) / FIGHTERS.length;
+const MOY_SPEED = FIGHTERS.reduce((a, f) => a + f.speed, 0) / FIGHTERS.length;
+
+/**
+ * Rôle d'un combattant.
+ *
+ * L'ordre des tests compte : un soutien reste un soutien même s'il est
+ * résistant, et la durabilité prime sur la spécialisation offensive parce
+ * qu'elle change la façon de jouer le combattant, pas seulement ses chiffres.
+ */
+export function roleOf(f) {
+  if (!f) return null;
+  if (f.support) return f.support.kind === 'soin' ? ROLES.soigneur : ROLES.renfort;
+
+  if (effectiveHp(f) / MOY_EFF >= SEUIL_DURABILITE) return ROLES.colosse;
+
+  // Écart relatif entre force et souffle : positif au corps à corps.
+  const ecart = (f.strike - f.blast) / ((f.strike + f.blast) / 2);
+  if (ecart >= SEUIL_SPECIALISATION) return ROLES.assaut;
+  if (ecart <= -SEUIL_SPECIALISATION) return ROLES.canon;
+  return ROLES.polyvalent;
+}
+
+/**
+ * Tempo : la vitesse décide de l'ordre des coups et du revenu de ki, mais
+ * elle traverse tous les rôles — un colosse rapide reste un colosse. Elle
+ * s'affiche donc à côté du rôle, pas à sa place.
+ */
+export function tempoOf(f) {
+  if (!f) return null;
+  const v = f.speed / MOY_SPEED;
+  if (v >= 1.15) return { key: 'rapide', label: 'Rapide', glyph: '»', blurb: 'Agit avant la plupart.' };
+  if (v <= 0.85) return { key: 'lent', label: 'Lent', glyph: '«', blurb: 'Agit après la plupart.' };
+  return null;
+}
+
 /** Un combattant de soutien porte une capacité de soin ou de renfort. */
 export const isSupport = (f) => !!(f && f.support);
 
