@@ -224,18 +224,17 @@
 <div class="ov" id="ov-rules" hidden>
   <div class="sheet">
     <button class="sheet-close" data-close="ov-rules">✕</button>
-    <h2>Comment se bat-on ?</h2>
-    <div class="rules-grid">
-      <section><h3><span>1</span> Un tour, une commande</h3><p>À chaque tour, les deux camps choisissent <b>en aveugle</b> : attaque, garde ou changement. Puis tout se résout d'un coup. Personne ne voit le choix de l'autre avant.</p></section>
-      <section><h3><span>2</span> L'ordre de résolution</h3><p>Les <b>changements</b> passent en premier, les <b>gardes</b> ensuite, puis les attaques <b>du plus rapide au plus lent</b>. C'est pourquoi la vitesse compte autant que la force.</p></section>
-      <section><h3><span>3</span> Les quatre coups</h3><p><b>Frappe</b> est gratuite et rend du ki. <b>Souffle</b> coûte 18 et frappe plus fort. <b>Spéciale</b> coûte 38 et inflige une altération. <b>Ultime</b> coûte 72 et ne part qu'une fois par combattant.</p></section>
-      <section><h3><span>4</span> Le ki</h3><p>Chaque combattant gagne <b>14 ki par tour</b>, plus 20 s'il se met en garde. La garde amortit <b>55 %</b> des dégâts du tour : c'est un investissement, pas une perte de temps.</p></section>
-      <section><h3><span>5</span> Éléments et altérations</h3><p>🔥 bat ⚡ bat 🔮 bat 🍃 bat ❄️ bat 🔥 : <b>+30 %</b> en avantage, −20 % en désavantage. Chaque élément pose son altération — brûlure, paralysie, gel, drain, sève.</p></section>
-      <section><h3><span>6</span> Gagner</h3><p>Mettez les <b>trois</b> combattants adverses à terre. Changer coûte le tour mais ne coûte pas de ki : c'est la façon de reprendre l'avantage élémentaire.</p></section>
+    <h2 id="rules-titre">Comment se bat-on ?</h2>
+
+    <div class="rules-tabs" id="rules-tabs" role="tablist">
+      <button class="rtab is-on" data-page="combat" role="tab" aria-selected="true">⚔️ Le combat</button>
+      <button class="rtab" data-page="roles" role="tab" aria-selected="false">🛡 Les rôles</button>
+      <button class="rtab" data-page="elements" role="tab" aria-selected="false">🔥 Les éléments</button>
     </div>
-    <h3 class="roles-titre">Les six rôles</h3>
-    <p class="pick-sub">Le rôle se déduit des statistiques : il ne ment jamais sur ce que fait le combattant.</p>
-    <div class="roles-legende" id="roles-legende"></div>
+
+    <div class="rules-page is-on" id="rp-combat" role="tabpanel"></div>
+    <div class="rules-page" id="rp-roles" role="tabpanel"></div>
+    <div class="rules-page" id="rp-elements" role="tabpanel"></div>
   </div>
 </div>
 

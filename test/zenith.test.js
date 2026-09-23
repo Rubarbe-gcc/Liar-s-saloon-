@@ -488,13 +488,18 @@ test('la difficulte est ordonnee : Legende bat Guerrier, qui bat Recrue', () => 
 
   const legVsRec = taux('legende', 'recrue');
   const gueVsRec = taux('guerrier', 'recrue');
-  assert.ok(legVsRec > 0.68,
+  assert.ok(legVsRec > 0.64,
     `Legende ne gagne que ${(legVsRec * 100).toFixed(1)} % contre Recrue`);
-  assert.ok(gueVsRec > 0.57,
+  assert.ok(gueVsRec > 0.60,
     `Guerrier ne gagne que ${(gueVsRec * 100).toFixed(1)} % contre Recrue`);
-  assert.ok(legVsRec > gueVsRec + 0.03,
-    `Legende (${(legVsRec * 100).toFixed(1)} %) doit devancer Guerrier `
-    + `(${(gueVsRec * 100).toFixed(1)} %) face a Recrue`);
+
+  // L'ordre entre Legende et Guerrier se mesure face a face, pas a travers
+  // Recrue : contre un adversaire qui joue presque au hasard, les deux
+  // plafonnent aux alentours de 72 % et leur ecart disparait dans le bruit.
+  // Compare directement, il vaut une dizaine de points.
+  const legVsGue = taux('legende', 'guerrier', 500);
+  assert.ok(legVsGue > 0.55,
+    `Legende ne gagne que ${(legVsGue * 100).toFixed(1)} % contre Guerrier`);
 });
 
 test('choisir sa commande vaut nettement mieux que taper au hasard', () => {
@@ -1021,6 +1026,73 @@ test('la roue dit juste le rapport de force', async () => {
   }
 });
 
+
+/* ================================================================== */
+/* Pages de regles                                                    */
+/* ================================================================== */
+
+/** Même échappement que les pages : sinon une apostrophe fait echouer la
+ *  comparaison alors que le texte est bien la. */
+const escHtml = (t) => String(t).replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+test('les trois pages de regles se rendent hors navigateur', async () => {
+  // Les pages sont de simples fonctions de chaines : si l'une touchait au
+  // document, elle ne serait testable qu'en navigateur, et ne le serait donc
+  // jamais.
+  const R = await import('../public/games/zenith/js/regles.js');
+  for (const nom of ['pageCombat', 'pageRoles', 'pageElements']) {
+    const html = R[nom]();
+    assert.ok(typeof html === 'string' && html.length > 400, `${nom} : page vide`);
+    // Balises ouvrantes et fermantes en nombre egal, signe d'un fragment sain.
+    const ouv = (html.match(/<(div|p|section|article|h3|span|b)\b/g) || []).length;
+    const fer = (html.match(/<\/(div|p|section|article|h3|span|b)>/g) || []).length;
+    assert.equal(ouv, fer, `${nom} : ${ouv} balises ouvertes pour ${fer} fermees`);
+  }
+});
+
+test('la page des roles les presente tous, avec des exemples reels', async () => {
+  const R = await import('../public/games/zenith/js/regles.js');
+  const html = R.pageRoles();
+  for (const k of F.ROLE_KEYS) {
+    const r = F.ROLES[k];
+    assert.ok(html.includes(r.label), `${r.label} absent de la page`);
+    assert.ok(html.includes(escHtml(r.blurb)), `${r.label} : description absente`);
+    // L'effectif annonce doit etre le vrai.
+    const n = F.FIGHTERS.filter((f) => F.roleOf(f).key === k).length;
+    assert.ok(html.includes(`${n} combattants`), `${r.label} : effectif faux`);
+    // Et les exemples doivent porter ce role.
+    const exemples = F.FIGHTERS.filter((f) => F.roleOf(f).key === k).slice(0, 3);
+    for (const f of exemples) assert.ok(html.includes(f.name), `${f.name} absent`);
+  }
+  assert.ok(html.includes(String(B.SOUTIENS_MAX)), 'le nombre de charges doit figurer');
+});
+
+test('les regles annoncent les chiffres du moteur, pas des chiffres figes', async () => {
+  // Elles ont longtemps annonce « 14 ki par tour » alors que le revenu
+  // dependait deja de la vitesse. Les construire depuis les constantes est
+  // ce qui empeche l'ecart de revenir ; ce test le verifie.
+  const R = await import('../public/games/zenith/js/regles.js');
+  const combat = R.pageCombat();
+  assert.ok(combat.includes(String(B.GUARD_KI)), 'le gain de ki de la garde doit figurer');
+  assert.ok(combat.includes(String(B.MAX_TURNS)), 'la limite de tours doit figurer');
+  assert.ok(combat.includes(String(B.VITESSE_REF)), 'la vitesse de reference doit figurer');
+  assert.ok(combat.includes(`${Math.round((1 - B.GUARD_REDUCTION) * 100)} %`),
+    'la reduction de la garde doit figurer');
+  for (const k of B.MOVE_KEYS) {
+    if (B.MOVES[k].ki) assert.ok(combat.includes(String(B.MOVES[k].ki)), `cout de ${k} absent`);
+  }
+
+  const elements = R.pageElements();
+  assert.ok(elements.includes(`+${Math.round((F.ADVANTAGE_BONUS - 1) * 100)} %`),
+    'le bonus elementaire doit figurer');
+  for (const k of F.ELEMENT_KEYS) {
+    assert.ok(elements.includes(F.ELEMENTS[k].label), `${k} absent`);
+    const st = B.STATUS[B.ELEMENT_STATUS[k]];
+    assert.ok(elements.includes(st.label), `alteration de ${k} absente`);
+    assert.ok(elements.includes(escHtml(st.blurb)), `description de ${st.label} absente`);
+  }
+});
 
 /* ================================================================== */
 /* Arene en ligne                                                     */

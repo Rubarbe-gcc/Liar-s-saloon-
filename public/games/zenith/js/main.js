@@ -8,6 +8,7 @@ import {
 import { TEAM_SIZE } from '../../../shared/zenith/battle.js';
 import { LEVELS } from '../../../shared/zenith/ai.js';
 import * as ui from './ui.js';
+import * as regles from './regles.js';
 import * as solo from './offline.js';
 import * as net from './online.js';
 import { sfx, toggle as toggleSound, isEnabled as soundOn, unlock } from './sfx.js';
@@ -125,6 +126,43 @@ function drop(i) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Règles                                                              */
+/* ------------------------------------------------------------------ */
+
+const TITRES = {
+  combat: 'Comment se bat-on ?',
+  roles: 'Qui fait quoi',
+  elements: 'La roue des éléments',
+};
+
+/** Les pages ne sont construites qu'à la première ouverture. */
+let reglesPretes = false;
+
+function ouvrirRegles() {
+  if (!reglesPretes) {
+    $('rp-combat').innerHTML = regles.pageCombat();
+    $('rp-roles').innerHTML = regles.pageRoles();
+    $('rp-elements').innerHTML = regles.pageElements();
+    reglesPretes = true;
+  }
+  pageRegles('combat');
+  $('ov-rules').hidden = false;
+}
+
+function pageRegles(nom) {
+  for (const t of $('rules-tabs').querySelectorAll('.rtab')) {
+    const actif = t.dataset.page === nom;
+    t.classList.toggle('is-on', actif);
+    t.setAttribute('aria-selected', String(actif));
+  }
+  for (const nom2 of Object.keys(TITRES)) {
+    $(`rp-${nom2}`).classList.toggle('is-on', nom2 === nom);
+  }
+  $('rules-titre').textContent = TITRES[nom];
+  $('ov-rules').querySelector('.sheet').scrollTop = 0;
+}
+
+/* ------------------------------------------------------------------ */
 /* Modes                                                               */
 /* ------------------------------------------------------------------ */
 
@@ -230,22 +268,18 @@ function bind() {
     if (to === 'menu') return goMenu();
     if (to === 'solo') return openSolo();
     if (to === 'online') return openOnline();
-    if (to === 'rules') {
-      $('roles-legende').innerHTML = ROLE_KEYS.map((k) => {
-        const r = ROLES[k];
-        const n = FIGHTERS.filter((f) => roleOf(f).key === k).length;
-        return `<div class="rl" style="--rc:${r.color}"><b>${r.glyph} ${r.label}</b>`
-          + `<i>${n}</i><span>${ui.esc(r.blurb)}</span></div>`;
-      }).join('');
-      $('ov-rules').hidden = false;
-      return;
-    }
+    if (to === 'rules') { ouvrirRegles(); return; }
     if (to === 'roster') { $('codex').innerHTML = FIGHTERS.map(ui.codexCard).join(''); $('ov-roster').hidden = false; return; }
     return show(to);
   }));
 
   document.querySelectorAll('[data-close]').forEach((el) =>
     el.addEventListener('click', () => { $(el.dataset.close).hidden = true; }));
+
+  $('rules-tabs').addEventListener('click', (e) => {
+    const t = e.target.closest('.rtab');
+    if (t) pageRegles(t.dataset.page);
+  });
 
   $('opt-role').addEventListener('click', (e) => {
     const c = e.target.closest('.chip');

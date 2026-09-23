@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v6';
+const VERSION = 'v7';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -41,6 +41,7 @@ const SHELL = [
   '/games/zenith/js/offline.js',
   '/games/zenith/js/online.js',
   '/games/zenith/js/sfx.js',
+  '/games/zenith/js/regles.js',
   '/games/zenith/icons/icon-192.png',
   '/shared/zenith/fighters.js',
   '/shared/zenith/battle.js',
