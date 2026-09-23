@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#070310">
+<meta name="description" content="ZÉNITH — jeu de combat à cartes. 18 combattants, équipes de trois, en solo ou en ligne.">
+<title>ZÉNITH</title>
+<link rel="icon" href="/games/zenith/icons/icon-192.png">
+<link rel="manifest" href="/games/zenith/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/games/zenith/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Zénith">
+<link rel="stylesheet" href="/games/zenith/css/zenith.css">
+</head>
+<body>
+
+<div class="bg" aria-hidden="true">
+  <div class="bg-aurora a1"></div>
+  <div class="bg-aurora a2"></div>
+  <div class="bg-grid"></div>
+  <div class="bg-vig"></div>
+</div>
+
+<!-- ============================ MENU ============================ -->
+<section class="screen is-active" id="s-menu">
+  <div class="menu">
+    <header class="logo">
+      <div class="logo-kicker">dix-huit combattants · équipes de trois</div>
+      <h1 class="logo-title">ZÉNITH</h1>
+      <div class="logo-rule"><i></i><span>🔥 ⚡ 🌑 🍃 ❄️</span><i></i></div>
+      <p class="logo-tag">Frappez. Esquivez. Dépassez votre limite.</p>
+    </header>
+
+    <nav class="menu-nav">
+      <button class="btn btn-big" data-go="solo">
+        <span class="bi">⚔️</span>
+        <span class="bt"><b>Combat solo</b><i>Affrontez l'ordinateur</i></span>
+      </button>
+      <button class="btn btn-big" data-go="online">
+        <span class="bi">🌐</span>
+        <span class="bt"><b>Combat en ligne</b><i>Un code, un adversaire</i></span>
+      </button>
+      <div class="menu-row">
+        <button class="btn btn-thin" data-go="roster"><span class="bi">📖</span> Roster</button>
+        <button class="btn btn-thin" data-go="rules"><span class="bi">❓</span> Règles</button>
+        <button class="btn btn-thin" id="b-sound"><span class="bi">🔊</span> Son</button>
+      </div>
+      <a class="menu-back" href="/">‹ Retour à l'arcade</a>
+    </nav>
+  </div>
+</section>
+
+<!-- ======================= SÉLECTION D'ÉQUIPE =================== -->
+<section class="screen" id="s-team">
+  <div class="pick">
+    <header class="pick-head">
+      <button class="pick-back" data-go="menu">‹</button>
+      <div>
+        <h2 class="pick-title">Votre équipe</h2>
+        <p class="pick-sub" id="pick-sub">Choisissez trois combattants.</p>
+      </div>
+    </header>
+
+    <div class="squad" id="squad"></div>
+
+    <div class="pick-tools">
+      <div class="chip-row" id="opt-level" role="radiogroup" aria-label="Difficulté">
+        <button class="chip" data-val="recrue" role="radio">Recrue</button>
+        <button class="chip is-on" data-val="guerrier" role="radio" aria-checked="true">Guerrier</button>
+        <button class="chip" data-val="legende" role="radio">Légende</button>
+      </div>
+      <button class="btn btn-ghost btn-sm" id="b-random">🎲 Au hasard</button>
+    </div>
+
+    <div class="chip-row chip-roles" id="opt-role" role="radiogroup" aria-label="Filtrer par rôle">
+      <button class="chip is-on" data-val="tous" role="radio" aria-checked="true">Tous</button>
+    </div>
+
+    <div class="roster" id="roster"></div>
+
+    <div class="pick-actions">
+      <button class="btn btn-go" id="b-fight" disabled>Au combat</button>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= SALON EN LIGNE ===================== -->
+<section class="screen" id="s-online">
+  <div class="panel">
+    <button class="pick-back" data-go="menu">‹</button>
+    <h2 class="pick-title">Combat en ligne</h2>
+    <p class="pick-sub" id="net-status">Connexion…</p>
+
+    <div id="net-gate">
+      <label class="field-label" for="in-name">Votre nom</label>
+      <input id="in-name" class="field" type="text" maxlength="14" placeholder="Challenger" autocomplete="off">
+      <button class="btn btn-go btn-wide" id="b-create">Ouvrir une arène</button>
+      <div class="or"><i></i><span>ou</span><i></i></div>
+      <label class="field-label" for="in-code">Code de l'arène</label>
+      <div class="join">
+        <input id="in-code" class="field code" type="text" maxlength="4" placeholder="ABCD"
+               autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <button class="btn btn-ghost" id="b-join">Entrer</button>
+      </div>
+    </div>
+
+    <div id="net-room" hidden>
+      <div class="arena-code">
+        <span>Code de l'arène</span>
+        <button id="room-code" title="Copier le lien">····</button>
+        <i>Touchez pour copier l'invitation</i>
+      </div>
+      <ul class="fighters-list" id="net-players"></ul>
+      <p class="pick-sub" id="net-note"></p>
+      <div class="pick-actions two">
+        <button class="btn btn-ghost" id="b-leave">Quitter</button>
+        <button class="btn btn-go" id="b-launch" disabled>Lancer</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== COMBAT =========================== -->
+<section class="screen screen-fight" id="s-fight">
+  <header class="tbar">
+    <button class="fight-quit" id="b-quit" title="Abandonner">✕</button>
+    <span class="tbar-turn" id="turn-n">Tour 1</span>
+    <span class="tbar-state" id="turn-state">À vous de jouer</span>
+  </header>
+
+  <!-- Adversaire -->
+  <div class="side foe-side">
+    <div class="portraits" id="foe-portraits"></div>
+    <div class="vitals">
+      <div class="vname" id="foe-name">—</div>
+      <div class="bar hp"><i id="foe-hp"></i></div>
+      <div class="vsub"><span id="foe-ki-n">ki 0</span><span id="foe-status"></span></div>
+    </div>
+  </div>
+
+  <!-- Arène -->
+  <div class="arena" id="arena">
+    <div class="avatar foe-av" id="foe-avatar"></div>
+    <div class="clash" id="clash"></div>
+    <div class="avatar me-av" id="me-avatar"></div>
+    <button class="matchup" id="matchup" title="Voir la roue des éléments"></button>
+    <div class="roue-mini" id="roue-mini"></div>
+    <div class="announce" id="announce" hidden></div>
+  </div>
+
+  <!-- Journal du tour -->
+  <div class="ticker" id="ticker"></div>
+
+  <!-- Joueur -->
+  <div class="side me-side">
+    <div class="vitals">
+      <div class="vname" id="me-name">—</div>
+      <div class="bar hp"><i id="me-hp"></i></div>
+      <div class="bar ki"><i id="me-ki"></i><span id="me-ki-n">0</span></div>
+      <div class="vsub"><span id="me-status"></span><b class="soutien-jauge" id="soutien-jauge" hidden></b></div>
+    </div>
+    <div class="portraits mine" id="me-portraits"></div>
+  </div>
+
+  <!-- Menu de commandes -->
+  <div class="menu-cmd" id="menu-cmd">
+    <div class="cmd-grid" id="cmd-moves"></div>
+    <div class="cmd-row">
+      <button class="cmd cmd-guard" id="b-guard">
+        <span class="cmd-g">🛡️</span>
+        <span class="cmd-l">Garde</span>
+        <span class="cmd-s">−55 % dégâts · +20 ki</span>
+      </button>
+      <button class="cmd cmd-swap" id="b-swap">
+        <span class="cmd-g">🔄</span>
+        <span class="cmd-l">Changer</span>
+        <span class="cmd-s">passe avant les coups</span>
+      </button>
+      <button class="cmd cmd-soutien" id="b-soutien" hidden>
+        <span class="cmd-g" id="soutien-g">💚</span>
+        <span class="cmd-l" id="soutien-l">Soutien</span>
+        <span class="cmd-dmg" id="soutien-n"></span>
+        <span class="cmd-s" id="soutien-s"></span>
+      </button>
+    </div>
+    <div class="cmd-wait" id="cmd-wait" hidden>⏳ L'adversaire réfléchit…</div>
+  </div>
+</section>
+
+<!-- Choix du remplaçant -->
+<div class="ov" id="ov-roue" hidden>
+  <div class="sheet sheet-sm">
+    <button class="sheet-close" data-close="ov-roue">✕</button>
+    <h2>La roue des éléments</h2>
+    <p class="pick-sub">Chaque élément domine le suivant : <b>+30 %</b> de dégâts en
+      avantage, <b>−20 %</b> en désavantage.</p>
+    <div class="roue-grande" id="roue-grande"></div>
+    <p class="roue-dit" id="roue-dit"></p>
+  </div>
+</div>
+
+<div class="ov" id="ov-swap" hidden>
+  <div class="sheet sheet-sm">
+    <button class="sheet-close" data-close="ov-swap">✕</button>
+    <h2>Qui envoyer ?</h2>
+    <p class="pick-sub">Le changement s'effectue avant les attaques du tour.</p>
+    <div class="swap-list" id="swap-list"></div>
+  </div>
+</div>
+
+<!-- ======================== SUPERPOSITIONS ====================== -->
+
+<div class="ov" id="ov-roster" hidden>
+  <div class="sheet">
+    <button class="sheet-close" data-close="ov-roster">✕</button>
+    <h2>Les dix-huit</h2>
+    <div class="codex" id="codex"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-rules" hidden>
+  <div class="sheet">
+    <button class="sheet-close" data-close="ov-rules">✕</button>
+    <h2 id="rules-titre">Comment se bat-on ?</h2>
+
+    <div class="rules-tabs" id="rules-tabs" role="tablist">
+      <button class="rtab is-on" data-page="combat" role="tab" aria-selected="true">⚔️ Le combat</button>
+      <button class="rtab" data-page="roles" role="tab" aria-selected="false">🛡 Les rôles</button>
+      <button class="rtab" data-page="elements" role="tab" aria-selected="false">🔥 Les éléments</button>
+    </div>
+
+    <div class="rules-page is-on" id="rp-combat" role="tabpanel"></div>
+    <div class="rules-page" id="rp-roles" role="tabpanel"></div>
+    <div class="rules-page" id="rp-elements" role="tabpanel"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-end" hidden>
+  <div class="endcard">
+    <div class="end-mark" id="end-mark">🏆</div>
+    <h2 class="end-title" id="end-title"></h2>
+    <p class="end-sub" id="end-sub"></p>
+    <table class="end-stats"><tbody id="end-stats"></tbody></table>
+    <div class="pick-actions two">
+      <button class="btn btn-ghost" id="b-end-menu">Menu</button>
+      <button class="btn btn-go" id="b-end-again">Revanche</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script type="module" src="/games/zenith/js/main.js"></script>
+</body>
+</html>

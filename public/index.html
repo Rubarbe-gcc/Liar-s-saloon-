@@ -70,6 +70,17 @@
  */
 const GAMES = [
   {
+    slug: 'zenith',
+    title: 'ZÉNITH',
+    desc: "Jeu de combat à cartes. Dix-huit combattants, équipes de trois, ki à gérer et éléments qui se dominent. Solo ou en ligne.",
+    icon: '⚡',
+    tags: ['Combat', 'Solo & en ligne', '18 combattants'],
+    art: 'linear-gradient(140deg,#7c5cff,#ff3d68 55%,#070310)',
+    tint: 'rgba(124,92,255,.32)',
+    badge: 'nouveau',
+    ready: true,
+  },
+  {
     slug: 'liars-saloon',
     title: "Liar's Saloon",
     desc: "Bluff, accusations et roulette russe autour d'un tapis vert. Seul contre la machine, ou entre amis avec un code de table.",
@@ -77,13 +88,12 @@ const GAMES = [
     tags: ['Bluff', 'Solo & en ligne', '2–4 joueurs'],
     art: 'linear-gradient(140deg,#6d3d24,#1d4436 52%,#0c0705)',
     tint: 'rgba(232,183,92,.26)',
-    badge: 'nouveau',
     ready: true,
   },
 ];
 
 /** Emplacements vides, pour donner sa forme a la galerie. */
-const SOON = 2;
+const SOON = 1;
 
 const grid = document.getElementById('grid');
 const frag = document.createDocumentFragment();
