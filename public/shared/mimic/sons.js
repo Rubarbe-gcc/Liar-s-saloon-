@@ -20,6 +20,7 @@ export const FAMILLES = {
   machine: { key: 'machine', label: 'Machines', glyph: '⚙️', color: '#38bdf8' },
   musique: { key: 'musique', label: 'Musique', glyph: '🎵', color: '#a78bfa' },
   humain: { key: 'humain', label: 'Voix', glyph: '🗣️', color: '#ffd84d' },
+  internet: { key: 'internet', label: 'Grand n\'importe quoi', glyph: '🌐', color: '#f472b6' },
 };
 
 export const FAMILLE_KEYS = Object.keys(FAMILLES);
@@ -32,6 +33,10 @@ export const FAMILLE_KEYS = Object.keys(FAMILLES);
  *   bruit  part de souffle mêlée, de 0 à 1
  *   vol    volume, ou [depart, arrivee]
  *   apres  silence qui suit, en secondes
+ *   vibrato  {hz, demitons} — oscillation de hauteur, pour tout ce qui
+ *            tremble : le trombone triste, le ressort, la scie musicale.
+ *            Sans lui, ces sons-là sonnent comme un synthétiseur des
+ *            années quatre-vingt plutôt que comme ce qu'ils imitent.
  */
 export const SONS = [
   /* ---- Bestiaire ---- */
@@ -198,6 +203,115 @@ export const SONS = [
       { hz: [260, 200], duree: 0.55, forme: 'dent', bruit: 0.25, vol: [0.9, 0.1] },
     ],
   },
+
+  /* ================================================================ */
+  /* Grand n'importe quoi                                             */
+  /*                                                                  */
+  /* Des archétypes, pas des enregistrements : le trombone triste, la */
+  /* corne de brume, le ressort. Ce sont des familles de sons que tout */
+  /* le monde reconnaît, et qui n'appartiennent à personne — à la      */
+  /* différence des extraits précis qui circulent sur internet.        */
+  /* ================================================================ */
+  {
+    id: 'trombone', nom: 'Le trombone triste', glyph: '🎺', famille: 'internet',
+    difficulte: 2, attaques: 3,
+    indice: 'Wah — wah — waaah. Trois fois, la dernière s\'effondre.',
+    segments: [
+      { hz: [330, 294], duree: 0.26, forme: 'dent', bruit: 0.06, vol: [0.9, 0.7],
+        vibrato: { hz: 6, demitons: 0.4 }, apres: 0.07 },
+      { hz: [294, 262], duree: 0.26, forme: 'dent', bruit: 0.06, vol: [0.9, 0.7],
+        vibrato: { hz: 6, demitons: 0.4 }, apres: 0.07 },
+      { hz: [262, 175], duree: 0.62, forme: 'dent', bruit: 0.08, vol: [0.95, 0.1],
+        vibrato: { hz: 5, demitons: 0.7 } },
+    ],
+  },
+  {
+    id: 'corne', nom: 'La corne de brume', glyph: '📣', famille: 'internet',
+    difficulte: 1, attaques: 3,
+    indice: 'Trois coups courts, très graves, très francs.',
+    segments: [
+      { hz: 165, duree: 0.2, forme: 'dent', bruit: 0.1, vol: [1, 0.85], apres: 0.1 },
+      { hz: 165, duree: 0.2, forme: 'dent', bruit: 0.1, vol: [1, 0.85], apres: 0.1 },
+      { hz: [165, 140], duree: 0.4, forme: 'dent', bruit: 0.12, vol: [1, 0.1] },
+    ],
+  },
+  {
+    id: 'ressort', nom: 'Le ressort', glyph: '🪀', famille: 'internet',
+    difficulte: 3, attaques: 1,
+    indice: 'Un « boing » qui monte d\'un coup et tremble en retombant.',
+    segments: [
+      { hz: [160, 720], duree: 0.09, forme: 'dent', bruit: 0, vol: 1 },
+      { hz: [720, 200], duree: 0.55, forme: 'dent', bruit: 0.04, vol: [1, 0.08],
+        vibrato: { hz: 13, demitons: 2.6 } },
+    ],
+  },
+  {
+    id: 'scratch', nom: 'Le scratch', glyph: '💿', famille: 'internet',
+    difficulte: 3, attaques: 2,
+    indice: 'Deux coups de platine : ça descend, ça remonte.',
+    segments: [
+      { hz: [600, 120], duree: 0.16, forme: 'dent', bruit: 0.45, vol: [1, 0.6], apres: 0.05 },
+      { hz: [120, 520], duree: 0.18, forme: 'dent', bruit: 0.45, vol: [0.8, 0.1] },
+    ],
+  },
+  {
+    id: 'modem', nom: 'Le modem 56k', glyph: '☎️', famille: 'internet',
+    difficulte: 3, attaques: 3,
+    indice: 'Deux bips, puis un long grésillement chaotique.',
+    segments: [
+      { hz: 980, duree: 0.16, forme: 'sinus', bruit: 0, vol: 0.75, apres: 0.09 },
+      { hz: 1320, duree: 0.16, forme: 'sinus', bruit: 0, vol: 0.75, apres: 0.09 },
+      { hz: [400, 900], duree: 0.8, forme: 'dent', bruit: 0.6, vol: [0.9, 0.5],
+        vibrato: { hz: 17, demitons: 6 } },
+    ],
+  },
+  {
+    id: 'caisse', nom: 'Le tiroir-caisse', glyph: '💰', famille: 'internet',
+    difficulte: 2, attaques: 2,
+    indice: 'Ka — ching. Deux notes claires, la seconde plus haute et qui sonne.',
+    segments: [
+      { hz: 880, duree: 0.1, forme: 'sinus', bruit: 0.05, vol: [1, 0.4], apres: 0.06 },
+      { hz: 1320, duree: 0.5, forme: 'sinus', bruit: 0.03, vol: [1, 0.05] },
+    ],
+  },
+  {
+    id: 'erreur', nom: 'Le bip d\'erreur', glyph: '🚫', famille: 'internet',
+    difficulte: 1, attaques: 2,
+    indice: 'Deux notes basses identiques, sèches et sans appel.',
+    segments: [
+      { hz: 196, duree: 0.18, forme: 'carre', bruit: 0, vol: 0.9, apres: 0.08 },
+      { hz: 196, duree: 0.3, forme: 'carre', bruit: 0, vol: [0.9, 0.1] },
+    ],
+  },
+  {
+    id: 'victoire', nom: 'Le petit air de victoire', glyph: '🏅', famille: 'internet',
+    difficulte: 2, attaques: 4,
+    indice: 'Quatre notes qui montent en courant, la dernière tient.',
+    segments: [
+      { hz: 523, duree: 0.11, forme: 'carre', bruit: 0, vol: 0.85, apres: 0.03 },
+      { hz: 659, duree: 0.11, forme: 'carre', bruit: 0, vol: 0.88, apres: 0.03 },
+      { hz: 784, duree: 0.11, forme: 'carre', bruit: 0, vol: 0.92, apres: 0.03 },
+      { hz: 1047, duree: 0.45, forme: 'carre', bruit: 0, vol: [1, 0.1] },
+    ],
+  },
+  {
+    id: 'vuvuzela', nom: 'La vuvuzela', glyph: '🎊', famille: 'internet',
+    difficulte: 1, attaques: 1,
+    indice: 'Une seule note tenue, obstinée, qui ne bouge pas.',
+    segments: [
+      { hz: 233, duree: 1.2, forme: 'dent', bruit: 0.18, vol: [0.3, 1],
+        vibrato: { hz: 4.5, demitons: 0.3 } },
+    ],
+  },
+  {
+    id: 'scie', nom: 'La scie musicale', glyph: '🪚', famille: 'internet',
+    difficulte: 3, attaques: 1,
+    indice: 'Une note qui glisse vers le haut en tremblant beaucoup.',
+    segments: [
+      { hz: [280, 620], duree: 1.1, forme: 'sinus', bruit: 0.03, vol: [0.5, 0.9],
+        vibrato: { hz: 6.5, demitons: 1.5 } },
+    ],
+  },
 ];
 
 const PAR_ID = new Map(SONS.map((s) => [s.id, s]));
@@ -264,9 +378,14 @@ export function rendre(son, sampleRate, graine = 1234) {
   for (const seg of son.segments) {
     const n = Math.round(seg.duree * sampleRate);
     const partBruit = seg.bruit || 0;
+    const vib = seg.vibrato || null;
     for (let i = 0; i < n; i++) {
       const t = i / Math.max(1, n - 1);
-      const hz = lire(seg.hz, t);
+      let hz = lire(seg.hz, t);
+      if (vib) {
+        const tremble = Math.sin(2 * Math.PI * vib.hz * (i / sampleRate));
+        hz *= Math.pow(2, (tremble * vib.demitons) / 12);
+      }
       phase += (2 * Math.PI * hz) / sampleRate;
 
       // Fondu d'entrée et de sortie courts : une attaque nette, sans clic.
@@ -287,9 +406,20 @@ export function rendre(son, sampleRate, graine = 1234) {
 export function tirage(n, rng = Math.random) {
   const parFamille = {};
   for (const s of SONS) (parFamille[s.famille] = parFamille[s.famille] || []).push(s);
-  const familles = Object.keys(parFamille);
   const out = [];
   const pris = new Set();
+
+  // L'ordre des familles est tiré au sort à chaque partie.
+  //
+  // Le parcourir dans l'ordre de déclaration suffisait tant qu'il y avait
+  // autant de familles que de manches. Avec cinq familles pour quatre
+  // manches, la dernière déclarée n'était plus jamais tirée — le contenu le
+  // plus récent devenait invisible, sans que rien ne le signale.
+  const familles = Object.keys(parFamille);
+  for (let i = familles.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [familles[i], familles[j]] = [familles[j], familles[i]];
+  }
 
   // Une famille par manche tant que possible : un jeu qui enchaîne quatre
   // aboiements lasse au troisième.

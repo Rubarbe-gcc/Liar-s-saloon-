@@ -284,6 +284,9 @@ export function fermerFin() { $('ov-fin').hidden = true; }
 /* ------------------------------------------------------------------ */
 
 export function catalogue() {
+  // Le compte se lit dans les données. Écrit en dur dans la page, il
+  // redevenait faux au premier son ajouté.
+  $('sons-titre').textContent = `Les ${SONS.length} sons`;
   $('sons-grid').innerHTML = SONS.map((s) => {
     const f = FAMILLES[s.famille];
     return `<button class="son-card" data-son="${s.id}" style="--fc:${f.color}">

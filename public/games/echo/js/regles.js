@@ -48,7 +48,7 @@ export function pageManche() {
       ${MANCHE_ROUE}. Elle donne des points, ou de quoi nuire.</p></section>
   </div>
   <h3 class="roles-titre">Les sons</h3>
-  <p class="rules-chapo">Dix-huit, répartis en quatre familles : ${familles}.
+  <p class="rules-chapo">${SONS.length}, répartis en ${FAMILLE_KEYS.length} familles : ${familles}.
     Aucun n'est un fichier : tous sont <b>calculés</b> au moment où ils sonnent.
     Le jeu tient donc hors ligne, et ne doit rien à personne.</p>`;
 }

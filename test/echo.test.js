@@ -142,7 +142,7 @@ test('les poids des trois dimensions font cent', () => {
 /* ================================================================== */
 
 test('chaque son est complet et coherent', () => {
-  assert.ok(S.SONS.length >= 12, 'il faut de quoi varier les manches');
+  assert.ok(S.SONS.length >= 20, 'il faut de quoi varier les manches sans se repeter');
   const ids = S.SONS.map((s) => s.id);
   assert.equal(new Set(ids).size, ids.length, 'identifiants dupliques');
 
@@ -188,6 +188,70 @@ test('un son se note cent contre lui-meme', () => {
     const r = A.noter(A.analyser(x, SR), A.analyser(x, SR));
     assert.ok(r.total >= 99, `${s.id} : ${r.total} contre lui-meme`);
   }
+});
+
+test('chaque famille peut sortir, et chaque son avec elle', () => {
+  // Le tirage parcourait les familles dans l'ordre de declaration : des qu'il
+  // y en a eu plus que de manches, la derniere n'etait plus jamais tiree et
+  // dix sons devenaient invisibles. L'ordre est desormais melange.
+  const vues = {};
+  const parSon = {};
+  const rng = P.makeRng(1);
+  for (let k = 0; k < 1500; k++) {
+    for (const id of S.tirage(4, rng)) {
+      const f = S.getSon(id).famille;
+      vues[f] = (vues[f] || 0) + 1;
+      parSon[id] = (parSon[id] || 0) + 1;
+    }
+  }
+  const total = Object.values(vues).reduce((a, b) => a + b, 0);
+  for (const f of S.FAMILLE_KEYS) {
+    const part = (vues[f] || 0) / total;
+    assert.ok(part > 0.1,
+      `la famille ${f} ne represente que ${(part * 100).toFixed(1)} % des tirages`);
+  }
+  const jamais = S.SONS.filter((x) => !parSon[x.id]).map((x) => x.id);
+  assert.equal(jamais.length, 0, `sons jamais tires : ${jamais.join(', ')}`);
+});
+
+test('un son sans hauteur redistribue son poids au lieu d\'offrir des points', () => {
+  // Un scratch de vinyle n'a pas de melodie. La noter serait arbitraire :
+  // son poids passe au rythme et aux attaques, et l'on ne donne rien pour rien.
+  const sansHauteur = S.SONS.filter((x) => {
+    const a = A.analyser(S.rendre(x, SR), SR);
+    return a.hauteurs.filter((h) => h !== null).length === 0;
+  });
+  assert.ok(sansHauteur.length >= 1, 'il faut au moins un son non melodique pour tester ce chemin');
+
+  for (const son of sansHauteur) {
+    const ref = A.analyser(S.rendre(son, SR), SR);
+    const parfaite = A.noter(ref, ref);
+    assert.equal(parfaite.melodie, null, `${son.id} : la melodie doit etre neutralisee`);
+    assert.equal(parfaite.total, 100, `${son.id} : une imitation exacte vaut cent`);
+
+    // Et le silence ne doit pas profiter de la neutralisation.
+    const muet = A.noter(ref, A.analyser(new Float32Array(SR), SR));
+    assert.ok(muet.total < 20, `${son.id} : le silence vaut ${muet.total}`);
+  }
+});
+
+test('le vibrato fait bouger la hauteur, sans la deplacer en moyenne', () => {
+  const base = { hz: 440, duree: 0.8, forme: 'sinus', bruit: 0, vol: 0.8 };
+  const plat = S.rendre({ segments: [base] }, SR, 1);
+  const tremble = S.rendre({ segments: [{ ...base, vibrato: { hz: 6, demitons: 2 } }] }, SR, 1);
+
+  const hauteurs = (x) => A.analyser(x, SR).hauteurs.filter((h) => h !== null);
+  const ecartType = (a) => {
+    const m = a.reduce((p, c) => p + c, 0) / a.length;
+    return { m, sd: Math.sqrt(a.reduce((p, c) => p + (c - m) ** 2, 0) / a.length) };
+  };
+  const p1 = ecartType(hauteurs(plat));
+  const p2 = ecartType(hauteurs(tremble));
+
+  assert.ok(p2.sd > p1.sd * 3,
+    `le vibrato doit faire trembler : ecart-type ${p1.sd.toFixed(1)} sans, ${p2.sd.toFixed(1)} avec`);
+  assert.ok(Math.abs(p2.m - p1.m) < 25,
+    `le vibrato ne doit pas transposer : ${p1.m.toFixed(0)} Hz contre ${p2.m.toFixed(0)} Hz`);
 });
 
 test('le tirage varie les familles et ne repete jamais un son', () => {
