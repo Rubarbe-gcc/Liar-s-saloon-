@@ -1,18 +1,18 @@
 /**
- * PRISME — le conseiller.
+ * RAID — le conseiller.
  *
  * Le même code sert trois besoins qu'il serait absurde d'écrire trois fois :
  *   • le bouton « conseil », qui montre un bon chemin sans le jouer ;
  *   • la démonstration qui tourne toute seule derrière l'écran-titre ;
  *   • les tests d'équilibrage, qui ont besoin d'un joueur honnête pour savoir
- *     si une expédition se termine.
+ *     si un donjon se termine.
  *
  * Il ne triche pas : il ne lit que ce que l'écran affiche déjà.
  *
  * Module ISO : ni DOM ni Node.
  */
 
-import { meilleurChemin } from './orbes.js';
+import { meilleurChemin } from './globes.js';
 import {
   choisir, tracer, attaquer, modesDisponibles, estimerDegats, utiliserObjet, estFini, PHASE,
 } from './combat.js';
@@ -20,12 +20,12 @@ import {
 /** Le meilleur chemin pour le héros actif — ou pour un héros donné. */
 export function conseilChemin(etat, idx = etat.actif) {
   if (idx == null) return null;
-  return meilleurChemin(etat.plateau, etat.equipe[idx].affinite);
+  return meilleurChemin(etat.plateau, etat.equipe[idx].ecole);
 }
 
 /**
  * Le coup qui enlève le plus de vie, à cible égale. Une spéciale l'emporte sur
- * une frappe à dégâts équivalents : garder du ki d'un tour sur l'autre ne sert
+ * une frappe à dégâts équivalents : garder du mana d'un tour sur l'autre ne sert
  * à rien, la jauge se vide en fin de tour.
  */
 export function conseilCoup(etat, idx = etat.actif) {
@@ -71,7 +71,7 @@ export function pasAuto(etat) {
     return choisir(etat, idx).evenements || [];
   }
 
-  if (etat.phase === PHASE.ORBES) {
+  if (etat.phase === PHASE.GLOBES) {
     const c = conseilChemin(etat);
     return c ? (tracer(etat, c.chemin).evenements || []) : null;
   }

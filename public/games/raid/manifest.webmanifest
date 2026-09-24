@@ -1,0 +1,20 @@
+{
+  "name": "RAID — donjon solo",
+  "short_name": "Raid",
+  "description": "Ramassez le mana sur le champ d'essence, enchaînez les sorts et menez un raid de six héros jusqu'au Dragon Cendré.",
+  "id": "/games/raid/",
+  "start_url": "/games/raid/",
+  "scope": "/games/raid/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0c0a07",
+  "theme_color": "#0c0a07",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["games"],
+  "icons": [
+    { "src": "/games/raid/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/games/raid/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/games/raid/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

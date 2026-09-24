@@ -1,9 +1,9 @@
 /**
- * PRISME — pixel art paramétrique.
+ * RAID — pixel art paramétrique.
  *
  * Aucune image n'est chargée : les silhouettes sont des grilles de 16×16
- * décrites en données, colorées à la volée par l'affinité du personnage et
- * décalées en teinte pour que deux héros de la même affinité ne soient pas
+ * décrites en données, colorées à la volée par l'école du personnage et
+ * décalées en teinte pour que deux héros de la même école ne soient pas
  * jumeaux. Rien à télécharger, rien qui manque hors connexion.
  *
  * Deux poses seulement — au repos et en frappe. Tout le reste de l'animation
@@ -14,7 +14,8 @@
  * Module ISO : ni DOM ni Node.
  */
 
-import { AFFINITES } from './affinites.js';
+import { ECOLES } from './ecoles.js';
+import { PEUPLES } from './heros.js';
 
 export const GRID = 16;
 export const POSES = ['repos', 'frappe'];
@@ -22,7 +23,7 @@ export const POSES = ['repos', 'frappe'];
 /**
  * Indices employés par les grilles :
  *   . vide · 1 contour · 2 peau · 3 tenue sombre · 4 tenue claire
- *   5 accent d'affinité · 6 accent clair · 7 œil · 8 métal
+ *   5 accent d'école · 6 accent clair · 7 œil · 8 métal
  */
 const BASE = ['', '#160d1f', '#f3cfa8', '#2f2440', '#4c3b66', '#ffffff', '#ffffff', '#0b0610', '#cfd8e6'];
 
@@ -31,8 +32,8 @@ const BASE = ['', '#160d1f', '#f3cfa8', '#2f2440', '#4c3b66', '#ffffff', '#fffff
 /* ------------------------------------------------------------------ */
 
 const HEROS_GRILLES = {
-  /* Assaut : fine silhouette, lame tenue basse, prête à partir devant. */
-  assaut: {
+  /* DPS : silhouette fine, lame tenue basse, prête à partir devant. */
+  dps: {
     repos: [
       '................',
       '.....555551.....',
@@ -71,8 +72,8 @@ const HEROS_GRILLES = {
     ],
   },
 
-  /* Colosse : épaules larges, plastron, jambes plantées. */
-  colosse: {
+  /* Tank : épaules larges, plastron, jambes plantées. */
+  tank: {
     repos: [
       '................',
       '....1555551.....',
@@ -111,8 +112,8 @@ const HEROS_GRILLES = {
     ],
   },
 
-  /* Soutien : robe longue, bâton, capuche marquée. */
-  soutien: {
+  /* Soigneur : robe longue, bâton, capuche marquée. */
+  soigneur: {
     repos: [
       '................',
       '....1555551.....',
@@ -157,8 +158,8 @@ const HEROS_GRILLES = {
 /* ------------------------------------------------------------------ */
 
 const ENNEMIS_GRILLES = {
-  /* Rampant : bas sur pattes, mâchoire en avant. */
-  rampant: {
+  /* Bête : basse sur pattes, mâchoire en avant. */
+  bete: {
     repos: [
       '................',
       '................',
@@ -197,42 +198,42 @@ const ENNEMIS_GRILLES = {
     ],
   },
 
-  /* Carapace : coque bombée, pattes courtes. */
-  carapace: {
+  /* Brute : dos voûté, épaules énormes, gourdin dans une patte. */
+  brute: {
     repos: [
       '................',
       '................',
-      '.....555551.....',
-      '...1555555551...',
-      '..135555555531..',
-      '.13455555554431.',
-      '.13445555544431.',
+      '......1111......',
+      '.....155551.....',
+      '....15577551....',
+      '....15555551....',
+      '.....113311.....',
+      '...1133333311...',
+      '..133444444331..',
+      '.13344444444331.',
       '.13444444444431.',
       '.13444444444431.',
-      '.11344444444311.',
-      '.1.133333331..1.',
-      '.1..1277721...1.',
-      '....131..131....',
-      '...1331..1331...',
-      '................',
+      '..1334444443311.',
+      '...13331.13331..',
+      '..133311.133311.',
       '................',
     ],
     frappe: [
       '................',
-      '.....55555......',
-      '...155555551....',
-      '..13555555531...',
-      '.1345555555431..',
-      '.1344555554431..',
-      '13444444444431..',
-      '13444444444431..',
-      '.1344444444431..',
-      '..13333333331...',
-      '..1277772211....',
-      '..131...1331....',
-      '.1331....131....',
-      '.131......131...',
-      '................',
+      '.........1881...',
+      '......1111881...',
+      '.....155518811..',
+      '....1557755181..',
+      '....15555551....',
+      '.....113311.....',
+      '...1133333311...',
+      '..133444444331..',
+      '.13344444444331.',
+      '.13444444444431.',
+      '..134444444431..',
+      '..13334444331...',
+      '..13331.13331...',
+      '.133311.133311..',
       '................',
     ],
   },
@@ -352,11 +353,11 @@ const hsl = ([h, s, l]) =>
   `hsl(${Math.round(((h % 1) + 1) % 1 * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%)`;
 
 /**
- * Palette d'un personnage : la tenue prend la teinte de l'affinité, la peau
+ * Palette d'un personnage : la tenue prend la teinte de l'école, la peau
  * reste de la peau, et l'identifiant décale le tout de quelques degrés.
  */
-export function palettePour({ id = 'x', affinite = 'vermeil', ennemi = false } = {}) {
-  const aff = AFFINITES[affinite] || AFFINITES.vermeil;
+export function palettePour({ id = 'x', ecole = 'feu', peuple = null, ennemi = false } = {}) {
+  const aff = ECOLES[ecole] || ECOLES.feu;
   const [ha, sa] = hexVersHsl(aff.teinte);
   const h = empreinte(id);
   const teinte = (((h % 31) - 15) / 360);
@@ -365,7 +366,7 @@ export function palettePour({ id = 'x', affinite = 'vermeil', ennemi = false } =
   const pal = BASE.slice();
   const t = (ha + teinte + 1) % 1;
   // Les ennemis sont désaturés et assombris : on doit les distinguer d'un
-  // héros de la même affinité sans lire l'étiquette.
+  // héros de la même école sans lire l'étiquette.
   const sat = ennemi ? sa * 0.62 : sa;
   const baisse = ennemi ? 0.08 : 0;
 
@@ -373,7 +374,11 @@ export function palettePour({ id = 'x', affinite = 'vermeil', ennemi = false } =
   pal[4] = hsl([t, sat * 0.68, Math.max(0.16, 0.33 + clarte - baisse)]);
   pal[5] = hsl([t, Math.min(1, sat * 1.05), Math.min(0.8, 0.58 + clarte - baisse)]);
   pal[6] = hsl([t, Math.min(1, sat), Math.min(0.92, 0.78 + clarte)]);
-  pal[2] = ennemi ? hsl([t, 0.25, 0.62]) : hsl([0.08, 0.45, Math.min(0.9, 0.8 + clarte / 2)]);
+  // Le teint vient du peuple quand il y en a un ; les bêtes prennent la
+  // teinte de leur école, délavée.
+  pal[2] = PEUPLES[peuple] ? PEUPLES[peuple].peau
+    : ennemi ? hsl([t, 0.25, 0.62])
+    : hsl([0.08, 0.45, Math.min(0.9, 0.8 + clarte / 2)]);
   pal[7] = ennemi ? '#ffe066' : BASE[7];
   return pal;
 }
@@ -384,7 +389,7 @@ export function palettePour({ id = 'x', affinite = 'vermeil', ennemi = false } =
 
 function grilleDe(sujet, pose) {
   const jeu = sujet.silhouette ? ENNEMIS_GRILLES[sujet.silhouette] : HEROS_GRILLES[sujet.role];
-  const secours = sujet.silhouette ? ENNEMIS_GRILLES.rampant : HEROS_GRILLES.assaut;
+  const secours = sujet.silhouette ? ENNEMIS_GRILLES.bete : HEROS_GRILLES.dps;
   const source = jeu || secours;
   return (source[pose] || source.repos).map((r) => r.padEnd(GRID, '.').slice(0, GRID));
 }
@@ -397,7 +402,8 @@ export function spriteSvg(sujet, pose = 'repos', { classe = 'sprite' } = {}) {
   const grille = grilleDe(sujet, pose);
   const pal = palettePour({
     id: sujet.id || sujet.modeleId || sujet.nom || 'x',
-    affinite: sujet.affinite,
+    ecole: sujet.ecole,
+    peuple: sujet.peuple || null,
     ennemi: !!sujet.silhouette,
   });
 

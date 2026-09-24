@@ -5,9 +5,9 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
 
 **Les jeux**
 
-- **PRISME** — combat solo. Un champ d'orbes à parcourir pour récolter le ki,
-  six héros qui partagent une seule barre de vie, quinze rencontres à la
-  suite.
+- **RAID** — donjon solo au tour par tour. Un champ d'essence à parcourir
+  pour récolter le mana, un raid de six qui partage une seule barre de vie,
+  cinq ailes jusqu'au Dragon Cendré.
 - **ÉCHO** — jeu de fête à la voix. On entend un son, tout le monde l'imite
   au micro, la roue distribue points et sabotages.
 - **ZÉNITH** — jeu de combat au tour par tour. Trente combattants, équipes de
@@ -35,47 +35,53 @@ npm test                   # règles, équilibrage, bots, parties en ligne
 
 ---
 
-## PRISME — comment ça marche
+## RAID — comment ça marche
 
-Un jeu solo au tour par tour, dans la lignée des jeux de combat à orbes.
-L'expédition tient en quinze rencontres réparties sur cinq secteurs, et
-l'équipe de six héros partage **une seule barre de vie** qui ne se remplit
-pas entre deux combats.
+Un donjon solo au tour par tour, dans les codes des jeux de raid : la trinité
+tank / soigneur / DPS, des écoles de magie qui se percent, de l'aggro, des
+incantations de boss à interrompre par un bouclier bien posé, et du butin
+entre deux ailes.
+
+La descente tient en quinze pulls répartis sur cinq ailes, et les six
+personnages partagent **une seule barre de vie** — celle du raid — qui ne se
+remplit pas entre deux combats.
 
 Chaque tour suit toujours le même fil :
 
-1. Une **rotation de trois héros** entre en scène ; les deux rotations
-   alternent d'un tour à l'autre.
-2. L'adversaire annonce **qui il vise** et **après combien de héros** il
+1. Un **groupe de trois** monte au front ; les deux groupes alternent d'un
+   tour à l'autre.
+2. Le boss annonce **qui a l'aggro** et **après combien de personnages** il
    frappera.
 3. Chacun, dans l'ordre choisi par le joueur, trace un chemin sur le **champ
-   d'orbes** — huit directions, jamais deux fois la même orbe, neuf orbes au
-   plus — et récolte son ki : les orbes de sa propre affinité et les orbes
-   prismatiques comptent double.
-4. À douze de ki l'attaque **spéciale** s'arme, à dix-huit l'**ultime**
-   s'ouvre ; la jauge se vide en fin de tour, garder du ki n'existe pas.
+   d'essence** — huit directions, jamais deux fois le même globe, neuf globes
+   au plus — et récolte son mana : les globes de sa propre école et les globes
+   d'essence pure comptent double.
+4. À douze de mana le **sort** est disponible, à dix-huit le **sort ultime** ;
+   la barre se vide en fin de tour, garder son mana n'existe pas.
 
-L'ordre de passage est donc la vraie décision : celui qui joue avant la
-fenêtre ennemie peut poser une garde, celui qui joue après frappe une bête
-déjà entravée.
+L'ordre de passage est donc la vraie décision : qui joue avant le coup du boss
+peut poser un bouclier, qui joue après frappe une cible déjà affaiblie.
 
-Cinq affinités forment un cycle fermé (avantage ×1.5, désavantage ×0.7), et
-trois rôles — assaut, colosse, soutien — lisibles au glyphe sur chaque carte.
-Le **meneur** dope toute la garnison, et deux héros d'une même rotation qui
-partagent une étiquette **résonnent**. Entre deux secteurs, un **éveil** à
-choisir parmi trois.
+Cinq **écoles de magie** forment un cycle fermé (vulnérable ×1.5, résistant
+×0.7), et trois **rôles** lisibles au glyphe sur chaque jeton. Le **chef de
+raid** applique son buff à tout le monde, et deux personnages d'un même groupe
+qui partagent une étiquette sont en **synergie**. Chaque boss d'aile lâche une
+pièce de **butin** à choisir parmi trois.
 
-L'équilibrage est mesuré, pas deviné : un conseiller joue des expéditions
-entières en tête de série fixe, et les réglages sont choisis pour que le
-palier *Guerrier* se gagne environ deux fois sur trois en jouant bien, le
-palier *Apprenti* presque toujours, et l'*Ascension* rarement.
+L'équilibrage est mesuré, pas deviné : un conseiller joue des donjons entiers
+en tête de série fixe, et les réglages sont choisis pour que le mode
+*Héroïque* se boucle environ deux fois sur trois en jouant bien, le mode
+*Normal* presque toujours, et le *Mythique* rarement.
 
-Les héros et les bêtes sont dessinés en **pixel art paramétrique** : des
-grilles de 16×16 décrites en données, colorées par l'affinité et décalées en
-teinte pour chaque personnage. Le reste de l'animation — l'élan, le cut-in,
-l'encaissement, la chute — est affaire de transformations CSS déclenchées par
-les événements que renvoie le moteur : rien n'apparaît à l'écran qui ne soit
-passé par une règle.
+Les personnages et les créatures sont dessinés en **pixel art paramétrique** :
+des grilles de 16×16 décrites en données, colorées par l'école, teintées par
+le peuple — un orc n'a pas la peau d'un nain — et décalées pour chaque
+personnage. Le reste de l'animation — l'élan, le cut-in, l'encaissement, la
+chute — est affaire de transformations CSS déclenchées par les événements que
+renvoie le moteur : rien n'apparaît à l'écran qui ne soit passé par une règle.
+
+Tout est original : noms, personnages, sorts, bestiaire et dessins. Seuls les
+codes du genre sont repris.
 
 ---
 
@@ -155,8 +161,8 @@ public/
     hasard.js             aléa déterministe, partagé par les jeux
     zenith/               ZÉNITH : roster, moteur, adversaires, sprites
     mimic/                ÉCHO : analyse du son, sons de référence, manches
-    prisme/               PRISME : affinités, orbes, héros, bestiaire,
-                          combat, expédition, sprites, conseiller
+    raid/                 RAID : écoles, globes, héros, bestiaire, combat,
+                          donjon, sprites, conseiller
   games/liars-saloon/
     index.html
     manifest.webmanifest  identité « Liar's Saloon »
@@ -165,7 +171,7 @@ public/
     js/{main,ui,offline,online,sfx}.js
   games/zenith/           même forme : index, manifest, icônes, css, js
   games/echo/
-  games/prisme/
+  games/raid/
     js/{main,scene,regles,sfx}.js   navigation, combat animé, règles, sons
 server/
   index.js                serveur autonome : statique + WebSocket
@@ -180,10 +186,10 @@ test/
   engine.test.js          Liar's Saloon
   zenith.test.js          ZÉNITH
   echo.test.js            ÉCHO
-  prisme.test.js          PRISME
+  raid.test.js            RAID
 ```
 
-PRISME n'a pas de module serveur : c'est un jeu solo, tout tient dans
+RAID n'a pas de module serveur : c'est un jeu solo, tout tient dans
 l'onglet.
 
 Deux principes structurent le tout :
@@ -227,7 +233,7 @@ Chrome : menu ⋮) pose une icône qui ouvre le jeu en plein écran, sans barre
 d'adresse.
 
 Chaque jeu est installable séparément, avec sa propre icône et son propre
-point d'entrée : le hub **Insert Coin** depuis l'accueil, puis **PRISME**,
+point d'entrée : le hub **Insert Coin** depuis l'accueil, puis **RAID**,
 **ÉCHO**, **ZÉNITH** et **Liar's Saloon** depuis leurs pages.
 
 Une fois la page visitée une première fois, `public/sw.js` met la coquille en

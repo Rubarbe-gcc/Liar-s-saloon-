@@ -1,5 +1,5 @@
 /**
- * PRISME — navigation, composition d'équipe et conduite de l'expédition.
+ * RAID — navigation, composition d'équipe et conduite du donjon.
  *
  * Ce module tient les écrans et la sauvegarde ; il ne connaît rien des règles,
  * qu'il délègue entièrement aux modules partagés, ni des animations, qui vivent
@@ -7,15 +7,15 @@
  */
 
 import {
-  HEROS, PAR_ID, ROLES, PASSIFS, EFFETS, equipeAuHasard, equipeParDefaut, budgetOf,
-} from '../../../shared/prisme/heros.js';
-import { AFFINITES, CYCLE, roueSvg, domine, craint } from '../../../shared/prisme/affinites.js';
-import { spriteSvg } from '../../../shared/prisme/sprites.js';
-import { creerCombat, vieMaximale, PHASE } from '../../../shared/prisme/combat.js';
+  HEROS, PAR_ID, ROLES, PEUPLES, TALENTS, EFFETS, groupeAuHasard, groupeParDefaut,
+} from '../../../shared/raid/heros.js';
+import { ECOLES, CYCLE, roueSvg, domine, craint } from '../../../shared/raid/ecoles.js';
+import { spriteSvg } from '../../../shared/raid/sprites.js';
+import { creerCombat, vieMaximale, PHASE } from '../../../shared/raid/combat.js';
 import {
-  creerExpedition, composerRencontre, resoudre, choisirEveil, etiquette, secteurCourant,
-  SECTEURS, RENCONTRES_PAR_SECTEUR, DIFFICULTES,
-} from '../../../shared/prisme/expedition.js';
+  creerDonjon, composerRencontre, resoudre, choisirButin, etiquette, aileCourante,
+  AILES, RENCONTRES_PAR_AILE, DIFFICULTES, RARETES,
+} from '../../../shared/raid/donjon.js';
 import { makeRng } from '../../../shared/hasard.js';
 import * as scene from './scene.js';
 import { rendrePage, PAGES } from './regles.js';
@@ -24,61 +24,61 @@ import { sfx, basculer as basculerSon, estActif as sonActif, debloquer } from '.
 const $ = (id) => document.getElementById(id);
 const txt = (s) => String(s).replace(/[&<>"']/g, (c) =>
   ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const teinte = (a) => (AFFINITES[a] || AFFINITES.vermeil).teinte;
+const teinte = (a) => (ECOLES[a] || ECOLES.vermeil).teinte;
 const nb = (n) => Math.round(n).toLocaleString('fr-FR');
 
 /* ------------------------------------------------------------------ */
 /* Préférences et sauvegarde                                           */
 /* ------------------------------------------------------------------ */
 
-const prefs = { equipe: [], difficulte: 'guerrier', filtre: 'tous', regle: 0 };
-let exp = null;            // expédition en cours
+const prefs = { equipe: [], difficulte: 'heroique', filtre: 'tous', regle: 0 };
+let exp = null;            // donjon en cours
 let rencontre = null;      // rencontre composée, en attente d'engagement
 
 function chargerPrefs() {
   try {
-    const brut = localStorage.getItem('prisme.prefs');
+    const brut = localStorage.getItem('raid.prefs');
     if (brut) Object.assign(prefs, JSON.parse(brut));
   } catch { /* premier passage */ }
-  if (!DIFFICULTES[prefs.difficulte]) prefs.difficulte = 'guerrier';
+  if (!DIFFICULTES[prefs.difficulte]) prefs.difficulte = 'heroique';
   // Une préférence peut désigner un héros retiré depuis.
   prefs.equipe = (prefs.equipe || []).filter((id) => PAR_ID[id]).slice(0, 6);
 }
 const sauverPrefs = () => {
-  try { localStorage.setItem('prisme.prefs', JSON.stringify(prefs)); } catch { /* ignore */ }
+  try { localStorage.setItem('raid.prefs', JSON.stringify(prefs)); } catch { /* ignore */ }
 };
 
-/** L'expédition tient dans une poignée de champs : on la range telle quelle. */
+/** L'donjon tient dans une poignée de champs : on la range telle quelle. */
 function sauverPartie() {
-  if (!exp || exp.termine) { try { localStorage.removeItem('prisme.partie'); } catch { /* ignore */ } return; }
+  if (!exp || exp.termine) { try { localStorage.removeItem('raid.partie'); } catch { /* ignore */ } return; }
   const paquet = {
     seed: exp.seed, difficulte: exp.difficulte,
     equipe: exp.equipe.map((h) => h.id),
-    eveils: exp.eveils, acquis: exp.acquis, vus: exp.vus,
-    secteur: exp.secteur, rencontre: exp.rencontre,
+    butin: exp.butin, acquis: exp.acquis, vus: exp.vus,
+    aile: exp.aile, rencontre: exp.rencontre,
     objets: exp.objets, vie: exp.vie, vieMax: exp.vieMax,
   };
-  try { localStorage.setItem('prisme.partie', JSON.stringify(paquet)); } catch { /* ignore */ }
+  try { localStorage.setItem('raid.partie', JSON.stringify(paquet)); } catch { /* ignore */ }
 }
 
 function chargerPartie() {
   try {
-    const brut = localStorage.getItem('prisme.partie');
+    const brut = localStorage.getItem('raid.partie');
     if (!brut) return null;
     const p = JSON.parse(brut);
-    const equipe = (p.equipe || []).map((id) => PAR_ID[id]);
-    if (equipe.length !== 6 || equipe.some((h) => !h)) return null;
+    const groupe = (p.equipe || []).map((id) => PAR_ID[id]);
+    if (groupe.length !== 6 || groupe.some((h) => !h)) return null;
 
-    const reprise = creerExpedition({ equipe, difficulte: p.difficulte, seed: p.seed });
+    const reprise = creerDonjon({ groupe, difficulte: p.difficulte, seed: p.seed });
     Object.assign(reprise, {
-      eveils: { ...reprise.eveils, ...p.eveils },
+      butin: { ...reprise.butin, ...p.butin },
       acquis: p.acquis || [], vus: p.vus || [],
-      secteur: p.secteur || 0, rencontre: p.rencontre || 0,
-      objets: p.objets ?? 2, vie: p.vie, vieMax: p.vieMax || vieMaximale(equipe, p.eveils),
+      aile: p.aile || 0, rencontre: p.rencontre || 0,
+      objets: p.objets ?? 2, vie: p.vie, vieMax: p.vieMax || vieMaximale(groupe, p.butin),
     });
     // Le tirage ne se sauvegarde pas : on le relance sur une graine dérivée,
     // ce qui suffit à ne pas rejouer deux fois la même série de rencontres.
-    reprise.rng = makeRng((p.seed ^ (p.secteur * 977 + p.rencontre * 31)) >>> 0);
+    reprise.rng = makeRng((p.seed ^ (p.aile * 977 + p.rencontre * 31)) >>> 0);
     return reprise;
   } catch {
     return null;
@@ -117,14 +117,14 @@ function majReprise() {
 const FILTRES = [
   { id: 'tous', nom: 'Tous' },
   ...Object.entries(ROLES).map(([id, r]) => ({ id, nom: `${r.glyphe} ${r.nom}` })),
-  ...CYCLE.map((a) => ({ id: a, nom: `${AFFINITES[a].glyphe} ${AFFINITES[a].nom}` })),
+  ...CYCLE.map((a) => ({ id: a, nom: `${ECOLES[a].glyphe} ${ECOLES[a].nom}` })),
 ];
 
 function rendreEquipe() {
-  // Les deux rotations, montrées telles qu'elles joueront.
+  // Les deux lignes, montrées telles qu'elles monteront au front.
   const groupes = [
-    { titre: 'Rotation A · tours impairs', de: 0 },
-    { titre: 'Rotation B · tours pairs', de: 3 },
+    { titre: 'Groupe 1 · tours impairs', de: 0 },
+    { titre: 'Groupe 2 · tours pairs', de: 3 },
   ];
   $('squad').innerHTML = groupes.map((g) => `
     <div class="groupe">
@@ -140,14 +140,14 @@ function rendreEquipe() {
     };
   });
 
-  const meneur = PAR_ID[prefs.equipe[0]];
-  $('meneur-note').innerHTML = meneur
-    ? `<b>${txt(meneur.nom)}</b> mène : ${txt(meneur.meneur.texte)}`
-    : 'Le premier héros choisi devient le meneur — son bonus vaut pour toute l’équipe.';
+  const chef = PAR_ID[prefs.equipe[0]];
+  $('meneur-note').innerHTML = chef
+    ? `<b>${txt(chef.nom)}</b> mène le raid — <u>${txt(chef.meneur.nom)}</u> : ${txt(chef.meneur.texte)}`
+    : 'Le premier choisi devient chef de raid : son buff vaut pour tout le monde.';
 
   $('equipe-sub').textContent = prefs.equipe.length < 6
-    ? `Encore ${6 - prefs.equipe.length} héros. Touchez ★ pour changer de meneur.`
-    : 'Équipe complète. Touchez un héros pour le retirer, ★ pour le faire mener.';
+    ? `Encore ${6 - prefs.equipe.length} personnage${prefs.equipe.length < 5 ? 's' : ''}. Touchez ★ pour changer de chef de raid.`
+    : 'Raid complet. Touchez un personnage pour le sortir, ★ pour lui donner le raid.';
   $('b-partir').disabled = prefs.equipe.length !== 6;
 
   rendreRoster();
@@ -160,7 +160,7 @@ function slotHtml(n) {
       + `<span class="slot-vide">+</span></div>`;
   }
   return `<div class="slot is-plein${n === 0 ? ' is-meneur' : ''}" data-n="${n}"`
-    + ` style="--aff:${teinte(h.affinite)}" title="${txt(h.nom)}">`
+    + ` style="--aff:${teinte(h.ecole)}" title="${txt(h.nom)}">`
     + `<span class="slot-num">${n + 1}</span>`
     + spriteSvg(h, 'repos')
     + `<span class="slot-meneur">★</span></div>`;
@@ -168,7 +168,7 @@ function slotHtml(n) {
 
 function rendreRoster() {
   const liste = HEROS.filter((h) => prefs.filtre === 'tous'
-    || h.role === prefs.filtre || h.affinite === prefs.filtre);
+    || h.role === prefs.filtre || h.ecole === prefs.filtre);
   $('roster').innerHTML = liste.map((h) => carteHeros(h, prefs.equipe.includes(h.id))).join('');
   $('roster').querySelectorAll('.carte-heros').forEach((el) => {
     const h = PAR_ID[el.dataset.id];
@@ -181,8 +181,8 @@ function rendreRoster() {
 
 function carteHeros(h, pris = false) {
   return `<button class="carte-heros${pris ? ' est-pris' : ''}" data-id="${h.id}"`
-    + ` style="--aff:${teinte(h.affinite)}">`
-    + `<span class="coin" title="Fiche">${AFFINITES[h.affinite].glyphe}</span>`
+    + ` style="--aff:${teinte(h.ecole)}">`
+    + `<span class="coin" title="Fiche">${ECOLES[h.ecole].glyphe}</span>`
     + `<span class="role" title="${ROLES[h.role].nom}" style="--role:${ROLES[h.role].teinte}">`
     + `${ROLES[h.role].glyphe}</span>`
     + spriteSvg(h, 'repos')
@@ -220,8 +220,8 @@ function promouvoir(n) {
 /* ------------------------------------------------------------------ */
 
 function ouvrirFiche(h) {
-  const aff = AFFINITES[h.affinite];
-  const coup = (c, quoi) => `<div class="ligne"><u>${quoi} · ${txt(c.nom)}</u> — ×${c.mult}`
+  const aff = ECOLES[h.ecole];
+  const sort = (c, quoi) => `<div class="ligne"><u>${quoi} · ${txt(c.nom)}</u> — ${c.mana} mana, ×${c.mult}`
     + (c.effet ? ` · ${EFFETS[c.effet.type].nom.toLowerCase()} : ${EFFETS[c.effet.type].texte(c.effet.valeur)}` : '')
     + `</div>`;
 
@@ -231,20 +231,21 @@ function ouvrirFiche(h) {
     + `<div class="etiquettes">`
     + `<span class="trait" style="color:${aff.teinte}">${aff.glyphe} ${aff.nom}</span>`
     + `<span class="trait">${ROLES[h.role].glyphe} ${ROLES[h.role].nom}</span>`
+    + `<span class="trait">${txt(PEUPLES[h.peuple].nom)} · ${txt(h.classe)}</span>`
     + `</div></div></div>`
     + `<div class="stats">`
     + `<div class="stat"><b>${nb(h.pv)}</b><i>vie apportée</i></div>`
     + `<div class="stat"><b>${nb(h.atk)}</b><i>attaque</i></div>`
-    + `<div class="stat"><b>${nb(h.def)}</b><i>défense</i></div>`
+    + `<div class="stat"><b>${nb(h.def)}</b><i>armure</i></div>`
     + `</div>`
-    + coup(h.special, 'Spéciale')
-    + coup(h.ultime, 'Ultime')
-    + `<div class="ligne"><u>Passif · ${PASSIFS[h.passif.type].nom}</u> — ${PASSIFS[h.passif.type].texte(h.passif.valeur)}</div>`
-    + `<div class="ligne meneur"><u>Meneur</u> — ${txt(h.meneur.texte)}</div>`
+    + sort(h.special, 'Sort')
+    + sort(h.ultime, 'Sort ultime')
+    + `<div class="ligne"><u>Talent · ${TALENTS[h.talent.type].nom}</u> — ${TALENTS[h.talent.type].texte(h.talent.valeur)}</div>`
+    + `<div class="ligne meneur"><u>Chef de raid · ${txt(h.meneur.nom)}</u> — ${txt(h.meneur.texte)}</div>`
     + `<div class="etiquettes">${h.liens.map((l) => `<span class="trait">⛓ ${txt(l)}</span>`).join('')}</div>`
-    + roueSvg({ moi: h.affinite, cible: domine(h.affinite), taille: 160 })
+    + roueSvg({ moi: h.ecole, cible: domine(h.ecole), taille: 160 })
     + `<div class="ligne" style="text-align:center;color:var(--doux)">`
-    + `Domine ${AFFINITES[domine(h.affinite)].nom} · craint ${AFFINITES[craint(h.affinite)].nom}</div>`;
+    + `Perce ${ECOLES[domine(h.ecole)].nom} · craint ${ECOLES[craint(h.ecole)].nom}</div>`;
 
   const boite = $('fiche');
   boite.style.setProperty('--aff', aff.teinte);
@@ -252,13 +253,13 @@ function ouvrirFiche(h) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Expédition                                                          */
+/* Donjon                                                              */
 /* ------------------------------------------------------------------ */
 
 function partir() {
-  const equipe = prefs.equipe.map((id) => PAR_ID[id]);
-  if (equipe.length !== 6) return;
-  exp = creerExpedition({ equipe, difficulte: prefs.difficulte });
+  const groupe = prefs.equipe.map((id) => PAR_ID[id]);
+  if (groupe.length !== 6) return;
+  exp = creerDonjon({ groupe, difficulte: prefs.difficulte });
   sauverPartie();
   allerCarte();
 }
@@ -272,20 +273,20 @@ function reprendre() {
 
 function allerCarte() {
   rencontre = composerRencontre(exp);
-  const sect = secteurCourant(exp);
+  const sect = aileCourante(exp);
 
-  $('carte-secteur').textContent = etiquette(exp);
+  $('carte-aile').textContent = etiquette(exp);
   $('carte-titre').textContent = sect.nom;
   $('carte-texte').textContent = sect.texte;
 
   // La piste : un pas par rencontre, les boss en rond.
   let piste = '';
-  for (let s = 0; s < SECTEURS.length; s++) {
+  for (let s = 0; s < AILES.length; s++) {
     if (s) piste += '<i class="piste-sep"></i>';
-    for (let r = 0; r < RENCONTRES_PAR_SECTEUR; r++) {
-      const fait = s < exp.secteur || (s === exp.secteur && r < exp.rencontre);
-      const ici = s === exp.secteur && r === exp.rencontre;
-      const boss = r === RENCONTRES_PAR_SECTEUR - 1;
+    for (let r = 0; r < RENCONTRES_PAR_AILE; r++) {
+      const fait = s < exp.aile || (s === exp.aile && r < exp.rencontre);
+      const ici = s === exp.aile && r === exp.rencontre;
+      const boss = r === RENCONTRES_PAR_AILE - 1;
       piste += `<i class="piste-pas${fait ? ' est-fait' : ''}${ici ? ' est-ici' : ''}${boss ? ' est-boss' : ''}"></i>`;
     }
   }
@@ -300,18 +301,18 @@ function allerCarte() {
 
   $('carte-ennemis').innerHTML = rencontre.ennemis.map((e) => {
     const rang = e.rang === 'boss' ? '<span class="rang boss">boss</span>'
-      : e.rang === 'elite' ? '<span class="rang elite">élite</span>' : '<span class="rang">commun</span>';
-    return `<div class="fiche-ennemi" style="--aff:${teinte(e.affinite)}">`
+      : e.rang === 'elite' ? '<span class="rang elite">élite</span>' : '<span class="rang">trash</span>';
+    return `<div class="fiche-ennemi" style="--aff:${teinte(e.ecole)}">`
       + spriteSvg(e, 'repos')
       + `<div><div class="nom">${txt(e.nom)} ${rang}</div>`
-      + `<div class="detail">${AFFINITES[e.affinite].glyphe} ${AFFINITES[e.affinite].nom}`
-      + ` · ${nb(e.pvMax)} vie · ${txt(e.charge.nom)} tous les ${e.charge.tours} tours</div>`
+      + `<div class="detail">${ECOLES[e.ecole].glyphe} ${ECOLES[e.ecole].nom}`
+      + ` · ${nb(e.pvMax)} vie · incante ${txt(e.charge.nom)} tous les ${e.charge.tours} tours</div>`
       + `<div class="detail">${e.traits.map((t) => `· ${t}`).join(' ')}</div>`
       + `</div></div>`;
   }).join('');
 
-  $('b-engager').textContent = rencontre.finale ? 'Affronter Le Prisme Noir'
-    : rencontre.boss ? 'Affronter le gardien' : 'Engager';
+  $('b-engager').textContent = rencontre.finale ? 'Affronter le Dragon Cendré'
+    : rencontre.boss ? 'Pull du boss' : 'Pull';
   sauverPartie();
   montrer('carte');
 }
@@ -320,18 +321,18 @@ async function engager() {
   const combat = creerCombat({
     equipe: exp.equipe,
     ennemis: rencontre.ennemis,
-    eveils: exp.eveils,
+    butin: exp.butin,
     objets: exp.objets,
   });
-  // La barre de vie suit l'expédition, pas le combat : on la recale.
+  // La barre de vie suit le donjon, pas le combat : on la recale.
   combat.vie.max = exp.vieMax;
   combat.vie.actuel = Math.min(exp.vie, exp.vieMax);
 
   montrer('combat');
   debloquer();
   await scene.lancer(combat, {
-    lieu: `${secteurCourant(exp).nom} · ${exp.rencontre + 1}/${RENCONTRES_PAR_SECTEUR}`,
-    onQuitter: () => { if (confirm('Quitter ? L’expédition est sauvegardée à la rencontre en cours.')) allerMenu(); },
+    lieu: `${aileCourante(exp).nom} · ${exp.rencontre + 1}/${RENCONTRES_PAR_AILE}`,
+    onQuitter: () => { if (confirm('Quitter ? Le donjon est sauvegardé à la rencontre en cours.')) allerMenu(); },
     onFini: (victoire) => terminerCombat(combat, victoire),
   });
 }
@@ -345,54 +346,57 @@ function terminerCombat(combat, victoire) {
   sauverPartie();
 
   if (suite.suite === 'combat') { setTimeout(allerCarte, 500); return; }
-  if (suite.suite === 'eveil') { setTimeout(() => allerEveil(suite.choix), 500); return; }
+  if (suite.suite === 'butin') { setTimeout(() => allerButin(suite.choix), 500); return; }
   setTimeout(() => allerFin(suite.suite === 'victoire'), 600);
 }
 
-function allerEveil(choix) {
-  sfx.eveil();
-  $('eveil-cartes').innerHTML = choix.map((e) =>
-    `<button class="eveil-carte" data-id="${e.id}">`
-    + `<span class="glyphe">${e.glyphe}</span>`
-    + `<span><b>${txt(e.nom)}</b><i>${txt(e.texte)}</i></span></button>`).join('');
-  $('eveil-cartes').querySelectorAll('.eveil-carte').forEach((el) => {
+function allerButin(choix) {
+  sfx.butin();
+  $('butin-cartes').innerHTML = choix.map((piece) => {
+    const r = RARETES[piece.rarete] || RARETES.commun;
+    return `<button class="eveil-carte" data-id="${piece.id}" style="--aff:${r.teinte}">`
+      + `<span class="glyphe">${piece.glyphe}</span>`
+      + `<span><b>${txt(piece.nom)}</b>`
+      + `<u class="rarete">${txt(r.nom)}</u>`
+      + `<i>${txt(piece.texte)}</i></span></button>`;
+  }).join('');
+  $('butin-cartes').querySelectorAll('.eveil-carte').forEach((el) => {
     el.onclick = () => {
-      if (!choisirEveil(exp, el.dataset.id).ok) return;
+      if (!choisirButin(exp, el.dataset.id).ok) return;
       sfx.clic();
       sauverPartie();
       allerCarte();
     };
   });
-  montrer('eveil');
+  montrer('butin');
 }
 
 function allerFin(victoire) {
-  const sect = Math.min(exp.secteur + 1, SECTEURS.length);
-  $('fin-sceau').textContent = victoire ? '✦' : '☠';
-  $('fin-titre').textContent = victoire ? 'Le prisme est traversé' : 'L’expédition s’arrête';
+  $('fin-sceau').textContent = victoire ? '🐉' : '💀';
+  $('fin-titre').textContent = victoire ? 'Donjon bouclé' : 'Wipe.';
   $('fin-texte').textContent = victoire
-    ? 'Six héros, quinze rencontres, une seule barre de vie. Bien joué.'
-    : `Vous êtes tombés dans ${secteurCourant(exp).nom}. Une autre équipe ferait peut-être mieux.`;
+    ? 'Le Dragon Cendré est tombé. Six héros, quinze pulls, une seule barre de vie.'
+    : `Le raid est tombé dans ${aileCourante(exp).nom}. Une autre composition ferait peut-être mieux.`;
   $('fin-stats').innerHTML = [
     ['Difficulté', DIFFICULTES[exp.difficulte].nom],
-    ['Secteurs franchis', `${victoire ? SECTEURS.length : exp.secteur} / ${SECTEURS.length}`],
-    ['Éveils obtenus', exp.acquis.length],
+    ['Ailes nettoyées', `${victoire ? AILES.length : exp.aile} / ${AILES.length}`],
+    ['Butin ramassé', exp.acquis.length],
     ['Potions restantes', exp.objets],
-    ['Meneur', exp.equipe[0].nom],
+    ['Chef de raid', exp.equipe[0].nom],
   ].map(([k, v]) => `<li><span>${txt(k)}</span><b>${txt(v)}</b></li>`).join('');
 
-  try { localStorage.removeItem('prisme.partie'); } catch { /* ignore */ }
+  try { localStorage.removeItem('raid.partie'); } catch { /* ignore */ }
   exp.termine = true;
   montrer('fin');
 }
 
 /* ------------------------------------------------------------------ */
-/* Garnison et règles                                                  */
+/* Guilde et règles                                                    */
 /* ------------------------------------------------------------------ */
 
-function rendreGarnison() {
-  $('garnison').innerHTML = HEROS.map((h) => carteHeros(h)).join('');
-  $('garnison').querySelectorAll('.carte-heros').forEach((el) => {
+function rendreGuilde() {
+  $('guilde').innerHTML = HEROS.map((h) => carteHeros(h)).join('');
+  $('guilde').querySelectorAll('.carte-heros').forEach((el) => {
     el.onclick = () => ouvrirFiche(PAR_ID[el.dataset.id]);
   });
 }
@@ -418,7 +422,7 @@ function brancher() {
       debloquer();
       if (cible === 'menu') return allerMenu();
       if (cible === 'nouvelle') { rendreEquipe(); return montrer('equipe'); }
-      if (cible === 'garnison') { rendreGarnison(); return montrer('garnison'); }
+      if (cible === 'guilde') { rendreGuilde(); return montrer('guilde'); }
       if (cible === 'regles') { rendreRegles(); return montrer('regles'); }
       return montrer(cible);
     };
@@ -428,11 +432,11 @@ function brancher() {
   $('b-partir').onclick = partir;
   $('b-engager').onclick = engager;
   $('b-abandonner').onclick = () => {
-    if (confirm('Abandonner l’expédition en cours ?')) { exp.termine = true; sauverPartie(); allerMenu(); }
+    if (confirm('Quitter le donjon en cours ?')) { exp.termine = true; sauverPartie(); allerMenu(); }
   };
   $('b-rejouer').onclick = () => { rendreEquipe(); montrer('equipe'); };
   $('b-hasard').onclick = () => {
-    prefs.equipe = equipeAuHasard(Math.random).map((h) => h.id);
+    prefs.equipe = groupeAuHasard(Math.random).map((h) => h.id);
     sfx.clic();
     sauverPrefs();
     rendreEquipe();
@@ -486,7 +490,7 @@ function brancher() {
 /* ------------------------------------------------------------------ */
 
 chargerPrefs();
-if (!prefs.equipe.length) prefs.equipe = equipeParDefaut().map((h) => h.id);
+if (!prefs.equipe.length) prefs.equipe = groupeParDefaut().map((h) => h.id);
 brancher();
 majReprise();
 

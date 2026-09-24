@@ -1,9 +1,9 @@
 /**
- * PRISME — feuille de style unique.
+ * RAID — feuille de style unique.
  *
  * Trois principes tiennent tout le fichier :
- *   • une seule couleur d'accent par affinité, posée en variable `--aff` sur
- *     l'élément concerné : cartes, orbes, jauges et auras s'y accordent ;
+ *   • une seule couleur d'accent par école, posée en variable `--aff` sur
+ *     l'élément concerné : cartes, globes, jauges et auras s'y accordent ;
  *   • les animations sont déclarées ici et déclenchées par une classe depuis
  *     le script — aucun style calculé à la main en JavaScript ;
  *   • tout est pensé pour un pouce sur un téléphone d'abord.
@@ -12,24 +12,25 @@
 :root {
   color-scheme: dark;
 
-  --fond: #0a0713;
-  --fond-2: #120d23;
-  --carte: rgba(28, 20, 48, .72);
-  --bord: rgba(255, 255, 255, .1);
-  --texte: #efe9ff;
-  --doux: #a79dc4;
-  --or: #ffd66b;
-  --vif: #ff4d8d;
-  --vert: #3ddc84;
-  --rouge: #ff5468;
+  /* Pierre, fer et or : la salle d'un donjon éclairée à la torche. */
+  --fond: #0c0a07;
+  --fond-2: #171208;
+  --carte: rgba(44, 34, 22, .74);
+  --bord: rgba(232, 192, 96, .17);
+  --texte: #f3e7d1;
+  --doux: #b5a382;
+  --or: #e8c060;
+  --vif: #d4762a;
+  --vert: #7fc95c;
+  --rouge: #e04b48;
 
-  --vermeil: #ff4d5e;
-  --jade: #3ddc84;
-  --pourpre: #a855f7;
-  --ambre: #ffb020;
-  --azur: #38bdf8;
+  --sacre: #ffd45e;
+  --ombre: #a855f7;
+  --nature: #3ddc84;
+  --givre: #5ed0ff;
+  --feu: #ff6a3d;
 
-  --aff: var(--vif);
+  --aff: var(--or);
   --rayon: 16px;
   --sr: env(safe-area-inset-right, 0px);
   --sl: env(safe-area-inset-left, 0px);
@@ -71,9 +72,9 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   opacity: .3;
   animation: derive 26s ease-in-out infinite alternate;
 }
-.bg-ray.r1 { background: linear-gradient(180deg, rgba(255,77,141,.55), transparent 70%); transform: translateX(-60%) rotate(-16deg); }
-.bg-ray.r2 { background: linear-gradient(180deg, rgba(56,189,248,.45), transparent 70%); transform: translateX(-10%) rotate(9deg); animation-delay: -8s; }
-.bg-ray.r3 { background: linear-gradient(180deg, rgba(255,176,32,.35), transparent 70%); transform: translateX(-110%) rotate(24deg); animation-delay: -15s; }
+.bg-ray.r1 { background: linear-gradient(180deg, rgba(232,160,48,.5), transparent 70%); transform: translateX(-60%) rotate(-16deg); }
+.bg-ray.r2 { background: linear-gradient(180deg, rgba(224,75,72,.34), transparent 70%); transform: translateX(-10%) rotate(9deg); animation-delay: -8s; }
+.bg-ray.r3 { background: linear-gradient(180deg, rgba(94,208,255,.22), transparent 70%); transform: translateX(-110%) rotate(24deg); animation-delay: -15s; }
 
 @keyframes derive {
   from { opacity: .18; }
@@ -122,15 +123,15 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   font-size: clamp(50px, 17vw, 84px);
   letter-spacing: .1em;
   font-weight: 900;
-  background: linear-gradient(100deg, #ff4d5e, #ffb020 28%, #3ddc84 52%, #38bdf8 74%, #a855f7);
+  background: linear-gradient(100deg, #8a6a2c, #ffe9a8 22%, #e8c060 42%, #fff3cc 58%, #a87a30 82%, #ffe9a8);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  filter: drop-shadow(0 6px 26px rgba(168, 85, 247, .45));
-  animation: prisme 9s linear infinite;
+  filter: drop-shadow(0 6px 24px rgba(232, 192, 96, .38));
+  animation: raid 11s linear infinite;
   background-size: 260% 100%;
 }
-@keyframes prisme {
+@keyframes raid {
   from { background-position: 0% 50%; }
   to   { background-position: 260% 50%; }
 }
@@ -163,10 +164,10 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 
 .btn-go {
   justify-content: center;
-  background: linear-gradient(120deg, #ff4d8d, #a855f7);
-  border-color: transparent;
+  background: linear-gradient(120deg, #c8922f, #8a5a1c);
+  border-color: rgba(255, 233, 168, .35);
   font-weight: 800;
-  box-shadow: 0 10px 28px rgba(168, 85, 247, .35);
+  box-shadow: 0 10px 26px rgba(140, 90, 28, .45);
 }
 .btn-go[disabled] { opacity: .4; box-shadow: none; pointer-events: none; }
 .btn-ghost { justify-content: center; background: rgba(255,255,255,.05); }
@@ -220,12 +221,12 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   background: rgba(10,7,19,.7); border: 1px solid var(--bord);
   color: var(--doux);
 }
-.slot.is-meneur .slot-meneur { color: var(--or); border-color: rgba(255,214,107,.5); }
+.slot.is-meneur .slot-meneur { color: var(--or); border-color: rgba(232,192,96,.5); }
 .slot-vide { font-size: 18px; color: rgba(255,255,255,.2); }
 
 .meneur-note {
   text-align: center; font-size: 12px; color: var(--or);
-  background: rgba(255,214,107,.08); border: 1px solid rgba(255,214,107,.22);
+  background: rgba(232,192,96,.08); border: 1px solid rgba(232,192,96,.22);
   border-radius: 10px; padding: 7px 10px; margin-bottom: 12px;
   min-height: 32px;
 }
@@ -278,7 +279,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .pick-actions.two { grid-template-columns: 1fr 1fr; }
 
 /* ------------------------------------------------------------------ */
-/* Carte d'expédition                                                  */
+/* Carte d'donjon                                                  */
 /* ------------------------------------------------------------------ */
 
 .carte { max-width: 560px; margin: 0 auto; padding-top: 4vh; }
@@ -310,7 +311,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .fiche-ennemi .nom { font-weight: 700; font-size: 15px; }
 .fiche-ennemi .detail { font-size: 11.5px; color: var(--doux); }
 .rang { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; padding: 2px 7px; border-radius: 999px; border: 1px solid var(--bord); }
-.rang.boss { color: var(--or); border-color: rgba(255,214,107,.4); background: rgba(255,214,107,.1); }
+.rang.boss { color: var(--or); border-color: rgba(232,192,96,.4); background: rgba(232,192,96,.1); }
 .rang.elite { color: var(--vif); border-color: rgba(255,77,141,.35); }
 
 /* ------------------------------------------------------------------ */
@@ -374,8 +375,8 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   border-radius: 18px;
   border: 1px solid var(--bord);
   background:
-    radial-gradient(90% 70% at 50% 0%, rgba(168,85,247,.18), transparent 70%),
-    linear-gradient(180deg, rgba(18,13,35,.9), rgba(10,7,19,.75));
+    radial-gradient(90% 70% at 50% 0%, rgba(232,160,48,.16), transparent 70%),
+    linear-gradient(180deg, rgba(26,19,10,.92), rgba(12,10,7,.8));
   padding: 10px;
   min-height: 178px;
   flex: 1 1 auto;
@@ -403,9 +404,9 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   font-size: 9px; padding: 1px 6px; border-radius: 999px;
   background: rgba(255,255,255,.08); border: 1px solid var(--bord); color: var(--doux);
 }
-.trait.est-charge { color: var(--or); border-color: rgba(255,214,107,.45); background: rgba(255,214,107,.12); }
+.trait.est-charge { color: var(--or); border-color: rgba(232,192,96,.45); background: rgba(232,192,96,.12); }
 .trait.est-charge.imminent { animation: clignote .7s steps(2) infinite; }
-.trait.est-entrave { color: var(--azur); }
+.trait.est-entrave { color: var(--givre); }
 .trait.est-brasier { color: #ff8f5a; }
 @keyframes clignote { 50% { opacity: .25; } }
 
@@ -440,10 +441,10 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 /* --------------------------- héros en scène ------------------------ */
 
 .heros-scene { display: flex; justify-content: center; gap: 6px; align-items: flex-end; margin-top: 6px; }
-.combattant { position: relative; width: min(88px, 20vw); transition: filter .25s, opacity .25s; }
-.combattant .sprite { width: 100%; aspect-ratio: 1; image-rendering: pixelated; filter: drop-shadow(0 6px 10px rgba(0,0,0,.55)); }
-.combattant.est-pale { opacity: .5; filter: saturate(.55); }
-.combattant.est-actif::before {
+.personnage { position: relative; width: min(88px, 20vw); transition: filter .25s, opacity .25s; }
+.personnage .sprite { width: 100%; aspect-ratio: 1; image-rendering: pixelated; filter: drop-shadow(0 6px 10px rgba(0,0,0,.55)); }
+.personnage.est-pale { opacity: .5; filter: saturate(.55); }
+.personnage.est-actif::before {
   content: ''; position: absolute; inset: -6px -2px 2px;
   border-radius: 50%;
   background: radial-gradient(60% 50% at 50% 70%, color-mix(in srgb, var(--aff) 55%, transparent), transparent 70%);
@@ -451,17 +452,17 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 }
 @keyframes aura { 50% { transform: scale(1.12); opacity: .7; } }
 
-.combattant.charge .sprite { animation: charge-heros .6s ease; }
+.personnage.charge .sprite { animation: charge-heros .6s ease; }
 @keyframes charge-heros {
   50% { transform: translateY(-8px) scale(1.14); filter: brightness(1.6) drop-shadow(0 0 14px var(--aff)); }
 }
-.combattant.frappe .sprite { animation: bond .52s cubic-bezier(.2,.9,.3,1); }
+.personnage.frappe .sprite { animation: bond .52s cubic-bezier(.2,.9,.3,1); }
 @keyframes bond {
   25% { transform: translate(-14px, 4px) scale(.94); }
   55% { transform: translate(38px, -18px) scale(1.16); filter: brightness(1.4); }
   100% { transform: none; }
 }
-.combattant.encaisse .sprite { animation: encaisse .3s ease; }
+.personnage.encaisse .sprite { animation: encaisse .3s ease; }
 @keyframes encaisse {
   0%, 100% { transform: none; }
   30% { transform: translateX(-8px) rotate(-6deg); filter: brightness(2.4) saturate(.2); }
@@ -607,8 +608,8 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   border: 1px solid var(--bord); background: rgba(255,255,255,.06);
   white-space: nowrap;
 }
-.etat.est-elan { color: var(--or); border-color: rgba(255,214,107,.4); }
-.etat.est-garde { color: var(--azur); border-color: rgba(56,189,248,.4); }
+.etat.est-elan { color: var(--or); border-color: rgba(232,192,96,.4); }
+.etat.est-garde { color: var(--givre); border-color: rgba(56,189,248,.4); }
 
 /* ----------------------------- rotation ---------------------------- */
 
@@ -628,13 +629,13 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .jeton .sprite { width: 34px; height: 34px; image-rendering: pixelated; flex: none; }
 .jeton .corps { flex: 1; min-width: 0; display: block; }
 .jeton .nom { display: block; font-size: 11.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.jeton .ki-barre { display: block; position: relative; height: 7px; border-radius: 999px; background: rgba(0,0,0,.45); overflow: hidden; margin-top: 3px; }
-.jeton .ki-plein { position: absolute; inset: 0; width: 0; background: linear-gradient(90deg, var(--azur), var(--or)); transition: width .45s cubic-bezier(.2,.9,.3,1); }
-.jeton .ki-seuils { display: block; position: absolute; inset: 0; }
-.jeton .ki-seuils i { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,.45); }
-.jeton .ki-texte { display: block; font-size: 10px; color: var(--doux); margin-top: 2px; white-space: nowrap; }
-.jeton .ki-texte.est-super { color: var(--or); font-weight: 800; }
-.jeton .ki-texte.est-ultime { color: var(--vif); font-weight: 800; animation: clignote 1s steps(2) infinite; }
+.jeton .mana-barre { display: block; position: relative; height: 7px; border-radius: 999px; background: rgba(0,0,0,.45); overflow: hidden; margin-top: 3px; }
+.jeton .mana-plein { position: absolute; inset: 0; width: 0; background: linear-gradient(90deg, #4f8ef7, #7ec8ff 60%, var(--or)); transition: width .45s cubic-bezier(.2,.9,.3,1); }
+.jeton .mana-seuils { display: block; position: absolute; inset: 0; }
+.jeton .mana-seuils i { position: absolute; top: 0; bottom: 0; width: 1px; background: rgba(255,255,255,.45); }
+.jeton .mana-texte { display: block; font-size: 10px; color: var(--doux); margin-top: 2px; white-space: nowrap; }
+.jeton .mana-texte.est-super { color: var(--or); font-weight: 800; }
+.jeton .mana-texte.est-ultime { color: var(--vif); font-weight: 800; animation: clignote 1s steps(2) infinite; }
 .jeton.est-jouable:active { transform: scale(.97); }
 .jeton.est-actif { box-shadow: 0 0 0 2px var(--aff), 0 8px 20px rgba(0,0,0,.45); }
 .jeton.est-fait { opacity: .38; }
@@ -643,8 +644,8 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   box-shadow: inset 0 0 0 1px rgba(255,84,104,.5);
 }
 .jeton .vise {
-  font-style: normal; font-size: 8.5px; letter-spacing: .08em;
-  text-transform: uppercase; color: var(--rouge);
+  font-style: normal; font-size: 11px; color: var(--rouge);
+  margin-right: 3px;
   animation: clignote 1.4s steps(2) infinite;
 }
 .jeton .role-pastille {
@@ -676,7 +677,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   user-select: none;
 }
 
-.orbe {
+.globe {
   position: relative;
   aspect-ratio: 1;
   border-radius: 50%;
@@ -688,27 +689,31 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   font-size: 13px; color: rgba(10,7,19,.55);
   transition: transform .14s ease, box-shadow .2s;
 }
-.orbe.est-prisme {
+.globe.est-essence {
   background:
-    radial-gradient(60% 55% at 35% 30%, #fff, transparent 60%),
-    conic-gradient(from 0deg, #ff4d5e, #ffb020, #3ddc84, #38bdf8, #a855f7, #ff4d5e);
-  animation: tourne 4.5s linear infinite;
+    radial-gradient(60% 55% at 35% 30%, #fff, transparent 55%),
+    radial-gradient(circle at 50% 55%, #fffdf4 0%, #ffe9a8 45%, #c9a04a 100%);
+  box-shadow: inset 0 -3px 8px rgba(120,80,20,.4), 0 0 14px rgba(255,233,168,.55);
+  animation: essence 2.4s ease-in-out infinite;
 }
-.orbe.est-mienne::after {
+@keyframes essence {
+  50% { box-shadow: inset 0 -3px 8px rgba(120,80,20,.4), 0 0 24px rgba(255,233,168,.9); }
+}
+.globe.est-mienne::after {
   content: ''; position: absolute; inset: 14%;
   border: 2px solid rgba(255,255,255,.75); border-radius: 50%;
 }
-.orbe.est-prise {
+.globe.est-prise {
   transform: scale(1.16);
   box-shadow: 0 0 0 3px #fff, 0 0 20px var(--aff);
   z-index: 2;
 }
-.orbe.arrive { animation: orbe-arrive .3s cubic-bezier(.2,1.3,.4,1) backwards; }
-@keyframes orbe-arrive {
+.globe.arrive { animation: globe-arrive .3s cubic-bezier(.2,1.3,.4,1) backwards; }
+@keyframes globe-arrive {
   from { transform: translateY(-38px) scale(.4); opacity: 0; }
 }
-.orbe.part { animation: orbe-part .28s ease-in forwards; }
-@keyframes orbe-part {
+.globe.part { animation: globe-part .28s ease-in forwards; }
+@keyframes globe-part {
   to { transform: scale(0) rotate(90deg); opacity: 0; }
 }
 
@@ -717,20 +722,20 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   left: 50%; transform: translateX(-50%);
   width: min(100%, 340px);
   pointer-events: none;
-  /* Au-dessus des orbes : entre deux voisines, la ligne passerait sinon
+  /* Au-dessus des globes : entre deux voisines, la ligne passerait sinon
      entièrement sous les deux billes et on ne verrait plus son chemin. */
   z-index: 4;
 }
 .trace polyline { fill: none; stroke: #fff; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; opacity: .85; filter: drop-shadow(0 0 8px var(--aff)); }
 
-.ki-flottant {
+.mana-flottant {
   position: absolute; top: -4px; right: max(4px, calc(50% - 176px));
   background: rgba(10,7,19,.9); border: 1px solid var(--aff);
   border-radius: 999px; padding: 3px 11px; font-size: 12px;
   box-shadow: 0 0 18px color-mix(in srgb, var(--aff) 55%, transparent);
   z-index: 3;
 }
-.ki-flottant b { font-size: 15px; color: var(--or); }
+.mana-flottant b { font-size: 15px; color: var(--or); }
 
 .grain {
   position: fixed; z-index: 28; width: 12px; height: 12px; border-radius: 50%;
@@ -747,9 +752,9 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 }
 .btn-plat:active { transform: scale(.97); }
 .btn-plat.est-vif {
-  background: linear-gradient(120deg, #ff4d8d, #a855f7);
-  border-color: transparent;
-  box-shadow: 0 8px 22px rgba(168,85,247,.3);
+  background: linear-gradient(120deg, #c8922f, #8a5a1c);
+  border-color: rgba(255, 233, 168, .3);
+  box-shadow: 0 8px 20px rgba(140, 90, 28, .4);
 }
 
 .actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
@@ -768,7 +773,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .coup i { display: block; font-style: normal; font-size: 10px; color: var(--doux); margin-top: 2px; }
 .coup .degat { display: block; font-size: 15px; font-weight: 900; color: var(--or); }
 .coup:active { transform: scale(.96); }
-.coup.est-special { border-color: color-mix(in srgb, var(--or) 55%, transparent); background: linear-gradient(180deg, rgba(255,214,107,.16), var(--carte)); }
+.coup.est-special { border-color: color-mix(in srgb, var(--or) 55%, transparent); background: linear-gradient(180deg, rgba(232,192,96,.16), var(--carte)); }
 .coup.est-ultime { border-color: var(--vif); background: linear-gradient(180deg, rgba(255,77,141,.22), var(--carte)); box-shadow: 0 0 22px rgba(255,77,141,.28); }
 .coup.est-ultime b { color: #fff; text-shadow: 0 0 12px var(--vif); }
 .coup[disabled] { opacity: .35; pointer-events: none; }
@@ -789,7 +794,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   padding: 15px;
   border-radius: var(--rayon);
   border: 1px solid var(--bord);
-  background: linear-gradient(110deg, rgba(168,85,247,.16), var(--carte));
+  background: linear-gradient(110deg, color-mix(in srgb, var(--aff) 20%, transparent), var(--carte));
   text-align: left;
   transition: transform .15s, box-shadow .2s, border-color .2s;
   animation: entree .4s ease both;
@@ -797,8 +802,14 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .eveil-carte:nth-child(2) { animation-delay: .08s; }
 .eveil-carte:nth-child(3) { animation-delay: .16s; }
 .eveil-carte:active { transform: scale(.98); }
-.eveil-carte:hover { border-color: var(--or); box-shadow: 0 0 24px rgba(255,214,107,.2); }
+.eveil-carte:hover { border-color: var(--aff); box-shadow: 0 0 24px color-mix(in srgb, var(--aff) 30%, transparent); }
+.eveil-carte { border-left: 3px solid var(--aff); }
 .eveil-carte .glyphe { font-size: 28px; width: 40px; text-align: center; }
+.eveil-carte .rarete {
+  display: block; text-decoration: none;
+  font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--aff); margin-top: 1px;
+}
 .eveil-carte b { display: block; font-size: 16px; }
 .eveil-carte i { display: block; font-style: normal; font-size: 12.5px; color: var(--doux); margin-top: 2px; }
 
@@ -842,7 +853,7 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 
 .fiche {
   position: fixed; inset: 0; z-index: 40;
-  background: rgba(5,3,10,.78);
+  background: rgba(8,6,3,.8);
   backdrop-filter: blur(6px);
   display: grid; place-items: center;
   padding: 16px;
@@ -884,8 +895,8 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 @media (min-width: 720px) {
   .scene { min-height: 250px; }
   .bete { width: 180px; }
-  .combattant { width: 104px; }
-  .orbe { font-size: 16px; }
+  .personnage { width: 104px; }
+  .globe { font-size: 16px; }
   .plateau, .trace { width: min(100%, 400px); }
 }
 

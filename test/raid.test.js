@@ -1,7 +1,7 @@
 /**
- * PRISME — le moteur, sous contrat.
+ * RAID — le moteur, sous contrat.
  *
- * Tout ce qui décide d'une partie vit dans `public/shared/prisme/` et ne
+ * Tout ce qui décide d'une partie vit dans `public/shared/raid/` et ne
  * touche ni au DOM ni à Node : ces tests peuvent donc l'exercer directement,
  * et l'écran ne sait rien que le moteur n'ait dit.
  */
@@ -10,29 +10,29 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  CYCLE, AFFINITES, domine, craint, multiplicateur, roueSvg, AVANTAGE, DESAVANTAGE, PRISMATIQUE,
-} from '../public/shared/prisme/affinites.js';
+  CYCLE, ECOLES, domine, craint, multiplicateur, roueSvg, AVANTAGE, DESAVANTAGE, ESSENCE,
+} from '../public/shared/raid/ecoles.js';
 import {
   COLONNES, LIGNES, CASES, LONGUEUR_MAX, creerPlateau, voisines, voisinage, cheminValide,
-  valeurOrbe, kiDuChemin, recolter, meilleurChemin, KI_DOUBLE, KI_SIMPLE,
-} from '../public/shared/prisme/orbes.js';
+  valeurGlobe, manaDuChemin, recolter, meilleurChemin, MANA_DOUBLE, MANA_SIMPLE,
+} from '../public/shared/raid/globes.js';
 import {
-  HEROS, PAR_ID, ROLES, EFFETS, PASSIFS, budgetOf, equipeParDefaut, equipeAuHasard, parAffinite,
-} from '../public/shared/prisme/heros.js';
+  HEROS, PAR_ID, ROLES, EFFETS, TALENTS, budgetOf, groupeParDefaut, groupeAuHasard, parEcole,
+} from '../public/shared/raid/heros.js';
 import {
-  MODELES, MODELES_PAR_ID, TRAITS, SILHOUETTES, instancier, attaqueDe, tirerModele, parRang,
-} from '../public/shared/prisme/ennemis.js';
+  MODELES, MODELES_PAR_ID, BOSS_FINAL, TRAITS, SILHOUETTES, instancier, attaqueDe, tirerModele, parRang,
+} from '../public/shared/raid/ennemis.js';
 import {
   creerCombat, choisir, tracer, attaquer, modesDisponibles, estimerDegats, utiliserObjet,
-  vue, estFini, statsDe, resonances, vieMaximale, PHASE, SEUIL_SPECIAL, SEUIL_ULTIME, KI_MAX,
+  vue, estFini, statsDe, synergies, vieMaximale, PHASE, SEUIL_SPECIAL, SEUIL_ULTIME, MANA_MAX,
   rotationDe, multDe,
-} from '../public/shared/prisme/combat.js';
+} from '../public/shared/raid/combat.js';
 import {
-  creerExpedition, composerRencontre, resoudre, choisirEveil, EVEILS, SECTEURS,
-  RENCONTRES_PAR_SECTEUR, DIFFICULTES, avancement,
-} from '../public/shared/prisme/expedition.js';
-import { spriteSvg, poses, palettePour, GRID } from '../public/shared/prisme/sprites.js';
-import { jouerCombatAuto, conseilChemin, conseilCoup, conseilOrdre, pasAuto } from '../public/shared/prisme/auto.js';
+  creerDonjon, composerRencontre, resoudre, choisirButin, BUTIN, AILES,
+  RENCONTRES_PAR_AILE, DIFFICULTES, avancement,
+} from '../public/shared/raid/donjon.js';
+import { spriteSvg, poses, palettePour, GRID } from '../public/shared/raid/sprites.js';
+import { jouerCombatAuto, conseilChemin, conseilCoup, conseilOrdre, pasAuto } from '../public/shared/raid/auto.js';
 import { makeRng } from '../public/shared/hasard.js';
 
 /* ------------------------------------------------------------------ */
@@ -43,10 +43,10 @@ const rngT = (seed = 42) => makeRng(seed);
 
 /** Un combat contre un unique ennemi taillé sur mesure. */
 function combatTest(opts = {}) {
-  const ennemi = instancier(MODELES_PAR_ID.glapissant, 1, opts.affinite || 'jade', rngT(3));
+  const ennemi = instancier(MODELES_PAR_ID.gnoll, 1, opts.ecole || 'jade', rngT(3));
   Object.assign(ennemi, opts.ennemi || {});
   return creerCombat({
-    equipe: opts.equipe || equipeParDefaut(),
+    equipe: opts.equipe || groupeParDefaut(),
     ennemis: [ennemi],
     seed: opts.seed ?? 77,
     ...opts.combat,
@@ -60,7 +60,7 @@ function jouerUnTour(etat, { mode = 'normale' } = {}) {
   while (etat.tour === depart && etat.phase === PHASE.CHOIX && etat.ordreRestant.length) {
     const idx = etat.ordreRestant[0];
     choisir(etat, idx);
-    const chemin = meilleurChemin(etat.plateau, etat.equipe[idx].affinite).chemin;
+    const chemin = meilleurChemin(etat.plateau, etat.equipe[idx].ecole).chemin;
     ev.push(...tracer(etat, chemin).evenements);
     const dispo = modesDisponibles(etat).filter((m) => m.ouvert).map((m) => m.mode);
     const choisi = dispo.includes(mode) ? mode : 'normale';
@@ -71,17 +71,17 @@ function jouerUnTour(etat, { mode = 'normale' } = {}) {
 }
 
 /* ================================================================== */
-/* Affinités                                                          */
+/* Écoles                                                          */
 /* ================================================================== */
 
-test('le cycle des affinités est fermé et sans point faible', () => {
+test('le cycle des écoles est fermé et sans point faible', () => {
   assert.equal(CYCLE.length, 5);
   for (const a of CYCLE) {
-    assert.ok(AFFINITES[a], `${a} doit avoir une fiche`);
+    assert.ok(ECOLES[a], `${a} doit avoir une fiche`);
     assert.notEqual(domine(a), a);
     assert.equal(craint(domine(a)), a, 'dominer, c\'est être craint');
   }
-  // Chaque affinité domine et est dominée exactement une fois.
+  // Chaque école domine et est dominée exactement une fois.
   const dominees = CYCLE.map(domine);
   assert.equal(new Set(dominees).size, CYCLE.length);
 });
@@ -91,25 +91,25 @@ test('les multiplicateurs suivent le cycle', () => {
   assert.equal(multiplicateur(a, domine(a)), AVANTAGE);
   assert.equal(multiplicateur(a, craint(a)), DESAVANTAGE);
   assert.equal(multiplicateur(a, a), 1);
-  assert.equal(multiplicateur(a, 'inconnu'), 1, 'un ennemi sans affinité ne casse rien');
+  assert.equal(multiplicateur(a, 'inconnu'), 1, 'un ennemi sans école ne casse rien');
 });
 
 test('la roue se dessine et met le duel en avant', () => {
   const svg = roueSvg();
-  for (const a of CYCLE) assert.ok(svg.includes(AFFINITES[a].teinte), `${a} doit apparaître`);
+  for (const a of CYCLE) assert.ok(svg.includes(ECOLES[a].teinte), `${a} doit apparaître`);
   const duel = roueSvg({ moi: CYCLE[0], cible: domine(CYCLE[0]) });
   assert.ok(duel.includes('stroke-width="3"'), 'la flèche du duel est épaissie');
 });
 
 /* ================================================================== */
-/* Champ d'orbes                                                      */
+/* Champ d'essence                                                      */
 /* ================================================================== */
 
-test('le plateau est plein et ne contient que des orbes connues', () => {
+test('le plateau est plein et ne contient que des globes connues', () => {
   const p = creerPlateau(rngT(1));
   assert.equal(p.length, CASES);
   assert.equal(CASES, COLONNES * LIGNES);
-  for (const o of p) assert.ok(CYCLE.includes(o) || o === PRISMATIQUE, `orbe inconnue : ${o}`);
+  for (const o of p) assert.ok(CYCLE.includes(o) || o === ESSENCE, `globe inconnue : ${o}`);
 });
 
 test('un chemin ne passe que par des cases voisines, jamais deux fois', () => {
@@ -138,19 +138,19 @@ test('le chemin est borné en longueur', () => {
   assert.ok(!cheminValide(serpent.slice(0, LONGUEUR_MAX + 1)));
 });
 
-test('les orbes de son affinité comptent double, la prismatique aussi', () => {
-  assert.equal(valeurOrbe('azur', 'azur'), KI_DOUBLE);
-  assert.equal(valeurOrbe('azur', 'jade'), KI_SIMPLE);
-  assert.equal(valeurOrbe(PRISMATIQUE, 'jade'), KI_DOUBLE);
+test('les globes de son école comptent double, la prismatique aussi', () => {
+  assert.equal(valeurGlobe('azur', 'azur'), MANA_DOUBLE);
+  assert.equal(valeurGlobe('azur', 'jade'), MANA_SIMPLE);
+  assert.equal(valeurGlobe(ESSENCE, 'jade'), MANA_DOUBLE);
 
   const plateau = new Array(CASES).fill('jade');
-  plateau[0] = 'azur'; plateau[1] = PRISMATIQUE; plateau[2] = 'jade';
-  const d = kiDuChemin(plateau, [0, 1, 2], 'azur');
+  plateau[0] = 'azur'; plateau[1] = ESSENCE; plateau[2] = 'jade';
+  const d = manaDuChemin(plateau, [0, 1, 2], 'azur');
   assert.deepEqual(
-    { total: d.total, doubles: d.doubles, simples: d.simples, prismes: d.prismes },
-    { total: 2 + 2 + 1, doubles: 1, simples: 1, prismes: 1 },
+    { total: d.total, doubles: d.doubles, simples: d.simples, essences: d.essences },
+    { total: 2 + 2 + 1, doubles: 1, simples: 1, essences: 1 },
   );
-  assert.equal(kiDuChemin(plateau, [0, 2], 'azur').total, 0, 'un chemin invalide ne rapporte rien');
+  assert.equal(manaDuChemin(plateau, [0, 2], 'azur').total, 0, 'un chemin invalide ne rapporte rien');
 });
 
 test('la récolte tasse les colonnes et complète par le haut', () => {
@@ -183,10 +183,10 @@ test('le meilleur chemin est un chemin jouable, et il est bon', () => {
     const plateau = creerPlateau(rng);
     const m = meilleurChemin(plateau, 'azur');
     assert.ok(cheminValide(m.chemin), 'le conseil doit être jouable');
-    assert.equal(kiDuChemin(plateau, m.chemin, 'azur').total, m.ki);
+    assert.equal(manaDuChemin(plateau, m.chemin, 'azur').total, m.mana);
     // Un chemin au hasard de même longueur ne doit pas faire mieux.
     const hasard = [0, 1, 2, 3, 4, 5, COLONNES + 5, COLONNES + 4, COLONNES + 3].slice(0, m.chemin.length);
-    assert.ok(m.ki >= kiDuChemin(plateau, hasard, 'azur').total);
+    assert.ok(m.mana >= manaDuChemin(plateau, hasard, 'azur').total);
   }
 });
 
@@ -204,14 +204,14 @@ test('le voisinage ne déborde jamais de la grille', () => {
 /* Garnison                                                           */
 /* ================================================================== */
 
-test('la garnison est complète et cohérente', () => {
+test('le roster est complète et cohérente', () => {
   assert.equal(HEROS.length, 15);
   assert.equal(new Set(HEROS.map((x) => x.id)).size, 15, 'pas de doublon');
-  for (const a of CYCLE) assert.equal(parAffinite(a).length, 3, `trois héros ${a}`);
+  for (const a of CYCLE) assert.equal(parEcole(a).length, 3, `trois héros ${a}`);
   for (const x of HEROS) {
     assert.ok(ROLES[x.role], `${x.id} : rôle inconnu`);
-    assert.ok(CYCLE.includes(x.affinite), `${x.id} : affinité inconnue`);
-    assert.ok(PASSIFS[x.passif.type], `${x.id} : passif inconnu`);
+    assert.ok(CYCLE.includes(x.ecole), `${x.id} : école inconnue`);
+    assert.ok(TALENTS[x.talent.type], `${x.id} : talent inconnu`);
     assert.ok(x.liens.length >= 2, `${x.id} doit pouvoir résonner`);
     assert.ok(x.ultime.mult > x.special.mult, `${x.id} : l'ultime doit dépasser la spéciale`);
     for (const coup of [x.special, x.ultime]) {
@@ -231,9 +231,9 @@ test('les héros d’un même rôle valent le même prix', () => {
 
 test('chaque rôle tient sa promesse', () => {
   const moyenne = (l, f) => l.reduce((s, x) => s + f(x), 0) / l.length;
-  const assaut = HEROS.filter((x) => x.role === 'assaut');
-  const colosse = HEROS.filter((x) => x.role === 'colosse');
-  const soutien = HEROS.filter((x) => x.role === 'soutien');
+  const assaut = HEROS.filter((x) => x.role === 'dps');
+  const colosse = HEROS.filter((x) => x.role === 'tank');
+  const soutien = HEROS.filter((x) => x.role === 'soigneur');
 
   assert.ok(moyenne(assaut, (x) => x.atk) > moyenne(colosse, (x) => x.atk) * 1.2, 'l’assaut frappe plus fort');
   assert.ok(moyenne(colosse, (x) => x.pv) > moyenne(assaut, (x) => x.pv) * 1.4, 'le colosse porte l’équipe');
@@ -246,11 +246,11 @@ test('chaque rôle tient sa promesse', () => {
 test('une équipe au hasard est jouable', () => {
   const rng = rngT(4);
   for (let i = 0; i < 20; i++) {
-    const eq = equipeAuHasard(rng);
+    const eq = groupeAuHasard(rng);
     assert.equal(eq.length, 6);
     assert.equal(new Set(eq.map((x) => x.id)).size, 6, 'jamais deux fois le même héros');
   }
-  assert.equal(equipeParDefaut().length, 6);
+  assert.equal(groupeParDefaut().length, 6);
 });
 
 /* ================================================================== */
@@ -264,13 +264,13 @@ test('le bestiaire est cohérent', () => {
     for (const t of m.traits) assert.ok(TRAITS[t], `${m.id} : trait inconnu`);
     assert.ok(m.charge.tours >= 2 && m.charge.mult > 1, `${m.id} : charge incohérente`);
   }
-  for (const rang of ['commun', 'elite', 'boss']) assert.ok(parRang(rang).length >= 2, rang);
+  for (const rang of ['trash', 'elite', 'boss']) assert.ok(parRang(rang).length >= 2, rang);
 });
 
 test('un ennemi grossit avec le palier', () => {
   const rng = rngT(2);
-  const bas = instancier(MODELES_PAR_ID.glapissant, 1, 'jade', rng);
-  const haut = instancier(MODELES_PAR_ID.glapissant, 5, 'jade', rng);
+  const bas = instancier(MODELES_PAR_ID.gnoll, 1, 'jade', rng);
+  const haut = instancier(MODELES_PAR_ID.gnoll, 5, 'jade', rng);
   assert.ok(haut.pvMax > bas.pvMax * 2, 'la vie doit vraiment monter');
   assert.ok(haut.atk > bas.atk, 'l’attaque aussi');
   assert.ok(haut.pvMax / bas.pvMax > haut.atk / bas.atk, 'mais moins vite que la vie');
@@ -278,7 +278,7 @@ test('un ennemi grossit avec le palier', () => {
 });
 
 test('rage et entrave pèsent sur l’attaque ennemie', () => {
-  const e = instancier(MODELES_PAR_ID.gardien, 1, 'jade', rngT(6));
+  const e = instancier(MODELES_PAR_ID.vorgath, 1, 'jade', rngT(6));
   const calme = attaqueDe(e);
   e.enrage = true;
   assert.ok(attaqueDe(e) > calme, 'la rage fait mal');
@@ -288,8 +288,8 @@ test('rage et entrave pèsent sur l’attaque ennemie', () => {
 
 test('le tirage évite ce qu’on vient de voir', () => {
   const rng = rngT(8);
-  const eviter = parRang('commun').slice(0, 3).map((m) => m.id);
-  for (let i = 0; i < 20; i++) assert.ok(!eviter.includes(tirerModele('commun', rng, eviter).id));
+  const eviter = parRang('trash').slice(0, 3).map((m) => m.id);
+  for (let i = 0; i < 20; i++) assert.ok(!eviter.includes(tirerModele('trash', rng, eviter).id));
 });
 
 /* ================================================================== */
@@ -298,7 +298,7 @@ test('le tirage évite ce qu’on vient de voir', () => {
 
 test('un combat se monte avec six héros et au moins un adversaire', () => {
   assert.throws(() => creerCombat({ equipe: HEROS.slice(0, 3), ennemis: [1] }), /six/);
-  assert.throws(() => creerCombat({ equipe: equipeParDefaut(), ennemis: [] }), /adversaire/);
+  assert.throws(() => creerCombat({ equipe: groupeParDefaut(), ennemis: [] }), /adversaire/);
   const etat = combatTest();
   assert.equal(etat.tour, 1);
   assert.equal(etat.phase, PHASE.CHOIX);
@@ -306,7 +306,7 @@ test('un combat se monte avec six héros et au moins un adversaire', () => {
 });
 
 test('la barre de vie est celle des six, meneur compris', () => {
-  const equipe = equipeParDefaut();
+  const equipe = groupeParDefaut();
   const somme = equipe.reduce((s, x) => s + x.pv, 0);
   const max = vieMaximale(equipe);
   assert.ok(max > somme, 'le meneur doit gonfler la barre');
@@ -314,66 +314,66 @@ test('la barre de vie est celle des six, meneur compris', () => {
   assert.ok(max > sansMeneur);
 });
 
-test('le ki ne franchit pas ses seuils sans être gagné', () => {
+test('le mana ne franchit pas ses seuils sans être gagné', () => {
   const etat = combatTest();
   const idx = etat.ordreRestant[0];
   choisir(etat, idx);
-  etat.ki[idx] = 0;
+  etat.mana[idx] = 0;
   etat.phase = PHASE.ACTION;
   assert.equal(attaquer(etat, { mode: 'special' }).ok, false);
   assert.equal(attaquer(etat, { mode: 'ultime' }).ok, false);
-  etat.ki[idx] = SEUIL_SPECIAL;
+  etat.mana[idx] = SEUIL_SPECIAL;
   assert.equal(modesDisponibles(etat, idx).find((m) => m.mode === 'special').ouvert, true);
   assert.equal(modesDisponibles(etat, idx).find((m) => m.mode === 'ultime').ouvert, false);
-  etat.ki[idx] = SEUIL_ULTIME;
+  etat.mana[idx] = SEUIL_ULTIME;
   assert.equal(modesDisponibles(etat, idx).find((m) => m.mode === 'ultime').ouvert, true);
 });
 
-test('le ki au-delà du seuil renforce le coup, jusqu’au plafond', () => {
-  const x = PAR_ID.ignar;
+test('le mana au-delà du seuil renforce le sort, jusqu’au plafond', () => {
+  const x = PAR_ID.braz;
   assert.equal(multDe(x, 'normale', 24), 1);
   assert.ok(multDe(x, 'special', SEUIL_SPECIAL + 6) > multDe(x, 'special', SEUIL_SPECIAL));
-  assert.equal(multDe(x, 'special', KI_MAX + 20), multDe(x, 'special', KI_MAX), 'le plafond plafonne');
+  assert.equal(multDe(x, 'special', MANA_MAX + 20), multDe(x, 'special', MANA_MAX), 'le plafond plafonne');
 });
 
-test('tracer un chemin verse le ki et renouvelle le plateau', () => {
+test('tracer un chemin verse le mana et renouvelle le plateau', () => {
   const etat = combatTest();
   const idx = etat.ordreRestant[0];
   choisir(etat, idx);
   const avant = [...etat.plateau];
-  const chemin = meilleurChemin(etat.plateau, etat.equipe[idx].affinite).chemin;
+  const chemin = meilleurChemin(etat.plateau, etat.equipe[idx].ecole).chemin;
   const r = tracer(etat, chemin);
   assert.ok(r.ok);
-  assert.equal(etat.ki[idx], Math.min(KI_MAX, r.detail.total + 0 + (etat.equipe[idx].passif.type === 'flux' ? etat.equipe[idx].passif.valeur : 0)));
+  assert.equal(etat.mana[idx], Math.min(MANA_MAX, r.detail.total + 0 + (etat.equipe[idx].talent.type === 'flux' ? etat.equipe[idx].talent.valeur : 0)));
   assert.notDeepEqual(etat.plateau, avant, 'le plateau doit bouger');
   assert.equal(etat.phase, PHASE.ACTION);
   assert.equal(tracer(etat, chemin).ok, false, 'on ne trace pas deux fois');
 });
 
-test('l’avantage d’affinité fait vraiment plus mal', () => {
-  const equipe = equipeParDefaut();
+test('l’avantage d’école fait vraiment plus mal', () => {
+  const equipe = groupeParDefaut();
   const idx = 1;                                   // Ignar, vermeil
-  const fort = combatTest({ affinite: domine(equipe[idx].affinite) });
-  const faible = combatTest({ affinite: craint(equipe[idx].affinite) });
+  const fort = combatTest({ ecole: domine(equipe[idx].ecole) });
+  const faible = combatTest({ ecole: craint(equipe[idx].ecole) });
   const a = estimerDegats(fort, idx, 'special', fort.ennemis[0]).degats;
   const b = estimerDegats(faible, idx, 'special', faible.ennemis[0]).degats;
   assert.ok(a > b * 1.8, `avantage ${a} contre désavantage ${b}`);
 });
 
-test('les résonances récompensent une rotation cohérente', () => {
-  const liens = ['brasier', 'duelliste'];
-  const clone = (id, extra = {}) => ({ ...PAR_ID.ignar, id, liens, ...extra });
+test('les synergies récompensent une rotation cohérente', () => {
+  const liens = ['fureur', 'assaut'];
+  const clone = (id, extra = {}) => ({ ...PAR_ID.braz, id, liens, ...extra });
   const soudee = creerCombat({
     equipe: [clone('a'), clone('b'), clone('c'), clone('d'), clone('e'), clone('f')],
-    ennemis: [instancier(MODELES_PAR_ID.glapissant, 1, 'jade', rngT(1))], seed: 5,
+    ennemis: [instancier(MODELES_PAR_ID.gnoll, 1, 'jade', rngT(1))], seed: 5,
   });
   const eparse = creerCombat({
     equipe: [clone('a', { liens: ['x1', 'y1'] }), clone('b', { liens: ['x2', 'y2'] }),
              clone('c', { liens: ['x3', 'y3'] }), clone('d'), clone('e'), clone('f')],
-    ennemis: [instancier(MODELES_PAR_ID.glapissant, 1, 'jade', rngT(1))], seed: 5,
+    ennemis: [instancier(MODELES_PAR_ID.gnoll, 1, 'jade', rngT(1))], seed: 5,
   });
-  assert.equal(resonances(soudee, 0).length, 2);
-  assert.equal(resonances(eparse, 0).length, 0);
+  assert.equal(synergies(soudee, 0).length, 2);
+  assert.equal(synergies(eparse, 0).length, 0);
   assert.ok(statsDe(soudee, 0).atk > statsDe(eparse, 0).atk, 'les liens doivent payer');
 });
 
@@ -385,7 +385,7 @@ test('la fenêtre ennemie s’ouvre au moment annoncé', () => {
     while (etat.phase === PHASE.CHOIX && agis < attendu) {
       const idx = etat.ordreRestant[0];
       choisir(etat, idx);
-      tracer(etat, meilleurChemin(etat.plateau, etat.equipe[idx].affinite).chemin);
+      tracer(etat, meilleurChemin(etat.plateau, etat.equipe[idx].ecole).chemin);
       const ev = attaquer(etat, { mode: 'normale', cible: 0 }).evenements;
       agis++;
       coups += ev.filter((e) => e.type === 'coupEnnemi').length;
@@ -403,7 +403,7 @@ test('une garde posée avant la fenêtre amortit le coup', () => {
     etat.garde = garde;
     const ev = [];
     choisir(etat, etat.rotation[0]);
-    tracer(etat, meilleurChemin(etat.plateau, etat.equipe[etat.rotation[0]].affinite).chemin);
+    tracer(etat, meilleurChemin(etat.plateau, etat.equipe[etat.rotation[0]].ecole).chemin);
     ev.push(...attaquer(etat, { mode: 'normale', cible: 0 }).evenements);
     return ev.filter((e) => e.type === 'coupEnnemi').reduce((s, e) => s + e.degats, 0);
   };
@@ -420,8 +420,8 @@ test('les effets des spéciales font ce qu’ils annoncent', () => {
     ?? etat.rotation[0];
   etat.equipe[idx] = { ...etat.equipe[idx], special: { nom: 'Test', mult: 2, effet: { type: 'soin', valeur: 0.2 } } };
   choisir(etat, idx);
-  tracer(etat, meilleurChemin(etat.plateau, etat.equipe[idx].affinite).chemin);
-  etat.ki[idx] = SEUIL_SPECIAL;
+  tracer(etat, meilleurChemin(etat.plateau, etat.equipe[idx].ecole).chemin);
+  etat.mana[idx] = SEUIL_SPECIAL;
   const ev = attaquer(etat, { mode: 'special', cible: 0 }).evenements;
   const soin = ev.find((e) => e.type === 'soin');
   assert.ok(soin && soin.montant > 0);
@@ -432,8 +432,8 @@ test('les effets des spéciales font ce qu’ils annoncent', () => {
   const j = b.rotation[0];
   b.equipe[j] = { ...b.equipe[j], ultime: { nom: 'Test', mult: 3, effet: { type: 'brasier', valeur: 0.5 } } };
   choisir(b, j);
-  tracer(b, meilleurChemin(b.plateau, b.equipe[j].affinite).chemin);
-  b.ki[j] = SEUIL_ULTIME;
+  tracer(b, meilleurChemin(b.plateau, b.equipe[j].ecole).chemin);
+  b.mana[j] = SEUIL_ULTIME;
   attaquer(b, { mode: 'ultime', cible: 0 });
   assert.ok(b.ennemis[0].brasier.tours > 0, 'le brasier doit être posé');
   const avant = b.ennemis[0].pv;
@@ -441,30 +441,30 @@ test('les effets des spéciales font ce qu’ils annoncent', () => {
   assert.ok(b.ennemis[0].pv < avant, 'le brasier doit mordre');
 });
 
-test('l’ultime consomme le ki, la frappe normale le garde', () => {
+test('l’ultime consomme le mana, la frappe normale le garde', () => {
   const etat = combatTest({ ennemi: { pvMax: 9e6, pv: 9e6 } });
   const idx = etat.rotation[0];
   choisir(etat, idx);
-  tracer(etat, meilleurChemin(etat.plateau, etat.equipe[idx].affinite).chemin);
-  const ki = etat.ki[idx];
+  tracer(etat, meilleurChemin(etat.plateau, etat.equipe[idx].ecole).chemin);
+  const mana = etat.mana[idx];
   attaquer(etat, { mode: 'normale', cible: 0 });
-  assert.equal(etat.ki[idx], ki, 'une frappe normale ne coûte rien');
+  assert.equal(etat.mana[idx], mana, 'une frappe normale ne coûte rien');
 
   const b = combatTest({ ennemi: { pvMax: 9e6, pv: 9e6 } });
   const j = b.rotation[0];
   choisir(b, j);
-  tracer(b, meilleurChemin(b.plateau, b.equipe[j].affinite).chemin);
-  b.ki[j] = SEUIL_ULTIME;
+  tracer(b, meilleurChemin(b.plateau, b.equipe[j].ecole).chemin);
+  b.mana[j] = SEUIL_ULTIME;
   attaquer(b, { mode: 'ultime', cible: 0 });
-  assert.equal(b.ki[j], 0, 'l’ultime vide la jauge');
+  assert.equal(b.mana[j], 0, 'l’ultime vide la jauge');
 });
 
-test('la rotation alterne et le ki repart de zéro à chaque tour', () => {
+test('la rotation alterne et le mana repart de zéro à chaque tour', () => {
   const etat = combatTest({ ennemi: { pvMax: 9e6, pv: 9e6 } });
   assert.deepEqual(etat.rotation, [0, 1, 2]);
   jouerUnTour(etat);
   assert.deepEqual(etat.rotation, [3, 4, 5], 'les trois autres entrent en scène');
-  for (const i of [0, 1, 2]) assert.equal(etat.ki[i], 0, 'le ki ne se met pas en réserve');
+  for (const i of [0, 1, 2]) assert.equal(etat.mana[i], 0, 'le mana ne se met pas en réserve');
   jouerUnTour(etat);
   assert.deepEqual(etat.rotation, [0, 1, 2]);
 });
@@ -473,7 +473,7 @@ test('la victoire et la défaite s’arrêtent net', () => {
   const gagne = combatTest({ ennemi: { pv: 1, pvMax: 1 } });
   const idx = gagne.rotation[0];
   choisir(gagne, idx);
-  tracer(gagne, meilleurChemin(gagne.plateau, gagne.equipe[idx].affinite).chemin);
+  tracer(gagne, meilleurChemin(gagne.plateau, gagne.equipe[idx].ecole).chemin);
   const ev = attaquer(gagne, { mode: 'normale', cible: 0 }).evenements;
   assert.equal(gagne.phase, PHASE.VICTOIRE);
   assert.ok(ev.some((e) => e.type === 'victoire'));
@@ -486,7 +486,7 @@ test('la victoire et la défaite s’arrêtent net', () => {
   perdu.ennemis[0].pvMax = 9e6; perdu.ennemis[0].pv = 9e6;
   const k = perdu.rotation[0];
   choisir(perdu, k);
-  tracer(perdu, meilleurChemin(perdu.plateau, perdu.equipe[k].affinite).chemin);
+  tracer(perdu, meilleurChemin(perdu.plateau, perdu.equipe[k].ecole).chemin);
   attaquer(perdu, { mode: 'normale', cible: 0 });
   assert.equal(perdu.phase, PHASE.DEFAITE);
 });
@@ -513,49 +513,49 @@ test('la vue dit tout ce qu’il faut et rien de plus', () => {
 });
 
 /* ================================================================== */
-/* Expédition                                                         */
+/* Donjon                                                         */
 /* ================================================================== */
 
-test('une expédition enchaîne quinze rencontres et finit sur Le Prisme Noir', () => {
-  const exp = creerExpedition({ equipe: equipeParDefaut(), seed: 12 });
+test('un donjon enchaîne quinze rencontres et finit sur le Dragon Cendré', () => {
+  const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 12 });
   let n = 0, derniere = null;
   for (;;) {
     derniere = composerRencontre(exp);
     n++;
     const r = resoudre(exp, { victoire: true, vie: exp.vie, objets: exp.objets });
-    if (r.suite === 'eveil') choisirEveil(exp, r.choix[0].id);
+    if (r.suite === 'butin') choisirButin(exp, r.choix[0].id);
     if (r.suite === 'victoire') break;
-    assert.ok(n < 50, 'l’expédition doit se terminer');
+    assert.ok(n < 50, 'le donjon doit se terminer');
   }
-  assert.equal(n, SECTEURS.length * RENCONTRES_PAR_SECTEUR);
-  assert.equal(derniere.ennemis[0].nom, MODELES_PAR_ID.prisme.nom);
+  assert.equal(n, AILES.length * RENCONTRES_PAR_AILE);
+  assert.equal(derniere.ennemis[0].nom, MODELES_PAR_ID[BOSS_FINAL].nom);
   assert.ok(derniere.finale);
   assert.ok(exp.victoire && exp.termine);
 });
 
-test('une défaite arrête l’expédition sur place', () => {
-  const exp = creerExpedition({ equipe: equipeParDefaut(), seed: 3 });
+test('un wipe arrête le donjon sur place', () => {
+  const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 3 });
   composerRencontre(exp);
   const r = resoudre(exp, { victoire: false, vie: 0, objets: 0 });
-  assert.equal(r.suite, 'defaite');
+  assert.equal(r.suite, 'wipe');
   assert.equal(exp.termine, true);
   assert.equal(exp.victoire, false);
 });
 
-test('les éveils s’appliquent sans soigner par accident', () => {
-  const exp = creerExpedition({ equipe: equipeParDefaut(), seed: 4 });
+test('le butin s’applique sans soigner par accident', () => {
+  const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 4 });
   exp.vie = Math.round(exp.vieMax * 0.5);
-  exp.choixEveil = [EVEILS.find((x) => x.id === 'poing')];
-  assert.equal(choisirEveil(exp, 'poing').ok, true);
-  assert.equal(exp.eveils.atk, 0.12);
-  assert.equal(choisirEveil(exp, 'poing').ok, false, 'un éveil déjà résolu ne revient pas');
+  exp.choixButin = [BUTIN.find((x) => x.id === 'heaume')];
+  assert.equal(choisirButin(exp, 'heaume').ok, true);
+  assert.equal(exp.butin.atk, 0.12);
+  assert.equal(choisirButin(exp, 'heaume').ok, false, 'une pièce déjà attribuée ne revient pas');
 
   // « +12 % de vie » conserve la part manquante, et rend ce qu'il promet.
-  const b = creerExpedition({ equipe: equipeParDefaut(), seed: 4 });
+  const b = creerDonjon({ groupe: groupeParDefaut(), seed: 4 });
   b.vie = Math.round(b.vieMax * 0.5);
-  b.choixEveil = [EVEILS.find((x) => x.id === 'souffle')];
+  b.choixButin = [BUTIN.find((x) => x.id === 'talisman')];
   const maxAvant = b.vieMax;
-  choisirEveil(b, 'souffle');
+  choisirButin(b, 'talisman');
   assert.ok(b.vieMax > maxAvant);
   assert.ok(b.vie / b.vieMax > 0.5, 'le rendu doit se voir');
   assert.ok(b.vie <= b.vieMax);
@@ -563,18 +563,18 @@ test('les éveils s’appliquent sans soigner par accident', () => {
 
 test('les trois difficultés sont bien ordonnées', () => {
   const parts = Object.values(DIFFICULTES).map((d) => d.part);
-  assert.deepEqual(parts, [...parts].sort((a, b) => a - b), 'apprenti, guerrier, ascension');
-  assert.ok(DIFFICULTES.apprenti.objets > DIFFICULTES.ascension.objets);
+  assert.deepEqual(parts, [...parts].sort((a, b) => a - b), 'normal, héroïque, mythique');
+  assert.ok(DIFFICULTES.normal.objets > DIFFICULTES.mythique.objets);
 
-  const dur = creerExpedition({ equipe: equipeParDefaut(), difficulte: 'ascension', seed: 7 });
-  const doux = creerExpedition({ equipe: equipeParDefaut(), difficulte: 'apprenti', seed: 7 });
+  const dur = creerDonjon({ groupe: groupeParDefaut(), difficulte: 'mythique', seed: 7 });
+  const doux = creerDonjon({ groupe: groupeParDefaut(), difficulte: 'normal', seed: 7 });
   assert.ok(composerRencontre(dur).ennemis[0].pvMax > composerRencontre(doux).ennemis[0].pvMax);
 });
 
 test('l’avancement progresse de zéro à un', () => {
-  const exp = creerExpedition({ equipe: equipeParDefaut(), seed: 2 });
+  const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 2 });
   assert.equal(avancement(exp), 0);
-  exp.secteur = SECTEURS.length - 1; exp.rencontre = RENCONTRES_PAR_SECTEUR - 1;
+  exp.aile = AILES.length - 1; exp.rencontre = RENCONTRES_PAR_AILE - 1;
   assert.ok(avancement(exp) > 0.9 && avancement(exp) <= 1);
 });
 
@@ -595,23 +595,23 @@ test('chaque héros et chaque silhouette se dessinent', () => {
   }
 });
 
-test('deux héros de la même affinité ne sont pas jumeaux', () => {
-  const [a, b] = parAffinite('vermeil');
+test('deux héros de la même école ne sont pas jumeaux', () => {
+  const [a, b] = parEcole('feu');
   assert.notEqual(spriteSvg(a), spriteSvg(b));
-  const pa = palettePour({ id: a.id, affinite: 'vermeil' });
-  const pb = palettePour({ id: b.id, affinite: 'vermeil' });
+  const pa = palettePour({ id: a.id, ecole: 'feu' });
+  const pb = palettePour({ id: b.id, ecole: 'feu' });
   assert.notDeepEqual(pa, pb);
   assert.notDeepEqual(
-    palettePour({ id: a.id, affinite: 'vermeil' }),
-    palettePour({ id: a.id, affinite: 'azur' }),
-    'l’affinité doit se voir',
+    palettePour({ id: a.id, ecole: 'feu' }),
+    palettePour({ id: a.id, ecole: 'givre' }),
+    'l’école doit se voir',
   );
-  assert.deepEqual(pa, palettePour({ id: a.id, affinite: 'vermeil' }), 'et rester stable');
+  assert.deepEqual(pa, palettePour({ id: a.id, ecole: 'feu' }), 'et rester stable');
 });
 
-test('un ennemi se distingue d’un héros de même affinité', () => {
-  const heros = palettePour({ id: 'ignar', affinite: 'vermeil' });
-  const bete = palettePour({ id: 'ignar', affinite: 'vermeil', ennemi: true });
+test('un ennemi se distingue d’un héros de même école', () => {
+  const heros = palettePour({ id: 'braz', ecole: 'feu' });
+  const bete = palettePour({ id: 'braz', ecole: 'feu', ennemi: true });
   assert.notEqual(heros[5], bete[5]);
   assert.notEqual(heros[7], bete[7], 'l’œil de la bête doit luire');
 });
@@ -635,20 +635,20 @@ test('les grilles font seize sur seize', () => {
 
 /**
  * Ces trois tests-là ne vérifient pas une règle mais un réglage : une
- * expédition doit être gagnable sans être acquise. Ils font jouer le
+ * donjon doit être gagnable sans être acquise. Ils font jouer le
  * conseiller — un joueur appliqué, pas un joueur parfait — d'un bout à
  * l'autre, et n'admettent que des bornes larges : un réglage qui glisse d'un
  * point ne doit pas faire rougir la suite, un réglage qui casse le jeu, si.
  */
 
-/** Une expédition complète, menée par le conseiller. */
-function expeditionAuto(difficulte, seed) {
-  const exp = creerExpedition({ equipe: equipeParDefaut(), difficulte, seed });
+/** Un donjon complète, menée par le conseiller. */
+function donjonAuto(difficulte, seed) {
+  const exp = creerDonjon({ groupe: groupeParDefaut(), difficulte, seed });
   let combats = 0, tours = 0;
   for (;;) {
     const r = composerRencontre(exp);
     const etat = creerCombat({
-      equipe: exp.equipe, ennemis: r.ennemis, eveils: exp.eveils,
+      equipe: exp.equipe, ennemis: r.ennemis, butin: exp.butin,
       vie: exp.vie, objets: exp.objets, seed: (seed * 31 + combats * 7) | 0,
     });
     etat.vie.max = exp.vieMax;
@@ -659,20 +659,20 @@ function expeditionAuto(difficulte, seed) {
     const suite = resoudre(exp, {
       victoire: etat.phase === PHASE.VICTOIRE, vie: etat.vie.actuel, objets: etat.objets,
     });
-    if (suite.suite === 'defaite') return { victoire: false, combats, tours, secteur: exp.secteur };
-    if (suite.suite === 'victoire') return { victoire: true, combats, tours, secteur: exp.secteur };
-    if (suite.suite === 'eveil') choisirEveil(exp, suite.choix[0].id);
+    if (suite.suite === 'wipe') return { victoire: false, combats, tours, aile: exp.aile };
+    if (suite.suite === 'victoire') return { victoire: true, combats, tours, aile: exp.aile };
+    if (suite.suite === 'butin') choisirButin(exp, suite.choix[0].id);
   }
 }
 
-test('une expédition d’apprenti se termine', () => {
-  const runs = [11, 202, 3003].map((s) => expeditionAuto('apprenti', s));
+test('un donjon en Normal se termine', () => {
+  const runs = [11, 202, 3003].map((s) => donjonAuto('normal', s));
   assert.ok(runs.every((r) => r.victoire), 'le premier palier ne doit pas être un mur');
-  assert.ok(runs.every((r) => r.combats === SECTEURS.length * RENCONTRES_PAR_SECTEUR));
+  assert.ok(runs.every((r) => r.combats === AILES.length * RENCONTRES_PAR_AILE));
 });
 
 test('aucun combat ne s’éternise', () => {
-  const runs = [11, 202, 3003].map((s) => expeditionAuto('apprenti', s));
+  const runs = [11, 202, 3003].map((s) => donjonAuto('normal', s));
   for (const r of runs) {
     const parCombat = r.tours / r.combats;
     assert.ok(parCombat >= 1.5, `${parCombat.toFixed(1)} tours par combat : trop expéditif`);
@@ -680,10 +680,10 @@ test('aucun combat ne s’éternise', () => {
   }
 });
 
-test('l’ascension reste une épreuve', () => {
-  const doux = [5, 55].map((s) => expeditionAuto('apprenti', s));
-  const dur = [5, 55].map((s) => expeditionAuto('ascension', s));
-  const avance = (r) => r.secteur + (r.victoire ? 1 : 0);
+test('le mode Mythique reste une épreuve', () => {
+  const doux = [5, 55].map((s) => donjonAuto('normal', s));
+  const dur = [5, 55].map((s) => donjonAuto('mythique', s));
+  const avance = (r) => r.aile + (r.victoire ? 1 : 0);
   assert.ok(
     dur.reduce((s, r) => s + avance(r), 0) < doux.reduce((s, r) => s + avance(r), 0),
     'le palier le plus dur doit arrêter plus tôt',

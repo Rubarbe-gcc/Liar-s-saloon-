@@ -1,19 +1,19 @@
 /**
- * PRISME — le moteur de combat.
+ * RAID — le moteur de combat.
  *
  * Un tour se déroule toujours de la même façon, et c'est là que tout se joue :
  *
- *   1. la rotation de trois héros entre en scène (l'équipe en compte six) ;
- *   2. l'ennemi annonce qui il vise et à quel moment du tour il frappera ;
- *   3. chaque héros, dans l'ordre choisi par le joueur, trace un chemin sur le
- *      champ d'orbes, récolte son ki, puis attaque — normale, spéciale à douze
- *      de ki, ultime à dix-huit ;
- *   4. la fenêtre ennemie s'ouvre au moment annoncé.
+ *   1. un groupe de trois monte au front (le raid en compte six) ;
+ *   2. le boss annonce qui a l'aggro et après combien de personnages il frappe ;
+ *   3. chacun, dans l'ordre choisi par le joueur, trace un chemin sur le champ
+ *      d'essence, récolte son mana, puis frappe — auto-attaque, sort à douze
+ *      de mana, sort ultime à dix-huit ;
+ *   4. la fenêtre du boss s'ouvre au moment annoncé.
  *
- * L'ordre de passage est donc la vraie décision : le héros qui attaque avant la
- * fenêtre peut poser une garde, celui qui attaque après frappe un ennemi déjà
- * entravé. L'équipe partage une seule barre de vie : un colosse sert à quelque
- * chose même quand il ne frappe pas.
+ * L'ordre de passage est donc la vraie décision : qui joue avant le coup du
+ * boss peut poser un bouclier, qui joue après frappe une cible déjà affaiblie.
+ * Le raid partage une seule barre de vie : un tank sert à quelque chose même
+ * les tours où il ne frappe pas.
  *
  * Le moteur ne rend jamais la main sans une liste d'ÉVÉNEMENTS : l'écran les
  * rejoue un par un pour animer. Aucune animation n'est donc décidée ici — mais
@@ -23,8 +23,8 @@
  */
 
 import { makeRng, entier } from '../hasard.js';
-import { multiplicateur, PRISMATIQUE } from './affinites.js';
-import { creerPlateau, recolter, kiDuChemin, cheminValide, LONGUEUR_MAX } from './orbes.js';
+import { multiplicateur, ESSENCE } from './ecoles.js';
+import { creerPlateau, recolter, manaDuChemin, cheminValide, LONGUEUR_MAX } from './globes.js';
 import { attaqueDe, RAGE } from './ennemis.js';
 
 /* ------------------------------------------------------------------ */
@@ -33,10 +33,10 @@ import { attaqueDe, RAGE } from './ennemis.js';
 
 export const SEUIL_SPECIAL = 12;
 export const SEUIL_ULTIME = 18;
-export const KI_MAX = 24;
+export const MANA_MAX = 24;
 
-/** Ce que rapporte chaque point de ki au-delà du seuil atteint. */
-export const KI_SUPPLEMENT = { special: 0.05, ultime: 0.055 };
+/** Ce que rapporte chaque point de mana au-delà du seuil atteint. */
+export const MANA_SUPPLEMENT = { special: 0.05, ultime: 0.055 };
 
 /** Adoucisseurs de défense : `def / (def + K)` donne la part de dégâts évitée. */
 export const K_DEF_ENNEMI = 7000;
@@ -45,16 +45,16 @@ export const K_DEF_HEROS = 6200;
 /** Une attaque ne peut jamais être complètement absorbée. */
 export const PLANCHER = 0.06;
 
-/** Une résonance partagée entre deux héros de la rotation. */
-export const RESONANCE_ATK = 0.06;
-export const RESONANCE_KI = 1;
+/** Une synergie partagée entre deux héros de la rotation. */
+export const SYNERGIE_ATK = 0.06;
+export const SYNERGIE_KI = 1;
 
 /** Deux coups d'affilée valent un peu plus qu'un seul, pas deux fois plus. */
 export const PART_DOUBLE = 0.6;
 
 export const PHASE = {
   CHOIX: 'choix',       // à qui le tour ?
-  ORBES: 'orbes',       // tracer le chemin
+  GLOBES: 'globes',       // tracer le chemin
   ACTION: 'action',     // normale, spéciale ou ultime ?
   ENNEMI: 'ennemi',     // la fenêtre ennemie s'ouvre
   VICTOIRE: 'victoire',
@@ -65,43 +65,43 @@ export const PHASE = {
 /* Création                                                            */
 /* ------------------------------------------------------------------ */
 
-/** Agrégat des éveils gagnés en expédition. Tout est en part (0.2 = +20 %). */
-export const EVEILS_VIDES = { atk: 0, def: 0, pv: 0, ki: 0, soin: 0, degats: 0 };
+/** Agrégat du butin ramassé dans le donjon. Tout est en part (0.2 = +20 %). */
+export const BUTIN_VIDE = { atk: 0, def: 0, pv: 0, mana: 0, soin: 0, degats: 0 };
 
 /**
  * Bonus du meneur — le premier héros de l'équipe — appliqué à toute la
- * garnison, y compris à lui-même.
+ * roster, y compris à lui-même.
  */
 export function bonusMeneur(meneur, heros) {
   const m = meneur?.meneur;
   if (!m) return { atk: 0, def: 0, pv: 0 };
-  if (m.cible !== 'tous' && heros.affinite !== m.cible) return { atk: 0, def: 0, pv: 0 };
+  if (m.cible !== 'tous' && heros.ecole !== m.cible) return { atk: 0, def: 0, pv: 0 };
   return { atk: m.atk || 0, def: m.def || 0, pv: m.pv || 0 };
 }
 
 /** Points de vie d'équipe : la somme des six, meneur compris. */
-export function vieMaximale(equipe, eveils = EVEILS_VIDES) {
+export function vieMaximale(equipe, butin = BUTIN_VIDE) {
   const meneur = equipe[0];
   return Math.round(equipe.reduce((somme, x) =>
-    somme + x.pv * (1 + bonusMeneur(meneur, x).pv + (eveils.pv || 0)), 0));
+    somme + x.pv * (1 + bonusMeneur(meneur, x).pv + (butin.pv || 0)), 0));
 }
 
 /**
  * Prépare un combat. `ennemis` est déjà instancié (voir `ennemis.js`) : le
- * moteur ne sait rien des paliers, c'est l'expédition qui en décide.
+ * moteur ne sait rien des paliers, c'est le donjon qui en décide.
  */
-export function creerCombat({ equipe, ennemis, eveils = EVEILS_VIDES, vie = null, objets = 2, seed = null } = {}) {
-  if (!Array.isArray(equipe) || equipe.length !== 6) throw new Error('PRISME : il faut six héros.');
-  if (!Array.isArray(ennemis) || !ennemis.length) throw new Error('PRISME : il faut un adversaire.');
+export function creerCombat({ equipe, ennemis, butin = BUTIN_VIDE, vie = null, objets = 2, seed = null } = {}) {
+  if (!Array.isArray(equipe) || equipe.length !== 6) throw new Error('RAID : il faut six héros.');
+  if (!Array.isArray(ennemis) || !ennemis.length) throw new Error('RAID : il faut un adversaire.');
 
   const graine = seed ?? Math.floor(Math.random() * 2 ** 31);
-  const max = vieMaximale(equipe, eveils);
+  const max = vieMaximale(equipe, butin);
 
   const etat = {
     seed: graine,
     rng: makeRng(graine),
     equipe,
-    eveils: { ...EVEILS_VIDES, ...eveils },
+    butin: { ...BUTIN_VIDE, ...butin },
     vie: vie ? { max, actuel: Math.min(vie, max) } : { max, actuel: max },
     ennemis,
     objets,
@@ -113,8 +113,8 @@ export function creerCombat({ equipe, ennemis, eveils = EVEILS_VIDES, vie = null
     fenetre: 3,
     vise: null,
     plateau: [],
-    ki: [0, 0, 0, 0, 0, 0],
-    prismes: [0, 0, 0, 0, 0, 0],
+    mana: [0, 0, 0, 0, 0, 0],
+    essences: [0, 0, 0, 0, 0, 0],
     actif: null,
     chemin: null,
     garde: 0,
@@ -131,8 +131,8 @@ export function creerCombat({ equipe, ennemis, eveils = EVEILS_VIDES, vie = null
 /* Statistiques effectives                                             */
 /* ------------------------------------------------------------------ */
 
-/** Étiquettes partagées entre deux héros de la rotation : +ATK et +ki. */
-export function resonances(etat, idx) {
+/** Étiquettes partagées entre deux héros de la rotation : +ATK et +mana. */
+export function synergies(etat, idx) {
   const moi = etat.equipe[idx];
   const autres = etat.rotation.filter((i) => i !== idx).map((i) => etat.equipe[i]);
   const communes = new Set();
@@ -151,38 +151,38 @@ export function statsDe(etat, idx, contexte = {}) {
   const meneur = etat.equipe[0];
   const bm = bonusMeneur(meneur, x);
 
-  let atk = 1 + bm.atk + (etat.eveils.atk || 0);
-  let def = 1 + bm.def + (etat.eveils.def || 0);
+  let atk = 1 + bm.atk + (etat.butin.atk || 0);
+  let def = 1 + bm.def + (etat.butin.def || 0);
 
-  const liens = resonances(etat, idx);
-  atk += liens.length * RESONANCE_ATK;
+  const liens = synergies(etat, idx);
+  atk += liens.length * SYNERGIE_ATK;
 
   if (etat.elan && etat.elan.tours > 0) atk += etat.elan.valeur;
 
   const bas = etat.vie.actuel <= etat.vie.max / 2;
-  const p = x.passif;
-  if (p) {
-    if (p.type === 'rage' && bas) atk += p.valeur;
-    if (p.type === 'tenace' && bas) def += p.valeur;
-    if (p.type === 'meute') {
-      const meme = etat.rotation.filter((i) => i !== idx && etat.equipe[i].affinite === x.affinite).length;
-      atk += meme * p.valeur;
+  const t = x.talent;
+  if (t) {
+    if (t.type === 'rage' && bas) atk += t.valeur;
+    if (t.type === 'endurance' && bas) def += t.valeur;
+    if (t.type === 'meute') {
+      const meme = etat.rotation.filter((i) => i !== idx && etat.equipe[i].ecole === x.ecole).length;
+      atk += meme * t.valeur;
     }
-    if (p.type === 'opportuniste' && contexte.cible
-        && multiplicateur(x.affinite, contexte.cible.affinite) > 1) atk += p.valeur;
-    if (p.type === 'eclat') atk += (etat.prismes[idx] || 0) * p.valeur;
-    if (p.type === 'echo' && contexte.mode === 'ultime') atk += p.valeur;
+    if (t.type === 'traque' && contexte.cible
+        && multiplicateur(x.ecole, contexte.cible.ecole) > 1) atk += t.valeur;
+    if (t.type === 'canalisation') atk += (etat.essences[idx] || 0) * t.valeur;
+    if (t.type === 'apotheose' && contexte.mode === 'ultime') atk += t.valeur;
   }
 
   return { atk: Math.round(x.atk * atk), def: Math.round(x.def * def), liens };
 }
 
-/** Ki de départ d'un héros : son passif de flux, plus les éveils. */
-export function kiDeDepart(etat, idx) {
+/** Mana de départ d'un personnage : son talent, plus le butin du raid. */
+export function manaDeDepart(etat, idx) {
   const x = etat.equipe[idx];
-  let ki = etat.eveils.ki || 0;
-  if (x.passif?.type === 'flux') ki += x.passif.valeur;
-  return ki;
+  let mana = etat.butin.mana || 0;
+  if (x.talent?.type === 'meditation') mana += x.talent.valeur;
+  return mana;
 }
 
 /* ------------------------------------------------------------------ */
@@ -205,8 +205,8 @@ export function commencerTour(etat) {
   etat.chemin = null;
   etat.actif = null;
   etat.plateau = creerPlateau(etat.rng);
-  etat.ki = etat.ki.map((_, i) => (etat.rotation.includes(i) ? kiDeDepart(etat, i) : 0));
-  etat.prismes = etat.prismes.map(() => 0);
+  etat.mana = etat.mana.map((_, i) => (etat.rotation.includes(i) ? manaDeDepart(etat, i) : 0));
+  etat.essences = etat.essences.map(() => 0);
 
   // L'ennemi annonce sa fenêtre et sa cible : c'est ce qui rend l'ordre de
   // passage intéressant plutôt que cosmétique.
@@ -237,21 +237,21 @@ export function choisir(etat, idx) {
   if (!etat.ordreRestant.includes(idx)) return { ok: false, raison: 'indisponible' };
   etat.actif = idx;
   etat.chemin = null;
-  etat.phase = PHASE.ORBES;
+  etat.phase = PHASE.GLOBES;
   return { ok: true, evenements: [{ type: 'choix', heros: idx }] };
 }
 
-/** Le joueur trace son chemin d'orbes et encaisse le ki. */
+/** Le joueur trace son chemin de globes et encaisse le mana. */
 export function tracer(etat, chemin) {
-  if (etat.phase !== PHASE.ORBES) return { ok: false, raison: 'phase' };
+  if (etat.phase !== PHASE.GLOBES) return { ok: false, raison: 'phase' };
   if (!cheminValide(chemin)) return { ok: false, raison: 'chemin' };
 
   const idx = etat.actif;
   const x = etat.equipe[idx];
-  const detail = kiDuChemin(etat.plateau, chemin, x.affinite);
-  const avant = etat.ki[idx];
-  etat.ki[idx] = Math.min(KI_MAX, avant + detail.total);
-  etat.prismes[idx] += detail.prismes;
+  const detail = manaDuChemin(etat.plateau, chemin, x.ecole);
+  const avant = etat.mana[idx];
+  etat.mana[idx] = Math.min(MANA_MAX, avant + detail.total);
+  etat.essences[idx] += detail.essences;
 
   const recolte = recolter(etat.plateau, chemin, etat.rng);
   etat.plateau = recolte.plateau;
@@ -261,27 +261,27 @@ export function tracer(etat, chemin) {
   return {
     ok: true,
     detail,
-    evenements: [{ type: 'recolte', heros: idx, detail, recolte, ki: etat.ki[idx], avant }],
+    evenements: [{ type: 'recolte', heros: idx, detail, recolte, mana: etat.mana[idx], avant }],
   };
 }
 
 /** Les attaques ouvertes au héros actif, avec ce que chacune vaut. */
 export function modesDisponibles(etat, idx = etat.actif) {
-  const ki = etat.ki[idx] || 0;
+  const mana = etat.mana[idx] || 0;
   const x = etat.equipe[idx];
   return [
-    { mode: 'normale', nom: 'Frappe', ki: 0, ouvert: true, mult: 1 },
-    { mode: 'special', nom: x.special.nom, ki: SEUIL_SPECIAL, ouvert: ki >= SEUIL_SPECIAL, mult: multDe(x, 'special', ki) },
-    { mode: 'ultime', nom: x.ultime.nom, ki: SEUIL_ULTIME, ouvert: ki >= SEUIL_ULTIME, mult: multDe(x, 'ultime', ki) },
+    { mode: 'normale', nom: 'Frappe', mana: 0, ouvert: true, mult: 1 },
+    { mode: 'special', nom: x.special.nom, mana: SEUIL_SPECIAL, ouvert: mana >= SEUIL_SPECIAL, mult: multDe(x, 'special', mana) },
+    { mode: 'ultime', nom: x.ultime.nom, mana: SEUIL_ULTIME, ouvert: mana >= SEUIL_ULTIME, mult: multDe(x, 'ultime', mana) },
   ];
 }
 
-/** Multiplicateur d'un coup, supplément de ki compris. */
-export function multDe(x, mode, ki) {
+/** Multiplicateur d'un coup, supplément de mana compris. */
+export function multDe(x, mode, mana) {
   if (mode === 'normale') return 1;
   const coup = mode === 'ultime' ? x.ultime : x.special;
   const seuil = mode === 'ultime' ? SEUIL_ULTIME : SEUIL_SPECIAL;
-  const rab = Math.max(0, Math.min(KI_MAX, ki) - seuil) * KI_SUPPLEMENT[mode];
+  const rab = Math.max(0, Math.min(MANA_MAX, mana) - seuil) * MANA_SUPPLEMENT[mode];
   return +(coup.mult + rab).toFixed(3);
 }
 
@@ -292,17 +292,17 @@ export const passage = (def, k) => Math.max(PLANCHER, 1 - def / (def + k));
 export function estimerDegats(etat, idx, mode, ennemi) {
   const x = etat.equipe[idx];
   const st = statsDe(etat, idx, { cible: ennemi, mode });
-  const mult = multDe(x, mode, etat.ki[idx] || 0);
+  const mult = multDe(x, mode, etat.mana[idx] || 0);
   const coup = mode === 'ultime' ? x.ultime : mode === 'special' ? x.special : null;
 
   let perce = 0;
   if (coup?.effet?.type === 'perce') perce = coup.effet.valeur;
   const def = ennemi.def * (1 - perce);
 
-  const type = multiplicateur(x.affinite, ennemi.affinite);
-  let brut = st.atk * mult * type * passage(def, K_DEF_ENNEMI) * (1 + (etat.eveils.degats || 0));
+  const type = multiplicateur(x.ecole, ennemi.ecole);
+  let brut = st.atk * mult * type * passage(def, K_DEF_ENNEMI) * (1 + (etat.butin.degats || 0));
   if (coup?.effet?.type === 'double') brut *= PART_DOUBLE * 2;
-  if (ennemi.traits.includes('blinde') && mode === 'normale') brut *= 0.7;
+  if (ennemi.traits.includes('carapace') && mode === 'normale') brut *= 0.7;
 
   return { degats: Math.max(1, Math.round(brut)), type, mult, atk: st.atk, liens: st.liens };
 }
@@ -312,9 +312,9 @@ export function attaquer(etat, { mode = 'normale', cible = 0 } = {}) {
   if (etat.phase !== PHASE.ACTION) return { ok: false, raison: 'phase' };
   const idx = etat.actif;
   const x = etat.equipe[idx];
-  const ki = etat.ki[idx] || 0;
-  if (mode === 'special' && ki < SEUIL_SPECIAL) return { ok: false, raison: 'ki' };
-  if (mode === 'ultime' && ki < SEUIL_ULTIME) return { ok: false, raison: 'ki' };
+  const mana = etat.mana[idx] || 0;
+  if (mode === 'special' && mana < SEUIL_SPECIAL) return { ok: false, raison: 'mana' };
+  if (mode === 'ultime' && mana < SEUIL_ULTIME) return { ok: false, raison: 'mana' };
 
   const vivants = etat.ennemis.filter((e) => e.pv > 0);
   if (!vivants.length) return { ok: false, raison: 'personne' };
@@ -329,16 +329,16 @@ export function attaquer(etat, { mode = 'normale', cible = 0 } = {}) {
   ennemi.pv = Math.max(0, ennemi.pv - calcul.degats);
   ev.push({
     type: 'frappe', heros: idx, mode, nom, cible: etat.ennemis.indexOf(ennemi),
-    degats: calcul.degats, coups, mult: calcul.mult, typeMult: calcul.type, ki,
+    degats: calcul.degats, coups, mult: calcul.mult, typeMult: calcul.type, mana,
   });
 
-  // Un ennemi « rugueux » rend une part de ce qu'il encaisse.
-  if (ennemi.traits.includes('rugueux')) {
+  // Un ennemi « à épines » rend une part de ce qu'il encaisse.
+  if (ennemi.traits.includes('epines')) {
     const retour = Math.round(calcul.degats * 0.07);
     etat.vie.actuel = Math.max(0, etat.vie.actuel - retour);
     ev.push({ type: 'retour', degats: retour });
   }
-  if (ennemi.traits.includes('vorace') && ennemi.pv > 0) {
+  if (ennemi.traits.includes('drain') && ennemi.pv > 0) {
     const rendu = Math.round(calcul.degats * 0.06);
     ennemi.pv = Math.min(ennemi.pvMax, ennemi.pv + rendu);
     ev.push({ type: 'ennemiSoin', ennemi, soin: rendu });
@@ -347,12 +347,12 @@ export function attaquer(etat, { mode = 'normale', cible = 0 } = {}) {
   if (coup?.effet) appliquerEffet(etat, idx, coup.effet, ennemi, calcul.degats, ev);
 
   if (ennemi.pv === 0) ev.push({ type: 'ennemiVaincu', ennemi });
-  else if (ennemi.traits.includes('furieux') && !ennemi.enrage && ennemi.pv <= ennemi.pvMax / 2) {
+  else if (ennemi.traits.includes('enrage') && !ennemi.enrage && ennemi.pv <= ennemi.pvMax / 2) {
     ennemi.enrage = true;
     ev.push({ type: 'rage', ennemi, part: RAGE });
   }
 
-  etat.ki[idx] = mode === 'normale' ? ki : 0;
+  etat.mana[idx] = mode === 'normale' ? mana : 0;
   etat.ordreRestant = etat.ordreRestant.filter((i) => i !== idx);
   etat.agi++;
   etat.actif = null;
@@ -381,7 +381,7 @@ export function attaquer(etat, { mode = 'normale', cible = 0 } = {}) {
 function appliquerEffet(etat, idx, effet, ennemi, degats, ev) {
   switch (effet.type) {
     case 'soin': {
-      const gain = Math.round(etat.vie.max * effet.valeur * (1 + (etat.eveils.soin || 0)));
+      const gain = Math.round(etat.vie.max * effet.valeur * (1 + (etat.butin.soin || 0)));
       const avant = etat.vie.actuel;
       etat.vie.actuel = Math.min(etat.vie.max, etat.vie.actuel + gain);
       ev.push({ type: 'soin', montant: etat.vie.actuel - avant });
@@ -410,12 +410,12 @@ function appliquerEffet(etat, idx, effet, ennemi, degats, ev) {
       ennemi.brasier = { degats: degats * effet.valeur, tours: 2 };
       ev.push({ type: 'brasierPose', ennemi, degats: Math.round(degats * effet.valeur) });
       break;
-    case 'ki':
+    case 'mana':
       for (const i of etat.ordreRestant) {
         if (i === idx) continue;
-        etat.ki[i] = Math.min(KI_MAX, etat.ki[i] + effet.valeur);
+        etat.mana[i] = Math.min(MANA_MAX, etat.mana[i] + effet.valeur);
       }
-      ev.push({ type: 'ressac', valeur: effet.valeur });
+      ev.push({ type: 'mana', valeur: effet.valeur });
       break;
     default:
       break;  // 'perce' et 'double' sont déjà pris en compte dans le calcul
@@ -431,7 +431,7 @@ export function tourEnnemi(etat, ev = []) {
     frapperEquipe(etat, e, charge, ev);
     if (etat.vie.actuel <= 0) return ev;
     // Frappe supplémentaire des ennemis vifs, hors attaque chargée.
-    if (!charge && e.traits.includes('vif') && etat.rng() < 0.35) {
+    if (!charge && e.traits.includes('frenesie') && etat.rng() < 0.35) {
       frapperEquipe(etat, e, false, ev, 0.55);
       if (etat.vie.actuel <= 0) return ev;
     }
@@ -448,11 +448,11 @@ function frapperEquipe(etat, ennemi, charge, ev, part = 1) {
   const x = etat.equipe[cible];
   const st = statsDe(etat, cible);
 
-  const type = multiplicateur(ennemi.affinite, x.affinite);
+  const type = multiplicateur(ennemi.ecole, x.ecole);
   let brut = attaqueDe(ennemi) * (charge ? ennemi.charge.mult : 1) * part * type;
   brut *= passage(st.def, K_DEF_HEROS);
   brut *= 1 - etat.garde;
-  if (x.passif?.type === 'rempart') brut *= 1 - x.passif.valeur;
+  if (x.talent?.type === 'plates') brut *= 1 - x.talent.valeur;
 
   const degats = Math.max(1, Math.round(brut));
   etat.vie.actuel = Math.max(0, etat.vie.actuel - degats);
@@ -461,12 +461,12 @@ function frapperEquipe(etat, ennemi, charge, ev, part = 1) {
     nom: charge ? ennemi.charge.nom : 'Attaque', typeMult: type,
   });
 
-  if (ennemi.traits.includes('venimeux')) {
+  if (ennemi.traits.includes('poison')) {
     const venin = Math.round(degats * 0.12);
     etat.vie.actuel = Math.max(0, etat.vie.actuel - venin);
     ev.push({ type: 'venin', degats: venin });
   }
-  if (ennemi.traits.includes('vorace')) {
+  if (ennemi.traits.includes('drain')) {
     const rendu = Math.round(degats * 0.25);
     ennemi.pv = Math.min(ennemi.pvMax, ennemi.pv + rendu);
     ev.push({ type: 'ennemiSoin', ennemi, soin: rendu });
@@ -487,7 +487,7 @@ export function utiliserObjet(etat) {
   if (etat.phase !== PHASE.CHOIX) return { ok: false, raison: 'phase' };
   if (etat.objets <= 0) return { ok: false, raison: 'vide' };
   etat.objets--;
-  const gain = Math.round(etat.vie.max * 0.3 * (1 + (etat.eveils.soin || 0)));
+  const gain = Math.round(etat.vie.max * 0.3 * (1 + (etat.butin.soin || 0)));
   const avant = etat.vie.actuel;
   etat.vie.actuel = Math.min(etat.vie.max, etat.vie.actuel + gain);
   return { ok: true, evenements: [{ type: 'objet', montant: etat.vie.actuel - avant }] };
@@ -530,13 +530,13 @@ export function vue(etat) {
     elan: etat.elan ? { ...etat.elan } : null,
     garde: etat.garde,
     plateau: [...etat.plateau],
-    ki: [...etat.ki],
+    mana: [...etat.mana],
     equipe: etat.equipe.map((x, i) => ({
-      id: x.id, nom: x.nom, affinite: x.affinite, role: x.role,
-      ki: etat.ki[i], liens: etat.rotation.includes(i) ? resonances(etat, i) : [],
+      id: x.id, nom: x.nom, ecole: x.ecole, role: x.role,
+      mana: etat.mana[i], liens: etat.rotation.includes(i) ? synergies(etat, i) : [],
     })),
     ennemis: etat.ennemis.map((e) => ({
-      nom: e.nom, affinite: e.affinite, silhouette: e.silhouette, rang: e.rang,
+      nom: e.nom, ecole: e.ecole, silhouette: e.silhouette, rang: e.rang,
       pv: e.pv, pvMax: e.pvMax, traits: [...e.traits], enrage: e.enrage,
       charge: { nom: e.charge.nom, reste: e.charge.reste, tours: e.charge.tours },
       entrave: e.entrave && e.entrave.tours > 0 ? e.entrave.valeur : 0,
@@ -545,4 +545,4 @@ export function vue(etat) {
   };
 }
 
-export { LONGUEUR_MAX, PRISMATIQUE };
+export { LONGUEUR_MAX, ESSENCE };

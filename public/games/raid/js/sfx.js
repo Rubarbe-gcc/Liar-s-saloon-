@@ -1,11 +1,11 @@
 /**
- * PRISME — bruitages synthétisés (Web Audio). Aucun fichier audio :
+ * RAID — bruitages synthétisés (Web Audio). Aucun fichier audio :
  * tout est fabriqué à la volée, donc rien à télécharger et rien qui manque
  * hors connexion.
  */
 
 let ctx = null, master = null, actif = true;
-try { actif = localStorage.getItem('prisme.son') !== 'off'; } catch { /* premier passage */ }
+try { actif = localStorage.getItem('raid.son') !== 'off'; } catch { /* premier passage */ }
 
 function ac() {
   if (!ctx) {
@@ -23,7 +23,7 @@ function ac() {
 export const estActif = () => actif;
 export function basculer() {
   actif = !actif;
-  try { localStorage.setItem('prisme.son', actif ? 'on' : 'off'); } catch { /* ignore */ }
+  try { localStorage.setItem('raid.son', actif ? 'on' : 'off'); } catch { /* ignore */ }
   if (actif) { ac(); note(780, 0.09, 'sine', 0.18); }
   return actif;
 }
@@ -66,11 +66,11 @@ export const sfx = {
   tap() { note(880, 0.04, 'square', 0.05); },
   clic() { note(600, 0.07, 'triangle', 0.12); },
 
-  /** Une orbe ramassée : la note monte avec la longueur du chemin. */
-  orbe(n) { note(420 + Math.min(n, 12) * 55, 0.06, 'triangle', 0.1); },
+  /** Une globe ramassée : la note monte avec la longueur du chemin. */
+  globe(n) { note(420 + Math.min(n, 12) * 55, 0.06, 'triangle', 0.1); },
 
-  /** Le ki se verse dans la jauge. */
-  ki() { note(520, 0.22, 'sine', 0.14, 1250); },
+  /** Le mana se verse dans la jauge. */
+  mana() { note(520, 0.22, 'sine', 0.14, 1250); },
 
   /** Seuil franchi : la spéciale s'arme. */
   arme() { note(660, 0.16, 'square', 0.12, 990); note(990, 0.2, 'sine', 0.1, 1320, 0.09); },
@@ -97,5 +97,5 @@ export const sfx = {
   rage() { note(90, 0.5, 'sawtooth', 0.3, 200); souffle(0.5, 'bandpass', 300, 0.3, 2, 900); },
   victoire() { [523, 659, 784, 1046].forEach((f, i) => note(f, 0.3, 'triangle', 0.2, null, i * 0.12)); },
   defaite() { [392, 311, 262, 196].forEach((f, i) => note(f, 0.36, 'sine', 0.17, null, i * 0.18)); },
-  eveil() { [784, 1046, 1318].forEach((f, i) => note(f, 0.4, 'sine', 0.16, null, i * 0.1)); },
+  butin() { [784, 1046, 1318].forEach((f, i) => note(f, 0.4, 'sine', 0.16, null, i * 0.1)); },
 };

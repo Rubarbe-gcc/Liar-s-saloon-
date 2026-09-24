@@ -1,19 +1,20 @@
 /**
- * PRISME — le champ d'orbes.
+ * RAID — le champ d'essence.
  *
- * Le cœur du jeu : avant de frapper, un héros trace un chemin sur une grille
- * d'orbes de lumière et récolte le ki qu'il ramasse en route. Les orbes de sa
- * propre affinité comptent double, l'orbe prismatique vaut pour tout le monde.
+ * Le cœur du jeu : avant de lancer un sort, un personnage trace un chemin sur
+ * une nappe de globes de mana et récolte ce qu'il ramasse en route. Les globes
+ * de sa propre école comptent double, et le globe d'essence pure vaut pour
+ * tout le monde.
  *
- * Le chemin passe d'une orbe à l'orbe voisine — les huit directions, diagonales
- * comprises — sans jamais repasser sur la même. Sa longueur est bornée : sans
- * cela, un joueur patient ramasserait la grille entière et le plafond de ki
- * n'aurait plus de sens.
+ * Le chemin passe d'un globe au globe voisin — les huit directions, diagonales
+ * comprises — sans jamais repasser au même endroit. Sa longueur est bornée :
+ * sans cela, un joueur patient ramasserait la nappe entière et le plafond de
+ * mana n'aurait plus de sens.
  *
  * Module ISO : ni DOM ni Node.
  */
 
-import { CYCLE, PRISMATIQUE } from './affinites.js';
+import { CYCLE, ESSENCE } from './ecoles.js';
 import { entier } from '../hasard.js';
 
 export const COLONNES = 6;
@@ -21,25 +22,25 @@ export const LIGNES = 5;
 export const CASES = COLONNES * LIGNES;
 export const LONGUEUR_MAX = 9;
 
-/** Valeurs de ki. Une orbe d'affinité vaut le double d'une orbe étrangère. */
-export const KI_SIMPLE = 1;
-export const KI_DOUBLE = 2;
+/** Valeurs de mana. Un globe de son école vaut le double d'un globe étranger. */
+export const MANA_SIMPLE = 1;
+export const MANA_DOUBLE = 2;
 
-/** Rareté de l'orbe prismatique. Assez rare pour être un événement. */
-const PART_PRISME = 0.09;
+/** Rareté du globe d'essence pure. Assez rare pour être un événement. */
+const PART_ESSENCE = 0.09;
 
 export const x = (i) => i % COLONNES;
 export const y = (i) => Math.floor(i / COLONNES);
 
-/** Une orbe au hasard, prismatique de temps en temps. */
-export function orbeAuHasard(rng) {
-  if (rng() < PART_PRISME) return PRISMATIQUE;
+/** Un globe au hasard, d'essence pure de temps en temps. */
+export function globeAuHasard(rng) {
+  if (rng() < PART_ESSENCE) return ESSENCE;
   return CYCLE[entier(rng, CYCLE.length)];
 }
 
 /** Grille pleine. */
 export function creerPlateau(rng) {
-  return Array.from({ length: CASES }, () => orbeAuHasard(rng));
+  return Array.from({ length: CASES }, () => globeAuHasard(rng));
 }
 
 /** Deux cases se touchent-elles, diagonales comprises ? */
@@ -78,30 +79,30 @@ export function cheminValide(chemin) {
   return true;
 }
 
-/** Ce qu'une orbe rapporte à un héros d'affinité donnée. */
-export function valeurOrbe(orbe, affinite) {
-  if (orbe === PRISMATIQUE) return KI_DOUBLE;
-  return orbe === affinite ? KI_DOUBLE : KI_SIMPLE;
+/** Ce qu'un globe rapporte à un personnage d'une école donnée. */
+export function valeurGlobe(globe, ecole) {
+  if (globe === ESSENCE) return MANA_DOUBLE;
+  return globe === ecole ? MANA_DOUBLE : MANA_SIMPLE;
 }
 
 /** Ki ramassé par un chemin, avec le détail pour l'affichage. */
-export function kiDuChemin(plateau, chemin, affinite) {
-  const detail = { total: 0, doubles: 0, simples: 0, prismes: 0, longueur: 0 };
+export function manaDuChemin(plateau, chemin, ecole) {
+  const detail = { total: 0, doubles: 0, simples: 0, essences: 0, longueur: 0 };
   if (!cheminValide(chemin)) return detail;
   for (const c of chemin) {
-    const orbe = plateau[c];
-    if (orbe == null) continue;
+    const globe = plateau[c];
+    if (globe == null) continue;
     detail.longueur++;
-    if (orbe === PRISMATIQUE) detail.prismes++;
-    else if (orbe === affinite) detail.doubles++;
+    if (globe === ESSENCE) detail.essences++;
+    else if (globe === ecole) detail.doubles++;
     else detail.simples++;
-    detail.total += valeurOrbe(orbe, affinite);
+    detail.total += valeurGlobe(globe, ecole);
   }
   return detail;
 }
 
 /**
- * Retire les orbes ramassées, fait tomber celles du dessus et complète par le
+ * Retire les globes ramassés, fait tomber ceux du dessus et complète par le
  * haut. La liste `chutes` décrit les déplacements pour que l'écran puisse les
  * animer plutôt que de redessiner la grille d'un coup.
  */
@@ -125,7 +126,7 @@ export function recolter(plateau, chemin, rng) {
     // Le reste de la colonne est neuf.
     for (let lig = ecrit; lig >= 0; lig--) {
       const j = lig * COLONNES + col;
-      suivant[j] = orbeAuHasard(rng);
+      suivant[j] = globeAuHasard(rng);
       neuves.push(j);
     }
   }
@@ -134,7 +135,7 @@ export function recolter(plateau, chemin, rng) {
 }
 
 /**
- * Le meilleur chemin que l'on puisse tracer pour une affinité donnée.
+ * Le meilleur chemin que l'on puisse tracer pour une école donnée.
  *
  * L'exploration exhaustive exploserait (neuf pas, huit directions) : on garde
  * donc, à chaque longueur, les `LARGEUR` chemins les plus riches. C'est une
@@ -144,13 +145,13 @@ export function recolter(plateau, chemin, rng) {
  */
 const LARGEUR = 160;
 
-export function meilleurChemin(plateau, affinite, longueurMax = LONGUEUR_MAX) {
+export function meilleurChemin(plateau, ecole, longueurMax = LONGUEUR_MAX) {
   const borne = Math.min(longueurMax, LONGUEUR_MAX);
   let front = [];
   for (let i = 0; i < CASES; i++) {
-    front.push({ chemin: [i], vus: 1 << 0, ki: valeurOrbe(plateau[i], affinite), set: new Set([i]) });
+    front.push({ chemin: [i], vus: 1 << 0, mana: valeurGlobe(plateau[i], ecole), set: new Set([i]) });
   }
-  let meilleur = front.reduce((a, b) => (b.ki > a.ki ? b : a));
+  let meilleur = front.reduce((a, b) => (b.mana > a.mana ? b : a));
 
   for (let pas = 1; pas < borne; pas++) {
     const suite = [];
@@ -163,15 +164,15 @@ export function meilleurChemin(plateau, affinite, longueurMax = LONGUEUR_MAX) {
         suite.push({
           chemin: [...etat.chemin, v],
           set,
-          ki: etat.ki + valeurOrbe(plateau[v], affinite),
+          mana: etat.mana + valeurGlobe(plateau[v], ecole),
         });
       }
     }
     if (!suite.length) break;
-    suite.sort((a, b) => b.ki - a.ki);
+    suite.sort((a, b) => b.mana - a.mana);
     front = suite.slice(0, LARGEUR);
-    if (front[0].ki > meilleur.ki) meilleur = front[0];
+    if (front[0].mana > meilleur.mana) meilleur = front[0];
   }
 
-  return { chemin: meilleur.chemin, ki: meilleur.ki };
+  return { chemin: meilleur.chemin, mana: meilleur.mana };
 }

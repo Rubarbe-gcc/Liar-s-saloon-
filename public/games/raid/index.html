@@ -3,17 +3,17 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0a0713">
-<meta name="description" content="PRISME — jeu de combat solo. Récoltez le ki sur le champ d'orbes, enchaînez les attaques spéciales et menez six héros au bout de l'expédition.">
-<title>PRISME</title>
-<link rel="icon" href="/games/prisme/icons/icon-192.png">
-<link rel="manifest" href="/games/prisme/manifest.webmanifest">
-<link rel="apple-touch-icon" href="/games/prisme/icons/apple-touch-icon.png">
+<meta name="theme-color" content="#0c0a07">
+<meta name="description" content="RAID — donjon solo au tour par tour. Ramassez le mana sur le champ d'essence, enchaînez les sorts et menez un raid de six héros jusqu'au Dragon Cendré.">
+<title>RAID</title>
+<link rel="icon" href="/games/raid/icons/icon-192.png">
+<link rel="manifest" href="/games/raid/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/games/raid/icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Prisme">
-<link rel="stylesheet" href="/games/prisme/css/prisme.css">
+<meta name="apple-mobile-web-app-title" content="Raid">
+<link rel="stylesheet" href="/games/raid/css/raid.css">
 </head>
 <body>
 
@@ -29,23 +29,23 @@
 <section class="screen is-active" id="s-menu">
   <div class="menu">
     <header class="logo">
-      <div class="logo-kicker">expédition solo · quinze rencontres</div>
-      <h1 class="logo-title" id="logo-title">PRISME</h1>
-      <div class="logo-rule"><i></i><span id="logo-glyphes">◆ ❋ ✦ ✳ ◈</span><i></i></div>
-      <p class="logo-tag">Ramassez la lumière. Frappez avec.</p>
+      <div class="logo-kicker">donjon solo · cinq ailes · quinze pulls</div>
+      <h1 class="logo-title" id="logo-title">RAID</h1>
+      <div class="logo-rule"><i></i><span id="logo-glyphes">✧ ☾ ❦ ❄ ✹</span><i></i></div>
+      <p class="logo-tag">Six héros. Une seule barre de vie. Un dragon au sommet.</p>
     </header>
 
     <nav class="menu-nav">
       <button class="btn btn-big" data-go="nouvelle">
-        <span class="bi">✦</span>
-        <span class="bt"><b>Nouvelle expédition</b><i>Six héros, cinq secteurs</i></span>
+        <span class="bi">⚔</span>
+        <span class="bt"><b>Monter un raid</b><i>Six personnages, cinq ailes</i></span>
       </button>
       <button class="btn btn-big" id="b-reprendre" hidden>
         <span class="bi">⏵</span>
         <span class="bt"><b>Reprendre</b><i id="reprendre-note">—</i></span>
       </button>
       <div class="menu-row">
-        <button class="btn btn-thin" data-go="garnison"><span class="bi">📖</span> Garnison</button>
+        <button class="btn btn-thin" data-go="guilde"><span class="bi">📖</span> La guilde</button>
         <button class="btn btn-thin" data-go="regles"><span class="bi">❓</span> Règles</button>
         <button class="btn btn-thin" id="b-son"><span class="bi">🔊</span> Son</button>
       </div>
@@ -54,14 +54,14 @@
   </div>
 </section>
 
-<!-- ============================= ÉQUIPE ============================= -->
+<!-- ============================== RAID ============================== -->
 <section class="screen" id="s-equipe">
   <div class="pick">
     <header class="pick-head">
       <button class="pick-back" data-go="menu" aria-label="Retour">‹</button>
       <div>
-        <h2 class="pick-title">Votre expédition</h2>
-        <p class="pick-sub" id="equipe-sub">Choisissez six héros. Le premier mène.</p>
+        <h2 class="pick-title">Votre raid</h2>
+        <p class="pick-sub" id="equipe-sub">Choisissez six personnages. Le premier est chef de raid.</p>
       </div>
     </header>
 
@@ -79,16 +79,16 @@
     <div class="roster" id="roster"></div>
 
     <div class="pick-actions">
-      <button class="btn btn-go" id="b-partir" disabled>Partir en expédition</button>
+      <button class="btn btn-go" id="b-partir" disabled>Entrer dans le donjon</button>
     </div>
   </div>
 </section>
 
-<!-- ============================== CARTE ============================= -->
+<!-- ============================== AILE ============================== -->
 <section class="screen" id="s-carte">
   <div class="carte">
     <header class="carte-head">
-      <div class="carte-secteur" id="carte-secteur">—</div>
+      <div class="carte-aile" id="carte-aile">—</div>
       <h2 class="carte-titre" id="carte-titre">—</h2>
       <p class="carte-texte" id="carte-texte">—</p>
     </header>
@@ -107,8 +107,8 @@
     <div class="carte-ennemis" id="carte-ennemis"></div>
 
     <div class="pick-actions two">
-      <button class="btn btn-ghost" id="b-abandonner">Abandonner</button>
-      <button class="btn btn-go" id="b-engager">Engager</button>
+      <button class="btn btn-ghost" id="b-abandonner">Quitter le donjon</button>
+      <button class="btn btn-go" id="b-engager">Pull</button>
     </div>
   </div>
 </section>
@@ -123,7 +123,7 @@
         <b id="hud-lieu">—</b>
         <i id="hud-tour">Tour 1</i>
       </div>
-      <button class="hud-btn hud-potion" id="b-potion" aria-label="Utiliser une potion">🧪<em id="potion-n">0</em></button>
+      <button class="hud-btn hud-potion" id="b-potion" aria-label="Boire une potion de soins">🧪<em id="potion-n">0</em></button>
     </div>
 
     <div class="scene" id="scene">
@@ -150,7 +150,7 @@
       <div class="plateau-enveloppe">
         <div class="plateau" id="plateau"></div>
         <svg class="trace" id="trace" viewBox="0 0 600 500" preserveAspectRatio="none" aria-hidden="true"></svg>
-        <div class="ki-flottant" id="ki-flottant" hidden><b>0</b> ki</div>
+        <div class="mana-flottant" id="mana-flottant" hidden><b>0</b> mana</div>
       </div>
 
       <div class="valider" id="valider" hidden>
@@ -173,43 +173,43 @@
   <div class="flash" id="flash" aria-hidden="true"></div>
 </section>
 
-<!-- ============================== ÉVEIL ============================= -->
-<section class="screen" id="s-eveil">
+<!-- ============================== BUTIN ============================= -->
+<section class="screen" id="s-butin">
   <div class="eveil">
     <header class="eveil-head">
-      <div class="eveil-kicker">secteur franchi</div>
-      <h2 class="eveil-titre">Choisissez un éveil</h2>
-      <p class="pick-sub">Un seul. Il vous suivra jusqu'à la fin de l'expédition.</p>
+      <div class="eveil-kicker">boss tombé · aile nettoyée</div>
+      <h2 class="eveil-titre">Le butin</h2>
+      <p class="pick-sub">Une seule pièce. Elle vous suit jusqu'au bout du donjon.</p>
     </header>
-    <div class="eveil-cartes" id="eveil-cartes"></div>
+    <div class="eveil-cartes" id="butin-cartes"></div>
   </div>
 </section>
 
 <!-- =============================== FIN ============================== -->
 <section class="screen" id="s-fin">
   <div class="fin">
-    <div class="fin-sceau" id="fin-sceau">✦</div>
+    <div class="fin-sceau" id="fin-sceau">✧</div>
     <h2 class="fin-titre" id="fin-titre">—</h2>
     <p class="fin-texte" id="fin-texte">—</p>
     <ul class="fin-stats" id="fin-stats"></ul>
     <div class="pick-actions two">
       <button class="btn btn-ghost" data-go="menu">Menu</button>
-      <button class="btn btn-go" id="b-rejouer">Repartir</button>
+      <button class="btn btn-go" id="b-rejouer">Remonter un raid</button>
     </div>
   </div>
 </section>
 
-<!-- ============================= GARNISON =========================== -->
-<section class="screen" id="s-garnison">
+<!-- ============================== GUILDE ============================ -->
+<section class="screen" id="s-guilde">
   <div class="pick">
     <header class="pick-head">
       <button class="pick-back" data-go="menu" aria-label="Retour">‹</button>
       <div>
-        <h2 class="pick-title">Garnison</h2>
-        <p class="pick-sub">Quinze héros, trois par affinité.</p>
+        <h2 class="pick-title">La guilde</h2>
+        <p class="pick-sub">Quinze personnages, trois par école de magie.</p>
       </div>
     </header>
-    <div class="roster roster-large" id="garnison"></div>
+    <div class="roster roster-large" id="guilde"></div>
   </div>
 </section>
 
@@ -239,6 +239,6 @@
   </div>
 </div>
 
-<script type="module" src="/games/prisme/js/main.js"></script>
+<script type="module" src="/games/raid/js/main.js"></script>
 </body>
 </html>

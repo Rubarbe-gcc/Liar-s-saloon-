@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v10';
+const VERSION = 'v11';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -48,23 +48,23 @@ const SHELL = [
   '/shared/zenith/ai.js',
   '/shared/zenith/sprites.js',
   '/shared/zenith/roue.js',
-  '/games/prisme/',
-  '/games/prisme/manifest.webmanifest',
-  '/games/prisme/css/prisme.css',
-  '/games/prisme/js/main.js',
-  '/games/prisme/js/scene.js',
-  '/games/prisme/js/regles.js',
-  '/games/prisme/js/sfx.js',
-  '/games/prisme/icons/icon-192.png',
+  '/games/raid/',
+  '/games/raid/manifest.webmanifest',
+  '/games/raid/css/raid.css',
+  '/games/raid/js/main.js',
+  '/games/raid/js/scene.js',
+  '/games/raid/js/regles.js',
+  '/games/raid/js/sfx.js',
+  '/games/raid/icons/icon-192.png',
   '/shared/hasard.js',
-  '/shared/prisme/affinites.js',
-  '/shared/prisme/orbes.js',
-  '/shared/prisme/heros.js',
-  '/shared/prisme/ennemis.js',
-  '/shared/prisme/combat.js',
-  '/shared/prisme/expedition.js',
-  '/shared/prisme/sprites.js',
-  '/shared/prisme/auto.js',
+  '/shared/raid/ecoles.js',
+  '/shared/raid/globes.js',
+  '/shared/raid/heros.js',
+  '/shared/raid/ennemis.js',
+  '/shared/raid/combat.js',
+  '/shared/raid/donjon.js',
+  '/shared/raid/sprites.js',
+  '/shared/raid/auto.js',
   '/games/echo/',
   '/games/echo/manifest.webmanifest',
   '/games/echo/css/echo.css',
