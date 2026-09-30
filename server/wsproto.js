@@ -12,8 +12,14 @@ const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 
 const OP = { CONT: 0x0, TEXT: 0x1, BIN: 0x2, CLOSE: 0x8, PING: 0x9, PONG: 0xa };
 
-/** Taille maximale d'un message applicatif (garde-fou memoire). */
-const MAX_PAYLOAD = 64 * 1024;
+/**
+ * Taille maximale d'un message applicatif (garde-fou memoire).
+ *
+ * ECHO fait transiter des prises audio : huit secondes a 16 kHz pesent 170 ko
+ * une fois en base64. A 64 ko, la connexion etait coupee des le premier depot
+ * — en local seulement, puisque Vercel passe par la bibliotheque `ws`.
+ */
+const MAX_PAYLOAD = 512 * 1024;
 
 export function isWebSocketUpgrade(req) {
   return (

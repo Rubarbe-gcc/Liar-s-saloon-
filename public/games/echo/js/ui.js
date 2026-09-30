@@ -6,9 +6,10 @@
  * se rejoue pas.
  */
 
-import { SONS, getSon, FAMILLES, rendre, dureeDe } from '../../../shared/mimic/sons.js';
-import { CASES, SABOTAGES, PHASE, DUREE_PRISE } from '../../../shared/mimic/partie.js';
+import { SONS, getSon, FAMILLES, FAMILLE_KEYS, rendre, dureeDe } from '../../../shared/mimic/sons.js';
+import { CASES, SABOTAGES, PHASE } from '../../../shared/mimic/partie.js';
 import { POIDS } from '../../../shared/mimic/analyse.js';
+import { bonhomme, COULEURS } from './avatars.js';
 import * as audio from './audio.js';
 
 const $ = (id) => document.getElementById(id);
@@ -106,27 +107,82 @@ export function niveau(v) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Les visages                                                         */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Photo ou trogne de chaque joueur, par identifiant. Elles ne transitent pas
+ * avec chaque état de partie : on les apprend une fois, au vestiaire.
+ */
+const visages = new Map();
+export function definirVisages(liste) {
+  visages.clear();
+  for (const j of liste) visages.set(j.id, { photo: j.photo || null, tete: j.tete || null });
+}
+const visageDe = (j) => ({ name: j.name, ...(visages.get(j.id) || {}) });
+
+/** Le bonhomme d'un joueur de la vue, à sa couleur de place. */
+export function bonhommeDe(v, i, o = {}) {
+  const j = v.joueurs[i];
+  return bonhomme(visageDe(j), { couleur: COULEURS[i % COULEURS.length], ...o });
+}
+
+/**
+ * La vedette : un grand bonhomme au milieu de la scène, pour dire à qui c'est
+ * le tour — de chanter, d'être réécouté, de tourner la roue.
+ */
+export function vedette(v, i, cls = '') {
+  const el = $('vedette');
+  if (v === null || i === null || i === undefined) { el.hidden = true; el.innerHTML = ''; return; }
+  const html = bonhommeDe(v, i, { cls: `grand ${cls}` });
+  if (el.dataset.sig !== html) { el.dataset.sig = html; el.innerHTML = html; }
+  el.hidden = false;
+}
+
+/* ------------------------------------------------------------------ */
 /* Le tableau                                                          */
 /* ------------------------------------------------------------------ */
 
-export function tableau(v, { surligne = null } = {}) {
+/**
+ * @param {object} v  la vue
+ * @param {{surligne?:number|null, chante?:boolean, sansMoi?:boolean}} [o]
+ *   `sansMoi` : partie à plusieurs sur un seul appareil, où « vous » ne
+ *   désigne personne en particulier.
+ */
+export function tableau(v, { surligne = null, chante = false, sansMoi = false } = {}) {
   const host = $('tableau');
+  // Jusqu'à quatre, tout le monde sur une ligne ; au-delà, quatre par ligne.
+  host.style.setProperty('--cols', Math.min(4, v.joueurs.length));
+  host.classList.toggle('nombreux', v.joueurs.length > 4);
+  const enScene = surligne ?? v.enregistreur ?? null;
   const html = v.joueurs.map((j, i) => {
     const sab = j.sabotage ? SABOTAGES[j.sabotage] : null;
     const p = j.prise;
-    const cls = ['jr', i === v.viewer ? 'moi' : '', surligne === i ? 'actif' : ''].filter(Boolean).join(' ');
+    const moi = !sansMoi && i === v.viewer;
+    const etiquette = moi && j.name !== 'Vous';
+    const cls = ['jr', moi ? 'moi' : '', enScene === i ? 'actif' : ''].filter(Boolean).join(' ');
+    const bh = [
+      enScene === i && (chante || v.enregistreur === i) ? 'chante' : '',
+      sab ? 'sabote' : '',
+      v.phase === PHASE.FIN && v.vainqueur === j.id ? 'gagne' : '',
+    ].filter(Boolean).join(' ');
     return `<div class="${cls}">
-      <span class="jr-nom">${esc(j.name)}${i === v.viewer ? ' <u>vous</u>' : ''}</span>
-      <span class="jr-etat">${etatJoueur(v, j, p, sab)}</span>
+      ${bonhommeDe(v, i, { cls: bh, badge: sab ? sab.glyph : '' })}
+      <span class="jr-nom">${esc(j.name)}${etiquette ? ' <u>vous</u>' : ''}</span>
+      <span class="jr-etat">${etatJoueur(v, j, p, sab, i)}</span>
       <span class="jr-score">${j.score}</span>
     </div>`;
   }).join('');
   if (host.dataset.sig !== html) { host.dataset.sig = html; host.innerHTML = html; }
 }
 
-function etatJoueur(v, j, p, sab) {
-  if (sab) return `<b class="sab">${sab.glyph} ${sab.label}</b>`;
-  if (v.phase === PHASE.ENREGISTREMENT) return j.aDepose ? '✓ prise déposée' : '…';
+function etatJoueur(v, j, p, sab, i) {
+  if (sab) return `<b class="sab">${sab.label}</b>`;
+  if (v.phase === PHASE.ENREGISTREMENT) {
+    if (j.aDepose) return '✓ prise';
+    if (v.enregistreur === i) return '<b class="sab">🎤 en scène</b>';
+    return v.enregistreur !== null && !j.isBot ? 'attend' : '…';
+  }
   if (p) {
     if (p.absente) return '<i class="rate">pas de prise</i>';
     return `<b class="note">+${p.note}</b>`;
@@ -233,9 +289,10 @@ export function choisirCible(v, sabotage) {
   const list = $('cible-list');
   list.hidden = false;
   list.innerHTML = v.joueurs
-    .filter((_, i) => i !== v.viewer)
-    .map((j) => `<button class="cible" data-cible="${esc(j.id)}">
-      <b>${esc(j.name)}</b><span>${j.score} pts</span></button>`).join('');
+    .map((j, i) => ({ j, i }))
+    .filter(({ i }) => i !== v.viewer)
+    .map(({ j, i }) => `<button class="cible" data-cible="${esc(j.id)}">
+      ${bonhommeDe(v, i)}<b>${esc(j.name)}</b><span>${j.score} pts</span></button>`).join('');
   $('roue-actions').innerHTML = '';
 }
 
@@ -253,21 +310,38 @@ $('cible-list').addEventListener('click', (e) => {
 /* Fin                                                                 */
 /* ------------------------------------------------------------------ */
 
-export function fin(v, { onMenu, onAgain }) {
-  const tri = [...v.joueurs].sort((a, b) => b.score - a.score);
+/**
+ * @param {object} v
+ * @param {{onMenu:Function, onAgain:Function, sansMoi?:boolean}} o
+ *   `sansMoi` : partie à plusieurs sur un seul appareil — on annonce le nom
+ *   du vainqueur plutôt que « vous gagnez ».
+ */
+export function fin(v, { onMenu, onAgain, sansMoi = false }) {
+  const tri = v.joueurs.map((j, i) => ({ j, i })).sort((a, b) => b.j.score - a.j.score);
   const moi = v.joueurs[v.viewer];
-  const gagne = tri[0] && tri[0].id === moi.id;
-
-  $('end-mark').textContent = gagne ? '🏆' : (tri[0].score === moi.score ? '🤝' : '🙉');
+  const premier = tri[0].j;
+  const exAequo = tri.length > 1 && tri[1].j.score === premier.score;
   const t = $('end-title');
-  t.className = `end-title${gagne ? '' : ' lost'}`;
-  t.textContent = gagne ? 'VOUS GAGNEZ' : (tri[0].score === moi.score ? 'ÉGALITÉ' : 'PERDU');
-  $('end-sub').textContent = gagne
-    ? `${moi.score} points en ${v.manches} manches.`
-    : `${esc(tri[0].name)} l'emporte avec ${tri[0].score} points.`;
 
-  $('podium').innerHTML = tri.map((j, i) => `<div class="pod${j.id === moi.id ? ' moi' : ''}">
-    <span class="pod-rang">${i + 1}</span>
+  if (sansMoi) {
+    $('end-mark').innerHTML = exAequo ? '🤝' : bonhommeDe(v, tri[0].i, { cls: 'grand gagne' });
+    t.className = 'end-title';
+    t.textContent = exAequo ? 'ÉGALITÉ' : `${premier.name.toUpperCase()} GAGNE`;
+    $('end-sub').textContent = `${premier.score} points en ${v.manches} manches.`;
+  } else {
+    const gagne = premier.id === moi.id && !exAequo;
+    const egal = exAequo && premier.score === moi.score;
+    $('end-mark').innerHTML = gagne ? bonhommeDe(v, v.viewer, { cls: 'grand gagne' }) : (egal ? '🤝' : '🙉');
+    t.className = `end-title${gagne || egal ? '' : ' lost'}`;
+    t.textContent = gagne ? 'VOUS GAGNEZ' : (egal ? 'ÉGALITÉ' : 'PERDU');
+    $('end-sub').textContent = gagne
+      ? `${moi.score} points en ${v.manches} manches.`
+      : `${premier.name} l'emporte avec ${premier.score} points.`;
+  }
+
+  $('podium').innerHTML = tri.map(({ j, i }, rang) => `<div class="pod${!sansMoi && j.id === moi.id ? ' moi' : ''}">
+    <span class="pod-rang">${['🥇', '🥈', '🥉'][rang] || rang + 1}</span>
+    ${bonhommeDe(v, i, { cls: rang === 0 ? 'gagne' : '' })}
     <span class="pod-nom">${esc(j.name)}</span>
     <span class="pod-score">${j.score}</span>
   </div>`).join('');
@@ -275,6 +349,20 @@ export function fin(v, { onMenu, onAgain }) {
   $('b-end-menu').onclick = onMenu;
   $('b-end-again').onclick = onAgain;
   $('ov-fin').hidden = false;
+  confettis();
+}
+
+/** Une pluie de confettis, pour l'écran de fin. */
+function confettis() {
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const host = $('confettis');
+  host.innerHTML = Array.from({ length: 46 }, (_, k) => {
+    const c = COULEURS[k % COULEURS.length];
+    return `<i style="--x:${Math.random() * 100}vw;--d:${(Math.random() * 1.2).toFixed(2)}s;`
+      + `--r:${Math.round(Math.random() * 720 - 360)}deg;--c:${c};--t:${(2.4 + Math.random() * 1.6).toFixed(2)}s"></i>`;
+  }).join('');
+  host.hidden = false;
+  setTimeout(() => { host.hidden = true; host.innerHTML = ''; }, 4400);
 }
 
 export function fermerFin() { $('ov-fin').hidden = true; }
@@ -287,15 +375,31 @@ export function catalogue() {
   // Le compte se lit dans les données. Écrit en dur dans la page, il
   // redevenait faux au premier son ajouté.
   $('sons-titre').textContent = `Les ${SONS.length} sons`;
-  $('sons-grid').innerHTML = SONS.map((s) => {
-    const f = FAMILLES[s.famille];
-    return `<button class="son-card" data-son="${s.id}" style="--fc:${f.color}">
+  $('sons-grid').innerHTML = FAMILLE_KEYS.map((k) => {
+    const f = FAMILLES[k];
+    const cartes = SONS.filter((s) => s.famille === k).map((s) => `<button class="son-card" data-son="${s.id}" style="--fc:${f.color}">
       <span class="son-g">${s.glyph}</span>
       <b>${esc(s.nom)}</b>
-      <span class="son-fam">${f.glyph} ${f.label}</span>
       <span class="son-meta">${s.attaques} · ${dureeDe(s).toFixed(1)} s</span>
-    </button>`;
+    </button>`).join('');
+    return `<h3 class="son-famille" style="--fc:${f.color}">${f.glyph} ${esc(f.label)}</h3>${cartes}`;
   }).join('');
+}
+
+/** Les notes de la manche pour tout le monde, quand plusieurs se partagent l'écran. */
+export function notesManche(v) {
+  const tri = v.joueurs.map((j, i) => ({ j, i }))
+    .sort((a, b) => (b.j.prise?.note || 0) - (a.j.prise?.note || 0));
+  return `<div class="nm">${tri.map(({ j, i }, rang) => {
+    const p = j.prise;
+    const n = p && !p.absente ? p.note : null;
+    return `<div class="nm-l${rang === 0 && n ? ' top' : ''}">
+      ${bonhommeDe(v, i, { cls: rang === 0 && n ? 'gagne' : '' })}
+      <b>${esc(j.name)}</b>
+      <span class="nm-bar"><i style="width:${n || 0}%"></i></span>
+      <span class="nm-n">${n === null ? '—' : n}</span>
+    </div>`;
+  }).join('')}</div>`;
 }
 
 $('sons-grid').addEventListener('click', async (e) => {

@@ -21,6 +21,7 @@ export const FAMILLES = {
   musique: { key: 'musique', label: 'Musique', glyph: '🎵', color: '#a78bfa' },
   humain: { key: 'humain', label: 'Voix', glyph: '🗣️', color: '#ffd84d' },
   internet: { key: 'internet', label: 'Grand n\'importe quoi', glyph: '🌐', color: '#f472b6' },
+  brainrot: { key: 'brainrot', label: 'Brainrot', glyph: '🧠', color: '#a3e635' },
 };
 
 export const FAMILLE_KEYS = Object.keys(FAMILLES);
@@ -37,6 +38,9 @@ export const FAMILLE_KEYS = Object.keys(FAMILLES);
  *            tremble : le trombone triste, le ressort, la scie musicale.
  *            Sans lui, ces sons-là sonnent comme un synthétiseur des
  *            années quatre-vingt plutôt que comme ce qu'ils imitent.
+ *   voyelle  'a' | 'e' | 'i' | 'o' | 'ou' | 'eu' — colore le son comme une
+ *            voix qui prononce cette voyelle. Pour les mèmes, qui sont des
+ *            phrases : « sa-hur » en bips ne ressemble à rien.
  */
 export const SONS = [
   /* ---- Bestiaire ---- */
@@ -312,6 +316,138 @@ export const SONS = [
         vibrato: { hz: 6.5, demitons: 1.5 } },
     ],
   },
+
+  /* ================================================================ */
+  /* Brainrot                                                         */
+  /*                                                                  */
+  /* Les mèmes de cour de récré, réduits à leur prosodie : le nombre  */
+  /* de syllabes, la ligne qui monte ou descend, la voyelle. Aucun    */
+  /* extrait n'est reproduit — ce sont des phrases qu'on prononce, et */
+  /* c'est justement ce qu'on demande au joueur de faire.             */
+  /* ================================================================ */
+  {
+    id: 'tung', nom: 'Tung tung tung sahur', glyph: '🥁', famille: 'brainrot',
+    difficulte: 2, attaques: 5,
+    indice: 'Trois « tung » secs comme un tambour de bois, puis « sa-hur ».',
+    segments: [
+      ...Array.from({ length: 3 }, () => (
+        { hz: [240, 170], duree: 0.12, forme: 'dent', voyelle: 'ou', bruit: 0.05,
+          vol: [1, 0.15], apres: 0.12 })),
+      { hz: 280, duree: 0.15, forme: 'dent', voyelle: 'a', bruit: 0.12, vol: 0.95, apres: 0.06 },
+      { hz: [260, 200], duree: 0.36, forme: 'dent', voyelle: 'ou', bruit: 0.06, vol: [1, 0.1] },
+    ],
+  },
+  {
+    id: 'uwu', nom: 'UwU', glyph: '🥺', famille: 'brainrot',
+    difficulte: 1, attaques: 2,
+    indice: 'Deux « ou » tout mignons, le second monte très haut.',
+    segments: [
+      { hz: [480, 560], duree: 0.24, forme: 'dent', voyelle: 'ou', bruit: 0.02, vol: [0.6, 1], apres: 0.08 },
+      { hz: [500, 820], duree: 0.42, forme: 'dent', voyelle: 'ou', bruit: 0.02, vol: [1, 0.2],
+        vibrato: { hz: 5, demitons: 0.3 } },
+    ],
+  },
+  {
+    id: 'tralalero', nom: 'Tralalero tralala', glyph: '🦈', famille: 'brainrot',
+    difficulte: 3, attaques: 7,
+    indice: 'Tra-la-le-ro, tra-la-la : sept syllabes chantées, la dernière tient.',
+    segments: [
+      { hz: 392, duree: 0.13, forme: 'dent', voyelle: 'a', vol: 0.9, apres: 0.04 },
+      { hz: 440, duree: 0.13, forme: 'dent', voyelle: 'a', vol: 0.9, apres: 0.04 },
+      { hz: 494, duree: 0.13, forme: 'dent', voyelle: 'e', vol: 0.95, apres: 0.04 },
+      { hz: 440, duree: 0.16, forme: 'dent', voyelle: 'o', vol: 0.9, apres: 0.14 },
+      { hz: 392, duree: 0.13, forme: 'dent', voyelle: 'a', vol: 0.9, apres: 0.04 },
+      { hz: 440, duree: 0.13, forme: 'dent', voyelle: 'a', vol: 0.9, apres: 0.04 },
+      { hz: [392, 380], duree: 0.4, forme: 'dent', voyelle: 'a', vol: [0.95, 0.1] },
+    ],
+  },
+  {
+    id: 'patapim', nom: 'Brr brr patapim', glyph: '🌳', famille: 'brainrot',
+    difficulte: 2, attaques: 5,
+    indice: 'Deux « brrr » qui roulent, puis pa-ta-pim, le « pim » plus aigu.',
+    segments: [
+      { hz: 200, duree: 0.26, forme: 'dent', voyelle: 'eu', bruit: 0.2, vol: 0.9,
+        vibrato: { hz: 26, demitons: 1.2 }, apres: 0.1 },
+      { hz: 200, duree: 0.26, forme: 'dent', voyelle: 'eu', bruit: 0.2, vol: 0.9,
+        vibrato: { hz: 26, demitons: 1.2 }, apres: 0.16 },
+      { hz: 300, duree: 0.1, forme: 'dent', voyelle: 'a', bruit: 0.1, vol: 0.9, apres: 0.05 },
+      { hz: 300, duree: 0.1, forme: 'dent', voyelle: 'a', bruit: 0.1, vol: 0.9, apres: 0.05 },
+      { hz: [420, 400], duree: 0.26, forme: 'dent', voyelle: 'i', bruit: 0.05, vol: [1, 0.15] },
+    ],
+  },
+  {
+    id: 'bombardiro', nom: 'Bombardiro crocodilo', glyph: '🐊', famille: 'brainrot',
+    difficulte: 3, attaques: 8,
+    indice: 'Bom-bar-di-ro, cro-co-di-lo : huit syllabes, un appui sur chaque début de mot.',
+    segments: [
+      { hz: 220, duree: 0.13, forme: 'dent', voyelle: 'o', vol: 1, apres: 0.04 },
+      { hz: 262, duree: 0.11, forme: 'dent', voyelle: 'a', vol: 0.8, apres: 0.04 },
+      { hz: 294, duree: 0.11, forme: 'dent', voyelle: 'i', vol: 0.8, apres: 0.04 },
+      { hz: 262, duree: 0.13, forme: 'dent', voyelle: 'o', vol: 0.8, apres: 0.16 },
+      { hz: 330, duree: 0.13, forme: 'dent', voyelle: 'o', vol: 1, apres: 0.04 },
+      { hz: 294, duree: 0.11, forme: 'dent', voyelle: 'o', vol: 0.8, apres: 0.04 },
+      { hz: 262, duree: 0.11, forme: 'dent', voyelle: 'i', vol: 0.8, apres: 0.04 },
+      { hz: [220, 200], duree: 0.28, forme: 'dent', voyelle: 'o', vol: [0.9, 0.1] },
+    ],
+  },
+  {
+    id: 'ballerina', nom: 'Ballerina cappuccina', glyph: '🩰', famille: 'brainrot',
+    difficulte: 2, attaques: 3,
+    indice: '« Mi-mi-mi » : trois notes pointues qui montent, comme une danseuse sur les pointes.',
+    segments: [
+      { hz: 660, duree: 0.14, forme: 'dent', voyelle: 'i', vol: 0.85, apres: 0.07 },
+      { hz: 784, duree: 0.14, forme: 'dent', voyelle: 'i', vol: 0.9, apres: 0.07 },
+      { hz: [880, 900], duree: 0.34, forme: 'dent', voyelle: 'i', vol: [1, 0.15] },
+    ],
+  },
+  {
+    id: 'bruh', nom: 'Bruh', glyph: '😐', famille: 'brainrot',
+    difficulte: 1, attaques: 1,
+    indice: 'Un seul « breuh » grave et blasé, qui s\'affaisse.',
+    segments: [
+      { hz: [160, 115], duree: 0.55, forme: 'dent', voyelle: 'eu', bruit: 0.1, vol: [1, 0.2] },
+    ],
+  },
+  {
+    id: 'boum', nom: 'Le BOUM dramatique', glyph: '💥', famille: 'brainrot',
+    difficulte: 1, attaques: 1,
+    indice: 'Un seul coup très grave qui résonne et s\'éteint lentement.',
+    segments: [
+      { hz: [130, 80], duree: 0.8, forme: 'dent', voyelle: 'ou', bruit: 0.15, vol: [1, 0.02] },
+    ],
+  },
+  {
+    id: 'sheesh', nom: 'Sheeesh', glyph: '😤', famille: 'brainrot',
+    difficulte: 2, attaques: 1,
+    indice: 'Un « chiiiii » qui monte et qu\'on tient longtemps, d\'un seul souffle.',
+    segments: [
+      { hz: 300, duree: 0.14, forme: 'bruit', bruit: 1, vol: [0.5, 0.8] },
+      { hz: [300, 440], duree: 0.95, forme: 'dent', voyelle: 'i', bruit: 0.18, vol: [0.8, 0.3],
+        vibrato: { hz: 5.5, demitons: 0.35 } },
+    ],
+  },
+  {
+    id: 'quoicoubeh', nom: 'Quoicoubeh', glyph: '🗿', famille: 'brainrot',
+    difficulte: 1, attaques: 3,
+    indice: 'Quoi-cou-beh : trois syllabes, le « beh » remonte, l\'air très sûr de soi.',
+    segments: [
+      { hz: 330, duree: 0.14, forme: 'dent', voyelle: 'a', bruit: 0.06, vol: 0.9, apres: 0.06 },
+      { hz: 280, duree: 0.13, forme: 'dent', voyelle: 'ou', bruit: 0.06, vol: 0.85, apres: 0.06 },
+      { hz: [300, 400], duree: 0.34, forme: 'dent', voyelle: 'e', bruit: 0.06, vol: [1, 0.2] },
+    ],
+  },
+  {
+    id: 'skibidi', nom: 'Skibidi', glyph: '🚽', famille: 'brainrot',
+    difficulte: 2, attaques: 5,
+    indice: 'Ski-bi-di, très vite, puis deux « dop » bien graves.',
+    segments: [
+      { hz: 440, duree: 0.09, forme: 'dent', voyelle: 'i', bruit: 0.1, vol: 0.9, apres: 0.04 },
+      { hz: 494, duree: 0.09, forme: 'dent', voyelle: 'i', vol: 0.9, apres: 0.04 },
+      { hz: 440, duree: 0.1, forme: 'dent', voyelle: 'i', vol: 0.9, apres: 0.14 },
+      { hz: 196, duree: 0.14, forme: 'dent', voyelle: 'o', vol: 1, apres: 0.1 },
+      { hz: [196, 185], duree: 0.2, forme: 'dent', voyelle: 'o', vol: [1, 0.15] },
+    ],
+  },
 ];
 
 const PAR_ID = new Map(SONS.map((s) => [s.id, s]));
@@ -361,6 +497,37 @@ function forme(nom, phase, souffle) {
 }
 
 /**
+ * Les deux premiers formants de chaque voyelle, en hertz : ce sont eux qui
+ * font qu'on entend « a » plutôt que « ou », quelle que soit la note chantée.
+ */
+const FORMANTS = {
+  a: [800, 1250],
+  e: [420, 2000],
+  i: [300, 2300],
+  o: [500, 900],
+  ou: [330, 800],
+  eu: [460, 1400],
+};
+
+/**
+ * Filtre passe-bande résonant (biquad, gain unitaire au sommet). Chaque
+ * segment voisé en a deux, un par formant, dont l'état ne dure que le segment.
+ */
+function passeBande(freq, q, sampleRate) {
+  const w = (2 * Math.PI * Math.min(freq, sampleRate * 0.45)) / sampleRate;
+  const alpha = Math.sin(w) / (2 * q);
+  const a0 = 1 + alpha;
+  const b0 = alpha / a0, b2 = -alpha / a0;
+  const a1 = (-2 * Math.cos(w)) / a0, a2 = (1 - alpha) / a0;
+  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+  return (x) => {
+    const y = b0 * x + b2 * x2 - a1 * y1 - a2 * y2;
+    x2 = x1; x1 = x; y2 = y1; y1 = y;
+    return y;
+  };
+}
+
+/**
  * Rend un son en échantillons.
  *
  * @param {object} son   une entrée de SONS
@@ -379,6 +546,9 @@ export function rendre(son, sampleRate, graine = 1234) {
     const n = Math.round(seg.duree * sampleRate);
     const partBruit = seg.bruit || 0;
     const vib = seg.vibrato || null;
+    const fmt = seg.voyelle && FORMANTS[seg.voyelle];
+    const f1 = fmt && passeBande(fmt[0], 3.5, sampleRate);
+    const f2 = fmt && passeBande(fmt[1], 5, sampleRate);
     for (let i = 0; i < n; i++) {
       const t = i / Math.max(1, n - 1);
       let hz = lire(seg.hz, t);
@@ -393,7 +563,12 @@ export function rendre(son, sampleRate, graine = 1234) {
       const descend = Math.min(1, (n - i) / Math.max(1, 0.012 * sampleRate));
       const vol = lire(seg.vol ?? 1, t) * monte * descend;
 
-      const ton = forme(seg.forme || 'sinus', phase, souffle);
+      let ton = forme(seg.forme || 'sinus', phase, souffle);
+      // Une voyelle garde une part du son brut : sans elle, la fondamentale
+      // s'efface derrière les formants et la hauteur devient indétectable.
+      // Les filtres mangent de l'énergie ; la saturation douce la rend, pour
+      // qu'un mème ne sonne pas deux fois moins fort qu'un aboiement.
+      if (fmt) ton = Math.tanh((ton * 0.45 + f1(ton) * 1.1 + f2(ton) * 0.7) * 2.3);
       const val = ton * (1 - partBruit) + souffle() * partBruit;
       if (curseur + i < total) x[curseur + i] = val * vol * 0.55;
     }

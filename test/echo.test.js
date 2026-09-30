@@ -132,6 +132,30 @@ test('un souffle de micro ne fait pas perdre la note', () => {
   assert.ok(r.total >= 85, `un micro un peu bruite tombe a ${r.total}`);
 });
 
+test('le silence autour d\'une prise ne coute rien', () => {
+  // Une prise humaine dure tout le temps imparti : temps de reaction au debut,
+  // silence a la fin. Avant qu'on les retire, une imitation parfaite d'un son
+  // d'une seconde, placee dans une fenetre de quatre, valait une quarantaine
+  // de points — les bots, eux, n'avaient pas ce handicap.
+  const notes = [];
+  for (const son of S.SONS) {
+    const x = S.rendre(son, SR);
+    const humaine = new Float32Array(4 * SR);
+    humaine.set(x, Math.round(0.45 * SR));
+    const r = A.noter(A.analyserPrise(x, SR), A.analyserPrise(humaine, SR));
+    assert.ok(r.total >= 85, `${son.id} : ${r.total} pour une imitation parfaite entouree de silence`);
+    notes.push(r.total);
+  }
+  const moyenne = notes.reduce((a, b) => a + b, 0) / notes.length;
+  assert.ok(moyenne >= 95, `moyenne de ${moyenne.toFixed(1)}`);
+});
+
+test('rogner ne fabrique rien dans le silence', () => {
+  const muet = new Float32Array(SR);
+  assert.equal(A.rogner(muet, SR).length, muet.length, 'un silence reste un silence entier');
+  assert.equal(A.noter(refAir(), A.analyserPrise(muet, SR)).total, 0);
+});
+
 test('les poids des trois dimensions font cent', () => {
   const somme = A.POIDS.melodie + A.POIDS.rythme + A.POIDS.attaques;
   assert.equal(somme, 100, `les poids font ${somme}`);
@@ -170,6 +194,23 @@ test('le nombre d\'attaques annonce est celui que le bareme comptera', () => {
     const a = A.analyser(S.rendre(s, SR), SR);
     assert.equal(a.attaques.length, s.attaques,
       `${s.id} : annonce ${s.attaques} attaques, le bareme en compte ${a.attaques.length}`);
+  }
+});
+
+test('les memes parlent : une voyelle garde sa hauteur et sonne aussi fort', () => {
+  // Les formants colorent le son sans effacer la fondamentale : le barème
+  // doit toujours pouvoir suivre la ligne d'un « sa-hur ».
+  const brainrot = S.SONS.filter((s) => s.famille === 'brainrot');
+  assert.ok(brainrot.length >= 8, `seulement ${brainrot.length} sons brainrot`);
+  const efficace = (x) => Math.sqrt(x.reduce((a, v) => a + v * v, 0) / x.length);
+  const autres = S.SONS.filter((s) => !s.segments.some((g) => g.voyelle));
+  const ref = autres.reduce((a, s) => a + efficace(S.rendre(s, SR)), 0) / autres.length;
+  for (const s of brainrot) {
+    const x = S.rendre(s, SR);
+    const h = A.analyser(x, SR).hauteurs;
+    const voise = h.filter((v) => v !== null).length / h.length;
+    assert.ok(voise > 0.6, `${s.id} : seulement ${(voise * 100).toFixed(0)} % de fenetres voisees`);
+    assert.ok(efficace(x) > ref * 0.5, `${s.id} : bien plus faible que les autres sons`);
   }
 });
 
@@ -276,8 +317,9 @@ test('les niveaux de bot sont ordonnes, et passent par le vrai bareme', () => {
     const n = 180;
     for (let k = 0; k < n; k++) {
       const son = S.SONS[k % S.SONS.length];
-      const ref = A.analyser(S.rendre(son, SR), SR);
-      somme += A.noter(ref, A.analyser(B.prise(son, niveau, SR, rng).samples, SR)).total;
+      // Le chemin du jeu : reference et prise rognees de la meme facon.
+      const ref = A.analyserPrise(S.rendre(son, SR), SR);
+      somme += A.noter(ref, A.analyserPrise(B.prise(son, niveau, SR, rng).samples, SR)).total;
     }
     return somme / n;
   };
@@ -432,6 +474,56 @@ test('les cases de la roue sont completes et toutes atteignables', () => {
   }
 });
 
+test('les reglages changent la partie, et rien d\'autre ne passe', () => {
+  for (const manches of P.CHOIX_MANCHES) {
+    const e = P.creerPartie([{ id: 'a', name: 'A' }], { manches, seed: manches });
+    assert.equal(e.programme.length, manches);
+    assert.equal(new Set(e.programme).size, manches, 'aucun son ne doit revenir');
+  }
+  assert.deepEqual(P.nettoyerReglages({ manches: 6, duree: 8, tour: 'chacun' }),
+    { manches: 6, duree: 8, tour: 'chacun' });
+  assert.deepEqual(P.nettoyerReglages({ manches: 999, duree: -1, tour: '<b>' }),
+    { manches: P.MANCHES, duree: P.DUREE_PRISE, tour: 'ensemble' });
+  assert.equal(P.JOUEURS_MAX, 8);
+  const huit = Array.from({ length: 8 }, (_, i) => ({ id: `j${i}`, name: `J${i}` }));
+  assert.doesNotThrow(() => P.creerPartie(huit));
+  assert.throws(() => P.creerPartie([...huit, { id: 'x', name: 'X' }]));
+});
+
+test('le temps de prise laisse toujours une seconde de plus que le son', () => {
+  for (const s of S.SONS) {
+    for (const d of P.CHOIX_DUREES) {
+      const t = P.dureePrise(d, s);
+      assert.ok(t >= d, `${s.id} : ${t} s pour un reglage de ${d} s`);
+      assert.ok(t >= S.dureeDe(s) + 1, `${s.id} : ${t} s pour un son de ${S.dureeDe(s).toFixed(2)} s`);
+    }
+  }
+});
+
+test('chacun son tour : un seul humain a la main, les bots n\'attendent pas', () => {
+  const e = P.creerPartie([
+    { id: 'a', name: 'A' }, { id: 'bot', name: 'Bot', isBot: true },
+    { id: 'b', name: 'B' }, { id: 'c', name: 'C' },
+  ], { seed: 3, tour: P.TOUR.CHACUN });
+  P.lancerEnregistrement(e);
+  assert.equal(e.enregistreur, 0);
+  // Le bot depose quand il veut ; B, pas avant son tour.
+  assert.equal(P.deposerPrise(e, 'bot', { total: 50 }).ok, true);
+  assert.equal(P.deposerPrise(e, 'b', { total: 50 }).ok, false, 'B a depose hors de son tour');
+  assert.equal(P.deposerPrise(e, 'a', { total: 60 }).ok, true);
+
+  assert.equal(P.enregistreurSuivant(e), true);
+  assert.equal(e.joueurs[e.enregistreur].id, 'b', 'le bot est saute');
+  assert.equal(P.viewFor(e, 'c').enregistreur, e.enregistreur, 'la vue dit qui est en scene');
+  P.deposerPrise(e, 'b', { total: 70 });
+  // C ne depose pas : on passe quand meme, et la manche se termine.
+  assert.equal(P.enregistreurSuivant(e), true);
+  assert.equal(P.enregistreurSuivant(e), false);
+  P.lancerRestitution(e);
+  assert.equal(e.enregistreur, null);
+  assert.equal(P.joueurDe(e, 'c').prises[0].absente, true);
+});
+
 test('la vue ne devoile pas les manches a venir', () => {
   const e = duo(12);
   const vue = P.viewFor(e, 'a');
@@ -473,55 +565,58 @@ test('une partie se joue de bout en bout avec de vraies prises de bots', () => {
 /* Salon en ligne                                                     */
 /* ================================================================== */
 
-test('une partie en ligne se joue a deux contre le vrai serveur', async (t) => {
+/** Client minimal au-dessus du WebSocket natif de Node. */
+class C {
+  constructor(url) {
+    this.ws = new WebSocket(url);
+    this.inbox = []; this.waiters = [];
+    this.ws.addEventListener('message', (e) => {
+      const m = JSON.parse(e.data);
+      this.inbox.push(m);
+      for (let i = this.waiters.length - 1; i >= 0; i--) {
+        if (this.waiters[i].match(m)) this.waiters.splice(i, 1)[0].resolve(m);
+      }
+    });
+  }
+  ready() {
+    return new Promise((res, rej) => {
+      if (this.ws.readyState === 1) return res();
+      this.ws.addEventListener('open', () => res(), { once: true });
+      this.ws.addEventListener('error', rej, { once: true });
+    });
+  }
+  /** Tout message porte `g` : c'est ce qui route vers le bon jeu. */
+  send(o) { this.ws.send(JSON.stringify({ g: 'echo', ...o })); }
+  wait(match, ms = 20000) {
+    const f = this.inbox.find(match);
+    if (f) return Promise.resolve(f);
+    return new Promise((resolve, reject) => {
+      const w = { match, resolve };
+      this.waiters.push(w);
+      setTimeout(() => {
+        const i = this.waiters.indexOf(w);
+        if (i >= 0) { this.waiters.splice(i, 1); reject(new Error('delai depasse')); }
+      }, ms);
+    });
+  }
+  close() { try { this.ws.close(); } catch { /* deja fermee */ } }
+}
+
+/** Démarre le vrai serveur sur un port libre ; rend son adresse. */
+async function serveur(t, ouverts) {
   const { default: server } = await import('../api/ws.js');
   await new Promise((res) => server.listen(0, '127.0.0.1', res));
-  const port = server.address().port;
-  const ouverts = [];
   t.after(() => {
     for (const c of ouverts) c.close();
     server.closeAllConnections?.();
     return new Promise((res) => server.close(res));
   });
+  return `ws://127.0.0.1:${server.address().port}/api/ws`;
+}
 
-  /** Client minimal au-dessus du WebSocket natif de Node. */
-  class C {
-    constructor(url) {
-      this.ws = new WebSocket(url);
-      this.inbox = []; this.waiters = [];
-      this.ws.addEventListener('message', (e) => {
-        const m = JSON.parse(e.data);
-        this.inbox.push(m);
-        for (let i = this.waiters.length - 1; i >= 0; i--) {
-          if (this.waiters[i].match(m)) this.waiters.splice(i, 1)[0].resolve(m);
-        }
-      });
-    }
-    ready() {
-      return new Promise((res, rej) => {
-        if (this.ws.readyState === 1) return res();
-        this.ws.addEventListener('open', () => res(), { once: true });
-        this.ws.addEventListener('error', rej, { once: true });
-      });
-    }
-    /** Tout message porte `g` : c'est ce qui route vers le bon jeu. */
-    send(o) { this.ws.send(JSON.stringify({ g: 'echo', ...o })); }
-    wait(match, ms = 20000) {
-      const f = this.inbox.find(match);
-      if (f) return Promise.resolve(f);
-      return new Promise((resolve, reject) => {
-        const w = { match, resolve };
-        this.waiters.push(w);
-        setTimeout(() => {
-          const i = this.waiters.indexOf(w);
-          if (i >= 0) { this.waiters.splice(i, 1); reject(new Error('delai depasse')); }
-        }, ms);
-      });
-    }
-    close() { try { this.ws.close(); } catch { /* deja fermee */ } }
-  }
-
-  const url = `ws://127.0.0.1:${port}/api/ws`;
+test('une partie en ligne se joue a deux contre le vrai serveur', async (t) => {
+  const ouverts = [];
+  const url = await serveur(t, ouverts);
   const hote = new C(url), invite = new C(url);
   ouverts.push(hote, invite);
   await Promise.all([hote.ready(), invite.ready()]);
@@ -591,6 +686,84 @@ test('une partie en ligne se joue a deux contre le vrai serveur', async (t) => {
   assert.equal(triche.prise.note, 100, 'la note doit etre ramenee dans les bornes');
 
   hote.close(); invite.close(); seul.close();
+});
+
+test('en ligne : les tetes, les reglages de l\'hote, et chacun son tour', async (t) => {
+  const ouverts = [];
+  const url = await serveur(t, ouverts);
+  const hote = new C(url), invite = new C(url);
+  ouverts.push(hote, invite);
+  await Promise.all([hote.ready(), invite.ready()]);
+
+  const photo = `data:image/jpeg;base64,${Buffer.from('une tete').toString('base64')}`;
+  hote.send({ t: 'hello', name: 'Hote', photo });
+  invite.send({ t: 'hello', name: 'Invite' });
+  await Promise.all([hote.wait((m) => m.t === 'e:bonjour'), invite.wait((m) => m.t === 'e:bonjour')]);
+
+  hote.send({ t: 'create', name: 'Hote', photo, reglages: { manches: 3, duree: 6, tour: 'chacun' } });
+  const salon = await hote.wait((m) => m.t === 'e:salon');
+  assert.deepEqual(salon.reglages, { manches: 3, duree: 6, tour: 'chacun' });
+  assert.equal(salon.joueurs[0].photo, photo, 'la photo de l\'hote doit etre relayee');
+
+  // Une « photo » qui n'en est pas une n'est jamais relayee.
+  invite.send({ t: 'join', code: salon.code, name: 'Invite', photo: 'javascript:alert(1)' });
+  const complet = await invite.wait((m) => m.t === 'e:salon' && m.joueurs.length === 2);
+  assert.equal(complet.joueurs[1].photo, null);
+
+  // Seul l'hote regle la partie.
+  invite.send({ t: 'reglages', manches: 8 });
+  await invite.wait((m) => m.t === 'e:erreur');
+  hote.send({ t: 'reglages', manches: 4, duree: 3, tour: 'chacun' });
+  await invite.wait((m) => m.t === 'e:salon' && m.reglages.manches === 4);
+
+  hote.send({ t: 'start' });
+  const enr = await invite.wait((m) => m.t === 'e:etat' && m.vue.phase === 'enregistrement');
+  assert.equal(enr.vue.tourPar, 'chacun');
+  assert.equal(enr.vue.enregistreur, 0, 'l\'hote est le premier en scene');
+  assert.ok(enr.vue.duree >= 3, 'le temps de prise suit le reglage');
+  assert.equal(enr.vue.manches, 4);
+
+  // L'invite parle trop tot : sa prise est refusee, la main reste a l'hote.
+  invite.send({ t: 'prise', note: { total: 90, melodie: 90, rythme: 90, attaques: 90 }, audio: null });
+  hote.send({ t: 'prise', note: { total: 55, melodie: 55, rythme: 55, attaques: 55 }, audio: null });
+  const aLui = await invite.wait((m) => m.t === 'e:etat' && m.vue.phase === 'enregistrement'
+    && m.vue.enregistreur === 1);
+  assert.equal(aLui.vue.joueurs[1].aDepose, false, 'la prise hors tour ne doit pas compter');
+
+  invite.send({ t: 'prise', note: { total: 70, melodie: 70, rythme: 70, attaques: 70 }, audio: null });
+  const notes = await hote.wait((m) => m.t === 'e:etat' && m.vue.phase === 'notes', 30000);
+  const par = Object.fromEntries(notes.vue.joueurs.map((j) => [j.name, j.prise.note]));
+  assert.deepEqual(par, { Hote: 55, Invite: 70 });
+});
+
+test('une prise de huit secondes passe par le serveur autonome', async (t) => {
+  // Le serveur sans dependance coupait tout message de plus de 64 ko : une
+  // prise de quatre secondes en pesait deja 85, et la connexion tombait au
+  // premier depot — en local seulement, Vercel passant par `ws`.
+  const { spawn } = await import('node:child_process');
+  const port = 30000 + Math.floor(Math.random() * 20000);
+  const proc = spawn(process.execPath, ['server/index.js'], {
+    env: { ...process.env, PORT: String(port), HOST: '127.0.0.1' },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  t.after(() => proc.kill());
+  await new Promise((res, rej) => {
+    proc.stdout.on('data', (d) => { if (String(d).includes(String(port))) res(); });
+    proc.on('exit', () => rej(new Error('le serveur s\'est arrete')));
+    setTimeout(() => rej(new Error('le serveur ne demarre pas')), 8000);
+  });
+
+  const c = new C(`ws://127.0.0.1:${port}/api/ws`);
+  t.after(() => c.close());
+  await c.ready();
+  c.send({ t: 'hello', name: 'Gros' });
+  await c.wait((m) => m.t === 'e:bonjour');
+  const huitSecondes = Buffer.alloc(8 * 16000, 64).toString('base64');
+  assert.ok(huitSecondes.length > 64 * 1024);
+  c.send({ t: 'prise', note: { total: 1 }, audio: huitSecondes });
+  c.send({ t: 'ping' });
+  await c.wait((m) => m.t === 'pong', 5000);
+  assert.equal(c.ws.readyState, 1, 'la connexion doit survivre a une grosse prise');
 });
 
 test('le routeur distingue les trois jeux', async (t) => {

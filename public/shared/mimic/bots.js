@@ -104,13 +104,18 @@ export const NOMS = [
   'Bêlant', 'Trompette', 'Crécelle', 'Glouglou', 'Ronflex',
 ];
 
+/** Leurs têtes : un bot n'a pas de photo, il a une trogne. */
+export const TETES = ['🤖', '👾', '🦜', '🐸', '🐷', '🦊', '🐵', '🐙', '🦆', '🐮'];
+
 /** Constitue `n` adversaires distincts. */
 export function adversaires(n, niveau, rng = Math.random) {
   const pool = [...NOMS];
+  const tetes = [...TETES];
   const out = [];
   for (let i = 0; i < n && pool.length; i++) {
     const nom = pool.splice(Math.floor(rng() * pool.length), 1)[0];
-    out.push({ id: `bot${i}`, name: nom, isBot: true, niveau });
+    const tete = tetes.splice(Math.floor(rng() * tetes.length), 1)[0];
+    out.push({ id: `bot${i}`, name: nom, isBot: true, niveau, tete });
   }
   return out;
 }

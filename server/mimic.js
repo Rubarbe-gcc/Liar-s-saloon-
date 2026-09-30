@@ -19,7 +19,8 @@ import {
   creerPartie, sonDeLaManche, lancerEnregistrement, deposerPrise,
   lancerRestitution, restitutionSuivante, encaisserNotes, tournerRoue,
   passerRoue, viser, finirOuContinuer, viewFor, prisesCompletes, roueTerminee,
-  PHASE, DUREE_PRISE, JOUEURS_MAX,
+  enregistreurSuivant, dureeManche, nettoyerReglages,
+  PHASE, JOUEURS_MAX, TOUR,
 } from '../public/shared/mimic/partie.js';
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -27,12 +28,19 @@ const CODE_LEN = 4;
 const SALON_TTL = 30 * 60 * 1000;
 const PARTIE_TTL = 20 * 60 * 1000;
 
-/** Marge laissée aux clients pour déposer leur prise, avant qu'on avance. */
-export const DEPOT_MS = (DUREE_PRISE + 6) * 1000;
+/**
+ * Marge laissée à un client pour déposer sa prise, au-delà du temps de prise
+ * lui-même : trois secondes de compte à rebours, et de quoi analyser et
+ * envoyer. Passé ce délai, on avance sans lui.
+ */
+export const MARGE_DEPOT_MS = 6000;
+const depotMs = (partie) => dureeManche(partie) * 1000 + MARGE_DEPOT_MS;
 /** Au-delà, on considère qu'un joueur ne tournera pas la roue. */
 export const ROUE_MS = 30 * 1000;
-/** Taille maximale d'une prise transmise, en caractères base64. */
+/** Taille maximale d'une prise transmise, en caractères base64 (8 s à 16 kHz). */
 const PRISE_MAX = 200 * 1024;
+/** Taille maximale d'une photo : 128 × 128 en JPEG tient largement dedans. */
+export const PHOTO_MAX = 24000;
 
 const salons = new Map();
 const clients = new Map();
@@ -53,6 +61,16 @@ function nettoyerNom(brut, defaut = 'Voix') {
   return s || defaut;
 }
 
+/**
+ * Une photo n'est relayée que si elle en a tout l'air : un JPEG en base64, de
+ * taille raisonnable. Tout le reste est ignoré sans bruit — le joueur aura
+ * simplement l'initiale de son nom pour tête.
+ */
+export function nettoyerPhoto(brut) {
+  if (typeof brut !== 'string' || brut.length > PHOTO_MAX) return null;
+  return /^data:image\/jpeg;base64,[A-Za-z0-9+/]+=*$/.test(brut) ? brut : null;
+}
+
 /** Ne garde d'une note que ce qui est plausible. */
 function nettoyerNote(brut) {
   const n = (v) => {
@@ -68,7 +86,8 @@ class Salon {
   constructor(code, hoteId) {
     this.code = code;
     this.hoteId = hoteId;
-    this.places = [];      // [{id, name}]
+    this.places = [];      // [{id, name, photo}]
+    this.reglages = nettoyerReglages();
     this.partie = null;
     this.audio = new Map(); // joueurId -> base64 de la manche en cours
     this.timer = null;
@@ -79,11 +98,11 @@ class Salon {
   indexOf(id) { return this.places.findIndex((p) => p.id === id); }
   a(id) { return this.indexOf(id) >= 0; }
 
-  ajouter(id, name) {
+  ajouter(id, name, photo = null) {
     if (this.partie) return { ok: false, error: 'La partie a déjà commencé.' };
     if (this.places.length >= JOUEURS_MAX) return { ok: false, error: 'Le salon est plein.' };
     if (this.a(id)) return { ok: true };
-    this.places.push({ id, name });
+    this.places.push({ id, name, photo });
     this.touch();
     return { ok: true };
   }
@@ -109,7 +128,8 @@ class Salon {
       code: this.code,
       hostId: this.hoteId,
       max: JOUEURS_MAX,
-      joueurs: this.places.map((p) => ({ id: p.id, name: p.name })),
+      reglages: this.reglages,
+      joueurs: this.places.map((p) => ({ id: p.id, name: p.name, photo: p.photo || null })),
     };
   }
 
@@ -124,7 +144,7 @@ class Salon {
 
   commencer() {
     if (this.places.length < 2) return { ok: false, error: 'Il faut être au moins deux.' };
-    this.partie = creerPartie(this.places.map((p) => ({ id: p.id, name: p.name })));
+    this.partie = creerPartie(this.places.map((p) => ({ id: p.id, name: p.name })), this.reglages);
     this.touch();
     this.diffuser({ t: 'e:debut' });
     this.manche();
@@ -143,8 +163,23 @@ class Salon {
       if (!this.partie) return;
       lancerEnregistrement(this.partie);
       this.pousser();
-      this.armer(() => this.restituer(), DEPOT_MS);
+      this.armer(() => this.tourSuivant(), depotMs(this.partie));
     }, 3500);
+  }
+
+  /**
+   * Fin du temps de dépôt : en mode ENSEMBLE, on passe à la restitution ; en
+   * mode CHACUN, la main passe au suivant, qui a droit au même délai.
+   */
+  tourSuivant() {
+    const p = this.partie;
+    if (!p || p.phase !== PHASE.ENREGISTREMENT) return;
+    if (p.tourPar === TOUR.CHACUN && enregistreurSuivant(p)) {
+      this.pousser();
+      this.armer(() => this.tourSuivant(), depotMs(p));
+      return;
+    }
+    this.restituer();
   }
 
   deposer(id, note, audioB64) {
@@ -155,8 +190,10 @@ class Salon {
       this.audio.set(id, audioB64);
     }
     this.touch();
+    if (prisesCompletes(this.partie)) { this.stop(); this.restituer(); return; }
+    // Chacun son tour : celui qui vient de déposer rend la main.
+    if (this.partie.tourPar === TOUR.CHACUN) { this.stop(); this.tourSuivant(); return; }
     this.pousser();
-    if (prisesCompletes(this.partie)) { this.stop(); this.restituer(); }
   }
 
   /** Rejoue les prises une par une, chacune avec son sabotage éventuel. */
@@ -179,7 +216,7 @@ class Salon {
         if (restitutionSuivante(this.partie)) return suite();
         this.pousser();
         this.armer(() => this.noter(), 1200);
-      }, (DUREE_PRISE + 1.5) * 1000);
+      }, (dureeManche(this.partie) + 1.5) * 1000);
     };
     suite();
   }
@@ -267,7 +304,7 @@ class Salon {
 /* ------------------------------------------------------------------ */
 
 export function handleOpen(conn) {
-  clients.set(conn.id, { conn, name: 'Voix', code: null });
+  clients.set(conn.id, { conn, name: 'Voix', photo: null, code: null });
   conn.send({ t: 'e:bonjour', id: conn.id });
 }
 
@@ -303,13 +340,16 @@ export function handleMessage(conn, msg) {
 
     case 'hello':
       c.name = nettoyerNom(msg.name);
+      c.photo = nettoyerPhoto(msg.photo);
       return conn.send({ t: 'e:hello', name: c.name });
 
     case 'create': {
       if (c.code) quitter(c, conn.id);
       c.name = nettoyerNom(msg.name, c.name);
+      if ('photo' in msg) c.photo = nettoyerPhoto(msg.photo);
       const s = new Salon(nouveauCode(), conn.id);
-      s.ajouter(conn.id, c.name);
+      s.reglages = nettoyerReglages(msg.reglages);
+      s.ajouter(conn.id, c.name, c.photo);
       salons.set(s.code, s);
       c.code = s.code;
       return s.diffuser(s.vestiaire());
@@ -321,7 +361,8 @@ export function handleMessage(conn, msg) {
       if (!s) return conn.send({ t: 'e:erreur', msg: 'Aucun salon à ce code.' });
       if (c.code && c.code !== code) quitter(c, conn.id);
       c.name = nettoyerNom(msg.name, c.name);
-      const r = s.ajouter(conn.id, c.name);
+      if ('photo' in msg) c.photo = nettoyerPhoto(msg.photo);
+      const r = s.ajouter(conn.id, c.name, c.photo);
       if (!r.ok) return conn.send({ t: 'e:erreur', msg: r.error });
       c.code = code;
       return s.diffuser(s.vestiaire());
@@ -334,6 +375,26 @@ export function handleMessage(conn, msg) {
       const r = s.commencer();
       if (!r.ok) conn.send({ t: 'e:erreur', msg: r.error });
       return;
+    }
+
+    case 'reglages': {
+      const s = c.code && salons.get(c.code);
+      if (!s || s.partie) return;
+      if (s.hoteId !== conn.id) return conn.send({ t: 'e:erreur', msg: 'Seul l\'hôte règle la partie.' });
+      s.reglages = nettoyerReglages(msg);
+      s.touch();
+      return s.diffuser(s.vestiaire());
+    }
+
+    case 'photo': {
+      c.photo = nettoyerPhoto(msg.photo);
+      const s = c.code && salons.get(c.code);
+      // En pleine partie, les visages sont déjà distribués : on ne les
+      // redistribue qu'au vestiaire.
+      if (!s || s.partie) return;
+      const place = s.places.find((p) => p.id === conn.id);
+      if (place) place.photo = c.photo;
+      return s.diffuser(s.vestiaire());
     }
 
     case 'prise': {

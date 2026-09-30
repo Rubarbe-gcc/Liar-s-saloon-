@@ -20,12 +20,42 @@
 import { SONS, getSon, tirage, dureeDe } from './sons.js';
 
 export const MANCHES = 4;
-export const JOUEURS_MAX = 5;
+export const JOUEURS_MAX = 8;
 
 /** Durée laissée pour enregistrer, en secondes. */
 export const DUREE_PRISE = 4;
 /** La roue n'apparaît qu'à partir de cette manche. */
 export const MANCHE_ROUE = 2;
+
+/** Ce que l'on peut régler avant une partie. */
+export const CHOIX_MANCHES = [3, 4, 6, 8];
+export const CHOIX_DUREES = [3, 4, 6, 8];
+
+/**
+ * Deux façons d'enregistrer :
+ *   · ENSEMBLE — tout le monde en même temps, chacun sur son appareil ;
+ *   · CHACUN   — l'un après l'autre, pour qui joue dans la même pièce et ne
+ *                veut pas que le micro du voisin capte sa propre voix.
+ */
+export const TOUR = { ENSEMBLE: 'ensemble', CHACUN: 'chacun' };
+
+/**
+ * Temps laissé pour une prise, pour un son donné.
+ *
+ * Le réglage est un souhait, pas une contrainte absolue : trois secondes pour
+ * imiter un son qui en dure deux et demie ne laisseraient même pas le temps de
+ * réagir. On garantit donc toujours une seconde de plus que le son.
+ */
+export const dureePrise = (duree, son) =>
+  Math.max(duree, Math.ceil((dureeDe(son) + 1) * 2) / 2);
+
+/** Ramène des réglages reçus à des valeurs admises. */
+export function nettoyerReglages(brut = {}) {
+  const manches = CHOIX_MANCHES.includes(Number(brut.manches)) ? Number(brut.manches) : MANCHES;
+  const duree = CHOIX_DUREES.includes(Number(brut.duree)) ? Number(brut.duree) : DUREE_PRISE;
+  const tour = brut.tour === TOUR.CHACUN ? TOUR.CHACUN : TOUR.ENSEMBLE;
+  return { manches, duree, tour };
+}
 
 export const PHASE = {
   ECOUTE: 'ecoute',
@@ -93,7 +123,7 @@ export function tirerCase(rng) {
 
 /**
  * @param {Array<{id:string,name:string,isBot?:boolean}>} joueurs
- * @param {{seed?:number, manches?:number}} [options]
+ * @param {{seed?:number, manches?:number, duree?:number, tour?:string}} [options]
  */
 export function creerPartie(joueurs, options = {}) {
   if (!joueurs.length || joueurs.length > JOUEURS_MAX) {
@@ -107,6 +137,9 @@ export function creerPartie(joueurs, options = {}) {
     seed,
     rng,
     manches,
+    duree: options.duree ?? DUREE_PRISE,
+    tourPar: options.tour === TOUR.CHACUN ? TOUR.CHACUN : TOUR.ENSEMBLE,
+    enregistreur: null,  // en mode CHACUN : index de celui qui enregistre
     manche: 1,
     phase: PHASE.ECOUTE,
     programme: tirage(manches, rng),
@@ -127,6 +160,8 @@ export function creerPartie(joueurs, options = {}) {
 
 export const sonDeLaManche = (etat) => getSon(etat.programme[etat.manche - 1]);
 export const joueurDe = (etat, id) => etat.joueurs.find((j) => j.id === id) || null;
+/** Temps de prise de la manche en cours. */
+export const dureeManche = (etat) => dureePrise(etat.duree, sonDeLaManche(etat));
 
 function journal(etat, texte) {
   etat.log.push({ manche: etat.manche, texte });
@@ -143,8 +178,31 @@ export function lancerEnregistrement(etat) {
   etat.phase = PHASE.ENREGISTREMENT;
   etat.effets = [];
   for (const j of etat.joueurs) j.prises[etat.manche - 1] = null;
+  etat.enregistreur = etat.tourPar === TOUR.CHACUN ? prochainEnregistreur(etat, -1) : null;
   journal(etat, `Manche ${etat.manche} — à vous.`);
   return { ok: true };
+}
+
+/**
+ * Premier joueur après `depuis` qui doit encore enregistrer. Les bots n'ont
+ * pas besoin de silence : ils enregistrent quand ils veulent, donc on les saute.
+ */
+function prochainEnregistreur(etat, depuis) {
+  for (let i = depuis + 1; i < etat.joueurs.length; i++) {
+    const j = etat.joueurs[i];
+    if (!j.isBot && !j.prises[etat.manche - 1]) return i;
+  }
+  return null;
+}
+
+/**
+ * En mode CHACUN, passe la main au suivant — que le précédent ait déposé ou
+ * non. Renvoie `false` quand tout le monde est passé.
+ */
+export function enregistreurSuivant(etat) {
+  if (etat.phase !== PHASE.ENREGISTREMENT || etat.enregistreur === null) return false;
+  etat.enregistreur = prochainEnregistreur(etat, etat.enregistreur);
+  return etat.enregistreur !== null;
 }
 
 /**
@@ -157,6 +215,12 @@ export function deposerPrise(etat, joueurId, note) {
   const j = joueurDe(etat, joueurId);
   if (!j) return { ok: false, error: 'joueur inconnu' };
   if (j.prises[etat.manche - 1]) return { ok: false, error: 'déjà déposée' };
+  // Chacun son tour : seul celui qui a la main peut déposer. Un bot, lui,
+  // n'occupe jamais le silence des autres.
+  if (etat.enregistreur !== null && !j.isBot
+      && etat.joueurs[etat.enregistreur] !== j) {
+    return { ok: false, error: 'pas votre tour' };
+  }
 
   j.prises[etat.manche - 1] = {
     note: Math.max(0, Math.min(100, Math.round(note.total))),
@@ -181,6 +245,7 @@ export function lancerRestitution(etat) {
     }
   }
   etat.phase = PHASE.RESTITUTION;
+  etat.enregistreur = null;
   etat.tour = 0;
   return { ok: true };
 }
@@ -318,6 +383,9 @@ export function viewFor(etat, viewerId) {
     phase: etat.phase,
     sonId: etat.phase === PHASE.ECOUTE || etat.phase !== PHASE.FIN
       ? etat.programme[etat.manche - 1] : null,
+    duree: etat.phase === PHASE.FIN ? etat.duree : dureeManche(etat),
+    tourPar: etat.tourPar,
+    enregistreur: etat.enregistreur,
     tour: etat.tour,
     viewer: moi < 0 ? 0 : moi,
     vainqueur: etat.vainqueur ?? null,

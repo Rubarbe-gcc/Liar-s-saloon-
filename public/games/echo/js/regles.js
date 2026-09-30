@@ -7,7 +7,7 @@
 
 import { POIDS } from '../../../shared/mimic/analyse.js';
 import {
-  CASES, SABOTAGES, MANCHES, DUREE_PRISE, MANCHE_ROUE, JOUEURS_MAX,
+  CASES, MANCHE_ROUE, JOUEURS_MAX, CHOIX_MANCHES, CHOIX_DUREES,
 } from '../../../shared/mimic/partie.js';
 import { SONS, FAMILLES, FAMILLE_KEYS } from '../../../shared/mimic/sons.js';
 
@@ -21,17 +21,23 @@ export function pageManche() {
     return `${f.glyph} ${f.label} (${n})`;
   }).join(' · ');
 
-  return `<p class="rules-chapo">De 1 à ${JOUEURS_MAX} joueurs, ${MANCHES} manches,
-    une dizaine de minutes. Chaque manche suit les mêmes six étapes.</p>
+  const liste = (a, u = '') => a.map((n) => `${n}${u}`).join(', ').replace(/, ([^,]*)$/, ' ou $1');
+  return `<p class="rules-chapo">De 1 à ${JOUEURS_MAX} joueurs, ${liste(CHOIX_MANCHES)} manches
+    au choix. Chaque manche suit les mêmes six étapes.</p>
   <div class="rules-grid">
     <section><h3><span>1</span> Le son passe</h3><p>Une fois. Pour tout le monde
       en même temps. Son nom, son indice et le <b>nombre de débuts de son</b>
       attendus restent affichés — ce dernier n'est pas une indication, c'est
-      exactement ce que le barème comptera.</p></section>
+      exactement ce que le barème comptera. Sa ligne se dessine pendant qu'il
+      joue.</p></section>
 
-    <section><h3><span>2</span> Tout le monde enregistre</h3><p>Sur le même
-      compte à rebours, pendant <b>${DUREE_PRISE} secondes</b>. Personne
-      n'attend son tour, et personne ne s'entend préparer son coup.</p></section>
+    <section><h3><span>2</span> On enregistre</h3><p>Pendant <b>${liste(CHOIX_DUREES, ' s')}</b>,
+      selon le réglage — toujours au moins une seconde de plus que le son.
+      Votre voix se dessine en direct sur la ligne du son : <b style="color:var(--vert)">verte</b>
+      quand vous suivez, <b style="color:var(--chaud)">orange</b> quand vous
+      décrochez. En ligne, tout le monde enregistre en même temps, ou
+      <b>chacun son tour</b> si vous êtes dans la même pièce ; en soirée sur un
+      seul téléphone, on se le passe.</p></section>
 
     <section><h3><span>3</span> Pas de seconde prise</h3><p>Ce qui sort sort.
       C'est ce qui rend la première seconde aussi importante que les
@@ -89,6 +95,8 @@ export function pageNote() {
 
   <h3 class="roles-titre">Ce qui n'est pas noté</h3>
   <p class="rules-chapo">Ni votre timbre, ni votre accent, ni votre registre.
+    Ni le temps de réaction : le silence avant et après votre imitation est
+    retiré avant de noter, pour le son de référence comme pour vous.
     Un son de référence sans hauteur — un bruit, une percussion — voit son
     poids de mélodie réparti sur les deux autres dimensions plutôt que
     d'accorder des points gratuits.</p>`;

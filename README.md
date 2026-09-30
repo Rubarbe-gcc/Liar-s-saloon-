@@ -8,8 +8,10 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
 - **RAID** — donjon solo au tour par tour. Un champ d'essence à parcourir
   pour récolter le mana, un raid de six qui partage une seule barre de vie,
   cinq ailes jusqu'au Dragon Cendré.
-- **ÉCHO** — jeu de fête à la voix. On entend un son, tout le monde l'imite
-  au micro, la roue distribue points et sabotages.
+- **ÉCHO** — jeu de fête à la voix. On entend un son, on l'imite au micro en
+  suivant sa ligne en direct, la roue distribue points et sabotages. Contre
+  des bots, en soirée sur un seul téléphone, ou en ligne — jusqu'à huit, chacun
+  avec sa tête en photo sur son bonhomme.
 - **ZÉNITH** — jeu de combat au tour par tour. Trente combattants, équipes de
   trois, rôles et éléments qui se dominent. Solo ou en ligne.
 - **Liar's Saloon** — bluff, accusations et roulette russe. Seul contre des
@@ -87,12 +89,36 @@ codes du genre sont repris.
 
 ## ÉCHO — comment ça marche
 
-On entend un son de trois secondes ; tout le monde l'imite en même temps au
-micro. Le moteur compare ensuite chaque prise au modèle sur trois axes —
-mélodie (45 %), rythme (35 %) et attaques (20 %) — par autocorrélation de
-hauteur et corrélation d'enveloppes. À partir de la deuxième manche, une roue
-distribue bonus et sabotages : la prise du saboté est saturée, hachée ou
-renvoyée en écho avant d'être notée.
+On entend un son de une à deux secondes et demie, puis on l'imite au micro.
+Le moteur compare chaque prise au modèle sur trois axes — mélodie (45 %),
+rythme (35 %) et attaques (20 %) — par autocorrélation de hauteur et
+corrélation d'enveloppes. Le silence qui entoure la prise est retiré avant de
+noter, pour la référence comme pour le joueur : sans cela, une imitation
+parfaite enregistrée dans une fenêtre de quatre secondes ne valait qu'une
+quarantaine de points.
+
+- **La courbe en direct.** Pendant la prise, la ligne du son s'affiche et la
+  voix se dessine par-dessus, verte quand elle suit, orange quand elle décroche
+  — mesurée par le même détecteur que le barème, recalée sur la médiane pour
+  que chanter une octave plus bas ne sorte pas du cadre.
+- **Trois façons de jouer.** Contre des bots qui chantent pour de vrai (leur
+  prise passe par le même barème) ; en soirée sur un seul téléphone, chacun
+  son tour ; en ligne, tous ensemble ou chacun son tour quand on est dans la
+  même pièce et que les micros se captent l'un l'autre.
+- **Réglages.** 3, 4, 6 ou 8 manches ; 3, 4, 6 ou 8 secondes pour imiter
+  (toujours au moins une seconde de plus que le son) ; jusqu'à huit joueurs.
+- **Les têtes.** Chacun peut se prendre en photo : réduite à 128 × 128 en JPEG,
+  elle coiffe un bonhomme qui chante à son tour, saute quand il gagne et fait
+  grise mine sous un sabotage. Elle ne quitte l'appareil que le temps d'un
+  salon en ligne ; le serveur ne relaie que ce qui est bien un JPEG.
+- **Les sons.** 39, en six familles, tous calculés — dont une famille
+  *Brainrot* (Tung tung tung sahur, UwU, Tralalero tralala…) réduite à la
+  prosodie : syllabes, ligne mélodique, et des voyelles de synthèse par
+  filtres de formants.
+
+À partir de la deuxième manche, une roue distribue bonus et sabotages. Un
+sabotage déforme la **restitution** — saturée, hachée, en écho ou remplacée par
+un canard — mais jamais la note, calculée sur le signal propre.
 
 ---
 
@@ -171,6 +197,9 @@ public/
     js/{main,ui,offline,online,sfx}.js
   games/zenith/           même forme : index, manifest, icônes, css, js
   games/echo/
+    js/{main,offline,online}.js      navigation, partie sur un appareil, en ligne
+    js/{karaoke,avatars}.js          courbe en direct, photos et bonhommes
+    js/{ui,audio,regles}.js          rendu, micro et sabotages, règles
   games/raid/
     js/{main,scene,regles,sfx}.js   navigation, combat animé, règles, sons
 server/

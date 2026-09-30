@@ -10,6 +10,8 @@
  * que ce soit est une page qu'on ferme.
  */
 
+import { hauteurFenetre } from '../../../shared/mimic/analyse.js';
+
 /** Fréquence de travail. Suffisante pour la voix, légère à transmettre. */
 export const SR = 16000;
 
@@ -100,8 +102,13 @@ export function relacherMicro() {
  *
  * `onNiveau` reçoit le niveau courant, pour dessiner un vumètre : sans retour
  * visible, on ne sait pas si le micro capte quoi que ce soit.
+ *
+ * `onHauteur` reçoit, bloc par bloc, la hauteur chantée (ou null) et l'instant
+ * en secondes : c'est ce qui dessine la courbe en direct. Elle se calcule par
+ * le même détecteur que le barème, pour que l'écran ne promette rien que la
+ * note ne tiendrait pas.
  */
-export async function enregistrer(secondes, onNiveau) {
+export async function enregistrer(secondes, onNiveau, onHauteur) {
   if (!flux || !flux.active) {
     const r = await demanderMicro();
     if (!r.ok) throw new Error(r.raison);
@@ -126,10 +133,14 @@ export async function enregistrer(secondes, onNiveau) {
       morceaux.push(copie);
       total += copie.length;
 
-      if (onNiveau) {
-        let s = 0;
-        for (let i = 0; i < copie.length; i++) s += copie[i] * copie[i];
-        onNiveau(Math.sqrt(s / copie.length));
+      let s = 0;
+      for (let i = 0; i < copie.length; i++) s += copie[i] * copie[i];
+      const rms = Math.sqrt(s / copie.length);
+      if (onNiveau) onNiveau(rms);
+      if (onHauteur) {
+        // Un bloc de 2048 échantillons à 44,1 ou 48 kHz a la taille de la
+        // fenêtre du barème : on l'analyse tel quel.
+        onHauteur(hauteurFenetre(copie, 0, copie.length, c.sampleRate), rms, total / c.sampleRate);
       }
       if (total >= cible) resolve();
     };

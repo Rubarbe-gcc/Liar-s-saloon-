@@ -30,8 +30,8 @@
     <div class="logo">
       <span class="logo-kicker">Jeu de fête à la voix</span>
       <h1 class="logo-title">ÉCHO</h1>
-      <div class="logo-rule"><i></i><span>1 à 5</span><i></i></div>
-      <p class="logo-tag">Un son. Tout le monde l'imite. En même temps.</p>
+      <div class="logo-rule"><i></i><span>1 à 8</span><i></i></div>
+      <p class="logo-tag">Un son. Tout le monde l'imite. La roue fait le reste.</p>
     </div>
 
     <nav class="menu-nav">
@@ -39,9 +39,13 @@
         <span class="bi">🎤</span>
         <span class="bt"><b>Contre la machine</b><i>Des imitateurs qui chantent pour de vrai</i></span>
       </button>
+      <button class="btn btn-big" data-go="soiree">
+        <span class="bi">🛋️</span>
+        <span class="bt"><b>Soirée, un seul téléphone</b><i>On se le passe, chacun son tour, jusqu'à huit</i></span>
+      </button>
       <button class="btn btn-big" data-go="online">
         <span class="bi">🎉</span>
-        <span class="bt"><b>Entre amis</b><i>Un code de salon, jusqu'à cinq voix</i></span>
+        <span class="bt"><b>Entre amis, en ligne</b><i>Un code de salon, un téléphone chacun</i></span>
       </button>
       <div class="menu-row">
         <button class="btn btn-thin" data-go="sons"><span class="bi">🔊</span> Les sons</button>
@@ -64,24 +68,70 @@
       </div>
     </header>
 
-    <div class="field-label">Combien d'adversaires</div>
-    <div class="chip-row" id="opt-nb" role="radiogroup" aria-label="Adversaires">
-      <button class="chip" data-val="1" role="radio">1</button>
-      <button class="chip is-on" data-val="2" role="radio" aria-checked="true">2</button>
-      <button class="chip" data-val="3" role="radio">3</button>
-      <button class="chip" data-val="4" role="radio">4</button>
+    <div class="moi-ligne">
+      <button class="tete-btn" id="b-ma-tete" title="Prendre ma tête en photo"></button>
+      <div>
+        <b>Votre tête</b>
+        <p class="pick-sub">Touchez le bonhomme pour vous prendre en photo.</p>
+      </div>
     </div>
+
+    <div class="field-label">Combien d'adversaires</div>
+    <div class="chip-row" id="opt-nb" role="radiogroup" aria-label="Adversaires"></div>
 
     <div class="field-label">Leur niveau</div>
     <div class="chip-row" id="opt-niveau" role="radiogroup" aria-label="Niveau"></div>
 
-    <p class="pick-sub mic-note" id="mic-note">
+    <div class="reglages">
+      <div>
+        <div class="field-label">Manches</div>
+        <div class="chip-row" data-reglage="manches" role="radiogroup" aria-label="Manches"></div>
+      </div>
+      <div>
+        <div class="field-label">Temps pour imiter</div>
+        <div class="chip-row" data-reglage="duree" role="radiogroup" aria-label="Temps pour imiter"></div>
+      </div>
+    </div>
+
+    <p class="pick-sub mic-note">
       Le jeu a besoin du microphone. Il vous sera demandé au premier
       enregistrement, jamais avant.
     </p>
 
     <div class="pick-actions">
       <button class="btn btn-go" id="b-start">Commencer</button>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== SOIRÉE (UN APPAREIL) ================ -->
+<section class="screen" id="s-soiree">
+  <div class="panel">
+    <header class="pick-head">
+      <button class="pick-back" data-go="menu">‹</button>
+      <div>
+        <h2 class="pick-title">Soirée</h2>
+        <p class="pick-sub">Un seul téléphone : chacun imite à son tour pendant que les autres se taisent.</p>
+      </div>
+    </header>
+
+    <div class="field-label">Les joueurs <span id="soiree-compte"></span></div>
+    <div class="troupe" id="soiree-liste"></div>
+    <button class="btn btn-thin btn-ghost" id="b-soiree-ajout">＋ Ajouter un joueur</button>
+
+    <div class="reglages">
+      <div>
+        <div class="field-label">Manches</div>
+        <div class="chip-row" data-reglage="manches" role="radiogroup" aria-label="Manches"></div>
+      </div>
+      <div>
+        <div class="field-label">Temps pour imiter</div>
+        <div class="chip-row" data-reglage="duree" role="radiogroup" aria-label="Temps pour imiter"></div>
+      </div>
+    </div>
+
+    <div class="pick-actions">
+      <button class="btn btn-go" id="b-soiree-go">C'est parti</button>
     </div>
   </div>
 </section>
@@ -94,8 +144,11 @@
     <p class="pick-sub" id="net-status">Connexion…</p>
 
     <div id="net-gate">
-      <div class="field-label">Votre nom</div>
-      <input class="field" id="in-name" maxlength="14" placeholder="Comment on vous appelle" autocomplete="nickname">
+      <div class="field-label">Votre nom et votre tête</div>
+      <div class="moi-ligne">
+        <button class="tete-btn" id="b-ma-tete-net" title="Prendre ma tête en photo"></button>
+        <input class="field" id="in-name" maxlength="14" placeholder="Comment on vous appelle" autocomplete="nickname">
+      </div>
       <button class="btn btn-go btn-wide" id="b-create">Ouvrir un salon</button>
       <div class="or"><i></i><span>ou</span><i></i></div>
       <div class="join">
@@ -110,7 +163,25 @@
         <button id="room-code" title="Copier">····</button>
         <i>Touchez pour copier</i>
       </div>
-      <div class="net-list" id="net-players"></div>
+      <div class="troupe" id="net-players"></div>
+
+      <div class="net-opts" id="net-opts">
+        <div class="field-label">Comment on enregistre</div>
+        <div class="chip-row" data-reglage="tour" role="radiogroup" aria-label="Mode d'enregistrement"></div>
+        <p class="pick-sub" id="net-tour-dit"></p>
+        <div class="reglages">
+          <div>
+            <div class="field-label">Manches</div>
+            <div class="chip-row" data-reglage="manches" role="radiogroup" aria-label="Manches"></div>
+          </div>
+          <div>
+            <div class="field-label">Temps pour imiter</div>
+            <div class="chip-row" data-reglage="duree" role="radiogroup" aria-label="Temps pour imiter"></div>
+          </div>
+        </div>
+      </div>
+      <p class="pick-sub net-resume" id="net-resume" hidden></p>
+
       <div class="pick-actions two">
         <button class="btn btn-ghost" id="b-leave">Quitter</button>
         <button class="btn btn-go" id="b-launch" disabled>Lancer</button>
@@ -139,6 +210,16 @@
 
   <!-- La scène : visualisation, compte à rebours, vumètre -->
   <div class="scene" id="scene">
+    <div class="courbe-cadre" id="courbe-cadre" hidden>
+      <canvas id="courbe" aria-label="La ligne du son à imiter, et votre voix par-dessus"></canvas>
+      <div class="courbe-legende" aria-hidden="true">
+        <span class="lg-ref">le son</span>
+        <span class="lg-juste">vous, juste</span>
+        <span class="lg-faux">vous, à côté</span>
+        <span class="lg-att">débuts de son</span>
+      </div>
+    </div>
+    <div class="vedette" id="vedette" hidden></div>
     <div class="onde" id="onde" aria-hidden="true"></div>
     <div class="compte" id="compte" hidden></div>
     <div class="scene-txt" id="scene-txt"></div>
@@ -201,6 +282,28 @@
   </div>
 </div>
 
+<div class="ov" id="ov-photo" hidden>
+  <div class="sheet sheet-sm photo-sheet">
+    <h2 id="photo-titre">Votre tête</h2>
+    <div class="photo-cadre">
+      <video id="photo-video" playsinline muted autoplay></video>
+      <div class="photo-rond" aria-hidden="true"></div>
+    </div>
+    <p class="pick-sub" id="photo-dit">Placez le visage dans le rond.</p>
+    <div class="pick-actions two">
+      <button class="btn btn-ghost" id="photo-annuler">Annuler</button>
+      <button class="btn btn-go" id="photo-prendre" disabled>📸 Clic !</button>
+    </div>
+    <div class="photo-autres">
+      <label class="btn btn-thin btn-ghost">🖼️ Choisir une image
+        <input type="file" accept="image/*" id="photo-fichier" hidden>
+      </label>
+      <button class="btn btn-thin btn-ghost" id="photo-retirer" hidden>Sans photo</button>
+    </div>
+  </div>
+</div>
+
+<div class="confettis" id="confettis" hidden aria-hidden="true"></div>
 <div class="toast" id="toast" hidden></div>
 
 <script type="module" src="/games/echo/js/main.js"></script>

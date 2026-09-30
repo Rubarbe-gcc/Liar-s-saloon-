@@ -197,6 +197,53 @@ export function detecterAttaques(env, pasSec) {
   return out;
 }
 
+/**
+ * Retire le silence qui entoure une prise.
+ *
+ * Une prise humaine dure tout le temps imparti : un temps de réaction au
+ * début, un long silence à la fin. Or le barème ramène les deux contours à
+ * une durée commune — si bien qu'une imitation parfaite d'un son d'une
+ * seconde, enregistrée dans une fenêtre de quatre, se retrouvait étirée sur
+ * toute la référence et ne valait qu'une quarantaine de points. Les bots, qui
+ * rendent une prise exactement à la durée du son, n'avaient pas ce handicap.
+ *
+ * Le seuil est relatif au maximum de la prise, avec un plancher absolu pour
+ * qu'un micro qui souffle ne soit pas pris pour une voix. La référence doit
+ * passer par la même coupe : c'est ce que fait `analyserPrise`.
+ *
+ * @returns {Float32Array} la portion utile
+ */
+export function rogner(x, sampleRate) {
+  const nEnv = Math.max(16, Math.round(FENETRE_ENV * sampleRate));
+  const pasEnv = Math.max(8, Math.round(PAS_ENV * sampleRate));
+  const env = [];
+  for (let deb = 0; deb + nEnv <= x.length; deb += pasEnv) env.push(rms(x, deb, nEnv));
+  if (!env.length) return x;
+
+  const max = Math.max(...env);
+  const seuil = Math.max(max * 0.08, SEUIL_VOISEMENT * 0.5);
+  if (max < SEUIL_VOISEMENT) return x;   // rien d'audible : on n'invente pas de début
+
+  const premier = env.findIndex((v) => v >= seuil);
+  let dernier = env.length - 1;
+  while (dernier > premier && env[dernier] < seuil) dernier--;
+
+  // Aucune marge : la référence passe par la même coupe, et une marge qui
+  // bute sur le bord d'un côté mais pas de l'autre suffit à décaler les deux
+  // contours — le barème, qui compare point à point, le paie très cher.
+  const deb = premier * pasEnv;
+  const fin = Math.min(x.length, dernier * pasEnv + nEnv);
+  return x.subarray(deb, fin);
+}
+
+/**
+ * Analyse d'un signal destiné au barème : rogné, puis analysé.
+ *
+ * C'est le seul chemin à emprunter pour noter — référence comme prise, humain
+ * comme bot. Deux signaux qui n'ont pas subi la même coupe ne se comparent pas.
+ */
+export const analyserPrise = (x, sampleRate) => analyser(rogner(x, sampleRate), sampleRate);
+
 /* ------------------------------------------------------------------ */
 /* Comparaison                                                         */
 /* ------------------------------------------------------------------ */

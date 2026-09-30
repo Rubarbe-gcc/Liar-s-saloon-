@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v11';
+const VERSION = 'v12';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -74,6 +74,8 @@ const SHELL = [
   '/games/echo/js/offline.js',
   '/games/echo/js/online.js',
   '/games/echo/js/regles.js',
+  '/games/echo/js/karaoke.js',
+  '/games/echo/js/avatars.js',
   '/games/echo/icons/icon-192.png',
   '/shared/mimic/analyse.js',
   '/shared/mimic/sons.js',

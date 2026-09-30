@@ -174,10 +174,12 @@ b,strong{color:var(--or);font-weight:700;}
 .cons-att{font-family:var(--f-num);font-size:.62rem !important;color:var(--faint) !important;}
 .cons-att b{font-size:.72rem;color:var(--or);}
 
-.scene{flex:1 1 auto;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;min-height:0;padding:10px;}
+/* `safe center` : si la scène déborde, elle défile au lieu de couper le haut. */
+.scene{flex:1 1 auto;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;justify-content:safe center;gap:10px;min-height:0;padding:8px 12px;overflow-y:auto;}
 .onde{display:flex;align-items:center;justify-content:center;gap:5px;height:clamp(60px,16vh,110px);}
 .onde i{display:block;width:6px;height:16%;border-radius:3px;background:var(--oc,var(--vif));opacity:.35;transition:opacity .2s;}
 .onde.bat i{opacity:1;animation:danse .62s var(--ease) infinite alternate;animation-delay:var(--d);}
+.onde:not(.bat){display:none;}   /* au repos, la scène appartient à la courbe et aux bonhommes */
 @keyframes danse{from{height:14%;}to{height:100%;}}
 .scene-txt{font-size:.88rem;color:var(--dim);text-align:center;padding:0 16px;line-height:1.4;}
 .scene-txt.doux{color:var(--faint);font-size:.8rem;}
@@ -195,22 +197,133 @@ b,strong{color:var(--or);font-weight:700;}
 .vu i{display:block;height:100%;width:0;border-radius:5px;background:linear-gradient(90deg,var(--vert),var(--or));transition:width .06s linear;}
 .vu i.fort{background:linear-gradient(90deg,var(--or),#ff3d68);}
 
-.tableau{flex:none;display:flex;flex-direction:column;gap:5px;padding:0 12px;}
-.jr{
-  display:grid;grid-template-columns:1fr auto auto;align-items:center;gap:10px;
-  padding:8px 12px;border-radius:11px;
-  background:rgba(0,0,0,.34);border:1px solid var(--line);
-  transition:border-color .2s,background .2s,transform .2s var(--ease);
+/* Le tableau : une carte par joueur, son bonhomme en tête. */
+.tableau{
+  flex:none;display:grid;grid-template-columns:repeat(var(--cols,4),minmax(0,1fr));gap:6px;
+  padding:0 12px;max-width:760px;width:100%;margin:0 auto;
 }
+.tableau.nombreux .jr .bh{--taille:26px;}
+.tableau.nombreux .jr-etat{display:none;}
+.jr{
+  position:relative;display:flex;flex-direction:column;align-items:center;gap:1px;
+  padding:6px 4px 6px;border-radius:13px;min-width:0;
+  background:rgba(0,0,0,.34);border:1px solid var(--line);
+  transition:border-color .2s,background .2s,transform .25s var(--back);
+}
+.jr .bh{--taille:34px;margin-bottom:2px;}
 .jr.moi{border-color:rgba(255,216,77,.34);background:rgba(255,216,77,.06);}
-.jr.actif{border-color:var(--vif);background:rgba(244,114,182,.12);transform:scale(1.02);}
-.jr-nom{font-size:.82rem;font-weight:600;}
-.jr-nom u{text-decoration:none;font-size:.58rem;letter-spacing:.1em;text-transform:uppercase;color:var(--or);margin-left:5px;}
-.jr-etat{font-size:.66rem;color:var(--faint);}
+.jr.actif{border-color:var(--vif);background:rgba(244,114,182,.14);transform:translateY(-3px);box-shadow:0 8px 22px rgba(244,114,182,.25);}
+.jr-nom{font-size:.72rem;font-weight:700;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.jr-nom u{text-decoration:none;font-size:.52rem;letter-spacing:.1em;text-transform:uppercase;color:var(--or);margin-left:3px;}
+.jr-etat{font-size:.6rem;color:var(--faint);min-height:1.2em;white-space:nowrap;}
 .jr-etat .note{color:var(--vert);font-family:var(--f-num);}
 .jr-etat .sab{color:var(--chaud);}
 .jr-etat .rate{color:#ff6b8a;font-style:normal;}
-.jr-score{font-family:var(--f-num);font-size:.94rem;font-weight:800;color:var(--or);min-width:40px;text-align:right;}
+.jr-score{
+  position:absolute;top:4px;right:5px;font-family:var(--f-num);font-size:.7rem;font-weight:800;color:var(--or);
+  padding:1px 6px;border-radius:999px;background:rgba(0,0,0,.45);
+}
+
+/* Le bonhomme ---------------------------------------------------------- */
+.bh{
+  --taille:40px;--bc:var(--vif);
+  position:relative;display:inline-flex;flex-direction:column;align-items:center;flex:none;
+  width:calc(var(--taille) * 1.25);animation:balance 3.2s ease-in-out infinite;transform-origin:50% 100%;
+}
+.bh-tete{
+  position:relative;z-index:2;display:grid;place-items:center;width:var(--taille);height:var(--taille);
+  border-radius:50%;overflow:hidden;background:color-mix(in srgb,var(--bc) 30%,#1d1036);
+  border:2px solid var(--bc);box-shadow:0 3px 10px rgba(0,0,0,.45);
+}
+.bh-tete img{width:100%;height:100%;object-fit:cover;display:block;}
+.bh-tete i{font-style:normal;font-weight:800;font-size:calc(var(--taille) * .48);line-height:1;color:#fff;}
+.bh-corps{width:calc(var(--taille) * 1.2);height:calc(var(--taille) * 1.02);margin-top:calc(var(--taille) * -.16);overflow:visible;}
+.bh-torse{fill:var(--bc);}
+.bh-bras,.bh-jambe{fill:none;stroke:var(--bc);stroke-width:4;stroke-linecap:round;}
+.bh-jambe{stroke:color-mix(in srgb,var(--bc) 60%,#000);}
+.bh-bras{transform-box:fill-box;transition:transform .3s var(--ease);}
+.bh-g{transform-origin:100% 0;} .bh-d{transform-origin:0 0;}
+.bh-micro{position:absolute;z-index:3;left:-2px;top:calc(var(--taille) * .8);font-size:calc(var(--taille) * .38);opacity:0;transform:scale(.4) rotate(-20deg);transition:all .25s var(--back);}
+.bh-badge{position:absolute;z-index:4;top:-6px;right:-4px;font-size:calc(var(--taille) * .42);filter:drop-shadow(0 2px 4px rgba(0,0,0,.6));animation:rebond 1s var(--back) infinite alternate;}
+.bh.chante{animation:chante .36s ease-in-out infinite alternate;}
+.bh.chante .bh-micro{opacity:1;transform:scale(1) rotate(-12deg);}
+.bh.chante .bh-g{transform:rotate(55deg) translateY(-2px);}
+.bh.chante .bh-tete{box-shadow:0 0 0 3px color-mix(in srgb,var(--bc) 45%,transparent),0 0 22px var(--bc);}
+.bh.gagne{animation:saute .55s var(--back) infinite alternate;}
+.bh.gagne .bh-g{transform:rotate(120deg);} .bh.gagne .bh-d{transform:rotate(-120deg);}
+.bh.sabote .bh-tete{filter:saturate(.4) hue-rotate(-25deg);border-color:var(--chaud);}
+.bh.grand{--taille:clamp(46px,9vh,80px);}
+@keyframes balance{0%,100%{transform:rotate(-2deg);}50%{transform:rotate(2deg);}}
+@keyframes chante{from{transform:translateY(0) rotate(-4deg) scale(1);}to{transform:translateY(-4px) rotate(4deg) scale(1.05);}}
+@keyframes saute{from{transform:translateY(0);}to{transform:translateY(-12px);}}
+@keyframes rebond{from{transform:translateY(0);}to{transform:translateY(-3px);}}
+
+/* La vedette : celui dont c'est le tour, au milieu de la scène. */
+.vedette{display:flex;justify-content:center;animation:pop .35s var(--back) both;}
+
+/* La courbe en direct -------------------------------------------------- */
+.courbe-cadre{
+  width:min(560px,100%);display:flex;flex-direction:column;gap:5px;
+  padding:8px 8px 6px;border-radius:14px;background:rgba(0,0,0,.38);border:1px solid var(--line);
+}
+.courbe-cadre canvas{display:block;width:100%;height:clamp(96px,19vh,170px);}
+.courbe-legende{display:flex;flex-wrap:wrap;justify-content:center;gap:4px 12px;font-size:.58rem;color:var(--faint);}
+.courbe-legende span{display:inline-flex;align-items:center;gap:5px;}
+.courbe-legende span::before{content:"";width:14px;height:4px;border-radius:2px;background:currentColor;}
+.lg-ref{color:rgba(255,255,255,.6);} .lg-juste{color:var(--vert);} .lg-faux{color:var(--chaud);}
+.lg-att{color:var(--or);} .lg-att::before{width:6px !important;height:6px !important;border-radius:50% !important;}
+
+/* Réglages, joueurs, photos ------------------------------------------- */
+.reglages{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;}
+.reglages .chip{min-width:0;padding:8px 4px;}
+.moi-ligne{display:flex;align-items:center;gap:12px;}
+.moi-ligne .field{flex:1;}
+.moi-ligne b{color:var(--text);font-size:.9rem;}
+.tete-btn{
+  position:relative;flex:none;display:grid;place-items:center;padding:6px 4px 2px;border-radius:14px;
+  background:rgba(0,0,0,.3);border:1px dashed var(--line);transition:border-color .2s,transform .2s var(--ease);
+}
+.tete-btn:hover{border-color:var(--vif);transform:translateY(-2px);}
+.tete-btn .bh{--taille:36px;}
+.tete-cam{position:absolute;right:-6px;top:-6px;font-size:.8rem;padding:2px 4px;border-radius:8px;background:var(--panel);border:1px solid var(--line);}
+.troupe{display:flex;flex-direction:column;gap:7px;}
+.tr{display:flex;align-items:center;gap:10px;}
+.tr .field{flex:1;padding:10px 12px;}
+.tr-x{flex:none;width:32px;height:32px;border-radius:50%;background:rgba(0,0,0,.34);border:1px solid var(--line);color:var(--dim);transition:all .2s;}
+.tr-x:hover:not(:disabled){color:#ff6b8a;border-color:#ff6b8a;}
+.tr-x:disabled{opacity:.25;cursor:not-allowed;}
+.tr-net{padding:6px 12px;border-radius:12px;background:rgba(0,0,0,.32);border:1px solid var(--line);}
+.tr-net .bh{--taille:30px;}
+.tr-net b{color:var(--text);font-size:.86rem;}
+.net-opts{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+.net-resume{text-align:center;padding:9px;border-radius:10px;background:rgba(0,0,0,.3);}
+
+.photo-sheet{text-align:center;display:flex;flex-direction:column;gap:12px;}
+.photo-sheet h2{margin-bottom:0;}
+.photo-cadre{position:relative;width:min(260px,70vw);aspect-ratio:1;margin:0 auto;border-radius:18px;overflow:hidden;background:#000;border:1px solid var(--line);}
+.photo-cadre video{width:100%;height:100%;object-fit:cover;transform:scaleX(-1);}
+.photo-rond{position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle closest-side,transparent 83%,rgba(5,2,12,.62) 84%);}
+.photo-rond::after{content:"";position:absolute;inset:8%;border-radius:50%;border:2px dashed rgba(255,255,255,.6);}
+.photo-autres{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+
+/* Notes de la manche, quand on est plusieurs sur le même écran. */
+.nm{display:flex;flex-direction:column;gap:5px;width:min(420px,100%);}
+.nm-l{display:grid;grid-template-columns:auto 1fr 1.2fr 34px;align-items:center;gap:9px;padding:3px 10px;border-radius:11px;background:rgba(0,0,0,.3);}
+.nm-l.top{background:rgba(255,216,77,.1);box-shadow:inset 0 0 0 1px rgba(255,216,77,.3);}
+.nm-l .bh{--taille:24px;}
+.nm-l b{font-size:.78rem;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.nm-bar{height:7px;border-radius:4px;background:rgba(0,0,0,.5);overflow:hidden;}
+.nm-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--froid),var(--vif));animation:remplit .8s var(--ease) both;}
+.nm-n{font-family:var(--f-num);font-weight:800;color:var(--or);text-align:right;}
+@keyframes remplit{from{width:0 !important;}}
+
+/* Confettis ------------------------------------------------------------ */
+.confettis{position:fixed;inset:0;z-index:70;pointer-events:none;overflow:hidden;}
+.confettis i{
+  position:absolute;top:-20px;left:var(--x);width:9px;height:14px;border-radius:2px;background:var(--c);
+  animation:tombe var(--t) cubic-bezier(.3,.6,.5,1) var(--d) both;
+}
+@keyframes tombe{from{transform:translateY(0) rotate(0);opacity:1;}to{transform:translateY(105vh) rotate(var(--r));opacity:.7;}}
 
 .actions{flex:none;display:flex;flex-direction:column;gap:8px;padding:10px 12px calc(12px + var(--safe-b));}
 .detail{padding:2px 0;}
@@ -243,9 +356,10 @@ b,strong{color:var(--or);font-weight:700;}
 .roue-case b{font-size:.6rem;letter-spacing:.04em;color:var(--cc);text-align:center;}
 .roue-fleche{position:absolute;top:-8px;left:50%;transform:translateX(-50%);color:var(--or);font-size:1rem;text-shadow:0 0 12px rgba(255,216,77,.8);}
 .cible-list{display:flex;flex-direction:column;gap:7px;margin:10px 0;}
-.cible{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 14px;border-radius:11px;background:rgba(0,0,0,.4);border:1px solid var(--line);transition:all .18s var(--ease);}
+.cible{display:flex;align-items:center;gap:10px;padding:6px 14px;border-radius:11px;background:rgba(0,0,0,.4);border:1px solid var(--line);transition:all .18s var(--ease);}
 .cible:hover{border-color:var(--chaud);background:rgba(255,138,61,.12);transform:translateX(3px);}
-.cible b{color:var(--text);font-size:.86rem;}
+.cible .bh{--taille:28px;}
+.cible b{color:var(--text);font-size:.86rem;flex:1;text-align:left;}
 .cible span{font-family:var(--f-num);font-size:.7rem;color:var(--faint);}
 
 /* Catalogue de sons ---------------------------------------------------- */
@@ -260,7 +374,7 @@ b,strong{color:var(--or);font-weight:700;}
 .son-card.joue{box-shadow:0 0 26px color-mix(in srgb,var(--fc) 55%,transparent);transform:scale(1.04);}
 .son-g{font-size:1.7rem;line-height:1;}
 .son-card b{font-size:.68rem;color:var(--text);text-align:center;line-height:1.2;}
-.son-fam{font-size:.56rem;color:var(--fc);letter-spacing:.04em;}
+.son-famille{grid-column:1 / -1;font-size:.82rem;color:var(--fc);letter-spacing:.04em;margin-top:8px;padding-bottom:4px;border-bottom:1px solid color-mix(in srgb,var(--fc) 30%,transparent);}
 .son-meta{font-family:var(--f-num);font-size:.54rem;color:var(--faint);}
 
 /* Règles --------------------------------------------------------------- */
@@ -292,12 +406,13 @@ b,strong{color:var(--or);font-weight:700;}
 
 /* Fin ------------------------------------------------------------------ */
 .endcard{text-align:center;}
-.end-mark{font-size:3.4rem;line-height:1;margin-bottom:6px;}
+.end-mark{font-size:3.4rem;line-height:1;margin-bottom:6px;display:flex;justify-content:center;}
 .end-title{font-family:var(--f-display);font-size:2rem;letter-spacing:.08em;color:var(--or);}
 .end-title.lost{color:#ff6b8a;}
 .end-sub{font-size:.8rem;color:var(--dim);margin:6px 0 14px;}
 .podium{display:flex;flex-direction:column;gap:6px;margin-bottom:14px;}
-.pod{display:grid;grid-template-columns:24px 1fr auto;align-items:center;gap:10px;padding:9px 12px;border-radius:11px;background:rgba(0,0,0,.34);border:1px solid var(--line);}
+.pod{display:grid;grid-template-columns:26px auto 1fr auto;align-items:center;gap:10px;padding:5px 12px;border-radius:11px;background:rgba(0,0,0,.34);border:1px solid var(--line);}
+.pod .bh{--taille:28px;}
 .pod.moi{border-color:rgba(255,216,77,.4);background:rgba(255,216,77,.08);}
 .pod-rang{font-family:var(--f-num);color:var(--faint);}
 .pod-nom{text-align:left;font-size:.84rem;}
@@ -313,11 +428,18 @@ b,strong{color:var(--or);font-weight:700;}
   .cons-glyph{font-size:1.4rem;}
   .onde{height:clamp(38px,12vh,70px);}
   .scene{gap:9px;}
-  .jr{padding:5px 11px;}
+  .jr{padding:3px 4px;}
+  .jr .bh{--taille:24px;}
+  .courbe-cadre canvas{height:clamp(80px,26vh,140px);}
+  .bh.grand{--taille:48px;}
   .logo-title{font-size:clamp(2.6rem,12vh,4rem);}
   .panel{max-height:96vh;}
+}
+@media (max-width:380px){
+  .reglages{grid-template-columns:1fr;}
 }
 @media (prefers-reduced-motion:reduce){
   .blob,.logo-title{animation:none;}
   .onde.bat i{animation-duration:1.4s;}
+  .bh,.bh.chante,.bh.gagne,.bh-badge{animation:none;}
 }
