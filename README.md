@@ -5,6 +5,9 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
 
 **Les jeux**
 
+- **BRASIER** — huit champions dans une taverne-forge. On recrute des
+  serviteurs, on les fusionne en dorés, les combats se jouent seuls ; le dernier
+  debout l'emporte. En ligne uniquement : les chaises vides sont prises par des bots.
 - **RAID** — donjon solo au tour par tour. Un champ d'essence à parcourir
   pour récolter le mana, un raid de six qui partage une seule barre de vie,
   cinq ailes jusqu'au Dragon Cendré.
@@ -36,6 +39,29 @@ npm test                   # règles, équilibrage, bots, parties en ligne
 ```
 
 ---
+
+## BRASIER — comment ça marche
+
+Huit champions, 30 PV chacun. Chaque tour alterne un **recrutement** — de l'or,
+une taverne à rangs, un plateau de sept places — et un **combat** automatique
+contre un autre survivant. Le perdant perd le rang de taverne du vainqueur plus
+les étoiles de ses survivants, sous un plafond qui monte avec les tours.
+
+- **La réserve est commune** à la table : chaque serviteur existe en un nombre
+  fixe d'exemplaires. Trois exemplaires fusionnent en un **doré** (stats et
+  effets doublés) qui rapporte une découverte d'un rang au-dessus.
+- **Le combat est déterministe** à graine égale et produit une suite
+  d'événements — attaque, coup, bouclier brisé, mort, invocation — que l'écran
+  rejoue au rythme d'une table `TEMPO` partagée avec le serveur, qui sait ainsi
+  quand relancer le recrutement.
+- **Six mots-clés** (Provocation, Bouclier sacré, Venin, Furie, Réincarnation,
+  Balayage) et cinq moments d'effet (cri, fin de tour, début de combat, râle,
+  mort d'un allié), sur six tribus et une quarantaine de serviteurs originaux.
+- **Les bots** passent par la même fonction `agir` que les joueurs : mêmes
+  règles, même or, même réserve. Ils prennent les chaises vides au lancement,
+  et la chaise de quiconque quitte la partie en cours.
+- **La vue** d'un joueur ne contient jamais la taverne ni le plateau des
+  autres : leur plateau ne se découvre qu'au combat.
 
 ## RAID — comment ça marche
 
@@ -187,6 +213,7 @@ public/
     hasard.js             aléa déterministe, partagé par les jeux
     zenith/               ZÉNITH : roster, moteur, adversaires, sprites
     mimic/                ÉCHO : analyse du son, sons de référence, manches
+    brasier/              BRASIER : serviteurs, héros, combat, partie, bots
     raid/                 RAID : écoles, globes, héros, bestiaire, combat,
                           donjon, sprites, conseiller
   games/liars-saloon/
@@ -196,6 +223,8 @@ public/
     css/{base,menu,table}.css
     js/{main,ui,offline,online,sfx}.js
   games/zenith/           même forme : index, manifest, icônes, css, js
+  games/brasier/
+    js/{main,net,ui,arene,regles,sfx}.js   navigation, réseau, recrutement, combat rejoué
   games/echo/
     js/{main,offline,online}.js      navigation, partie sur un appareil, en ligne
     js/{karaoke,avatars}.js          courbe en direct, photos et bonhommes
@@ -209,6 +238,7 @@ server/
   saloon.js               salons de Liar's Saloon
   zenith.js               arènes de ZÉNITH
   mimic.js                salons d'ÉCHO
+  brasier.js              tables de BRASIER, bots compris
 api/
   ws.js                   même logique, exposée comme Function Vercel
 test/

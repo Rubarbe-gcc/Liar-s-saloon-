@@ -15,8 +15,9 @@
 import * as saloon from './saloon.js';
 import * as zenith from './zenith.js';
 import * as echo from './mimic.js';
+import * as brasier from './brasier.js';
 
-const GAMES = { saloon, zenith, echo };
+const GAMES = { saloon, zenith, echo, brasier };
 const DEFAULT_GAME = 'saloon';
 
 /** Jeu auquel chaque connexion est rattachée. */

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d0806">
+<meta name="description" content="BRASIER — huit champions, une taverne-forge. Recrutez, fusionnez, et soyez le dernier debout. En ligne, les chaises vides sont prises par des bots.">
+<title>BRASIER</title>
+<link rel="icon" href="/games/brasier/icons/icon-192.png">
+<link rel="manifest" href="/games/brasier/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/games/brasier/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Brasier">
+<link rel="stylesheet" href="/games/brasier/css/brasier.css">
+</head>
+<body>
+
+<div class="fond" aria-hidden="true">
+  <div class="fond-forge"></div>
+  <div class="fond-cendres" id="cendres"></div>
+  <div class="fond-vig"></div>
+</div>
+
+<!-- ============================ MENU ============================ -->
+<section class="ecran actif" id="e-menu">
+  <div class="menu">
+    <header class="logo">
+      <span class="logo-sur">Huit champions · une taverne-forge</span>
+      <h1 class="logo-titre">BRASIER</h1>
+      <div class="logo-filet"><i></i><span>🔨 ⚔️ 🔥</span><i></i></div>
+      <p class="logo-dit">Recrutez. Fusionnez. Restez le dernier debout.</p>
+    </header>
+
+    <div class="plaque">
+      <label class="etiquette" for="in-nom">Votre nom de champion</label>
+      <input class="champ" id="in-nom" maxlength="14" placeholder="Comment on vous appelle" autocomplete="nickname">
+      <p class="statut" id="net-statut">Connexion à la forge…</p>
+    </div>
+
+    <nav class="menu-nav">
+      <button class="bouton bouton-braise" id="b-creer">
+        <span class="bi">🔥</span>
+        <span class="bt"><b>Allumer une table</b><i>Les chaises vides seront prises par des bots</i></span>
+      </button>
+      <div class="rejoindre">
+        <input class="champ code" id="in-code" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off">
+        <button class="bouton" id="b-rejoindre">Rejoindre</button>
+      </div>
+      <button class="bouton bouton-fin" data-ouvre="ov-regles"><span class="bi">📜</span> Règles</button>
+    </nav>
+
+    <a class="menu-retour" href="/">‹ Retour aux jeux</a>
+  </div>
+</section>
+
+<!-- ========================== VESTIAIRE ========================= -->
+<section class="ecran" id="e-table">
+  <div class="plaque plaque-large">
+    <header class="table-tete">
+      <button class="rond" id="b-quitter-table" title="Quitter">‹</button>
+      <div>
+        <h2 class="titre">La table</h2>
+        <p class="statut">Huit chaises. Les vides seront prises par des bots au lancement.</p>
+      </div>
+    </header>
+    <div class="code-table">
+      <span>Code de la table</span>
+      <button id="code-table" title="Copier">····</button>
+      <i>Touchez pour copier, puis envoyez-le à vos amis</i>
+    </div>
+    <div class="chaises" id="chaises"></div>
+    <div class="actions-bas">
+      <button class="bouton bouton-braise bouton-large" id="b-lancer">Lancer la partie</button>
+      <p class="statut" id="attente-hote" hidden>L'hôte lancera la partie.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== RECRUTEMENT ========================= -->
+<section class="ecran ecran-jeu" id="e-recrut">
+  <header class="barre">
+    <button class="rond petit" id="b-quitter" title="Quitter la partie">✕</button>
+    <span class="barre-tour" id="r-tour">Tour 1</span>
+    <span class="chrono" id="r-chrono">⏳ 30</span>
+    <button class="rond petit" id="b-son" title="Son">🔊</button>
+  </header>
+
+  <div class="jeu-corps">
+    <aside class="classement" id="classement" aria-label="Classement"></aside>
+
+    <div class="jeu-centre">
+      <div class="taverne" id="taverne">
+        <div class="taverne-tete">
+          <div class="rang">
+            <b>Taverne</b>
+            <span class="etoiles" id="r-etoiles"></span>
+          </div>
+          <div class="taverne-boutons">
+            <button class="outil" id="b-ameliorer" title="Monter la taverne d'un rang">⬆<b id="r-cout-rang">5</b></button>
+            <button class="outil" id="b-geler" title="Geler la taverne pour le prochain tour">❄️</button>
+            <button class="outil" id="b-rafraichir" title="Nouveaux serviteurs">🔄<b id="r-cout-rafr">1</b></button>
+          </div>
+        </div>
+        <div class="rangee comptoir" id="boutique"></div>
+      </div>
+
+      <div class="fiche" id="fiche">
+        <p class="fiche-vide" id="fiche-vide">Touchez un serviteur pour le voir. Double-touchez en taverne pour l'acheter.</p>
+        <div class="fiche-contenu" id="fiche-contenu" hidden></div>
+      </div>
+
+      <div class="plateau" id="plateau-cadre">
+        <div class="rangee dalle" id="plateau"></div>
+      </div>
+
+      <footer class="socle">
+        <div class="heros-socle" id="r-heros"></div>
+        <div class="bourse">
+          <span class="bourse-or" id="r-or">3</span>
+          <span class="pieces" id="r-pieces"></span>
+        </div>
+        <button class="bouton bouton-braise bouton-pret" id="b-pret">Prêt ⚔️</button>
+      </footer>
+    </div>
+  </div>
+</section>
+
+<!-- ========================== COMBAT =========================== -->
+<section class="ecran ecran-jeu" id="e-combat">
+  <header class="barre">
+    <span class="barre-tour" id="c-tour">Tour 1</span>
+    <span class="chrono">⚔️ Combat</span>
+  </header>
+  <div class="arene">
+    <div class="arene-heros haut" id="c-heros-adv"></div>
+    <div class="rangee arene-rangee" id="c-adv"></div>
+    <div class="arene-milieu" id="c-milieu"></div>
+    <div class="rangee arene-rangee" id="c-moi"></div>
+    <div class="arene-heros bas" id="c-heros-moi"></div>
+  </div>
+</section>
+
+<!-- ======================== SUPERPOSITIONS ====================== -->
+<div class="ov" id="ov-heros" hidden>
+  <div class="feuille feuille-heros">
+    <h2>Choisissez votre champion</h2>
+    <p class="statut" id="heros-chrono">Vous avez 25 secondes.</p>
+    <div class="heros-choix" id="heros-choix"></div>
+    <p class="statut" id="heros-attente" hidden>En attente des autres champions…</p>
+  </div>
+</div>
+
+<div class="ov" id="ov-decouverte" hidden>
+  <div class="feuille">
+    <h2>✨ Découverte</h2>
+    <p class="statut">Choisissez un serviteur. Il rejoint votre plateau.</p>
+    <div class="rangee decouverte" id="decouverte"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-fin" hidden>
+  <div class="feuille feuille-fin">
+    <div class="fin-marque" id="fin-marque">🏆</div>
+    <h2 class="fin-titre" id="fin-titre">—</h2>
+    <p class="statut" id="fin-dit"></p>
+    <ol class="podium" id="podium"></ol>
+    <div class="actions-bas deux">
+      <button class="bouton" id="b-fin-menu">Menu</button>
+      <button class="bouton bouton-braise" id="b-fin-table">Retour à la table</button>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ov-regles" hidden>
+  <div class="feuille feuille-large">
+    <button class="rond fermer" data-ferme="ov-regles">✕</button>
+    <h2>Les règles du Brasier</h2>
+    <div class="onglets" id="regles-onglets" role="tablist">
+      <button class="onglet actif" data-page="partie">⚔️ La partie</button>
+      <button class="onglet" data-page="mots">🛡️ Mots-clés</button>
+      <button class="onglet" data-page="cartes">📖 Serviteurs</button>
+      <button class="onglet" data-page="heros">👑 Héros</button>
+    </div>
+    <div class="page actif" id="rp-partie"></div>
+    <div class="page" id="rp-mots"></div>
+    <div class="page" id="rp-cartes"></div>
+    <div class="page" id="rp-heros"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script type="module" src="/games/brasier/js/main.js"></script>
+</body>
+</html>

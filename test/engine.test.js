@@ -457,6 +457,7 @@ test('une partie en ligne se joue de bout en bout contre le vrai serveur', async
       '/games/liars-saloon/manifest.webmanifest': '/games/liars-saloon/',
       '/games/zenith/manifest.webmanifest': '/games/zenith/',
       '/games/echo/manifest.webmanifest': '/games/echo/',
+      '/games/brasier/manifest.webmanifest': '/games/brasier/',
     };
 
     for (const [path, expectedStart] of Object.entries(manifests)) {
@@ -490,6 +491,7 @@ test('une partie en ligne se joue de bout en bout contre le vrai serveur', async
       '/games/liars-saloon/icons/apple-touch-icon.png',
       '/games/zenith/icons/apple-touch-icon.png',
       '/games/echo/icons/apple-touch-icon.png',
+      '/games/brasier/icons/apple-touch-icon.png',
     ]) {
       assert.equal((await fetch(`${base}${apple}`)).status, 200, `${apple} introuvable`);
     }
@@ -502,7 +504,7 @@ test('une partie en ligne se joue de bout en bout contre le vrai serveur', async
     const code = await sw.text();
     assert.match(code, /addEventListener\('fetch'/, 'le service worker n\'intercepte rien');
     for (const engine of [
-      "'/shared/engine.js'", "'/shared/zenith/battle.js'", "'/shared/mimic/analyse.js'",
+      "'/shared/engine.js'", "'/shared/zenith/battle.js'", "'/shared/mimic/analyse.js'", "'/shared/brasier/partie.js'",
     ]) {
       assert.ok(code.includes(engine),
         `${engine} doit etre precache, sinon ce jeu ne tourne pas hors connexion`);
@@ -510,7 +512,7 @@ test('une partie en ligne se joue de bout en bout contre le vrai serveur', async
   });
 
   await t.test('les pages declarent de quoi s\'installer sur un telephone', async () => {
-    for (const page of ['/', '/games/liars-saloon/', '/games/zenith/', '/games/echo/']) {
+    for (const page of ['/', '/games/liars-saloon/', '/games/zenith/', '/games/echo/', '/games/brasier/']) {
       const html = await (await fetch(`${base}${page}`)).text();
       assert.match(html, /<link rel="manifest"/, `${page} ne declare pas de manifeste`);
       assert.match(html, /apple-touch-icon/, `${page} n'a pas d'icone iOS`);

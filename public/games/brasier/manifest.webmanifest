@@ -1,0 +1,20 @@
+{
+  "name": "BRASIER — la taverne des huit",
+  "short_name": "Brasier",
+  "description": "Huit champions, une taverne-forge. Recrutez, fusionnez, et soyez le dernier debout.",
+  "id": "/games/brasier/",
+  "start_url": "/games/brasier/",
+  "scope": "/games/brasier/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0d0806",
+  "theme_color": "#0d0806",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": ["games"],
+  "icons": [
+    { "src": "/games/brasier/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/games/brasier/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/games/brasier/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

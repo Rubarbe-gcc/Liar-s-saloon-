@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v13';
+const VERSION = 'v14';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -81,6 +81,21 @@ const SHELL = [
   '/shared/mimic/sons.js',
   '/shared/mimic/partie.js',
   '/shared/mimic/bots.js',
+  '/games/brasier/',
+  '/games/brasier/manifest.webmanifest',
+  '/games/brasier/css/brasier.css',
+  '/games/brasier/js/main.js',
+  '/games/brasier/js/net.js',
+  '/games/brasier/js/ui.js',
+  '/games/brasier/js/arene.js',
+  '/games/brasier/js/regles.js',
+  '/games/brasier/js/sfx.js',
+  '/games/brasier/icons/icon-192.png',
+  '/shared/brasier/serviteurs.js',
+  '/shared/brasier/heros.js',
+  '/shared/brasier/combat.js',
+  '/shared/brasier/partie.js',
+  '/shared/brasier/bots.js',
 ];
 
 self.addEventListener('install', (event) => {
