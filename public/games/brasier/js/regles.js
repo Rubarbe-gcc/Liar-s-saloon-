@@ -41,8 +41,9 @@ export function pagePartie() {
       peut vous coûter des PV, mais le fantôme, lui, ne saigne plus.</p></section>
   </div>
   <h3>Sur l'écran</h3>
-  <p>Touchez un serviteur pour lire sa fiche ; double-touchez en taverne pour l'acheter
-    d'un coup. Sur votre plateau, ◀ ▶ changent sa place dans l'ordre d'attaque.
+  <p>Glissez un serviteur de la taverne au plateau pour l'acheter, du plateau à la taverne
+    pour le vendre, ou d'une place à l'autre du plateau pour changer l'ordre d'attaque.
+    Au toucher, ses boutons apparaissent sur lui : Acheter, Vendre, ◀ ▶.
     ⚡ début de combat · ⏳ fin de tour · 💀 râle · 🩸 se nourrit des morts.</p>`;
 }
 

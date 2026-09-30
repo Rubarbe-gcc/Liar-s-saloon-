@@ -65,6 +65,7 @@ export function medaillon(u, o = {}) {
     <span class="srv-pv${blesse ? ' blesse' : (u.pv > d.pv * k ? ' gonfle' : '')}">${u.pv}</span>
     ${marques ? `<span class="srv-marques">${marques}</span>` : ''}
     ${o.prix ? `<span class="srv-prix">${COUT_SERVITEUR}</span>` : ''}
+    ${o.extra || ''}
   </div>`;
 }
 
@@ -105,14 +106,37 @@ export function compter(host) {
   host.style.setProperty('--n', Math.max(4, host.querySelectorAll('.srv:not(.meurt)').length));
 }
 
+/**
+ * Les boutons d'un serviteur sélectionné, posés sur lui plutôt qu'ailleurs :
+ * au doigt, une action doit se trouver là où l'on vient de toucher. Ceux du
+ * bord gauche ou droit s'alignent sur leur bord, pour ne pas sortir de l'écran.
+ */
+function actionsDe(zone, i, n, m) {
+  const bord = n >= 3 && i === 0 ? ' g' : (n >= 3 && i === n - 1 ? ' d' : '');
+  if (zone === 'boutique') {
+    const peut = m.or >= COUT_SERVITEUR && m.plateau.length < PLATEAU_MAX;
+    const pourquoi = m.plateau.length >= PLATEAU_MAX ? 'Plateau plein' : 'Pas assez d\'or';
+    return `<div class="srv-actions bas${bord}">
+      <button data-f="acheter" class="a-acheter" ${peut ? '' : 'disabled'}>${peut ? `Acheter · ${COUT_SERVITEUR}🪙` : pourquoi}</button></div>`;
+  }
+  return `<div class="srv-actions haut${bord}">
+    <button data-f="gauche" ${i <= 0 ? 'disabled' : ''} aria-label="Vers la gauche">◀</button>
+    <button data-f="vendre" class="a-vendre">Vendre · +1🪙</button>
+    <button data-f="droite" ${i >= n - 1 ? 'disabled' : ''} aria-label="Vers la droite">▶</button></div>`;
+}
+
 function rangee(host, zone, liste, o) {
   host.style.setProperty('--n', Math.max(4, liste.length));
   const avant = connus[zone];
-  const html = liste.map((u) => medaillon(u, {
-    ...o,
-    cls: [choix && choix.zone === zone && choix.uid === u.uid ? 'choisi' : '',
-      avant.size || zone === 'plateau' ? (avant.has(u.uid) ? '' : 'nouveau') : 'nouveau'].join(' '),
-  })).join('');
+  const m = vue.moi;
+  const html = liste.map((u, i) => {
+    const choisi = choix && choix.zone === zone && choix.uid === u.uid;
+    return medaillon(u, {
+      ...o,
+      cls: [choisi ? 'choisi' : '', avant.has(u.uid) ? '' : 'nouveau'].join(' '),
+      extra: choisi && !m.mort ? actionsDe(zone, i, liste.length, m) : '',
+    });
+  }).join('');
   if (host.dataset.sig !== html) { host.dataset.sig = html; host.innerHTML = html; }
   connus[zone] = new Set(liste.map((u) => u.uid));
 }
@@ -182,21 +206,7 @@ function rendreFiche() {
   const c = $('fiche-contenu');
   c.hidden = !u;
   if (!u) return;
-
-  let actions = '';
-  if (choix.zone === 'boutique') {
-    const peut = m.or >= COUT_SERVITEUR && m.plateau.length < PLATEAU_MAX;
-    actions = `<button class="bouton bouton-braise" data-f="acheter" ${peut ? '' : 'disabled'}>Acheter · ${COUT_SERVITEUR}🪙</button>
-      <span class="statut">${m.plateau.length >= PLATEAU_MAX ? 'Plateau plein' : (m.or < COUT_SERVITEUR ? 'Pas assez d\'or' : '')}</span>`;
-  } else {
-    const i = m.plateau.findIndex((x) => x.uid === u.uid);
-    actions = `<div class="ligne">
-        <button class="bouton" data-f="gauche" ${i <= 0 ? 'disabled' : ''} title="Vers la gauche">◀</button>
-        <button class="bouton" data-f="droite" ${i >= m.plateau.length - 1 ? 'disabled' : ''} title="Vers la droite">▶</button>
-      </div>
-      <button class="bouton" data-f="vendre">Vendre · +1🪙</button>`;
-  }
-  c.innerHTML = `${medaillon(u)}${detail(u)}<div class="fiche-actions">${actions}</div>`;
+  c.innerHTML = detail(u);
 }
 
 function rendreClassement(v) {
@@ -291,34 +301,133 @@ function indexDe(zone, uid) {
   return (zone === 'boutique' ? m.boutique : m.plateau).findIndex((u) => u.uid === uid);
 }
 
-$('boutique').addEventListener('click', (e) => {
-  const el = e.target.closest('.srv');
-  if (el) selectionner('boutique', el.dataset.uid);
-});
-$('boutique').addEventListener('dblclick', (e) => {
-  const el = e.target.closest('.srv');
-  if (!el) return;
-  const i = indexDe('boutique', el.dataset.uid);
-  if (i >= 0) { choix = null; agir({ type: 'acheter', i }); }
-});
-$('plateau').addEventListener('click', (e) => {
-  const el = e.target.closest('.srv');
-  if (el) selectionner('plateau', el.dataset.uid);
-});
-
-$('fiche-contenu').addEventListener('click', (e) => {
-  const b = e.target.closest('[data-f]');
-  if (!b || b.disabled || !choix) return;
-  const i = indexDe(choix.zone, choix.uid);
-  if (i < 0) return;
-  switch (b.dataset.f) {
+/** Une action sur un serviteur, désigné par son uid : les index bougent, lui non. */
+function faire(f, zone, uid) {
+  const i = indexDe(zone, uid);
+  if (i < 0) return undefined;
+  switch (f) {
     case 'acheter': choix = null; return agir({ type: 'acheter', i });
     case 'vendre': choix = null; return agir({ type: 'vendre', i });
     case 'gauche': return agir({ type: 'deplacer', de: i, vers: i - 1 });
     case 'droite': return agir({ type: 'deplacer', de: i, vers: i + 1 });
     default: return undefined;
   }
-});
+}
+
+/*
+ * Toucher, double toucher.
+ *
+ * Le double toucher se détecte ici plutôt que par l'événement `dblclick`,
+ * que les téléphones n'envoient pas de façon fiable — sur iPhone, un double
+ * toucher zoomait la page au lieu d'acheter. Sur le plateau, un double toucher
+ * garde la sélection au lieu de l'ouvrir puis de la refermer aussitôt.
+ */
+let dernierToucher = { uid: null, t: 0 };
+let ignorerClicsJusqua = 0;
+
+function toucher(zone, el) {
+  const uid = el.dataset.uid;
+  const t = performance.now();
+  const double = dernierToucher.uid === uid && t - dernierToucher.t < 380;
+  dernierToucher = double ? { uid: null, t: 0 } : { uid, t };
+  if (double && zone === 'boutique') return faire('acheter', zone, uid);
+  if (double) { choix = { zone, uid }; return rendreRecrutement(vue); }
+  return selectionner(zone, uid);
+}
+
+for (const zone of ['boutique', 'plateau']) {
+  $(zone).addEventListener('click', (e) => {
+    if (performance.now() < ignorerClicsJusqua) return;
+    const el = e.target.closest('.srv');
+    if (!el) return;
+    const b = e.target.closest('[data-f]');
+    if (b) { if (!b.disabled) faire(b.dataset.f, zone, el.dataset.uid); return; }
+    toucher(zone, el);
+  });
+}
+
+/*
+ * Glisser-déposer, comme à la taverne : de la taverne au plateau pour
+ * acheter, du plateau à la taverne pour vendre, sur le plateau pour changer
+ * l'ordre d'attaque. Un geste de moins de douze pixels reste un toucher.
+ */
+let glisse = null;
+
+function zoneSous(x, y) {
+  const el = document.elementFromPoint(x, y);
+  if (!el) return null;
+  if (el.closest('#taverne')) return 'taverne';
+  if (el.closest('#plateau-cadre')) return 'plateau';
+  return null;
+}
+
+function nettoyerGlisse(g) {
+  if (g.fantome) g.fantome.remove();
+  if (g.el) g.el.classList.remove('souleve');
+  document.body.classList.remove('glisse-achat', 'glisse-plateau');
+  $('taverne').classList.remove('depot');
+  $('plateau-cadre').classList.remove('depot');
+}
+
+for (const zone of ['boutique', 'plateau']) {
+  $(zone).addEventListener('pointerdown', (e) => {
+    if (e.button > 0 || e.target.closest('[data-f]')) return;
+    const el = e.target.closest('.srv');
+    if (!el || !vue || !vue.moi || vue.moi.mort) return;
+    glisse = { zone, uid: el.dataset.uid, el, x0: e.clientX, y0: e.clientY, id: e.pointerId, actif: false };
+  });
+}
+
+document.addEventListener('pointermove', (e) => {
+  const g = glisse;
+  if (!g || e.pointerId !== g.id) return;
+  if (!g.actif) {
+    if (Math.hypot(e.clientX - g.x0, e.clientY - g.y0) < 12) return;
+    g.actif = true;
+    const r = g.el.getBoundingClientRect();
+    const f = g.el.cloneNode(true);
+    f.classList.remove('choisi', 'nouveau');
+    f.classList.add('fantome-glisse');
+    f.querySelector('.srv-actions')?.remove();
+    f.style.setProperty('--w', `${r.width}px`);
+    document.body.appendChild(f);
+    g.fantome = f;
+    g.l = r.width; g.h = r.height;
+    g.el.classList.add('souleve');
+    document.body.classList.add(g.zone === 'boutique' ? 'glisse-achat' : 'glisse-plateau');
+  }
+  g.fantome.style.transform = `translate(${e.clientX - g.l / 2}px,${e.clientY - g.h / 2}px) rotate(-4deg) scale(1.08)`;
+  const sous = zoneSous(e.clientX, e.clientY);
+  $('taverne').classList.toggle('depot', g.zone === 'plateau' && sous === 'taverne');
+  $('plateau-cadre').classList.toggle('depot', g.zone === 'boutique' && sous === 'plateau');
+  e.preventDefault();
+}, { passive: false });
+
+function finGlisse(e, annule = false) {
+  const g = glisse;
+  if (!g || e.pointerId !== g.id) return;
+  glisse = null;
+  if (!g.actif) return;              // un simple toucher : le clic s'en charge
+  ignorerClicsJusqua = performance.now() + 350;
+  nettoyerGlisse(g);
+  if (annule) return;
+  const sous = zoneSous(e.clientX, e.clientY);
+  if (g.zone === 'boutique' && sous === 'plateau') return faire('acheter', g.zone, g.uid);
+  if (g.zone === 'plateau' && sous === 'taverne') return faire('vendre', g.zone, g.uid);
+  if (g.zone === 'plateau' && sous === 'plateau') {
+    const de = indexDe('plateau', g.uid);
+    const autres = [...$('plateau').querySelectorAll('.srv')].filter((x) => x.dataset.uid !== g.uid);
+    let vers = autres.findIndex((x) => {
+      const r = x.getBoundingClientRect();
+      return e.clientX < r.left + r.width / 2;
+    });
+    if (vers < 0) vers = autres.length;
+    if (de >= 0 && vers !== de) agir({ type: 'deplacer', de, vers });
+  }
+  return undefined;
+}
+document.addEventListener('pointerup', (e) => finGlisse(e));
+document.addEventListener('pointercancel', (e) => finGlisse(e, true));
 
 $('decouverte').addEventListener('click', (e) => {
   const b = e.target.closest('[data-decouvre]');

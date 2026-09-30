@@ -37,7 +37,7 @@
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 [hidden]{display:none !important;}
-html,body{height:100%;}
+html,body{height:100%;touch-action:manipulation;}
 body{
   background:var(--nuit);color:var(--texte);font-family:var(--f-ui);
   overflow:hidden;-webkit-font-smoothing:antialiased;user-select:none;
@@ -257,6 +257,34 @@ b{color:var(--or);}
 @keyframes eclat{30%{transform:scale(1.15);filter:brightness(1.8);}}
 .srv.gele .srv-cadre{box-shadow:0 0 0 2px var(--glace),0 0 14px rgba(121,212,255,.6);}
 
+/* Les boutons d'un serviteur sélectionné, posés sur lui */
+/* translate, et non transform : l'animation d'apparition écrase transform. */
+.srv-actions{position:absolute;z-index:30;left:50%;translate:-50% 0;display:flex;gap:5px;white-space:nowrap;
+  animation:entre .18s var(--doux) both;}
+.srv-actions.haut{bottom:calc(100% + 10px);}
+.srv-actions.bas{top:calc(100% + 12px);}
+.srv-actions.g{left:-4px;translate:none;} .srv-actions.d{left:auto;right:-4px;translate:none;}
+.srv-actions button{min-width:38px;min-height:38px;padding:7px 11px;border-radius:10px;font-weight:800;font-size:.76rem;
+  color:var(--texte);background:linear-gradient(180deg,var(--fer3),var(--fer));border:1px solid var(--laiton);
+  box-shadow:0 4px 12px rgba(0,0,0,.7);touch-action:manipulation;}
+.srv-actions button:disabled{opacity:.4;}
+.srv-actions .a-vendre{color:#fff;background:linear-gradient(180deg,#e0566a,#9a1a2c);border-color:#ff8a96;}
+.srv-actions .a-acheter{color:#2a0c02;background:linear-gradient(180deg,#ffd9a0,var(--flamme));border-color:#ffb566;}
+.srv-actions .a-acheter:disabled{color:var(--dim);background:var(--fer);border-color:var(--ligne);opacity:1;}
+
+/* Glisser-déposer */
+.rangee .srv{touch-action:none;}
+.fantome-glisse{position:fixed !important;left:0;top:0;z-index:100;pointer-events:none;opacity:.95;
+  filter:drop-shadow(0 12px 18px rgba(0,0,0,.8));transition:none;}
+.srv.souleve{opacity:.3;}
+body.glisse-achat .dalle{outline:2px dashed rgba(255,165,58,.7);outline-offset:-4px;}
+body.glisse-plateau .comptoir{outline:2px dashed rgba(224,86,106,.8);outline-offset:-4px;}
+#plateau-cadre.depot .dalle{box-shadow:inset 0 0 30px rgba(255,140,40,.45),0 0 18px rgba(255,120,40,.5);}
+#taverne.depot{border-color:#ff8a96;box-shadow:inset 0 0 30px rgba(224,86,106,.35),0 0 18px rgba(224,86,106,.5);}
+#taverne.depot .comptoir::after{content:"Vendre · +1 🪙";position:absolute;inset:0;display:grid;place-items:center;
+  font-weight:900;font-size:1.1rem;color:#fff;background:rgba(120,10,30,.55);border-radius:10px;}
+.comptoir{position:relative;}
+
 .degat{position:absolute;z-index:20;left:50%;top:38%;transform:translate(-50%,-50%);pointer-events:none;
   font-family:var(--f-num);font-weight:900;font-size:1.25rem;color:#fff;
   padding:6px 9px;border-radius:50%;background:radial-gradient(circle,#ff3a3a,#9a0a0a);
@@ -336,7 +364,7 @@ b{color:var(--or);}
 .dalle:empty::after{content:"Achetez des serviteurs en taverne — ils se rangeront ici";font-size:.72rem;color:var(--faint);font-style:italic;}
 .vide-taverne{font-size:.72rem;color:var(--faint);font-style:italic;}
 
-.fiche{flex:1 1 auto;min-height:72px;display:flex;align-items:center;justify-content:center;padding:4px 6px;overflow:hidden;}
+.fiche{flex:1 1 auto;min-height:56px;display:flex;align-items:center;justify-content:center;padding:4px 6px;overflow-y:auto;}
 .fiche-vide{font-size:.72rem;color:var(--faint);text-align:center;font-style:italic;}
 .fiche-contenu{display:flex;align-items:center;gap:12px;width:min(560px,100%);padding:8px 10px;border-radius:12px;
   background:rgba(0,0,0,.45);border:1px solid var(--ligne);animation:entre .2s var(--doux);}
