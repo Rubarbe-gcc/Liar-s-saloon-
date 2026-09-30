@@ -265,6 +265,42 @@ function reechantillonner(a, m) {
 
 const HZ_EN_DEMITONS = (hz) => 12 * Math.log2(hz / 440);
 
+/**
+ * Les petits recalages tolérés en temps.
+ *
+ * Une vraie voix n'est jamais calée au cordeau : on part un poil en retard,
+ * on traîne sur la fin. Comparer point à point punissait ces flottements
+ * comme s'ils étaient des fautes d'imitation. On essaie donc quelques
+ * étirements (±10 %) et décalages (±6 % de la durée), et l'on garde le
+ * meilleur — assez pour pardonner un flottement, trop peu pour transformer
+ * un rythme faux en rythme juste.
+ */
+const ETIREMENTS = [0.9, 0.95, 1, 1.05, 1.1];
+const DECALAGE_MAX = 0.06;
+
+function* recalages(m) {
+  const dmax = Math.round(m * DECALAGE_MAX);
+  for (const s of ETIREMENTS) {
+    // L'étirement se fait autour du milieu, pour ne pas tout faire glisser.
+    const c = (m - 1) / 2;
+    for (let d = -dmax; d <= dmax; d++) {
+      yield (i) => Math.round((i - c) * s + c + d);
+    }
+  }
+}
+
+/**
+ * Écart entre deux hauteurs relatives, en demi-tons.
+ *
+ * Sur une voix humaine, le détecteur saute parfois d'une octave — ou c'est le
+ * joueur qui y saute pour atteindre une note trop aiguë. Ce n'est pas une
+ * autre mélodie : une octave d'écart coûte un demi-ton et demi, pas douze.
+ */
+function ecartDemitons(d) {
+  const a = Math.abs(d);
+  return Math.min(a, Math.abs(a - 12) + 1.5);
+}
+
 /** Médiane des valeurs non nulles. */
 function mediane(a) {
   const v = a.filter((x) => x !== null && Number.isFinite(x)).sort((p, q) => p - q);
@@ -290,31 +326,34 @@ export function noterMelodie(ref, prise) {
   if (ma === null) return { note: null, couverture: 0 };
   if (mb === null) return { note: 0, couverture: 0 };
 
-  let somme = 0, n = 0;
-  for (let i = 0; i < m; i++) {
-    if (a[i] === null || b[i] === null) continue;
-    somme += Math.abs((a[i] - ma) - (b[i] - mb));
-    n++;
-  }
-  const couverture = n / m;
-  if (n === 0) return { note: 0, couverture: 0 };
-
-  // Un demi-ton d'écart moyen reste excellent ; au-delà de six, c'est une
-  // autre mélodie. La décroissance exponentielle évite un seuil brutal.
-  const ecart = somme / n;
-  const justesse = Math.exp(-ecart / 3.2);
-
-  // Ne chanter que le quart du temps ne doit pas valoir une note pleine.
-  //
   // La part attendue se mesure sur le contour RÉÉCHANTILLONNÉ, pas sur la
   // grille d'origine : comparer une couverture calculée sur 64 points à une
   // attente calculée sur cent-et-quelques donnait un rapport faussé, et un
   // signal comparé à lui-même n'obtenait pas tout à fait cent — 98 pour le
   // laser, dont peu de fenêtres sont voisées.
   const attendu = a.filter((v) => v !== null).length / m;
-  const part = attendu > 0 ? Math.min(1, couverture / attendu) : 1;
 
-  return { note: Math.round(100 * justesse * (0.45 + 0.55 * part)), couverture };
+  let meilleure = { note: 0, couverture: 0 };
+  for (const vers of recalages(m)) {
+    let somme = 0, n = 0;
+    for (let i = 0; i < m; i++) {
+      const j = vers(i);
+      if (a[i] === null || j < 0 || j >= m || b[j] === null) continue;
+      somme += ecartDemitons((a[i] - ma) - (b[j] - mb));
+      n++;
+    }
+    if (n === 0) continue;
+    const couverture = n / m;
+
+    // Un demi-ton d'écart moyen reste excellent ; au-delà de six, c'est une
+    // autre mélodie. La décroissance exponentielle évite un seuil brutal.
+    const justesse = Math.exp(-(somme / n) / 3.2);
+    // Ne chanter que le quart du temps ne doit pas valoir une note pleine.
+    const part = attendu > 0 ? Math.min(1, couverture / attendu) : 1;
+    const note = Math.round(100 * justesse * (0.45 + 0.55 * part));
+    if (note > meilleure.note) meilleure = { note, couverture };
+  }
+  return meilleure;
 }
 
 /** Corrélation de Pearson, bornée à [-1, 1]. */
@@ -342,7 +381,18 @@ export function noterRythme(ref, prise) {
   };
   const a = reechantillonner(norm(ref.enveloppe), m);
   const b = reechantillonner(norm(prise.enveloppe), m);
-  const r = correlation(a, b);
+
+  // Le meilleur des petits recalages, à condition qu'il recouvre presque
+  // toute la référence : glisser la prise hors du cadre ne doit rien rapporter.
+  let r = -1;
+  for (const vers of recalages(m)) {
+    const x = [], y = [];
+    for (let i = 0; i < m; i++) {
+      const j = vers(i);
+      if (j >= 0 && j < m) { x.push(a[i]); y.push(b[j]); }
+    }
+    if (x.length >= m * 0.85) r = Math.max(r, correlation(x, y));
+  }
   // Une corrélation nulle vaut zéro, pas cinquante : imiter au hasard ne doit
   // pas rapporter la moitié des points.
   return { note: Math.round(100 * Math.max(0, r)), correlation: r };

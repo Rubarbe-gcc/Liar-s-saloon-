@@ -150,6 +150,55 @@ test('le silence autour d\'une prise ne coute rien', () => {
   assert.ok(moyenne >= 95, `moyenne de ${moyenne.toFixed(1)}`);
 });
 
+test('une imitation humaine, un peu lente et avec un saut d\'octave, reste bien notee', () => {
+  // Ce que fait une vraie voix : partir en retard, trainer un peu, et sauter
+  // d'une octave pour attraper une note trop aigue. Ce ne sont pas des fautes
+  // d'imitation, et le bareme ne doit pas les traiter comme telles.
+  const notes = [];
+  for (const son of S.SONS) {
+    const lent = son.segments.map((g, k) => {
+      const oct = k === Math.floor(son.segments.length / 2) && son.segments.length > 1 ? 0.5 : 1;
+      const hz = Array.isArray(g.hz) ? g.hz.map((h) => h * oct) : g.hz * oct;
+      return { ...g, hz, duree: g.duree * 1.08, apres: g.apres ? g.apres * 1.08 : g.apres };
+    });
+    const x = S.rendre({ segments: lent }, SR, 5);
+    const prise = new Float32Array(4 * SR);
+    prise.set(x, Math.round(0.6 * SR));
+    notes.push(A.noter(A.analyserPrise(S.rendre(son, SR), SR), A.analyserPrise(prise, SR)).total);
+  }
+  const moyenne = notes.reduce((a, b) => a + b, 0) / notes.length;
+  assert.ok(moyenne >= 85, `moyenne de ${moyenne.toFixed(1)} pour des imitations fideles mais humaines`);
+});
+
+test('l\'enregistrement s\'arrete quand on a fini, pas entre deux syllabes', async () => {
+  const { finDePrise, SILENCE_FIN } = await import('../public/games/echo/js/audio.js');
+  const bloc = 2048 / 48000;
+  /** Joue une suite de [niveau, secondes] ; rend l'instant de l'arret, ou null. */
+  const jouer = (suite) => {
+    const fin = finDePrise();
+    let t = 0;
+    for (const [rms, duree] of suite) {
+      for (let k = 0; k < Math.round(duree / bloc); k++) {
+        t += bloc;
+        if (fin(rms, bloc)) return t;
+      }
+    }
+    return null;
+  };
+  const piece = 0.004;
+  // Silence de la piece, trois syllabes separees de blancs courts, puis silence.
+  const t = jouer([[piece, 0.8], [0.2, 0.3], [piece, 0.25], [0.2, 0.3], [piece, 0.25],
+    [0.2, 0.4], [piece, 3]]);
+  assert.ok(t !== null, 'la prise doit s\'arreter d\'elle-meme');
+  const finChant = 0.8 + 0.3 + 0.25 + 0.3 + 0.25 + 0.4;
+  assert.ok(t > finChant + SILENCE_FIN - 0.1 && t < finChant + SILENCE_FIN + 0.2,
+    `arret a ${t.toFixed(2)} s, le chant finit a ${finChant.toFixed(2)} s`);
+  // Personne ne chante : on ne coupe pas, le chrono decidera.
+  assert.equal(jouer([[piece, 4]]), null);
+  // Un micro qui souffle fort ne tient pas la prise ouverte indefiniment.
+  assert.ok(jouer([[0.03, 0.6], [0.3, 0.5], [0.03, 3]]) !== null, 'un souffle de fond ne doit pas empecher l\'arret');
+});
+
 test('rogner ne fabrique rien dans le silence', () => {
   const muet = new Float32Array(SR);
   assert.equal(A.rogner(muet, SR).length, muet.length, 'un silence reste un silence entier');
@@ -378,12 +427,14 @@ test('une partie compte le bon nombre de manches, sans en sauter', () => {
   assert.equal(e.phase, P.PHASE.FIN);
 });
 
-test('la roue n\'apparait qu\'a partir de la manche prevue', () => {
+test('la roue tourne de la manche prevue a l\'avant-derniere', () => {
+  // Apres la derniere manche, la roue ne servait a rien : ses sabotages ne
+  // touchaient aucune restitution, et le classement tombait aussitot.
   const e = duo(4);
   for (let m = 1; m <= 4; m++) {
     const r = manche(e, { a: 40, b: 40 });
-    assert.equal(r.roue, m >= P.MANCHE_ROUE,
-      `manche ${m} : roue ${r.roue}, attendu ${m >= P.MANCHE_ROUE}`);
+    const attendu = m >= P.MANCHE_ROUE && m < 4;
+    assert.equal(r.roue, attendu, `manche ${m} : roue ${r.roue}, attendu ${attendu}`);
     if (r.roue) for (const j of e.joueurs) P.passerRoue(e, j.id);
     if (e.phase !== P.PHASE.FIN) P.finirOuContinuer(e);
   }

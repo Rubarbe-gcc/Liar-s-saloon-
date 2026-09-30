@@ -50,8 +50,9 @@ export function pageManche() {
     <section><h3><span>5</span> Le barème note</h3><p>Sur cent, en combinant
       mélodie, rythme et attaques. Le détail est à l'onglet suivant.</p></section>
 
-    <section><h3><span>6</span> La roue tourne</h3><p>À partir de la manche
-      ${MANCHE_ROUE}. Elle donne des points, ou de quoi nuire.</p></section>
+    <section><h3><span>6</span> La roue tourne</h3><p>De la manche
+      ${MANCHE_ROUE} à l'avant-dernière. Elle donne des points, ou de quoi
+      nuire à la manche suivante.</p></section>
   </div>
   <h3 class="roles-titre">Les sons</h3>
   <p class="rules-chapo">${SONS.length}, répartis en ${FAMILLE_KEYS.length} familles : ${familles}.
@@ -109,8 +110,8 @@ export function pageRoue() {
     <span class="el-st">${esc(c.blurb)}</span>
   </div>`).join('');
 
-  return `<p class="rules-chapo">À partir de la manche ${MANCHE_ROUE}, chacun
-    peut tourner la roue — ou s'en passer. Un sabotage se <b>vise</b> : on
+  return `<p class="rules-chapo">De la manche ${MANCHE_ROUE} à l'avant-dernière,
+    chacun peut tourner la roue — ou s'en passer. Un sabotage se <b>vise</b> : on
     choisit sa victime.</p>
 
   <div class="el-table">${cases}</div>

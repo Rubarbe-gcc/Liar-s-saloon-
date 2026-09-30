@@ -107,8 +107,12 @@ export function relacherMicro() {
  * en secondes : c'est ce qui dessine la courbe en direct. Elle se calcule par
  * le même détecteur que le barème, pour que l'écran ne promette rien que la
  * note ne tiendrait pas.
+ *
+ * `secondes` est un maximum : dès que le joueur a imité puis s'est tu
+ * pendant `SILENCE_FIN`, on s'arrête. Attendre la fin du chrono dans le
+ * silence n'apportait rien — le barème retire ce silence de toute façon.
  */
-export async function enregistrer(secondes, onNiveau, onHauteur) {
+export async function enregistrer(secondes, onNiveau, onHauteur, { arretAuto = true } = {}) {
   if (!flux || !flux.active) {
     const r = await demanderMicro();
     if (!r.ok) throw new Error(r.raison);
@@ -124,6 +128,7 @@ export async function enregistrer(secondes, onNiveau, onHauteur) {
   const morceaux = [];
   let total = 0;
   const cible = Math.round(secondes * c.sampleRate);
+  const fin = arretAuto ? finDePrise() : () => false;
 
   const fini = new Promise((resolve) => {
     noeud.onaudioprocess = (e) => {
@@ -142,7 +147,7 @@ export async function enregistrer(secondes, onNiveau, onHauteur) {
         // fenêtre du barème : on l'analyse tel quel.
         onHauteur(hauteurFenetre(copie, 0, copie.length, c.sampleRate), rms, total / c.sampleRate);
       }
-      if (total >= cible) resolve();
+      if (total >= cible || fin(rms, copie.length / c.sampleRate)) resolve();
     };
   });
 
@@ -162,6 +167,43 @@ export async function enregistrer(secondes, onNiveau, onHauteur) {
   let o = 0;
   for (const m of morceaux) { brut.set(m, o); o += m.length; }
   return reechantillonner(brut, c.sampleRate, SR);
+}
+
+/** Silence qui clôt une prise, en secondes : plus long que tout blanc d'un son. */
+export const SILENCE_FIN = 0.7;
+
+/**
+ * Détecteur de fin de prise, nourri bloc par bloc : (niveau, durée du bloc)
+ * → vrai quand le joueur a imité puis s'est tu.
+ *
+ * Les seuils suivent le micro plutôt que des valeurs fixes : le plancher est
+ * le bloc le plus calme entendu (le bruit de la pièce), et le silence se juge
+ * par rapport au plus fort de la prise — un chuchoteur n'est pas coupé en
+ * pleine phrase, un micro qui souffle ne tient pas la prise ouverte.
+ *
+ * Le plus long blanc d'un son de référence dure un quart de seconde :
+ * `SILENCE_FIN` laisse de quoi respirer entre deux syllabes.
+ */
+export function finDePrise() {
+  let plancher = Infinity;
+  let crete = 0;
+  let parle = 0;        // durée consécutive au-dessus du seuil, avant le début
+  let commence = false;
+  let depuis = 0;       // durée depuis le début de l'imitation
+  let calme = 0;        // durée consécutive de silence
+  return (rms, dt) => {
+    plancher = Math.min(plancher, rms);
+    if (!commence) {
+      parle = rms >= Math.max(0.02, plancher * 4) ? parle + dt : 0;
+      if (parle >= 0.08) { commence = true; crete = rms; }
+      return false;
+    }
+    depuis += dt;
+    crete = Math.max(crete, rms);
+    const silence = rms < Math.max(0.008, plancher * 2.5, crete * 0.12);
+    calme = silence ? calme + dt : 0;
+    return depuis >= 0.3 && calme >= SILENCE_FIN;
+  };
 }
 
 /** Rééchantillonnage linéaire. Suffisant pour de la voix à 16 kHz. */

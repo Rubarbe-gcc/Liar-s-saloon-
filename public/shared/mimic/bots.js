@@ -20,22 +20,26 @@ import { rendre, dureeDe } from './sons.js';
  *
  * Avertissement honnête : ces chiffres sont réglés contre des prises
  * synthétiques, faute de pouvoir tester au micro depuis l'environnement où ce
- * jeu a été écrit. Ils visent 50 / 68 / 82 de moyenne, ce qui devrait rendre
+ * jeu a été écrit. Ils visent 57 / 71 / 83 de moyenne, ce qui devrait rendre
  * le virtuose battable sans être complaisant — mais c'est la première partie
  * jouée à la voix qui tranchera.
+ *
+ * Ils ont été relevés quand le barème a appris à pardonner les petits
+ * flottements de tempo et les sauts d'octave : cette tolérance est faite pour
+ * les voix humaines, pas pour offrir dix points de plus aux bots.
  */
 export const NIVEAUX = {
   pouet: {
     key: 'pouet', label: 'Pouet', blurb: 'Il essaie. C\'est déjà ça.',
-    demitons: 4.0, tempo: 0.34, attaques: 0.55, souffle: 0.12,
+    demitons: 8.0, tempo: 0.52, attaques: 0.8, souffle: 0.18,
   },
   correct: {
     key: 'correct', label: 'Correct', blurb: 'Il tient la note, la plupart du temps.',
-    demitons: 2.1, tempo: 0.20, attaques: 0.30, souffle: 0.07,
+    demitons: 4.0, tempo: 0.36, attaques: 0.5, souffle: 0.1,
   },
   virtuose: {
     key: 'virtuose', label: 'Virtuose', blurb: 'Il a l\'oreille. Agaçant.',
-    demitons: 1.1, tempo: 0.11, attaques: 0.16, souffle: 0.04,
+    demitons: 1.8, tempo: 0.17, attaques: 0.25, souffle: 0.05,
   },
 };
 

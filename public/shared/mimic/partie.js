@@ -280,7 +280,10 @@ export function encaisserNotes(etat) {
   // FIN dans le cas contraire : cette phase-là signifie « partie terminée »,
   // et s'en servir comme fourre-tout faisait avancer la manche deux fois —
   // la deuxième manche disparaissait purement et simplement.
-  if (etat.manche >= MANCHE_ROUE) {
+  //
+  // Pas de roue après la dernière manche : ses sabotages ne toucheraient
+  // aucune restitution, et le classement tombait aussitôt la roue tournée.
+  if (etat.manche >= MANCHE_ROUE && etat.manche < etat.manches) {
     etat.phase = PHASE.ROUE;
     for (const j of etat.joueurs) j.aTourne = false;
   }
