@@ -459,7 +459,9 @@ test('en ligne : les chaises vides prennent des bots, on recrute, on se bat, un 
 
   // Un achat, puis un refus : plus d'or.
   hote.send({ t: 'action', a: { type: 'acheter', i: 0 } });
-  await hote.wait((m) => m.t === 'b:etat' && m.vue.moi.plateau.length === 1);
+  // Un cri peut invoquer un compagnon : le plateau compte un ou deux serviteurs.
+  const apresAchat = await hote.wait((m) => m.t === 'b:etat' && m.vue.moi.plateau.length >= 1);
+  const taille = apresAchat.vue.moi.plateau.length;
   hote.send({ t: 'action', a: { type: 'acheter', i: 0 } });
   const refus = await hote.wait((m) => m.t === 'b:refus');
   assert.equal(refus.raison, 'or');
@@ -473,7 +475,7 @@ test('en ligne : les chaises vides prennent des bots, on recrute, on se bat, un 
   assert.ok(combat.vue.combat, 'le combat de l\'hote lui est envoye');
   assert.equal(combat.vue.combat.events[0].t, 'debut');
   const monCamp = combat.vue.combat.events[0].camps[combat.vue.combat.camp];
-  assert.equal(monCamp.length, 1, 'son plateau part au combat');
+  assert.equal(monCamp.length, taille, 'son plateau part au combat');
 
   // L'invite s'en va : un bot prend sa chaise, la partie continue a huit.
   invite.send({ t: 'leave' });
@@ -483,6 +485,77 @@ test('en ligne : les chaises vides prennent des bots, on recrute, on se bat, un 
 
   const tour2 = await hote.wait((m) => m.t === 'b:etat' && m.vue.phase === 'recrutement' && m.vue.tour === 2, 30000);
   assert.equal(tour2.vue.moi.or, 4);
+});
+
+test('une coupure de connexion ne fait pas perdre sa place', async (t) => {
+  // L'hebergement coupe les connexions au bout de cinq minutes : une partie
+  // en dure quinze. Sans jeton, chaque reconnexion faisait du joueur un
+  // inconnu, la table le remplacait par un bot — ou disparaissait.
+  const { default: server } = await import('../api/ws.js');
+  await new Promise((res) => server.listen(0, '127.0.0.1', res));
+  const url = `ws://127.0.0.1:${server.address().port}/api/ws`;
+  const ouverts = [];
+  t.after(() => {
+    for (const c of ouverts) c.close();
+    server.closeAllConnections?.();
+    return new Promise((res) => server.close(res));
+  });
+
+  const jeton = `test-${Math.random().toString(36).slice(2, 12)}`;
+  const a = new Client(url), b = new Client(url);
+  ouverts.push(a, b);
+  await Promise.all([a.ready(), b.ready()]);
+  a.send({ t: 'hello', name: 'Alice', jeton });
+  const salut = await a.wait((m) => m.t === 'b:hello');
+  assert.equal(salut.id, jeton, 'le jeton devient l\'identite du joueur');
+  assert.equal(salut.repris, false);
+  b.send({ t: 'hello', name: 'Bob', jeton: `test-${Math.random().toString(36).slice(2, 12)}` });
+  await b.wait((m) => m.t === 'b:hello');
+
+  a.send({ t: 'create', name: 'Alice' });
+  const salon = await a.wait((m) => m.t === 'b:salon');
+  b.send({ t: 'join', code: salon.code, name: 'Bob' });
+  await a.wait((m) => m.t === 'b:salon' && m.joueurs.length === 2);
+  a.send({ t: 'start' });
+  const choix = await a.wait((m) => m.t === 'b:etat' && m.vue.phase === 'heros');
+  a.send({ t: 'heros', id: choix.vue.moi.offre[0] });
+  const choixB = await b.wait((m) => m.t === 'b:etat' && m.vue.phase === 'heros');
+  b.send({ t: 'heros', id: choixB.vue.moi.offre[0] });
+  const recrut = await a.wait((m) => m.t === 'b:etat' && m.vue.phase === 'recrutement');
+  a.send({ t: 'action', a: { type: 'acheter', i: 0 } });
+  // Un cri peut invoquer un compagnon : on retient la taille, pas un chiffre.
+  const achat = await a.wait((m) => m.t === 'b:etat' && m.vue.moi.plateau.length >= 1);
+  const taille = achat.vue.moi.plateau.length;
+
+  // La connexion d'Alice tombe : un bot tient sa place, la table survit.
+  a.close();
+  const absente = await b.wait((m) => m.t === 'b:etat' && m.vue.joueurs.find((j) => j.id === jeton)?.isBot);
+  assert.equal(absente.vue.joueurs.length, 8);
+
+  // Alice revient avec son jeton : même place, même plateau, plus de bot.
+  const a2 = new Client(url);
+  ouverts.push(a2);
+  await a2.ready();
+  a2.send({ t: 'hello', name: 'Alice', jeton });
+  const retour = await a2.wait((m) => m.t === 'b:hello');
+  assert.equal(retour.repris, true);
+  await a2.wait((m) => m.t === 'b:debut' && m.reprise);
+  const vue = await a2.wait((m) => m.t === 'b:etat');
+  assert.equal(vue.vue.moi.id, jeton);
+  assert.equal(vue.vue.moi.plateau.length, taille, 'son plateau l\'attendait');
+  assert.equal(vue.vue.moi.heros, recrut.vue.moi.heros);
+  assert.equal(vue.vue.joueurs.find((j) => j.id === jeton).isBot, false);
+
+  // Et ses actions reprennent.
+  a2.send({ t: 'action', a: { type: 'vendre', i: 0 } });
+  await a2.wait((m) => m.t === 'b:etat' && m.vue.moi.plateau.length === taille - 1);
+
+  // Un jeton inconnu ne reprend rien.
+  const c = new Client(url);
+  ouverts.push(c);
+  await c.ready();
+  c.send({ t: 'hello', name: 'Carl', jeton: 'jeton-inconnu-123' });
+  assert.equal((await c.wait((m) => m.t === 'b:hello')).repris, false);
 });
 
 test('le routeur envoie les messages du brasier a son serveur', async (t) => {

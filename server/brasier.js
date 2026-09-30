@@ -10,6 +10,13 @@
  * bots et simule les combats. Les clients n'envoient que des intentions, et
  * ne reçoivent que leur propre vue — jamais la taverne ni le plateau d'autrui
  * avant le combat.
+ *
+ * Une partie dure un quart d'heure, et une connexion ne tient pas forcément
+ * aussi longtemps : l'hébergement coupe les connexions au bout de cinq
+ * minutes, et un téléphone en veille coupe les siennes quand il veut. Un
+ * joueur se reconnaît donc à son JETON, un identifiant que son client garde
+ * et renvoie à chaque connexion — pas à sa connexion. Quand elle tombe, sa
+ * place l'attend `GRACE_MS` ; un bot joue pour lui le temps qu'il revienne.
  */
 
 import {
@@ -29,8 +36,16 @@ const FIN_MS = 30 * 1000;
 /** Marge après la rediffusion du plus long combat, pour lire le résultat. */
 const MARGE_COMBAT_MS = 2500;
 
+/** Temps pendant lequel une place attend son joueur après une coupure. */
+export const GRACE_MS = 60 * 1000;
+
 const tables = new Map();
+/** Connexions ouvertes, par identifiant de connexion. */
 const clients = new Map();
+/** Joueurs, par jeton : la connexion courante de chacun. */
+const joueurs = new Map();
+
+const jetonValide = (j) => typeof j === 'string' && /^[A-Za-z0-9_-]{8,64}$/.test(j);
 
 const rnd = (n) => Math.floor(Math.random() * n);
 
@@ -91,14 +106,62 @@ class Table {
   retirer(id) {
     const i = this.indexOf(id);
     if (i < 0) return;
+    clearTimeout(this.places[i].minuteur);
     this.places.splice(i, 1);
     if (this.hoteId === id && this.places.length) this.hoteId = this.places[0].id;
     this.touch();
   }
 
   envoyer(id, msg) {
-    const c = clients.get(id);
+    const c = joueurs.get(id);
     if (c && c.conn) { try { c.conn.send(msg); } catch { /* connexion morte */ } }
+  }
+
+  /**
+   * La connexion d'un joueur est tombée. Sa place l'attend ; en partie, un
+   * bot la tient d'ici là — il ne faut pas que toute la table l'attende.
+   */
+  absent(id, partirPlusTard) {
+    const place = this.places.find((p) => p.id === id);
+    if (!place) return;
+    place.absent = true;
+    clearTimeout(place.minuteur);
+    place.minuteur = setTimeout(partirPlusTard, GRACE_MS);
+    if (!this.partie) return;
+    const j = joueurDe(this.partie, id);
+    if (!j || j.isBot) return;
+    j.isBot = true;
+    if (this.partie.phase === PHASE.HEROS) {
+      choisirHerosBot(this.partie, id);
+      if (herosTousChoisis(this.partie)) { this.recrutement(); return; }
+    }
+    // On n'avance plus tôt que si d'autres joueurs, bien présents, attendent
+    // déjà : une coupure de deux secondes ne doit pas faire jouer son tour à
+    // un bot quand le chrono laisse le temps de revenir.
+    const presents = this.places.some((p) => !p.absent && !joueurDe(this.partie, p.id)?.mort);
+    if (presents && this.partie.phase === PHASE.RECRUTEMENT && humainsPrets(this.partie)) {
+      this.combat();
+      return;
+    }
+    this.pousser();
+  }
+
+  /** Le joueur est de retour : il reprend sa place et son héros. */
+  revenir(id) {
+    const place = this.places.find((p) => p.id === id);
+    if (!place) return false;
+    place.absent = false;
+    clearTimeout(place.minuteur);
+    this.touch();
+    if (this.partie) {
+      const j = joueurDe(this.partie, id);
+      if (j) { j.isBot = false; j.pret = false; }
+      this.envoyer(id, { t: 'b:debut', reprise: true });
+      this.pousser();
+    } else {
+      this.diffuser(this.vestiaire());
+    }
+    return true;
   }
 
   diffuser(msg) { for (const p of this.places) this.envoyer(p.id, msg); }
@@ -238,45 +301,87 @@ class Table {
 /* Transport                                                           */
 /* ------------------------------------------------------------------ */
 
+/*
+ * Un client se présente d'abord avec l'identifiant de sa connexion ; dès son
+ * « hello », s'il fournit un jeton, c'est ce jeton qui devient son identité
+ * de joueur (`c.pid`). Tout ce qui touche à une table parle en pid.
+ */
 export function handleOpen(conn) {
-  clients.set(conn.id, { conn, name: 'Forgeron', code: null });
+  const c = { conn, name: 'Forgeron', code: null, pid: conn.id };
+  clients.set(conn.id, c);
+  joueurs.set(c.pid, c);
   conn.send({ t: 'b:bonjour', id: conn.id });
 }
 
-function quitter(c, id) {
+/** Départ définitif : la place se libère, ou passe à un bot en partie. */
+function quitter(c) {
   if (!c.code) return;
   const t = tables.get(c.code);
   c.code = null;
   if (!t) return;
-  t.partir(id);
+  t.partir(c.pid);
   if (t.places.length === 0) { t.stop(); tables.delete(t.code); }
 }
 
 export function handleClose(conn) {
   const c = clients.get(conn.id);
   if (!c) return;
-  quitter(c, conn.id);
   clients.delete(conn.id);
+  // Une connexion déjà remplacée par une plus récente ne compte plus.
+  if (joueurs.get(c.pid) !== c) return;
+  const t = c.code && tables.get(c.code);
+  if (!t) { joueurs.delete(c.pid); return; }
+  // Une coupure n'est pas un départ : la place attend son joueur.
+  t.absent(c.pid, () => {
+    if (joueurs.get(c.pid) !== c) return;   // revenu entre-temps
+    joueurs.delete(c.pid);
+    quitter(c);
+  });
+}
+
+/**
+ * Le « hello » : un nom, et un jeton. Si ce jeton tenait déjà une place, la
+ * nouvelle connexion la reprend là où l'ancienne l'a laissée.
+ */
+function bonjour(c, msg) {
+  c.name = nettoyerNom(msg.name, c.name);
+  let repris = false;
+  if (jetonValide(msg.jeton) && msg.jeton !== c.pid) {
+    const ancien = joueurs.get(msg.jeton);
+    if (joueurs.get(c.pid) === c) joueurs.delete(c.pid);
+    c.pid = msg.jeton;
+    joueurs.set(c.pid, c);
+    if (ancien && ancien !== c && ancien.code) {
+      c.code = ancien.code;
+      ancien.code = null;               // l'ancienne connexion ne parle plus pour lui
+      try { ancien.conn.close(); } catch { /* déjà fermée */ }
+      const t = tables.get(c.code);
+      repris = !!t && t.a(c.pid);
+      if (!repris) c.code = null;
+    }
+  }
+  c.conn.send({ t: 'b:hello', name: c.name, id: c.pid, repris });
+  if (repris) tables.get(c.code).revenir(c.pid);
 }
 
 export function handleMessage(conn, msg) {
   const c = clients.get(conn.id);
   if (!c || !msg || typeof msg.t !== 'string') return;
   const table = () => (c.code && tables.get(c.code)) || null;
+  const id = c.pid;
 
   switch (msg.t) {
     case 'ping':
       return conn.send({ t: 'pong' });
 
     case 'hello':
-      c.name = nettoyerNom(msg.name);
-      return conn.send({ t: 'b:hello', name: c.name });
+      return bonjour(c, msg);
 
     case 'create': {
-      if (c.code) quitter(c, conn.id);
+      if (c.code) quitter(c);
       c.name = nettoyerNom(msg.name, c.name);
-      const t = new Table(nouveauCode(), conn.id);
-      t.ajouter(conn.id, c.name);
+      const t = new Table(nouveauCode(), id);
+      t.ajouter(id, c.name);
       tables.set(t.code, t);
       c.code = t.code;
       return t.diffuser(t.vestiaire());
@@ -286,9 +391,9 @@ export function handleMessage(conn, msg) {
       const code = String(msg.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
       const t = tables.get(code);
       if (!t) return conn.send({ t: 'b:erreur', msg: 'Aucune table à ce code.' });
-      if (c.code && c.code !== code) quitter(c, conn.id);
+      if (c.code && c.code !== code) quitter(c);
       c.name = nettoyerNom(msg.name, c.name);
-      const r = t.ajouter(conn.id, c.name);
+      const r = t.ajouter(id, c.name);
       if (!r.ok) return conn.send({ t: 'b:erreur', msg: r.error });
       c.code = code;
       return t.diffuser(t.vestiaire());
@@ -297,7 +402,7 @@ export function handleMessage(conn, msg) {
     case 'start': {
       const t = table();
       if (!t || t.partie) return;
-      if (t.hoteId !== conn.id) return conn.send({ t: 'b:erreur', msg: 'L\'hôte lance la partie.' });
+      if (t.hoteId !== id) return conn.send({ t: 'b:erreur', msg: 'L\'hôte lance la partie.' });
       const r = t.commencer();
       if (!r.ok) conn.send({ t: 'b:erreur', msg: r.error });
       return;
@@ -305,19 +410,19 @@ export function handleMessage(conn, msg) {
 
     case 'heros': {
       const t = table();
-      if (t) t.heros(conn.id, String(msg.id || ''));
+      if (t) t.heros(id, String(msg.id || ''));
       return;
     }
 
     case 'action': {
       const t = table();
       const a = nettoyerAction(msg.a);
-      if (t && a) t.action(conn.id, a);
+      if (t && a) t.action(id, a);
       return;
     }
 
     case 'leave':
-      quitter(c, conn.id);
+      quitter(c);
       return conn.send({ t: 'b:parti' });
 
     default:

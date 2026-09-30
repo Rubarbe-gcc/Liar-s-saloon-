@@ -20,8 +20,27 @@ let battement = null;
 
 const on = {
   statut: () => {}, salon: () => {}, debut: () => {}, etat: () => {},
-  refus: () => {}, erreur: () => {}, parti: () => {},
+  refus: () => {}, erreur: () => {}, parti: () => {}, hello: () => {},
 };
+
+/**
+ * Le jeton : l'identité de ce joueur pour le serveur, d'une connexion à la
+ * suivante. L'hébergement coupe les connexions au bout de quelques minutes ;
+ * sans jeton, chaque reconnexion faisait de vous un inconnu, et la table vous
+ * remplaçait par un bot. Il vit le temps de l'onglet : deux onglets, deux
+ * joueurs — et recharger la page rend sa place.
+ */
+function jeton() {
+  const neuf = () => (crypto.randomUUID ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`);
+  try {
+    let j = sessionStorage.getItem('brasier.jeton');
+    if (!j) { j = neuf(); sessionStorage.setItem('brasier.jeton', j); }
+    return j;
+  } catch {
+    return (jeton.memoire = jeton.memoire || neuf());
+  }
+}
 export function ecouter(evt, fn) { on[evt] = fn; }
 export const moi = () => monId;
 
@@ -38,7 +57,7 @@ export function connecter(qui) {
   ws.addEventListener('open', () => {
     delai = 800; echecs = 0;
     on.statut('connecte');
-    envoyer({ t: 'hello', name: nom });
+    envoyer({ t: 'hello', name: nom, jeton: jeton() });
     clearInterval(battement);
     battement = setInterval(() => envoyer({ t: 'ping' }), 25000);
   });
@@ -79,9 +98,12 @@ function envoyer(o) {
 function traiter(m) {
   switch (m.t) {
     case 'b:bonjour': monId = m.id; return;
-    case 'b:hello': nom = m.name; return;
+    case 'b:hello':
+      nom = m.name;
+      if (m.id) monId = m.id;
+      return on.hello(!!m.repris);
     case 'b:salon': return on.salon(m);
-    case 'b:debut': return on.debut();
+    case 'b:debut': return on.debut(!!m.reprise);
     case 'b:etat': return on.etat(m.vue, m.reste);
     case 'b:refus': return on.refus(m.raison);
     case 'b:erreur': return on.erreur(m.msg || 'Erreur inconnue.');
@@ -97,4 +119,4 @@ export const lancer = () => envoyer({ t: 'start' });
 export const quitter = () => envoyer({ t: 'leave' });
 export const heros = (id) => envoyer({ t: 'heros', id });
 export const agir = (a) => envoyer({ t: 'action', a });
-export const renommer = (name) => { nom = name || nom; envoyer({ t: 'hello', name: nom }); };
+export const renommer = (name) => { nom = name || nom; envoyer({ t: 'hello', name: nom, jeton: jeton() }); };

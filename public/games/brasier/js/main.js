@@ -170,7 +170,13 @@ const REFUS = {
   'réserve vide': 'La réserve est épuisée.',
 };
 
+/** Le joueur est-il assis à une table, en partie ou au vestiaire ? */
+const aTable = () => ['e-table', 'e-recrut', 'e-combat']
+  .some((id) => $(id).classList.contains('actif'));
+
 net.ecouter('statut', (s) => {
+  // En pleine partie, une coupure se dit : l'écran ne doit pas sembler figé.
+  if (s === 'perdu' && aTable()) ui.toast('Connexion perdue — reconnexion…', 2500);
   const el = $('net-statut');
   const dit = {
     connexion: ['Connexion à la forge…', ''],
@@ -188,7 +194,24 @@ net.ecouter('salon', (r) => {
   rendreTable(r);
   ui.montrer('table');
 });
-net.ecouter('debut', () => { remettreAZero(); ui.montrer('recrut'); });
+net.ecouter('debut', (reprise) => {
+  remettreAZero();
+  ui.montrer('recrut');
+  if (reprise) ui.toast('De retour à la table.', 2200);
+});
+
+/*
+ * Après une reconnexion, le serveur dit s'il a retrouvé notre place. S'il ne
+ * l'a pas retrouvée alors qu'on se croyait à table, la table n'existe plus :
+ * mieux vaut le dire et revenir au menu que rester devant un écran figé.
+ */
+net.ecouter('hello', (repris) => {
+  if (repris || !aTable()) return;
+  salon = null;
+  remettreAZero();
+  ui.montrer('menu');
+  ui.toast('La table a été perdue pendant la coupure. Ouvrez-en une nouvelle.', 4500);
+});
 net.ecouter('etat', surEtat);
 net.ecouter('refus', (raison) => { sfx.refus(); ui.toast(REFUS[raison] || 'Impossible pour l\'instant.'); });
 net.ecouter('erreur', (m) => ui.toast(m, 3000));
