@@ -594,11 +594,12 @@ async function animerFrappe(e) {
     }
   }
 
-  flash(e.mode === 'ultime' ? 'est-blanc' : null);
-  secouer(e.mode === 'ultime');
+  flash(e.mode === 'ultime' || e.critique ? 'est-blanc' : null);
+  secouer(e.mode === 'ultime' || e.critique);
 
-  const style = e.mode === 'ultime' ? 'est-super' : 'est-degat';
-  const prefixe = e.typeMult > 1 ? '✦ ' : '';
+  // Un critique se voit : il est porté par la chance du raid.
+  const style = e.mode === 'ultime' || e.critique ? 'est-super' : 'est-degat';
+  const prefixe = (e.critique ? '💥 ' : '') + (e.typeMult > 1 ? '✦ ' : '');
   nombreSurBete(e.cible, e.degats, style, prefixe);
   rendreEnnemis(vue(etat));
 

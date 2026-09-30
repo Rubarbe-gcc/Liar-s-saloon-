@@ -792,7 +792,7 @@ test('une prise de huit secondes passe par le serveur autonome', async (t) => {
   // prise de quatre secondes en pesait deja 85, et la connexion tombait au
   // premier depot — en local seulement, Vercel passant par `ws`.
   const { spawn } = await import('node:child_process');
-  const port = 30000 + Math.floor(Math.random() * 20000);
+  const port = 20000 + Math.floor(Math.random() * 9000);
   const proc = spawn(process.execPath, ['server/index.js'], {
     env: { ...process.env, PORT: String(port), HOST: '127.0.0.1' },
     stdio: ['ignore', 'pipe', 'pipe'],

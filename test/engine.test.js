@@ -391,7 +391,8 @@ class Client {
 }
 
 test('une partie en ligne se joue de bout en bout contre le vrai serveur', async (t) => {
-  const port = 3000 + Math.floor(Math.random() * 4000);
+  // Loin du 3000 : un serveur de développement y tourne souvent pendant les tests.
+  const port = 40000 + Math.floor(Math.random() * 9000);
   const srv = spawn(process.execPath, ['server/index.js'], {
     cwd: ROOT,
     env: { ...process.env, PORT: String(port), HOST: '127.0.0.1' },

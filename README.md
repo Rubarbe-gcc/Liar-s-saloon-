@@ -96,10 +96,23 @@ raid** applique son buff à tout le monde, et deux personnages d'un même groupe
 qui partagent une étiquette sont en **synergie**. Chaque boss d'aile lâche une
 pièce de **butin** à choisir parmi trois.
 
+La descente est aussi une **aventure** (`shared/raid/aventure.js`) :
+
+- le raid part **niveau 1**, aux trois quarts de ses fiches, gagne de
+  l'expérience à chaque victoire et monte jusqu'au niveau 10, où il les
+  dépasse ; aux niveaux 3, 5, 7 et 9, il choisit un **don** parmi trois ;
+- la **chance** donne des coups critiques, fait réussir les choix risqués et
+  attire les pièces épiques ;
+- entre deux combats, des **événements** — autel, prisonnier, fontaine, pacte
+  du Dragon, raccourci… — proposent des choix qui pèsent sur le raid et sur
+  les **boss à venir** : un atout en moins, de la vie en plus pour le Dragon.
+  La carte les récapitule sous « Menaces et faveurs ».
+
 L'équilibrage est mesuré, pas deviné : un conseiller joue des donjons entiers
-en tête de série fixe, et les réglages sont choisis pour que le mode
-*Héroïque* se boucle environ deux fois sur trois en jouant bien, le mode
-*Normal* presque toujours, et le *Mythique* rarement.
+en tête de série fixe. Sur trente donjons, le mode *Normal* se boucle presque
+toujours, l'*Héroïque* une fois sur deux, le *Mythique* rarement — et, en
+Héroïque, on sort de la première aile avec environ 70 % de vie, là où l'on en
+gardait 97 % avant l'aventure.
 
 Les personnages et les créatures sont dessinés en **pixel art paramétrique** :
 des grilles de 16×16 décrites en données, colorées par l'école, teintées par

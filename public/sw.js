@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v15';
+const VERSION = 'v16';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -65,6 +65,7 @@ const SHELL = [
   '/shared/raid/donjon.js',
   '/shared/raid/sprites.js',
   '/shared/raid/auto.js',
+  '/shared/raid/aventure.js',
   '/games/echo/',
   '/games/echo/manifest.webmanifest',
   '/games/echo/css/echo.css',

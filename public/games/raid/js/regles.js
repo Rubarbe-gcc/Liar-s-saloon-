@@ -18,6 +18,10 @@ import {
 import { ROLES, TALENTS, EFFETS, HEROS } from '../../../shared/raid/heros.js';
 import { AILES, RENCONTRES_PAR_AILE, DIFFICULTES, BUTIN, RARETES } from '../../../shared/raid/donjon.js';
 import { TRAITS } from '../../../shared/raid/ennemis.js';
+import {
+  NIVEAU_MAX, NIVEAUX_DON, DONS, CHANCE_DEPART, CHANCE_MAX, MULT_CRITIQUE,
+  puissance, xpDeRencontre, critiqueDe, texteDon,
+} from '../../../shared/raid/aventure.js';
 
 const bloc = (titre, corps) => `<div class="regle-bloc"><h3>${titre}</h3>${corps}</div>`;
 const pct = (v) => `${Math.round(v * 100)} %`;
@@ -156,8 +160,31 @@ function pageEcoles() {
       .map(([k, t]) => `<li><b>${t.nom}</b> — ${t.texte(exempleTalent(k))}</li>`).join('')}</ul>`);
 }
 
+function pageAventure() {
+  const niveaux = NIVEAUX_DON.join(', ').replace(/, (\d+)$/, ' et $1');
+  return bloc('Le raid grandit',
+    `<p>Le raid part au <b>niveau 1</b>, à ${pct(puissance(1))} de la force de ses fiches.
+    Chaque victoire rapporte de l'expérience — une meute ${xpDeRencontre({ boss: false, ennemis: [{ rang: 'trash' }] })} XP,
+    une élite ${xpDeRencontre({ boss: false, ennemis: [{ rang: 'elite' }] })}, un boss d'aile
+    ${xpDeRencontre({ boss: true, ennemis: [] })} — et chaque niveau renforce tout le monde, jusqu'au
+    niveau ${NIVEAU_MAX} (${pct(puissance(NIVEAU_MAX))} de la fiche).</p>`)
+  + bloc('Les dons',
+    `<p>Aux niveaux ${niveaux}, le raid choisit un don parmi trois : ils restent jusqu'au bout du donjon.</p>
+    <ul>${DONS.map((d) => `<li>${d.glyphe} <b>${d.nom}</b> — ${texteDon(d)}</li>`).join('')}</ul>`)
+  + bloc('La chance',
+    `<p>Le raid commence avec ${CHANCE_DEPART} points de chance, jusqu'à ${CHANCE_MAX}. Elle donne des
+    <b>coups critiques</b> (×${MULT_CRITIQUE} ; ${pct(critiqueDe(10))} de chances à 10 points), fait
+    réussir les choix risqués, et attire les pièces épiques dans le butin.</p>`)
+  + bloc('Les rencontres du chemin',
+    `<p>Après la première meute de chaque aile — et parfois après la seconde — le donjon pose une
+    question : un autel, un prisonnier, une fontaine, une voix… Chaque réponse a un prix. Certaines
+    rendent le raid plus fort mais réveillent le Dragon ; d'autres affaiblissent le boss de l'aile, ou le
+    mettent en garde. Ce que vos choix ont fait aux boss s'affiche sur la carte, sous « menaces ».</p>`);
+}
+
 export const PAGES = [
   { titre: 'Le donjon', sous: 'Cinq ailes, une seule barre de vie', rendu: pageDonjon },
+  { titre: 'L’aventure', sous: 'Niveaux, dons, chance et choix', rendu: pageAventure },
   { titre: 'Le champ d’essence', sous: 'Ramasser le mana, franchir les seuils', rendu: pageGlobes },
   { titre: 'Le tour', sous: 'Groupes, aggro, incantation, synergies', rendu: pageTour },
   { titre: 'Écoles et rôles', sous: 'La roue, la trinité, les effets', rendu: pageEcoles },

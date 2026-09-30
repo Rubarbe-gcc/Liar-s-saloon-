@@ -104,7 +104,10 @@
       <div class="carte-objets" id="carte-objets">🧪 ×0</div>
     </div>
 
+    <div class="fiche-raid" id="fiche-raid"></div>
+
     <div class="carte-ennemis" id="carte-ennemis"></div>
+    <div class="menaces" id="carte-menaces" hidden></div>
 
     <div class="pick-actions two">
       <button class="btn btn-ghost" id="b-abandonner">Quitter le donjon</button>
@@ -186,6 +189,51 @@
 </section>
 
 <!-- =============================== FIN ============================== -->
+<section class="screen" id="s-progres">
+  <div class="eveil">
+    <header class="eveil-head">
+      <div class="eveil-kicker" id="progres-kicker">victoire</div>
+      <h2 class="eveil-titre" id="progres-titre">+30 XP</h2>
+      <p class="pick-sub" id="progres-texte"></p>
+    </header>
+    <div class="niveau-grand" id="progres-niveau"></div>
+    <div class="pick-actions">
+      <button class="btn btn-go" id="b-progres">Continuer</button>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="s-don">
+  <div class="eveil">
+    <header class="eveil-head">
+      <div class="eveil-kicker" id="don-kicker">niveau atteint</div>
+      <h2 class="eveil-titre">Un don pour le raid</h2>
+      <p class="pick-sub">Un seul. Il vous suit jusqu'au bout du donjon.</p>
+    </header>
+    <div class="eveil-cartes" id="don-cartes"></div>
+  </div>
+</section>
+
+<section class="screen" id="s-evenement">
+  <div class="eveil">
+    <header class="eveil-head">
+      <div class="eveil-kicker">sur le chemin</div>
+      <div class="evenement-glyphe" id="evenement-glyphe">🕯</div>
+      <h2 class="eveil-titre" id="evenement-titre">—</h2>
+      <p class="evenement-texte" id="evenement-texte">—</p>
+      <p class="pick-sub" id="evenement-chance"></p>
+    </header>
+    <div class="eveil-cartes" id="evenement-choix"></div>
+    <div class="evenement-issue" id="evenement-issue" hidden>
+      <p class="issue-dit" id="issue-dit"></p>
+      <p class="issue-effet" id="issue-effet"></p>
+      <div class="pick-actions">
+        <button class="btn btn-go" id="b-issue">Continuer</button>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section class="screen" id="s-fin">
   <div class="fin">
     <div class="fin-sceau" id="fin-sceau">✧</div>

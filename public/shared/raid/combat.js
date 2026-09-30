@@ -26,6 +26,7 @@ import { makeRng, entier } from '../hasard.js';
 import { multiplicateur, ESSENCE } from './ecoles.js';
 import { creerPlateau, recolter, manaDuChemin, cheminValide, LONGUEUR_MAX } from './globes.js';
 import { attaqueDe, RAGE } from './ennemis.js';
+import { puissance, critiqueDe, MULT_CRITIQUE } from './aventure.js';
 
 /* ------------------------------------------------------------------ */
 /* Constantes de réglage                                               */
@@ -65,8 +66,16 @@ export const PHASE = {
 /* Création                                                            */
 /* ------------------------------------------------------------------ */
 
-/** Agrégat du butin ramassé dans le donjon. Tout est en part (0.2 = +20 %). */
-export const BUTIN_VIDE = { atk: 0, def: 0, pv: 0, mana: 0, soin: 0, degats: 0 };
+/**
+ * Agrégat de ce que le raid a gagné dans le donjon : butin, dons, choix.
+ * Tout est en part (0.2 = +20 %), sauf `mana` (points), `chance` (points)
+ * et `niveau`, qui règle la puissance des héros (voir `aventure.js`).
+ * Sans niveau, les héros valent exactement leur fiche.
+ */
+export const BUTIN_VIDE = {
+  atk: 0, def: 0, pv: 0, mana: 0, soin: 0, degats: 0,
+  chance: 0, critique: 0, boss: 0, potion: 0, recup: 0,
+};
 
 /**
  * Bonus du meneur — le premier héros de l'équipe — appliqué à toute la
@@ -82,8 +91,9 @@ export function bonusMeneur(meneur, heros) {
 /** Points de vie d'équipe : la somme des six, meneur compris. */
 export function vieMaximale(equipe, butin = BUTIN_VIDE) {
   const meneur = equipe[0];
+  const k = puissance(butin.niveau);
   return Math.round(equipe.reduce((somme, x) =>
-    somme + x.pv * (1 + bonusMeneur(meneur, x).pv + (butin.pv || 0)), 0));
+    somme + x.pv * k * (1 + bonusMeneur(meneur, x).pv + (butin.pv || 0)), 0));
 }
 
 /**
@@ -174,7 +184,8 @@ export function statsDe(etat, idx, contexte = {}) {
     if (t.type === 'apotheose' && contexte.mode === 'ultime') atk += t.valeur;
   }
 
-  return { atk: Math.round(x.atk * atk), def: Math.round(x.def * def), liens };
+  const k = puissance(etat.butin.niveau);
+  return { atk: Math.round(x.atk * k * atk), def: Math.round(x.def * k * def), liens };
 }
 
 /** Mana de départ d'un personnage : son talent, plus le butin du raid. */
@@ -303,6 +314,7 @@ export function estimerDegats(etat, idx, mode, ennemi) {
   let brut = st.atk * mult * type * passage(def, K_DEF_ENNEMI) * (1 + (etat.butin.degats || 0));
   if (coup?.effet?.type === 'double') brut *= PART_DOUBLE * 2;
   if (ennemi.traits.includes('carapace') && mode === 'normale') brut *= 0.7;
+  if (ennemi.rang === 'boss') brut *= 1 + (etat.butin.boss || 0);
 
   return { degats: Math.max(1, Math.round(brut)), type, mult, atk: st.atk, liens: st.liens };
 }
@@ -322,6 +334,11 @@ export function attaquer(etat, { mode = 'normale', cible = 0 } = {}) {
 
   const ev = [];
   const calcul = estimerDegats(etat, idx, mode, ennemi);
+  // Le coup critique ne se tire que si le raid a de la chance : sans elle, le
+  // combat reste exactement celui que les fiches décrivent.
+  const chance = etat.butin.chance || 0;
+  const critique = chance > 0 && etat.rng() < critiqueDe(chance);
+  if (critique) calcul.degats = Math.round(calcul.degats * (MULT_CRITIQUE + (etat.butin.critique || 0)));
   const coup = mode === 'ultime' ? x.ultime : mode === 'special' ? x.special : null;
   const nom = coup ? coup.nom : 'Frappe';
   const coups = coup?.effet?.type === 'double' ? 2 : 1;
@@ -329,7 +346,7 @@ export function attaquer(etat, { mode = 'normale', cible = 0 } = {}) {
   ennemi.pv = Math.max(0, ennemi.pv - calcul.degats);
   ev.push({
     type: 'frappe', heros: idx, mode, nom, cible: etat.ennemis.indexOf(ennemi),
-    degats: calcul.degats, coups, mult: calcul.mult, typeMult: calcul.type, mana,
+    degats: calcul.degats, coups, mult: calcul.mult, typeMult: calcul.type, mana, critique,
   });
 
   // Un ennemi « à épines » rend une part de ce qu'il encaisse.
@@ -487,7 +504,7 @@ export function utiliserObjet(etat) {
   if (etat.phase !== PHASE.CHOIX) return { ok: false, raison: 'phase' };
   if (etat.objets <= 0) return { ok: false, raison: 'vide' };
   etat.objets--;
-  const gain = Math.round(etat.vie.max * 0.3 * (1 + (etat.butin.soin || 0)));
+  const gain = Math.round(etat.vie.max * (0.3 + (etat.butin.potion || 0)) * (1 + (etat.butin.soin || 0)));
   const avant = etat.vie.actuel;
   etat.vie.actuel = Math.min(etat.vie.max, etat.vie.actuel + gain);
   return { ok: true, evenements: [{ type: 'objet', montant: etat.vie.actuel - avant }] };

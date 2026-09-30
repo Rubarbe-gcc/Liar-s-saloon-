@@ -30,7 +30,13 @@ import {
 import {
   creerDonjon, composerRencontre, resoudre, choisirButin, BUTIN, AILES,
   RENCONTRES_PAR_AILE, DIFFICULTES, avancement,
+  butinCombat, choisirDon, choisirEvenement, conseilEvenement, evenementCourant, gagnerXp,
+  proposerEvenement, prochaineEtape, menacesDuBoss,
 } from '../public/shared/raid/donjon.js';
+import {
+  niveauDe, puissance, SEUILS_XP, NIVEAU_MAX, NIVEAUX_DON, DONS, EVENEMENTS, EVENEMENTS_PAR_ID,
+  reussiteDe, texteEffet, critiqueDe,
+} from '../public/shared/raid/aventure.js';
 import { spriteSvg, poses, palettePour, GRID } from '../public/shared/raid/sprites.js';
 import { jouerCombatAuto, conseilChemin, conseilCoup, conseilOrdre, pasAuto } from '../public/shared/raid/auto.js';
 import { makeRng } from '../public/shared/hasard.js';
@@ -516,18 +522,29 @@ test('la vue dit tout ce qu’il faut et rien de plus', () => {
 /* Donjon                                                         */
 /* ================================================================== */
 
-test('un donjon enchaîne quinze rencontres et finit sur le Dragon Cendré', () => {
+/** Règle toutes les décisions en attente, comme le ferait un joueur appliqué. */
+function deciderTout(exp) {
+  for (let g = 0; exp.file.length && g < 12; g++) {
+    const e = exp.file[0];
+    if (e === 'don') choisirDon(exp, exp.choixDon[0].id);
+    else if (e === 'butin') choisirButin(exp, exp.choixButin[0].id);
+    else if (e === 'evenement') choisirEvenement(exp, conseilEvenement(exp));
+  }
+}
+
+test('un donjon enchaîne ses rencontres et finit sur le Dragon Cendré', () => {
   const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 12 });
   let n = 0, derniere = null;
   for (;;) {
     derniere = composerRencontre(exp);
     n++;
     const r = resoudre(exp, { victoire: true, vie: exp.vie, objets: exp.objets });
-    if (r.suite === 'butin') choisirButin(exp, r.choix[0].id);
     if (r.suite === 'victoire') break;
+    deciderTout(exp);
     assert.ok(n < 50, 'le donjon doit se terminer');
   }
-  assert.equal(n, AILES.length * RENCONTRES_PAR_AILE);
+  // Un raccourci peut épargner une meute par aile, jamais un boss.
+  assert.ok(n <= AILES.length * RENCONTRES_PAR_AILE && n >= AILES.length * 2, `${n} rencontres`);
   assert.equal(derniere.ennemis[0].nom, MODELES_PAR_ID[BOSS_FINAL].nom);
   assert.ok(derniere.finale);
   assert.ok(exp.victoire && exp.termine);
@@ -569,6 +586,157 @@ test('les trois difficultés sont bien ordonnées', () => {
   const dur = creerDonjon({ groupe: groupeParDefaut(), difficulte: 'mythique', seed: 7 });
   const doux = creerDonjon({ groupe: groupeParDefaut(), difficulte: 'normal', seed: 7 });
   assert.ok(composerRencontre(dur).ennemis[0].pvMax > composerRencontre(doux).ennemis[0].pvMax);
+});
+
+/* ------------------------------------------------------------------ */
+/* L'aventure                                                          */
+/* ------------------------------------------------------------------ */
+
+test('les niveaux montent avec l’expérience, et la puissance avec eux', () => {
+  assert.equal(niveauDe(0), 1);
+  for (let n = 2; n <= NIVEAU_MAX; n++) {
+    assert.equal(niveauDe(SEUILS_XP[n]), n);
+    assert.equal(niveauDe(SEUILS_XP[n] - 1), n - 1);
+    assert.ok(puissance(n) > puissance(n - 1));
+  }
+  assert.ok(puissance(1) < 0.8, 'le raid part nettement sous ses fiches');
+  assert.ok(puissance(NIVEAU_MAX) > 1, 'et les dépasse au bout');
+  assert.equal(puissance(null), 1, 'sans niveau, les fiches telles quelles');
+});
+
+test('monter de niveau garde la part de vie, et ouvre un don aux paliers', () => {
+  const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 21 });
+  exp.vie = Math.round(exp.vieMax / 2);
+  const max1 = exp.vieMax;
+  const r = gagnerXp(exp, SEUILS_XP[3]);
+  assert.equal(r.niveauApres, 3);
+  assert.ok(exp.vieMax > max1, 'la vie maximale suit le niveau');
+  assert.ok(Math.abs(exp.vie / exp.vieMax - 0.5) < 0.01, 'sans soigner par accident');
+  assert.equal(prochaineEtape(exp), 'don');
+  assert.equal(exp.choixDon.length, 3);
+
+  const don = exp.choixDon[0];
+  assert.equal(choisirDon(exp, don.id).ok, true);
+  assert.ok(exp.dons.includes(don.id));
+  assert.equal(prochaineEtape(exp), 'combat');
+  assert.equal(choisirDon(exp, don.id).ok, false, 'un don ne se prend qu’une fois');
+});
+
+test('deux paliers franchis d’un coup ouvrent deux dons, l’un après l’autre', () => {
+  const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 22 });
+  gagnerXp(exp, SEUILS_XP[5]);
+  choisirDon(exp, exp.choixDon[0].id);
+  assert.equal(prochaineEtape(exp), 'don', 'le second don attend son tour');
+  choisirDon(exp, exp.choixDon[0].id);
+  assert.equal(exp.dons.length, 2);
+  assert.equal(prochaineEtape(exp), 'combat');
+});
+
+test('chaque événement propose de vrais choix, écrits depuis leurs effets', () => {
+  for (const ev of EVENEMENTS) {
+    assert.ok(ev.titre && ev.texte && ev.glyphe, `${ev.id} : fiche incomplète`);
+    assert.ok(ev.choix.length >= 2, `${ev.id} : un seul choix n’en est pas un`);
+    for (const c of ev.choix) {
+      assert.ok(c.effet || c.risque, `${ev.id}/${c.id} : ni effet ni risque`);
+      if (c.risque) {
+        assert.ok(c.risque.base > 0 && c.risque.base < 1);
+        assert.ok(c.risque.ditSucces && c.risque.ditEchec);
+      }
+    }
+  }
+  assert.equal(texteEffet({ vie: 0.2, chance: 3 }), '+20 % de vie · +3 chance');
+});
+
+test('un choix qu’on ne peut pas payer est refusé', () => {
+  const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 23 });
+  exp.objets = 0;
+  exp.evenement = 'marchand'; exp.file.push('evenement');
+  const ev = evenementCourant(exp);
+  assert.equal(ev.choix.find((c) => c.id === 'potion').possible, false);
+  assert.equal(choisirEvenement(exp, 'potion').ok, false);
+  assert.equal(choisirEvenement(exp, 'refuser').ok, true);
+  assert.equal(prochaineEtape(exp), 'combat');
+});
+
+test('la chance fait réussir les choix risqués', () => {
+  const taux = (chance) => {
+    let ok = 0;
+    for (let s = 0; s < 200; s++) {
+      const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 1000 + s });
+      exp.chance = chance;
+      exp.evenement = 'fontaine'; exp.file.push('evenement');
+      if (choisirEvenement(exp, 'boire').reussi) ok++;
+    }
+    return ok / 200;
+  };
+  const sans = taux(0), avec = taux(40);
+  assert.ok(Math.abs(sans - reussiteDe(0.5, 0)) < 0.1, `${sans} sans chance`);
+  assert.ok(avec > sans + 0.25, `${avec} avec 40 de chance contre ${sans}`);
+});
+
+test('les choix pèsent sur les boss : un atout en moins, un Dragon plus fort', () => {
+  // Le prisonnier libéré : le boss de l'aile perd un trait.
+  const a = creerDonjon({ groupe: groupeParDefaut(), seed: 31 });
+  a.aile = 2; a.rencontre = 2;
+  const avant = composerRencontre(a).ennemis[0].traits.length;
+  const b = creerDonjon({ groupe: groupeParDefaut(), seed: 31 });
+  b.aile = 2; b.rencontre = 2;
+  b.evenement = 'prisonnier'; b.file.push('evenement');
+  choisirEvenement(b, 'liberer');
+  assert.equal(composerRencontre(b).ennemis[0].traits.length, avant - 1);
+
+  // L'autel profané : le Dragon gagne de la vie, pas le boss de l'aile.
+  const c = creerDonjon({ groupe: groupeParDefaut(), seed: 32 });
+  c.evenement = 'autel'; c.file.push('evenement');
+  choisirEvenement(c, 'profaner');
+  assert.equal(menacesDuBoss(c, false).pv, 0);
+  assert.ok(Math.abs(menacesDuBoss(c, true).pv - 0.1) < 1e-9);
+  assert.ok(c.butin.degats > 0, 'et le raid gagne ce qu’on lui a promis');
+});
+
+test('les menaces d’une aile disparaissent avec son boss, celles du Dragon restent', () => {
+  const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 33 });
+  exp.menaces.push({ cible: 'aile', aile: 0, pv: 0.1, atk: 0, retire: 0, source: 'test' });
+  exp.menaces.push({ cible: 'final', aile: 0, pv: 0.1, atk: 0, retire: 0, source: 'test' });
+  exp.rencontre = RENCONTRES_PAR_AILE - 1;
+  composerRencontre(exp);
+  resoudre(exp, { victoire: true, vie: exp.vie, objets: exp.objets });
+  assert.deepEqual(exp.menaces.map((m) => m.cible), ['final']);
+});
+
+test('le raccourci épargne une meute, mais le boss attendait', () => {
+  const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 34 });
+  exp.rencontre = 1;
+  exp.evenement = 'raccourci'; exp.file.push('evenement');
+  choisirEvenement(exp, 'raccourci');
+  assert.equal(exp.rencontre, RENCONTRES_PAR_AILE - 1, 'la prochaine rencontre est le boss');
+  assert.ok(menacesDuBoss(exp).atk > 0);
+});
+
+test('les coups critiques ne tombent qu’avec de la chance', () => {
+  const critiques = (chance) => {
+    let n = 0;
+    for (let s = 0; s < 6; s++) {
+      const etat = combatTest({ seed: 500 + s, combat: { butin: { chance } } });
+      for (let t = 0; t < 3 && !estFini(etat); t++) {
+        for (const e of jouerUnTour(etat)) if (e.type === 'frappe' && e.critique) n++;
+      }
+    }
+    return n;
+  };
+  assert.equal(critiques(0), 0);
+  assert.ok(critiques(40) > 0);
+  assert.ok(critiqueDe(40) > critiqueDe(5));
+});
+
+test('le conseiller d’événement choisit toujours un choix possible', () => {
+  for (const ev of EVENEMENTS) {
+    const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 40 });
+    exp.objets = 0;
+    exp.evenement = ev.id; exp.file.push('evenement');
+    const id = conseilEvenement(exp);
+    assert.ok(evenementCourant(exp).choix.find((c) => c.id === id).possible, `${ev.id} : ${id}`);
+  }
 });
 
 test('l’avancement progresse de zéro à un', () => {
@@ -645,10 +813,13 @@ test('les grilles font seize sur seize', () => {
 function donjonAuto(difficulte, seed) {
   const exp = creerDonjon({ groupe: groupeParDefaut(), difficulte, seed });
   let combats = 0, tours = 0;
+  const vieFinAile = [];
+  const niveaux = [];
   for (;;) {
+    const aile = exp.aile;
     const r = composerRencontre(exp);
     const etat = creerCombat({
-      equipe: exp.equipe, ennemis: r.ennemis, butin: exp.butin,
+      equipe: exp.equipe, ennemis: r.ennemis, butin: butinCombat(exp),
       vie: exp.vie, objets: exp.objets, seed: (seed * 31 + combats * 7) | 0,
     });
     etat.vie.max = exp.vieMax;
@@ -656,19 +827,39 @@ function donjonAuto(difficulte, seed) {
     jouerCombatAuto(etat);
     combats++;
     tours += etat.tour;
+    niveaux.push(exp.niveau);
     const suite = resoudre(exp, {
       victoire: etat.phase === PHASE.VICTOIRE, vie: etat.vie.actuel, objets: etat.objets,
     });
-    if (suite.suite === 'wipe') return { victoire: false, combats, tours, aile: exp.aile };
-    if (suite.suite === 'victoire') return { victoire: true, combats, tours, aile: exp.aile };
-    if (suite.suite === 'butin') choisirButin(exp, suite.choix[0].id);
+    if (exp.aile !== aile || suite.suite === 'victoire') vieFinAile.push(etat.vie.actuel / etat.vie.max);
+    const bilan = { combats, tours, aile: exp.aile, niveau: exp.niveau, niveaux, vieFinAile };
+    if (suite.suite === 'wipe') return { victoire: false, ...bilan };
+    if (suite.suite === 'victoire') return { victoire: true, ...bilan };
+    deciderTout(exp);
   }
 }
 
 test('un donjon en Normal se termine', () => {
   const runs = [11, 202, 3003].map((s) => donjonAuto('normal', s));
   assert.ok(runs.every((r) => r.victoire), 'le premier palier ne doit pas être un mur');
-  assert.ok(runs.every((r) => r.combats === AILES.length * RENCONTRES_PAR_AILE));
+  assert.ok(runs.every((r) => r.combats >= AILES.length * 2 && r.combats <= AILES.length * RENCONTRES_PAR_AILE));
+});
+
+test('le raid grandit : faible au départ, fort à l’arrivée', () => {
+  const runs = [11, 202, 3003].map((s) => donjonAuto('heroique', s));
+  for (const r of runs) {
+    assert.equal(r.niveaux[0], 1, 'on part du niveau 1');
+    assert.ok(r.niveaux[r.niveaux.length - 1] >= 6, `niveau ${r.niveaux[r.niveaux.length - 1]} au dernier combat`);
+  }
+});
+
+test('la première aile coûte vraiment de la vie', () => {
+  // Avant l'aventure, on sortait de la première aile avec 97 % de vie en
+  // Héroïque : rien n'y résistait. Elle doit désormais entamer la barre.
+  const runs = [11, 202, 3003, 44, 555].map((s) => donjonAuto('heroique', s));
+  const moyenne = runs.reduce((s, r) => s + r.vieFinAile[0], 0) / runs.length;
+  assert.ok(moyenne < 0.88, `${Math.round(moyenne * 100)} % de vie en sortant de la première aile`);
+  assert.ok(runs.every((r) => r.aile >= 1 || r.victoire), 'mais elle ne doit pas être un mur');
 });
 
 test('aucun combat ne s’éternise', () => {

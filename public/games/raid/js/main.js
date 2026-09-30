@@ -14,8 +14,12 @@ import { spriteSvg } from '../../../shared/raid/sprites.js';
 import { creerCombat, vieMaximale, PHASE } from '../../../shared/raid/combat.js';
 import {
   creerDonjon, composerRencontre, resoudre, choisirButin, etiquette, aileCourante,
-  AILES, RENCONTRES_PAR_AILE, DIFFICULTES, RARETES,
+  AILES, RENCONTRES_PAR_AILE, DIFFICULTES, RARETES, BUTIN_PAR_ID,
+  butinCombat, prochaineEtape, choisirDon, evenementCourant, choisirEvenement, menacesDuBoss,
 } from '../../../shared/raid/donjon.js';
+import {
+  NIVEAU_MAX, DONS_PAR_ID, puissance, progressionNiveau, texteDon, critiqueDe,
+} from '../../../shared/raid/aventure.js';
 import { makeRng } from '../../../shared/hasard.js';
 import * as scene from './scene.js';
 import { rendrePage, PAGES } from './regles.js';
@@ -57,6 +61,11 @@ function sauverPartie() {
     butin: exp.butin, acquis: exp.acquis, vus: exp.vus,
     aile: exp.aile, rencontre: exp.rencontre,
     objets: exp.objets, vie: exp.vie, vieMax: exp.vieMax,
+    // L'aventure : ce qui a été gagné, et ce qui attend encore une décision.
+    niveau: exp.niveau, xp: exp.xp, chance: exp.chance, dons: exp.dons,
+    menaces: exp.menaces, evenementsVus: exp.evenementsVus, file: exp.file,
+    choixDon: (exp.choixDon || []).map((d) => d.id), donsEnAttente: exp.donsEnAttente,
+    choixButin: (exp.choixButin || []).map((b) => b.id), evenement: exp.evenement,
   };
   try { localStorage.setItem('raid.partie', JSON.stringify(paquet)); } catch { /* ignore */ }
 }
@@ -74,8 +83,20 @@ function chargerPartie() {
       butin: { ...reprise.butin, ...p.butin },
       acquis: p.acquis || [], vus: p.vus || [],
       aile: p.aile || 0, rencontre: p.rencontre || 0,
-      objets: p.objets ?? 2, vie: p.vie, vieMax: p.vieMax || vieMaximale(groupe, p.butin),
+      objets: p.objets ?? 2,
+      // Une sauvegarde d'avant l'aventure reprend au niveau 1 : c'est le
+      // niveau qui, désormais, fait la force du raid.
+      niveau: p.niveau || 1, xp: p.xp || 0, chance: p.chance ?? reprise.chance,
+      dons: p.dons || [], menaces: p.menaces || [], evenementsVus: p.evenementsVus || [],
+      file: (p.file || []).filter((x) => ['don', 'butin', 'evenement'].includes(x)),
+      choixDon: (p.choixDon || []).map((id) => DONS_PAR_ID[id]).filter(Boolean),
+      donsEnAttente: p.donsEnAttente || 0,
+      choixButin: (p.choixButin || []).map((id) => BUTIN_PAR_ID[id]).filter(Boolean),
+      evenement: p.evenement || null,
     });
+    reprise.vieMax = vieMaximale(groupe, butinCombat(reprise));
+    const part = p.vieMax ? Math.min(1, (p.vie ?? p.vieMax) / p.vieMax) : 1;
+    reprise.vie = Math.round(reprise.vieMax * part);
     // Le tirage ne se sauvegarde pas : on le relance sur une graine dérivée,
     // ce qui suffit à ne pas rejouer deux fois la même série de rencontres.
     reprise.rng = makeRng((p.seed ^ (p.aile * 977 + p.rencontre * 31)) >>> 0);
@@ -268,7 +289,48 @@ function reprendre() {
   const sauve = chargerPartie();
   if (!sauve) { majReprise(); return; }
   exp = sauve;
-  allerCarte();
+  suivre();
+}
+
+/** L'étape suivante du donjon : une décision en attente, ou la carte. */
+function suivre() {
+  sauverPartie();
+  switch (prochaineEtape(exp)) {
+    case 'don': return allerDon();
+    case 'butin': return allerButin(exp.choixButin);
+    case 'evenement': return allerEvenement();
+    case 'victoire': return allerFin(true);
+    case 'wipe': return allerFin(false);
+    default: return allerCarte();
+  }
+}
+
+/** La fiche du raid : niveau, expérience, chance et dons. */
+function ficheRaid() {
+  const dons = exp.dons.map((id) => DONS_PAR_ID[id]).filter(Boolean);
+  return `<span class="niv">Niveau ${exp.niveau}${exp.niveau >= NIVEAU_MAX ? ' · max' : ''}</span>`
+    + `<span class="xp" title="Expérience"><i style="width:${Math.round(progressionNiveau(exp.xp) * 100)}%"></i></span>`
+    + `<span class="chance" title="Chance : ${Math.round(critiqueDe(exp.chance) * 100)} % de coups critiques">🍀 ${exp.chance}</span>`
+    + `<span class="dons">${dons.length ? dons.map((d) => `${d.glyphe} ${txt(d.nom)}`).join(' · ') : 'Aucun don pour l’instant — le premier au niveau 3.'}</span>`;
+}
+
+/** Ce que les choix du raid ont fait au boss de cette aile (et au Dragon). */
+function rendreMenaces() {
+  const el = $('carte-menaces');
+  const finale = exp.aile === AILES.length - 1;
+  const m = menacesDuBoss(exp, finale);
+  const futures = exp.menaces.filter((x) => x.cible === 'final' && !finale);
+  const lignes = [...m.sources, ...futures].map((x) => {
+    const qui = x.cible === 'final' ? 'Dragon Cendré' : 'Boss de l’aile';
+    const parts = [];
+    if (x.pv) parts.push(`${x.pv > 0 ? '+' : '−'}${Math.round(Math.abs(x.pv) * 100)} % de vie`);
+    if (x.atk) parts.push(`${x.atk > 0 ? '+' : '−'}${Math.round(Math.abs(x.atk) * 100)} % d’attaque`);
+    if (x.retire) parts.push('une capacité en moins');
+    const bon = x.pv < 0 || x.atk < 0 || x.retire;
+    return `<li class="${bon ? 'bon' : ''}">${qui} : ${parts.join(', ')} <i>(${txt(x.source)})</i></li>`;
+  });
+  el.hidden = !lignes.length;
+  el.innerHTML = lignes.length ? `<b>Menaces et faveurs</b><ul>${lignes.join('')}</ul>` : '';
 }
 
 function allerCarte() {
@@ -298,6 +360,8 @@ function allerCarte() {
   $('carte-vie-barre').parentElement.classList.toggle('est-critique', part <= 0.22);
   $('carte-vie-texte').textContent = `${nb(exp.vie)} / ${nb(exp.vieMax)}`;
   $('carte-objets').textContent = `🧪 ×${exp.objets}`;
+  $('fiche-raid').innerHTML = ficheRaid();
+  rendreMenaces();
 
   $('carte-ennemis').innerHTML = rencontre.ennemis.map((e) => {
     const rang = e.rang === 'boss' ? '<span class="rang boss">boss</span>'
@@ -321,7 +385,7 @@ async function engager() {
   const combat = creerCombat({
     equipe: exp.equipe,
     ennemis: rencontre.ennemis,
-    butin: exp.butin,
+    butin: butinCombat(exp),
     objets: exp.objets,
   });
   // La barre de vie suit le donjon, pas le combat : on la recale.
@@ -345,9 +409,78 @@ function terminerCombat(combat, victoire) {
   });
   sauverPartie();
 
-  if (suite.suite === 'combat') { setTimeout(allerCarte, 500); return; }
-  if (suite.suite === 'butin') { setTimeout(() => allerButin(suite.choix), 500); return; }
-  setTimeout(() => allerFin(suite.suite === 'victoire'), 600);
+  if (suite.suite === 'wipe' || suite.suite === 'victoire') {
+    setTimeout(() => allerFin(suite.suite === 'victoire'), 600);
+    return;
+  }
+  setTimeout(() => allerProgres(suite.xp), 500);
+}
+
+/** Après une victoire : l'expérience gagnée, et le niveau s'il monte. */
+function allerProgres(xp) {
+  const monte = xp.niveauApres > xp.niveauAvant;
+  $('progres-kicker').textContent = monte ? 'niveau supérieur !' : 'victoire';
+  $('progres-titre').textContent = `+${xp.gain} XP`;
+  $('progres-texte').textContent = monte
+    ? `Le raid passe au niveau ${xp.niveauApres} : toute l’équipe frappe, encaisse et tient à ${Math.round(puissance(xp.niveauApres) * 100)} % de sa fiche.`
+    : 'Le raid gagne en expérience.';
+  $('progres-niveau').innerHTML = `<div class="chiffre${monte ? ' monte' : ''}">${exp.niveau}</div>`
+    + `<div class="xp"><i style="width:0%"></i></div>`
+    + `<small>${exp.niveau >= NIVEAU_MAX ? 'Niveau maximal atteint' : `${Math.round(progressionNiveau(exp.xp) * 100)} % vers le niveau ${exp.niveau + 1}`}</small>`;
+  if (monte) sfx.butin(); else sfx.clic();
+  montrer('progres');
+  // La jauge se remplit sous les yeux : c'est la progression qu'on doit voir.
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const barre = $('progres-niveau').querySelector('.xp i');
+    if (barre) barre.style.width = `${Math.round(progressionNiveau(exp.xp) * 100)}%`;
+  }));
+}
+
+function allerDon() {
+  sfx.butin();
+  $('don-kicker').textContent = `niveau ${exp.niveau} atteint`;
+  $('don-cartes').innerHTML = (exp.choixDon || []).map((d) =>
+    `<button class="eveil-carte" data-id="${d.id}" style="--aff:var(--or)">`
+    + `<span class="glyphe">${d.glyphe}</span>`
+    + `<span><b>${txt(d.nom)}</b><i>${txt(texteDon(d))}</i></span></button>`).join('');
+  $('don-cartes').querySelectorAll('.eveil-carte').forEach((el) => {
+    el.onclick = () => {
+      if (!choisirDon(exp, el.dataset.id).ok) return;
+      sfx.clic();
+      suivre();
+    };
+  });
+  montrer('don');
+}
+
+function allerEvenement() {
+  const ev = evenementCourant(exp);
+  if (!ev) { exp.file = exp.file.filter((x) => x !== 'evenement'); suivre(); return; }
+  $('evenement-glyphe').textContent = ev.glyphe;
+  $('evenement-titre').textContent = ev.titre;
+  $('evenement-texte').textContent = ev.texte;
+  $('evenement-chance').textContent = `🍀 Chance du raid : ${exp.chance} · ${Math.round(exp.vie / exp.vieMax * 100)} % de vie · 🧪 ×${exp.objets}`;
+  $('evenement-issue').hidden = true;
+  $('evenement-choix').hidden = false;
+  $('evenement-choix').innerHTML = ev.choix.map((c) =>
+    `<button class="eveil-carte" data-id="${c.id}" style="--aff:${c.chance !== null ? 'var(--vif)' : 'var(--or)'}" ${c.possible ? '' : 'disabled'}>`
+    + `<span><b>${txt(c.label)}${c.chance !== null ? `<em class="risque">${Math.round(c.chance * 100)} %</em>` : ''}</b>`
+    + `<i>${txt(c.possible ? c.annonce : 'Il vous faudrait une potion.')}</i></span></button>`).join('');
+  $('evenement-choix').querySelectorAll('.eveil-carte').forEach((el) => {
+    el.onclick = () => {
+      const r = choisirEvenement(exp, el.dataset.id);
+      if (!r.ok) return;
+      sauverPartie();
+      if (r.reussi === false) sfx.subi?.(); else sfx.clic();
+      $('evenement-choix').hidden = true;
+      const dit = $('issue-dit');
+      dit.textContent = r.dit;
+      dit.className = `issue-dit${r.reussi === true ? ' reussi' : r.reussi === false ? ' rate' : ''}`;
+      $('issue-effet').textContent = r.piece ? `${r.effet} : ${r.piece.glyphe} ${r.piece.nom}` : (r.effet === 'aucun effet' ? '' : r.effet);
+      $('evenement-issue').hidden = false;
+    };
+  });
+  montrer('evenement');
 }
 
 function allerButin(choix) {
@@ -364,8 +497,7 @@ function allerButin(choix) {
     el.onclick = () => {
       if (!choisirButin(exp, el.dataset.id).ok) return;
       sfx.clic();
-      sauverPartie();
-      allerCarte();
+      suivre();
     };
   });
   montrer('butin');
@@ -380,6 +512,9 @@ function allerFin(victoire) {
   $('fin-stats').innerHTML = [
     ['Difficulté', DIFFICULTES[exp.difficulte].nom],
     ['Ailes nettoyées', `${victoire ? AILES.length : exp.aile} / ${AILES.length}`],
+    ['Niveau atteint', exp.niveau],
+    ['Dons', exp.dons.length ? exp.dons.map((id) => DONS_PAR_ID[id]?.glyphe || '').join(' ') : '—'],
+    ['Chance', exp.chance],
     ['Butin ramassé', exp.acquis.length],
     ['Potions restantes', exp.objets],
     ['Chef de raid', exp.equipe[0].nom],
@@ -431,6 +566,8 @@ function brancher() {
   $('b-reprendre').onclick = () => { debloquer(); reprendre(); };
   $('b-partir').onclick = partir;
   $('b-engager').onclick = engager;
+  $('b-progres').onclick = suivre;
+  $('b-issue').onclick = suivre;
   $('b-abandonner').onclick = () => {
     if (confirm('Quitter le donjon en cours ?')) { exp.termine = true; sauverPartie(); allerMenu(); }
   };

@@ -907,3 +907,40 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
     transition-duration: .01ms !important;
   }
 }
+
+/* ------------------------------------------------------------------ */
+/* L'aventure : niveau, chance, dons, menaces, événements              */
+/* ------------------------------------------------------------------ */
+
+.fiche-raid {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px 12px;
+  margin: -4px 0 16px; padding: 10px 14px; border-radius: var(--rayon);
+  background: var(--carte); border: 1px solid var(--bord);
+}
+.fiche-raid .niv { font-weight: 800; color: var(--or); font-size: 15px; white-space: nowrap; }
+.fiche-raid .chance { font-size: 13px; color: var(--vert); white-space: nowrap; }
+.fiche-raid .dons { grid-column: 1 / -1; font-size: 12px; color: var(--doux); }
+.xp { position: relative; height: 10px; border-radius: 999px; overflow: hidden; background: rgba(0,0,0,.45); border: 1px solid var(--bord); }
+.xp i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #8a6a1c, var(--or)); border-radius: 999px; transition: width .9s cubic-bezier(.3,.7,.3,1); }
+
+.menaces { margin-top: 10px; padding: 10px 14px; border-radius: var(--rayon); border: 1px dashed rgba(224, 75, 72, .45); background: rgba(224, 75, 72, .07); font-size: 12.5px; }
+.menaces b { display: block; color: #ff8a86; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; margin-bottom: 4px; }
+.menaces li { list-style: none; color: var(--texte); }
+.menaces li.bon { color: var(--vert); }
+.menaces ul { padding: 0; margin: 0; display: grid; gap: 2px; }
+
+.niveau-grand { display: grid; gap: 10px; margin: 8px 0 22px; text-align: center; }
+.niveau-grand .xp { height: 16px; }
+.niveau-grand .chiffre { font-size: 44px; font-weight: 900; color: var(--or); text-shadow: 0 0 24px rgba(232, 192, 96, .5); line-height: 1; }
+.niveau-grand .chiffre.monte { animation: monte-niveau .9s cubic-bezier(.3,1.6,.5,1) both; }
+.niveau-grand small { color: var(--doux); font-size: 12.5px; }
+@keyframes monte-niveau { from { transform: scale(.4); opacity: 0; } to { transform: none; opacity: 1; } }
+
+.evenement-glyphe { font-size: 54px; margin: 8px 0 2px; filter: drop-shadow(0 0 18px rgba(232, 192, 96, .4)); }
+.evenement-texte { margin: 4px auto 6px; max-width: 420px; font-style: italic; color: var(--texte); font-size: 14px; line-height: 1.5; }
+.eveil-carte:disabled { opacity: .45; cursor: not-allowed; }
+.eveil-carte .risque { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 999px; font-size: 10.5px; font-style: normal; font-weight: 800; color: #1a1206; background: var(--or); vertical-align: 2px; }
+.evenement-issue { text-align: center; animation: entree .4s ease both; }
+.issue-dit { font-size: 15px; font-style: italic; margin: 6px 0; }
+.issue-effet { font-size: 13px; color: var(--or); margin: 0 0 14px; }
+.issue-dit.rate { color: #ff8a86; } .issue-dit.reussi { color: var(--vert); }
