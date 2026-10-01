@@ -132,9 +132,9 @@ export function accessibles(carte, position) {
 /** Croissance par chapitre : la vie monte plus vite que les coups. */
 export const CROISSANCE = { pv: 1.05, atk: 0.78, def: 0.45 };
 /** Ce que la courbe prend en plus, passé le troisième chapitre (puissance 1,5). */
-export const COURBURE = 0.45;
+export const COURBURE = 0.65;
 /** Les boss montent moins vite : leurs attaques de zone pèsent déjà bien assez. */
-export const COURBURE_BOSS = 0.4;
+export const COURBURE_BOSS = 0.72;
 
 /**
  * Un ennemi jouable, tiré d'un modèle du bestiaire. Les fiches du bestiaire

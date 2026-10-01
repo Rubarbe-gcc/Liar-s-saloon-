@@ -62,10 +62,10 @@ export const couleurRarete = (r) => (RARETES[r] || RARETES.commun).teinte;
 /** Une pièce d'équipement, en carte. `actions` est du HTML déjà prêt. */
 export function cartePiece(it, { actions = '', note = '' } = {}) {
   const r = RARETES[it.rarete] || RARETES.commun;
-  return `<div class="piece" style="--r:${r.teinte}">
+  return `<div class="piece r-${it.rarete}" style="--r:${r.teinte}">
     <b>${it.glyphe} ${txt(it.nom)}</b>
     <i>${texteBonus(it)}</i>
-    <small>${EMPLACEMENTS[it.emplacement].nom} · ${r.nom}${note ? ` · ${note}` : ''}</small>
+    <small>${EMPLACEMENTS[it.emplacement].nom} · <span class="rarete">${r.nom}</span>${it.trophee ? ' · trophée' : ''}${note ? ` · ${note}` : ''}</small>
     ${actions ? `<div class="piece-actions">${actions}</div>` : ''}
   </div>`;
 }

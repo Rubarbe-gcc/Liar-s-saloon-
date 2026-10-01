@@ -881,3 +881,10 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .tr-secours summary { cursor: pointer; color: var(--doux); font-size: 14px; }
 .tr-secours[open] summary { margin-bottom: 8px; }
 #s-transfert .regle-bloc { margin-bottom: 12px; }
+
+/* Raretés hautes : elles se voient. */
+.piece .rarete { color: var(--r); font-weight: 700; }
+.piece.r-legendaire { background: linear-gradient(120deg, rgba(255, 154, 61, .16), var(--carte)); box-shadow: inset 3px 0 0 var(--r), 0 0 14px rgba(255, 154, 61, .2), 0 5px 0 rgba(0,0,0,.45); }
+.piece.r-mythique { background: linear-gradient(120deg, rgba(255, 77, 109, .2), var(--carte)); box-shadow: inset 3px 0 0 var(--r), 0 0 18px rgba(255, 77, 109, .35), 0 5px 0 rgba(0,0,0,.45); }
+.piece.r-boss { border-width: 2px; background: linear-gradient(120deg, rgba(255, 210, 63, .22), rgba(120, 30, 20, .3) 60%, var(--carte)); box-shadow: inset 3px 0 0 var(--r), 0 0 20px rgba(255, 210, 63, .35), 0 5px 0 rgba(0,0,0,.45); }
+.piece.r-boss .rarete { letter-spacing: .12em; }

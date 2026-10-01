@@ -548,7 +548,7 @@ function combattre() {
   }
   aller('combat');
   const menaces = e.salle === 'boss' ? A.menacesDuBoss(av) : null;
-  let intro = e.salle === 'boss' ? `👑 <b>${txt(e.ennemis[0].nom)}</b>, maître de l’acte, vous attend.`
+  let intro = e.salle === 'boss' ? `👑 <b>${txt(e.ennemis[0].nom)}</b>, maître du chapitre, vous attend.`
     : e.salle === 'elite' ? `💀 Un adversaire redoutable : <b>${txt(e.ennemis[0].nom)}</b>.`
       : e.salle === 'embuscade' ? '⚠ <b>Embuscade !</b> Les monstres vous attendaient : ils frappent les premiers.'
         : e.salle === 'chasse' ? `Vous débusquez des monstres dans ${txt(ACTES[(e.acte || av.acte) - 1].nom)}.`
@@ -628,6 +628,7 @@ function rendreEtape() {
         suite();
       });
       clic('#b-rien', () => { A.prendreRecompense(av, null); suite(); });
+      brancherEquiper(zone, rendreEtape);
       break;
     case 'don':
       clic('[data-don]', (el) => { A.choisirDon(av, el.dataset.don); sfx.butin(); suite(); });
@@ -699,7 +700,7 @@ function rendreEtape() {
 }
 
 function etapeRecompense(e) {
-  const titre = e.salle === 'boss' ? 'Le maître de l’acte est tombé !' : e.salle === 'elite' ? 'L’élite est vaincue !'
+  const titre = e.salle === 'boss' ? 'Le maître du chapitre est tombé !' : e.salle === 'elite' ? 'L’élite est vaincue !'
     : e.salle === 'embuscade' ? 'Embuscade repoussée !' : 'Victoire !';
   const gains = e.xp.map((g) => {
     const p = av.groupe.find((x) => x.id === g.id);
@@ -719,9 +720,14 @@ function etapeRecompense(e) {
     }).join('') + `<button class="mini-btn" data-prendre="${it.uid}" data-idx="">Au sac</button>`;
     return cartePiece(it, { actions, note: conseil !== null ? `idéal pour ${av.groupe[conseil].nom}` : '' });
   }).join('');
+  // Les trophées sont déjà dans le sac : on propose seulement de les porter.
+  const prises = (e.trophees || []).map((uid) => av.sac.find((x) => x.uid === uid)).filter(Boolean);
+  const trophees = prises.length
+    ? `<h3 class="section">Trophée${prises.length > 1 ? 's' : ''}</h3><div class="et-liste">${prises.map((it) => cartePiece(it, { actions: boutonsEquiper(it), note: 'déjà dans le sac' })).join('')}</div>` : '';
   return tete(e.salle === 'boss' ? '👑' : '🏆', titre)
     + `<div class="et-effet">+${e.or} pièces d’or</div>`
     + `<div class="gains">${gains}</div>`
+    + trophees
     + (e.relique ? `<h3 class="section">Relique du boss</h3><div class="et-liste">${carteRelique(A.RELIQUES_PAR_ID[e.relique])}</div>` : '')
     + (e.pieces.length ? `<h3 class="section">Butin — une pièce au choix</h3><div class="et-liste">${pieces}</div>` : '')
     + `<button class="btn ${e.pieces.length ? 'btn-ghost' : 'btn-go'} btn-wide" id="b-rien">${e.pieces.length ? 'Ne rien prendre' : 'Continuer'}</button>`;
@@ -878,7 +884,7 @@ function etapeDefaite(e) {
       + '<button class="btn btn-go btn-wide" id="b-fin-hardcore">Recommencer une aventure</button>';
   }
   const blesse = A.blessuresBoss(av);
-  return tete('💀', 'Le groupe est tombé', 'Vous revenez au dernier feu de camp (ou au début de l’acte). '
+  return tete('💀', 'Le groupe est tombé', 'Vous revenez au dernier feu de camp (ou au début du chapitre). '
     + 'La moitié de l’expérience gagnée depuis reste acquise, mais l’or et le butin sont perdus.'
     + (blesse ? ` Le boss, lui, garde ses blessures : −${pc(blesse)} de vie au prochain assaut.` : ''))
     + '<button class="btn btn-go btn-wide" id="b-reprendre">Revenir au feu de camp</button>';

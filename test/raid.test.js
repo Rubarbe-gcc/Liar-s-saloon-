@@ -18,7 +18,10 @@ import {
   creerPersonnage, statsDe, statsBase, gagnerXp, niveauDe, SEUILS_XP, NIVEAU_MAX, NIVEAU_ULTIME,
   sortsDe, DEPARTS, progressionNiveau,
 } from '../public/shared/raid/personnages.js';
-import { forger, MODELES as PIECES, pieceAuHasard, tirerRarete, texteBonus } from '../public/shared/raid/equipement.js';
+import {
+  forger, MODELES as PIECES, pieceAuHasard, tirerRarete, texteBonus, RARETES, ORDRE_RARETES, TROPHEES,
+  forgerTrophee, valeurPiece,
+} from '../public/shared/raid/equipement.js';
 import {
   genererCarte, accessibles, composer, ennemiRpg, ACTES, RANGEES, ECHELLE,
 } from '../public/shared/raid/carte.js';
@@ -1030,7 +1033,7 @@ test('un compagnon parti sans rien peut ne jamais revenir, et le retenir coûte 
   for (const h of A.HISTOIRES) assert.ok(h.texte('X') && h.retour('X') && h.adieu('X'), h.id);
 });
 
-test('le dernier boss est un cran au-dessus, et ne lâche rien : sa mort finit l’aventure', () => {
+test('le dernier boss a son propre réglage, et ne lâche rien : sa mort finit l’aventure', () => {
   const dragon = (acteFinal) => {
     const av = A.creerAventure({ heros: 'kaelis', seed: 9 });
     for (const id of ['brandel', 'mei', 'pix']) av.groupe.push(creerPersonnage(id, 10));
@@ -1050,7 +1053,7 @@ test('le dernier boss est un cran au-dessus, et ne lâche rien : sa mort finit l
   const b = av.etape.ennemis[0];
   assert.equal(b.modeleId, BOSS_FINAL);
   const nu = composer(A.rng({ alea: 1 }), ACTES.length, 'boss', { taille: 4 })[0];
-  assert.ok(b.pvMax > nu.pvMax * 1.05, 'plus de vie que sa fiche');
+  assert.ok(b.atk < nu.atk, 'il frappe moins fort que sa fiche : à ce chapitre, la courbe est déjà raide');
   const or = av.or, xp = av.groupe[0].xp;
   const r = A.conclureCombat(av, true);
   assert.ok(r.fin);
@@ -1292,4 +1295,79 @@ test('le nom de chaque boss rappelle le nom de son chapitre', () => {
     const commun = mots(a.nom).filter((m) => mots(boss).includes(m));
     assert.ok(commun.length >= 1, `chapitre ${i + 1} « ${a.nom} » et son boss « ${boss} » n’ont aucun mot en commun`);
   }
+});
+
+/* ================================================================== */
+/* Raretés hautes et trophées                                         */
+/* ================================================================== */
+
+test('légendaire et mythique sont rares, plus forts, et les boss y aident', () => {
+  assert.deepEqual(ORDRE_RARETES, ['commun', 'rare', 'epique', 'legendaire', 'mythique']);
+  const epee = PIECES.find((m) => m.base === 'Épée');
+  let avant = 0;
+  for (const r of ORDRE_RARETES) {
+    const it = forger(epee, 3, r, rngT(1));
+    assert.ok(it.atk > avant, `${r} frappe plus fort que la rareté d’en dessous`);
+    assert.ok(it.nom.length > 5);
+    avant = it.atk;
+  }
+  const compte = (faveur) => {
+    const r = rngT(9);
+    const n = { legendaire: 0, mythique: 0, boss: 0 };
+    for (let i = 0; i < 20000; i++) { const x = tirerRarete(r, 5, 'commun', faveur); if (x in n) n[x]++; }
+    return n;
+  };
+  const sans = compte(0), boss = compte(3);
+  assert.ok(sans.legendaire > 0 && sans.legendaire < 20000 * 0.05, 'rare, mais possible');
+  assert.ok(sans.mythique < sans.legendaire);
+  assert.ok(boss.legendaire > sans.legendaire * 2 && boss.mythique > sans.mythique * 2, 'un boss aide vraiment');
+  assert.equal(sans.boss + boss.boss, 0, 'la rareté BOSS ne se tire jamais au sort');
+});
+
+test('chaque boss et chaque élite a son trophée, à son nom', () => {
+  const sansAccent = (t) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  for (const a of ACTES.slice(0, -1)) assert.ok(TROPHEES[a.boss], `le boss ${a.boss} n’a pas de trophée`);
+  for (const m of parRang('elite')) assert.ok(TROPHEES[m.id], `l’élite ${m.id} n’a pas de trophée`);
+  for (const [id, t] of Object.entries(TROPHEES)) {
+    const prenom = sansAccent(MODELES_PAR_ID[id].nom.replace(/^(La|Le) /, '').split(/[ ,]/)[0]);
+    assert.ok(sansAccent(t.nom).includes(prenom), `« ${t.nom} » ne nomme pas ${prenom}`);
+    const it = forgerTrophee(id, 4, rngT(2));
+    assert.equal(it.rarete, 'boss');
+    assert.equal(it.trophee, id);
+    assert.ok(valeurPiece(it) > valeurPiece(forgerTrophee(id, 1, rngT(2))), 'il grandit avec le chapitre');
+    assert.ok(texteBonus(it).length > 3);
+  }
+  assert.equal(forgerTrophee('gnoll', 1, rngT(1)), null, 'un monstre ordinaire n’en a pas');
+  assert.ok(RARETES.boss.facteur > RARETES.legendaire.facteur);
+});
+
+test('un boss lâche toujours son trophée, une élite parfois, et jamais ailleurs', () => {
+  const av = A.creerAventure({ heros: 'mordrec', seed: 30 });
+  av.acte = 2;
+  av.etape = { type: 'combat', salle: 'boss', ennemis: composer(rngT(1), 2, 'boss') };
+  A.conclureCombat(av, true);
+  assert.equal(av.etape.trophees.length, 1);
+  const t = av.sac.find((x) => x.uid === av.etape.trophees[0]);
+  assert.equal(t.trophee, 'vorgath');
+  assert.equal(t.rarete, 'boss');
+  A.prendreRecompense(av);
+  assert.ok(av.sac.includes(t), 'il reste dans le sac même sans rien choisir');
+
+  let trouves = 0;
+  const N = 300;
+  for (let seed = 0; seed < N; seed++) {
+    const x = A.creerAventure({ heros: 'mordrec', seed });
+    x.etape = { type: 'combat', salle: 'elite', ennemis: composer(rngT(seed), 1, 'elite') };
+    A.conclureCombat(x, true);
+    trouves += x.etape.trophees.length;
+    // Chez le marchand et dans les coffres : jamais de trophée.
+    x.etape = null;
+    for (let i = 0; i < 6; i++) assert.notEqual(pieceAuHasard(A.rng(x), 3, { chance: 40, faveur: 3 }).rarete, 'boss');
+  }
+  assert.ok(trouves / N > 0.25 && trouves / N < 0.45, `${trouves} trophées d’élite sur ${N}`);
+
+  const banal = A.creerAventure({ heros: 'mordrec', seed: 1 });
+  banal.etape = { type: 'combat', salle: 'combat', ennemis: [gnoll()] };
+  A.conclureCombat(banal, true);
+  assert.equal(banal.etape.trophees.length, 0);
 });

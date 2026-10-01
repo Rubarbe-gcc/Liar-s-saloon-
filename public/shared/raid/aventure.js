@@ -18,7 +18,9 @@ import { HEROS, PAR_ID, LEGENDES } from './heros.js';
 import {
   creerPersonnage, gagnerXp, statsDe, borner, DEPARTS, NIVEAU_MAX, SEUILS_XP,
 } from './personnages.js';
-import { pieceAuHasard, valeurPiece, texteBonus } from './equipement.js';
+import {
+  pieceAuHasard, valeurPiece, texteBonus, forgerTrophee, TROPHEES, CHANCE_TROPHEE_ELITE,
+} from './equipement.js';
 import { genererCarte, accessibles, noeud, composer, ACTES, TYPES } from './carte.js';
 import { OBJETS, creerBataille } from './bataille.js';
 import { EVEILS, texteEveil } from './eveils.js';
@@ -101,10 +103,10 @@ export const CHANCE_COLPORTEUR_ZONE = 0.12;
  * compagnon.
  */
 /**
- * Le dernier boss : un peu plus de vie que sa fiche, un peu moins de frappe —
- * à ce chapitre la courbe est déjà raide, et le combat doit durer, pas trancher.
+ * Le dernier boss frappe moins fort que sa fiche : au dixième chapitre la
+ * courbe est déjà raide, et le combat doit durer, pas trancher.
  */
-export const DRAGON = { pv: 1.1, atk: 0.9 };
+export const DRAGON = { pv: 1, atk: 0.74 };
 /** Niveau du héros quand on reprend l'histoire à un chapitre déjà débloqué. */
 export const niveauDuChapitre = (chapitre) => Math.min(NIVEAU_MAX, 2 * chapitre - 1);
 export const ACTE_LEGENDES = 3;
@@ -400,9 +402,9 @@ export function conclureCombat(av, victoire) {
   av.donsEnAttente += dons;
 
   let pieces = [];
-  if (salle === 'boss') pieces = [0, 1, 2].map(() => piece(av, { plancher: 'rare' }));
-  else if (salle === 'elite') pieces = [0, 1].map(() => piece(av, { plancher: 'rare' }));
-  else if (salle === 'embuscade') pieces = [piece(av, { plancher: 'rare' })];
+  if (salle === 'boss') pieces = [0, 1, 2].map(() => piece(av, { plancher: 'rare', faveur: 3 }));
+  else if (salle === 'elite') pieces = [0, 1].map(() => piece(av, { plancher: 'rare', faveur: 1 }));
+  else if (salle === 'embuscade') pieces = [piece(av, { plancher: 'rare', faveur: 1 })];
   else if (rng(av)() < 0.35) pieces = [piece(av, { acte })];
 
   // Un boss lâche toujours une relique, tant qu'il en reste à trouver.
@@ -413,12 +415,24 @@ export function conclureCombat(av, victoire) {
     relique = gagnerRelique(av);
   }
 
+  // Les trophées : un boss lâche toujours le sien, une élite parfois. Ils
+  // vont droit dans le sac, en plus de la pièce à choisir.
+  const trophees = [];
+  for (const e of ennemis) {
+    if (!TROPHEES[e.modeleId]) continue;
+    if (e.rang === 'boss' || (e.rang === 'elite' && rng(av)() < CHANCE_TROPHEE_ELITE)) {
+      const t = forgerTrophee(e.modeleId, acte, rng(av));
+      av.sac.push(t);
+      trophees.push(t.uid);
+    }
+  }
+
   avancerQuete(av, 'monstres', ennemis.length);
   avancerQuete(av, 'elites', ennemis.filter((e) => e.rang === 'elite').length);
   if (intact) avancerQuete(av, 'intacts', 1);
   if (salle === 'chasse' || salle === 'embuscade') avancerQuete(av, 'chasses', 1);
 
-  av.etape = { type: 'recompense', salle, xp, or, pieces, relique: relique ? relique.id : null };
+  av.etape = { type: 'recompense', salle, xp, or, pieces, relique: relique ? relique.id : null, trophees };
   return { ok: true, etape: av.etape };
 }
 

@@ -19,6 +19,7 @@ import { TRAITS_RPG, pc } from './textes.js';
 import { RANG_MAX, SEUIL_PALIER } from '../../../shared/raid/talents.js';
 import { RELIQUES, QUETES } from '../../../shared/raid/reliques.js';
 import { COUT_EVEIL } from '../../../shared/raid/eveils.js';
+import { RARETES, ORDRE_RARETES, TROPHEES, CHANCE_TROPHEE_ELITE } from '../../../shared/raid/equipement.js';
 import { LEGENDES } from '../../../shared/raid/heros.js';
 import { sortsDe } from '../../../shared/raid/personnages.js';
 import { texteSort, nomRole } from './textes.js';
@@ -67,8 +68,14 @@ export function rendreRegles() {
     Les niveaux montent jusqu’à ${NIVEAU_MAX} : plus de vie, d’attaque, d’armure et de mana.</p>
     <p>Aux niveaux ${NIVEAUX_DON.join(', ')} du héros, vous choisissez un <b>don</b> pour tout le groupe.</p>
     <p>L’<b>équipement</b> (arme, armure, bijou) se trouve sur les monstres, dans les coffres et chez le
-    marchand. Sa force suit le chapitre et sa rareté : commun, <span style="color:#5ea9ff">rare</span>,
-    <span style="color:#c77dff">épique</span>. Gérez-le depuis l’écran du groupe.</p>
+    marchand. Sa force suit le chapitre et sa rareté :
+    ${ORDRE_RARETES.map((r) => `<span style="color:${RARETES[r].teinte}">${RARETES[r].nom}</span>`).join(', ')}.
+    Le légendaire et le mythique sont très rares ; battre une élite ou un boss les rend plus probables.
+    Gérez l’équipement depuis l’écran du groupe.</p>
+    <p>La rareté <b style="color:${RARETES.boss.teinte}">BOSS</b> est à part : ce sont des <b>trophées</b>, une pièce
+    unique par boss et par élite, à son nom, avec des caractéristiques qui lui ressemblent. On ne les trouve
+    que sur lui : un boss lâche toujours le sien, une élite ${pc(CHANCE_TROPHEE_ELITE)} du temps. Il en existe
+    ${Object.keys(TROPHEES).length}.</p>
     <p>La <b>chance</b> (${CHANCE_DEPART} au départ) fait réussir les choix risqués, tomber de meilleures
     pièces et rend les critiques plus fréquents.</p>`)
     + bloc('Les choix', `
