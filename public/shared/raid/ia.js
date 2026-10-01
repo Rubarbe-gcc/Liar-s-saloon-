@@ -13,7 +13,7 @@ import { multiplicateur } from './ecoles.js';
 import {
   sallesAccessibles, entrer, bataillePour, conclureCombat, prendreRecompense, choisirDon,
   evenementCourant, choisirEvenement, terminerEtape, acheter, vendre, faireRepos, prendreTresor,
-  recruter, reprendre, choisirDepart, equiper, conseilEquipement, utiliser, prixObjets, prixPour, bonusDe,
+  recruter, reprendre, choisirDepart, prixViatique, equiper, conseilEquipement, utiliser, prixObjets, prixPour, bonusDe,
 } from './aventure.js';
 import { avancer, agir } from './bataille.js';
 import { statsDe } from './personnages.js';
@@ -183,7 +183,7 @@ export function jouerEtape(av) {
       // Groupe complet : le légendaire prend la place du dernier arrivé.
       if (!recruter(av, e.offres.find((id) => PAR_ID[id].legendaire) || e.offres[0], av.groupe.length >= 4 ? av.groupe.length - 1 : null).ok) terminerEtape(av);
       break;
-    case 'depart': choisirDepart(av, av.or >= 40 ? 'viatique' : 'retenir'); break;
+    case 'depart': choisirDepart(av, av.or >= prixViatique(av) ? 'viatique' : 'retenir'); break;
     case 'resultat':
     case 'quetes':
     case 'balade': terminerEtape(av); break;

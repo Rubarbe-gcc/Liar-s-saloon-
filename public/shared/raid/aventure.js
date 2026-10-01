@@ -1190,8 +1190,12 @@ export const CHANCE_ABSENCE = 0.35;
 export const DUREE_ABSENCE = 3;
 /** Risque qu'un compagnon parti sans rien ne revienne jamais. */
 export const RISQUE_ADIEU = 0.25;
-/** Ce qu'il en coûte de lui payer la route : il reviendra à coup sûr. */
-export const PRIX_VIATIQUE = 40;
+/**
+ * Ce qu'il en coûte de lui payer la route : il reviendra à coup sûr. Un
+ * montant fixe, qui suit le chapitre — de quoi faire hésiter sans ruiner :
+ * à peu près la moitié de ce qu'un chapitre rapporte.
+ */
+export const prixViatique = (av) => 20 + 30 * av.acte;
 
 /** Le groupe, absents compris : leur place reste la leur. */
 export const effectif = (av) => av.groupe.length + (av.absents || []).length;
@@ -1231,7 +1235,7 @@ export function departCourant(av) {
     choix: [
       { id: 'partir', label: `Laisser partir ${p.nom}`, possible: true,
         annonce: `Absence de ${DUREE_ABSENCE} salles. Au retour : l’éveil (+${Math.round(0.12 * 100)} % vie, attaque, armure, et un niveau)… s’il y a un retour (${Math.round(RISQUE_ADIEU * 100)} % de risque que non).` },
-      { id: 'viatique', label: `Lui payer la route (${PRIX_VIATIQUE} or)`, possible: av.or >= PRIX_VIATIQUE,
+      { id: 'viatique', label: `Lui payer la route (${prixViatique(av)} or)`, possible: av.or >= prixViatique(av),
         annonce: `Absence de ${DUREE_ABSENCE} salles, retour assuré, avec l’éveil.` },
       { id: 'retenir', label: `Demander à ${p.nom} de rester`, possible: true,
         annonce: 'Le groupe reste entier. −2 chance : un regret, ça pèse.' },
@@ -1252,7 +1256,7 @@ export function choisirDepart(av, choix) {
       dit: `${p.nom} hoche la tête et reprend sa place dans la file. Personne ne dit rien pendant un long moment.` };
     return { ok: true };
   }
-  if (choix === 'viatique') av.or -= PRIX_VIATIQUE;
+  if (choix === 'viatique') av.or -= prixViatique(av);
   const adieu = choix === 'partir' && rng(av)() < RISQUE_ADIEU;
   av.groupe = av.groupe.filter((x) => x !== p);
   av.absents = [...(av.absents || []), { perso: p, reste: DUREE_ABSENCE, adieu, histoire }];

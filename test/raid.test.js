@@ -974,7 +974,7 @@ test('un compagnon peut partir en voyage et revenir éveillé', () => {
   assert.equal(vue.choix.length, 3);
   const avant = statsDe(av.groupe[1]);
   assert.ok(A.choisirDepart(av, 'viatique').ok);
-  assert.equal(av.or, 100 - A.PRIX_VIATIQUE);
+  assert.equal(av.or, 100 - A.prixViatique(av), 'le prix du chapitre 2');
   assert.deepEqual(av.groupe.map((p) => p.id), ['kaelis', 'mei']);
   assert.equal(A.effectif(av), 3, 'sa place reste la sienne');
   A.terminerEtape(av);
@@ -1439,4 +1439,20 @@ test('aucun personnage n’a deux sorts qui font la même chose', () => {
     const b = h.ultime.effet ? h.ultime.effet.type : 'coup';
     assert.notEqual(a, b, `${h.id} : ${h.special.nom} et ${h.ultime.nom} ont le même effet (${a})`);
   }
+});
+
+test('payer la route coûte un montant fixe, qui suit le chapitre', () => {
+  const prix = [2, 5, 10].map((acte) => A.prixViatique({ acte }));
+  assert.deepEqual(prix, [80, 170, 320]);
+  const av = A.creerAventure({ heros: 'kaelis', seed: 3 });
+  av.acte = 5;
+  av.groupe.push(creerPersonnage('brandel', 9));
+  av.etape = { type: 'depart', idx: 1, histoire: 'dette' };
+  av.or = 169;
+  assert.equal(A.departCourant(av).choix.find((c) => c.id === 'viatique').possible, false, 'il manque une pièce');
+  assert.equal(A.choisirDepart(av, 'viatique').ok, false);
+  av.or = 2000;
+  assert.ok(A.choisirDepart(av, 'viatique').ok);
+  assert.equal(av.or, 2000 - 170, 'le prix ne dépend pas de la bourse');
+  assert.equal(av.absents[0].adieu, false, 'retour garanti');
 });

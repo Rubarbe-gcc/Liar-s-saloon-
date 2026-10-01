@@ -13,7 +13,7 @@ import { OBJETS, MULT_CRIT } from '../../../shared/raid/bataille.js';
 import {
   TAILLE_GROUPE, NIVEAUX_DON, CHANCE_DEPART, SOLO, DIFFICULTES, texteDifficulte, CHANCE_EMBUSCADE,
   CHANCE_COLPORTEUR, CHANCE_COLPORTEUR_ZONE, ACTE_LEGENDES, CHANCE_LEGENDE,
-  ACTE_ABSENCES, DUREE_ABSENCE, RISQUE_ADIEU, PRIX_VIATIQUE,
+  ACTE_ABSENCES, DUREE_ABSENCE, RISQUE_ADIEU, prixViatique,
 } from '../../../shared/raid/aventure.js';
 import { TRAITS_RPG, pc } from './textes.js';
 import { RANG_MAX, SEUIL_PALIER } from '../../../shared/raid/talents.js';
@@ -95,7 +95,7 @@ export function rendreRegles() {
       <li><b>Le laisser partir</b> : absent ${DUREE_ABSENCE} salles. Au retour, c’est <b>l’éveil</b> (+12 % de vie, d’attaque
       et d’armure, et un niveau)… mais il y a ${pc(RISQUE_ADIEU)} de risque de ne jamais le revoir. Son équipement
       vous est alors rendu.</li>
-      <li><b>Lui payer la route</b> (${PRIX_VIATIQUE} or) : retour assuré, avec l’éveil.</li>
+      <li><b>Lui payer la route</b> : retour assuré, avec l’éveil. Le prix suit le chapitre : ${prixViatique({ acte: 2 })} or au chapitre 2, puis ${prixViatique({ acte: 3 }) - prixViatique({ acte: 2 })} de plus à chaque chapitre (${prixViatique({ acte: 10 })} or au dernier).</li>
       <li><b>Le retenir</b> : le groupe reste entier, au prix d’un peu de chance.</li>
     </ul>
     <p>Sa place l’attend : personne ne peut la prendre pendant son voyage.</p>
