@@ -120,7 +120,7 @@ export function accessibles(carte, position) {
 /* ------------------------------------------------------------------ */
 
 /** Croissance par acte : la vie monte plus vite que les coups. */
-export const CROISSANCE = { pv: 0.9, atk: 0.66, def: 0.45 };
+export const CROISSANCE = { pv: 1.05, atk: 0.78, def: 0.45 };
 
 /**
  * Un ennemi jouable, tiré d'un modèle du bestiaire. Les fiches du bestiaire

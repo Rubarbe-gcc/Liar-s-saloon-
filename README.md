@@ -87,6 +87,11 @@ au pied du donjon et gravit **cinq actes** jusqu'au Dragon Cendré.
   critiques, le butin et les choix risqués, et des **événements** dont les
   réponses rendent plus fort, coûtent de la vie ou pèsent sur les **boss à
   venir**.
+- **Talents, reliques, quêtes** (`talents.js`, `reliques.js`) : un point de
+  talent par niveau à placer dans deux branches par rôle ; des reliques de
+  groupe lâchées par les boss, vendues en boutique ou gagnées en quête ; deux
+  quêtes proposées par acte. En combat, chaque effet en cours se lit en
+  pastille verte ou rouge, et se détaille en touchant le combattant.
 - **La défaite** ramène au dernier feu de camp ; la moitié de l'expérience
   gagnée depuis reste acquise, et un boss qui a gagné garde ses blessures —
   on ne bute jamais sans fin sur le même mur. La partie est sauvegardée à

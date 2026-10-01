@@ -15,6 +15,7 @@
 
 import { multiplicateur } from './ecoles.js';
 import { statsDe, sortsDe, NIVEAU_ULTIME } from './personnages.js';
+import { effetsTalents } from './talents.js';
 import { PAR_ID } from './heros.js';
 import { entier } from '../hasard.js';
 
@@ -29,6 +30,12 @@ export const VIE_PHENIX = 0.4;
 export const RAGE = 0.35;
 /** Poids d'un tank dans le choix d'une cible ennemie : il attire les coups. */
 export const POIDS_TANK = 3;
+/** Ce qu'un monstre qui se régénère reprend à chaque fin de manche. */
+export const REGEN = 0.04;
+/** PM qu'un coup glacé fait perdre. */
+export const GEL_PM = 3;
+/** Vie rendue par le Cœur de phénix, une fois par combat. */
+export const VIE_COEUR = 0.3;
 
 export const OBJETS = {
   potion: { nom: 'Potion de soin', glyphe: '🧪', texte: `Rend ${SOIN_POTION * 100} % de sa vie à un allié.` },
@@ -59,6 +66,7 @@ export function creerBataille({ groupe, ennemis, bonus = {}, inventaire, chance 
       pm: Math.min(p.pm, s.pmMax), pmMax: s.pmMax,
       atk: s.atk, def: s.def, vit: s.vit, crit: s.crit,
       sorts: sortsDe(PAR_ID[p.id]),
+      tal: effetsTalents(p),
       defense: false, poison: null,
     };
   });
@@ -69,7 +77,9 @@ export function creerBataille({ groupe, ennemis, bonus = {}, inventaire, chance 
     manche: 0,
     ordre: [],
     actif: null,
-    bouclier: null,   // { valeur, tours } sur tout le groupe
+    // { valeur, tours } sur tout le groupe ; l'Égide en pose un d'entrée
+    bouclier: bonus.egide ? { valeur: bonus.egide, tours: 2 } : null,
+    coeur: !!bonus.phenix,   // le Cœur de phénix n'a pas encore servi
     elan: null,       // { valeur, tours } sur tout le groupe
     fini: false,
     victoire: false,
@@ -89,7 +99,11 @@ function nouvelleManche(etat, ev) {
   etat.manche++;
   // Du plus rapide au plus lent ; à vitesse égale, le hasard.
   etat.ordre = [...vivants(etat.heros), ...vivants(etat.ennemis)]
-    .map((u) => ({ u, t: u.vit + etat.rng() * 0.9 }))
+    .map((u) => ({
+      u,
+      // Le Sablier fêlé donne l'initiative au groupe, la première manche.
+      t: u.vit + etat.rng() * 0.9 + (etat.manche === 1 && u.camp === 'h' ? (etat.bonus.sablier || 0) : 0),
+    }))
     .sort((a, b) => b.t - a.t)
     .map((x) => ref(x.u));
   ev.push({ t: 'manche', n: etat.manche });
@@ -104,6 +118,7 @@ function finDeManche(etat, ev) {
       subir(etat, e, b.degats, ev, { dot: 'brasier' });
     }
     if (e.entrave && --e.entrave.tours <= 0) e.entrave = null;
+    if (e.pv > 0 && e.traits.includes('regen')) soigner(e, e.pvMax * REGEN, ev);
   }
   for (const h of vivants(etat.heros)) {
     if (h.poison && h.poison.tours > 0) {
@@ -153,6 +168,7 @@ export function avancer(etat) {
     if (!u || u.pv <= 0) continue;
     if (u.camp === 'e') { jouerEnnemi(etat, u, ev); continue; }
     u.defense = false;
+    if (u.tal.pmTour) u.pm = Math.min(u.pmMax, u.pm + u.tal.pmTour);
     etat.actif = r;
     ev.push({ t: 'tour', ...r });
     return ev;
@@ -201,6 +217,7 @@ export function estimer(etat, src, cible, mult, { perce = 0, basique = false, al
   if (cible.camp === 'h') {
     if (cible.defense) d *= 0.5;
     if (etat.bouclier) d *= 1 - etat.bouclier.valeur;
+    if (cible.tal && cible.tal.reduc) d *= 1 - cible.tal.reduc;
   }
   if (crit) d *= MULT_CRIT + (etat.bonus.critique || 0);
   return { degats: Math.max(1, Math.round(d)), elem };
@@ -210,7 +227,12 @@ function subir(etat, cible, n, ev, extra = {}) {
   const avant = cible.pv;
   cible.pv = Math.max(0, cible.pv - n);
   ev.push({ t: 'degats', ...ref(cible), n: avant - cible.pv, pv: cible.pv, ...extra });
-  if (cible.pv <= 0 && avant > 0) {
+  if (cible.pv <= 0 && avant > 0 && cible.camp === 'h' && etat.coeur) {
+    // Le Cœur de phénix : le premier héros qui tombe se relève aussitôt.
+    etat.coeur = false;
+    cible.pv = Math.round(cible.pvMax * VIE_COEUR);
+    ev.push({ t: 'releve', ...ref(cible), pv: cible.pv, relique: 'coeur' });
+  } else if (cible.pv <= 0 && avant > 0) {
     ev.push({ t: 'ko', ...ref(cible) });
     if (cible.camp === 'h') { cible.poison = null; cible.pm = 0; }
   } else if (cible.camp === 'e' && cible.traits.includes('enrage') && !cible.enrage
@@ -288,8 +310,9 @@ export function agir(etat, { type, cible = null }) {
     if (!e) return { ok: false, raison: 'personne' };
     if (type === 'attaque') {
       ev.push({ t: 'action', ...ref(h), nom: 'Attaque', genre: 'attaque', cible: ref(e) });
-      frapper(etat, h, e, 1, ev, { basique: true });
+      const fait = frapper(etat, h, e, 1, ev, { basique: true });
       h.pm = Math.min(h.pmMax, h.pm + 2);   // frapper remplit un peu la jauge
+      if (h.tal.vampire && h.pv > 0) soigner(h, fait * h.tal.vampire, ev);
     } else {
       lancerOffensif(etat, h, type, e, ev);
     }
@@ -317,12 +340,13 @@ function lancerOffensif(etat, h, cle, e, ev) {
   ev.push({ t: 'action', ...ref(h), nom: s.nom, genre: cle === 'ultime' ? 'ultime' : 'sort', cible: ref(e) });
   const eff = s.effet || {};
   const perce = eff.type === 'perce' ? eff.valeur : 0;
+  const mult = s.mult * (1 + (h.tal.sorts || 0));
   let total = 0;
   if (eff.type === 'double') {
-    total += frapper(etat, h, e, s.mult * 0.6, ev);
-    if (e.pv > 0) total += frapper(etat, h, e, s.mult * 0.6, ev);
+    total += frapper(etat, h, e, mult * 0.6, ev);
+    if (e.pv > 0) total += frapper(etat, h, e, mult * 0.6, ev);
   } else {
-    total = frapper(etat, h, e, s.mult, ev, { perce });
+    total = frapper(etat, h, e, mult, ev, { perce });
   }
   if (eff.type === 'brasier' && e.pv > 0) {
     e.brasier = { degats: Math.max(1, Math.round(total * eff.valeur * 1.4)), tours: 3 };
@@ -345,7 +369,7 @@ function lancerSoutien(etat, h, cle, ev) {
   const eff = s.effet;
   switch (eff.type) {
     case 'soin':
-      for (const x of vivants(etat.heros)) soigner(x, x.pvMax * eff.valeur * 2 * (1 + (etat.bonus.soin || 0)), ev);
+      for (const x of vivants(etat.heros)) soigner(x, x.pvMax * eff.valeur * 2 * (1 + (etat.bonus.soin || 0) + (h.tal.soins || 0)), ev);
       break;
     case 'garde':
       etat.bouclier = { valeur: Math.min(0.6, eff.valeur * 1.1), tours: 2 };
@@ -402,6 +426,12 @@ function coupEnnemi(etat, e, h, mult, ev) {
   if (e.traits.includes('poison') && h.pv > 0) {
     h.poison = { degats: Math.max(1, Math.round(degats * 0.25)), tours: 2 };
   }
+  if (e.traits.includes('gel') && h.pv > 0 && h.pm > 0) {
+    const avant = h.pm;
+    h.pm = Math.max(0, h.pm - GEL_PM);
+    ev.push({ t: 'pm', ...ref(h), n: Math.round(h.pm - avant), pm: h.pm });
+  }
+  if (h.tal.epines && e.pv > 0) subir(etat, e, Math.max(1, Math.round(degats * h.tal.epines)), ev, { epines: true });
   if (e.traits.includes('drain')) soigner(e, degats * 0.25, ev);
 }
 
@@ -421,7 +451,7 @@ function jouerEnnemi(etat, e, ev) {
   if (!h) return;
   ev.push({ t: 'action', ...ref(e), nom: 'Attaque', genre: 'attaque', cible: ref(h) });
   coupEnnemi(etat, e, h, 1, ev);
-  if (e.traits.includes('frenesie') && etat.rng() < 0.35) {
+  if (e.pv > 0 && e.traits.includes('frenesie') && etat.rng() < 0.35) {
     const h2 = cibleEnnemie(etat);
     if (h2) coupEnnemi(etat, e, h2, 0.55, ev);
   }

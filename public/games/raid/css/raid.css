@@ -678,3 +678,71 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 @keyframes ban-nom { 0% { transform: scale(2.4); opacity: 0; letter-spacing: .5em; } 22% { transform: scale(1); opacity: 1; letter-spacing: .06em; } 100% { transform: scale(1.04); } }
 @keyframes ban-texte { 0%, 25% { opacity: 0; transform: translateY(8px); } 45%, 100% { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .portrait *, .banniere-boss, .banniere-boss * { animation: none !important; } }
+
+/* ------------------------------------------------------------------ */
+/* Effets, talents, reliques, quêtes                                   */
+/* ------------------------------------------------------------------ */
+
+.unite .etats { gap: 3px; flex-wrap: wrap; justify-content: flex-end; max-width: 70%; z-index: 2; }
+.unite .etats span {
+  font-size: 12px; line-height: 1; padding: 2px 3px; border-radius: 6px;
+  background: rgba(0,0,0,.65); border: 1px solid #555;
+}
+.unite .etats .bon { border-color: #6fcf4a; box-shadow: 0 0 6px rgba(111, 207, 74, .5); }
+.unite .etats .mauvais { border-color: #ef5a4a; box-shadow: 0 0 6px rgba(239, 90, 74, .5); }
+.effets-groupe { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; font-size: 12px; }
+.effets-groupe span { padding: 3px 9px; border-radius: 999px; background: rgba(0,0,0,.45); border: 1px solid #6fcf4a; color: #c9f5b6; }
+.chiffre-vol.perte { color: #c9a0ff; }
+
+.fiche-unite {
+  position: fixed; inset: 0; z-index: 45;
+  display: grid; align-items: end; justify-items: center;
+  background: rgba(0,0,0,.6);
+  padding: 0 10px calc(10px + var(--sb));
+  animation: entree .2s ease both;
+}
+.fiche-boite {
+  width: 100%; max-width: 520px; max-height: 80svh; overflow-y: auto;
+  padding: 16px; border-radius: 18px;
+  background: #1c150c; border: 1px solid color-mix(in srgb, var(--aff) 55%, transparent);
+  box-shadow: 0 -10px 40px rgba(0,0,0,.6);
+}
+.fiche-boite h3 { margin: 0 0 4px; font-size: 19px; color: var(--aff); }
+.fiche-boite h3 small { font-size: 12px; color: var(--doux); font-weight: 400; }
+.fiche-boite h4 { margin: 14px 0 6px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--doux); }
+.fiche-stats { margin: 0; font-size: 13px; color: var(--doux); }
+.fiche-boite ul { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
+.fiche-boite li { display: grid; gap: 2px; padding: 8px 10px; border-radius: 10px; background: rgba(0,0,0,.3); border-left: 3px solid #666; font-size: 13px; }
+.fiche-boite li span { color: var(--doux); font-size: 12px; }
+.fiche-boite li.bon { border-left-color: #6fcf4a; }
+.fiche-boite li.bon b { color: #a8ee8c; }
+.fiche-boite li.mauvais { border-left-color: #ef5a4a; }
+.fiche-boite li.mauvais b { color: #ff9a8a; }
+.fiche-boite li.neutre { border-left-color: #ffb35c; }
+
+.pastille { display: inline-block; padding: 1px 8px; border-radius: 999px; background: var(--or); color: #1a1206; font-size: 11px; font-weight: 800; margin-left: 4px; }
+.quete-bouton { margin-bottom: 9px; }
+.quete-bouton .bt b { font-size: 14px; }
+.piece.relique { background: linear-gradient(120deg, rgba(120, 84, 20, .45), var(--carte)); }
+.piece .jauge { margin-top: 6px; }
+
+.talents { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--bord); }
+.tal-tete { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--doux); margin-bottom: 8px; }
+.tal-tete span { text-transform: none; letter-spacing: 0; }
+.branches { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.branche { display: grid; gap: 6px; align-content: start; }
+.br-nom { font-size: 12px; font-weight: 800; color: var(--aff); text-align: center; }
+.talent {
+  display: grid; gap: 2px; text-align: left;
+  padding: 8px 9px; border-radius: 10px;
+  background: rgba(0,0,0,.28); border: 1px solid rgba(255,255,255,.1);
+  box-shadow: 0 3px 0 rgba(0,0,0,.4);
+}
+.talent b { font-size: 12px; display: flex; justify-content: space-between; gap: 4px; }
+.talent .pips { color: var(--or); letter-spacing: 1px; white-space: nowrap; }
+.talent i { font-style: normal; font-size: 11px; color: var(--texte); }
+.talent small { font-size: 10px; color: var(--doux); }
+.talent.dispo { border-color: #ffe9a8; box-shadow: 0 3px 0 rgba(0,0,0,.4), 0 0 12px rgba(255, 220, 130, .35); cursor: pointer; }
+.talent.bloque { opacity: .5; }
+.talent.max { border-color: rgba(127, 201, 92, .6); }
+.talent.max .pips { color: #8ee06a; }

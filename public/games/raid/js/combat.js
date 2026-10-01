@@ -14,6 +14,7 @@ import { spriteSvg } from '../../../shared/raid/sprites.js';
 import { choisirAction } from '../../../shared/raid/ia.js';
 import { txt, teinte, texteSort, TRAITS_RPG } from './textes.js';
 import { aUnPortrait, portraitSvg } from './boss.js';
+import { RAGE } from '../../../shared/raid/bataille.js';
 
 const $ = (id) => document.getElementById(id);
 const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -38,6 +39,7 @@ export function lancerCombat(bataille, options) {
   o = options;
   choix = null;
   anime = false;
+  fermerFiche();
   vue.clear();
   for (const u of [...b.heros, ...b.ennemis]) vue.set(cle(u.camp, u.idx), { pv: u.pv, pm: u.pm ?? 0 });
   $('b-auto').setAttribute('aria-pressed', String(auto));
@@ -85,7 +87,7 @@ function carteUnite(u) {
     <div class="nom">${txt(u.nom)}${ennemi ? '' : ` <i>niv. ${u.niveau}</i>`}</div>
     <div class="jauge ${ennemi ? 'ennemi' : 'pv'}"><i></i></div>
     ${ennemi ? '' : '<div class="jauge pm"><i></i></div>'}
-    <div class="chiffres"><span class="pv-txt"></span><span>${ennemi ? traits : '<span class="pm-txt"></span>'}</span></div>
+    <div class="chiffres"><span class="pv-txt"></span><span>${ennemi ? traits : `<span class="pm-txt"></span>`}</span></div>
     ${ennemi ? '<div class="alerte"></div>' : ''}
   </div>`;
 }
@@ -109,19 +111,11 @@ function majUnite(u) {
   pv.classList.toggle('bas', part < 0.3);
   el.querySelector('.pv-txt').textContent = `${Math.max(0, Math.round(v.pv))} / ${u.pvMax} PV`;
   el.classList.toggle('ko', v.pv <= 0);
-  const etats = [];
   if (u.camp === 'h') {
     el.querySelector('.jauge.pm').style.setProperty('--v', (v.pm / u.pmMax).toFixed(3));
     el.querySelector('.pm-txt').textContent = `${Math.round(v.pm)} PM`;
-    if (u.defense) etats.push('🛡');
-    if (u.poison) etats.push('☠');
-    if (b.bouclier) etats.push('🔰');
-    if (b.elan) etats.push('✨');
   } else {
-    if (u.enrage) etats.push('😡');
     el.classList.toggle('enrage', !!u.enrage);
-    if (u.brasier && u.brasier.tours > 0) etats.push('🔥');
-    if (u.entrave) etats.push('⛓');
     const al = el.querySelector('.alerte');
     const r = u.charge.reste;
     al.classList.toggle('imminente', r <= 1);
@@ -129,12 +123,82 @@ function majUnite(u) {
       ? `⚡ ${u.charge.nom} ${r <= 1 ? '— au prochain tour !' : '— dans 2 tours'}${u.charge.zone ? ' · tout le groupe' : ''}`
       : '';
   }
-  el.querySelector('.etats').textContent = etats.join('');
+  // Les effets en cours : vert pour ce qui aide l'unité, rouge pour ce qui lui nuit.
+  el.querySelector('.etats').innerHTML = v.pv <= 0 ? '' : effetsDe(u).filter((e) => !e.permanent)
+    .map((e) => `<span class="${e.bon ? 'bon' : 'mauvais'}">${e.glyphe}</span>`).join('');
   const a = actif(b);
   el.classList.toggle('actif', !anime && !!a && u.camp === 'h' && a.idx === u.idx);
 }
 
+const manches = (n) => `${n} manche${n > 1 ? 's' : ''}`;
+
+/**
+ * Tout ce qui pèse sur une unité en ce moment. `bon` dit si l'effet l'aide
+ * (vert) ou lui nuit (rouge) ; `permanent` marque les capacités d'un monstre,
+ * qui ne s'usent pas.
+ */
+function effetsDe(u) {
+  const out = [];
+  if (u.camp === 'h') {
+    if (u.defense) out.push({ glyphe: '🛡', nom: 'En défense', bon: true, texte: 'Moitié des dégâts jusqu’à son prochain tour.' });
+    if (b.bouclier) out.push({ glyphe: '🔰', nom: 'Bouclier', bon: true, texte: `−${Math.round(b.bouclier.valeur * 100)} % de dégâts subis, encore ${manches(b.bouclier.tours)}.` });
+    if (b.elan) out.push({ glyphe: '✨', nom: 'Élan', bon: true, texte: `+${Math.round(b.elan.valeur * 100)} % de dégâts, encore ${manches(b.elan.tours)}.` });
+    if (u.poison && u.poison.tours > 0) out.push({ glyphe: '☠', nom: 'Empoisonné', bon: false, texte: `${u.poison.degats} dégâts à chaque fin de manche, encore ${manches(u.poison.tours)}.` });
+  } else {
+    if (u.enrage) out.push({ glyphe: '😡', nom: 'Enragé', bon: true, texte: `+${Math.round(RAGE * 100)} % d’attaque jusqu’à la fin du combat.` });
+    if (u.brasier && u.brasier.tours > 0) out.push({ glyphe: '🔥', nom: 'Brûlure', bon: false, texte: `${u.brasier.degats} dégâts à chaque fin de manche, encore ${manches(u.brasier.tours)}.` });
+    if (u.entrave) out.push({ glyphe: '⛓', nom: 'Affaibli', bon: false, texte: `−${Math.round(u.entrave.valeur * 100)} % d’attaque, encore ${manches(u.entrave.tours)}.` });
+    for (const t of u.traits) {
+      const tr = TRAITS_RPG[t];
+      if (!tr) continue;
+      const [nom, ...reste] = tr.texte.split(' : ');
+      const dit = reste.join(' : ');
+      out.push({ glyphe: tr.glyphe, nom, bon: true, permanent: true, texte: dit.charAt(0).toUpperCase() + dit.slice(1) });
+    }
+  }
+  return out;
+}
+
+/** Les effets qui valent pour tout le groupe, rappelés en clair au-dessus des héros. */
+function majEffetsGroupe() {
+  const l = [];
+  if (b.bouclier) l.push(`<span class="bon">🔰 Bouclier −${Math.round(b.bouclier.valeur * 100)} % · ${manches(b.bouclier.tours)}</span>`);
+  if (b.elan) l.push(`<span class="bon">✨ Élan +${Math.round(b.elan.valeur * 100)} % · ${manches(b.elan.tours)}</span>`);
+  if (b.coeur) l.push('<span class="bon">🔥 Cœur de phénix prêt</span>');
+  $('effets-groupe').innerHTML = l.join('');
+  $('effets-groupe').hidden = !l.length;
+}
+
+/** La fiche d'une unité : ses chiffres, et le détail de chaque effet. */
+function ouvrirFiche(u) {
+  fermerFiche();
+  const effets = effetsDe(u);
+  const ligne = (e) => `<li class="${e.bon ? 'bon' : 'mauvais'}"><b>${e.glyphe} ${txt(e.nom)}</b><span>${txt(e.texte)}</span></li>`;
+  const temporaires = effets.filter((e) => !e.permanent);
+  const capacites = effets.filter((e) => e.permanent);
+  const charge = u.camp === 'e'
+    ? `<li class="neutre"><b>⚡ ${txt(u.charge.nom)}</b><span>Attaque chargée ${u.charge.zone ? 'sur tout le groupe' : 'sur un héros'}, dans ${u.charge.reste <= 1 ? 'un tour' : `${u.charge.reste} tours`}.</span></li>` : '';
+  const f = document.createElement('div');
+  f.className = 'fiche-unite';
+  f.innerHTML = `<div class="fiche-boite" style="--aff:${teinte(u.ecole)}">
+    <h3>${txt(u.nom)}${u.camp === 'h' ? ` <small>niv. ${u.niveau}</small>` : ''}</h3>
+    <p class="fiche-stats">PV ${Math.max(0, Math.round(u.pv))}/${u.pvMax}${u.camp === 'h' ? ` · PM ${Math.round(u.pm)}/${u.pmMax}` : ''} · ATQ ${u.atk} · DEF ${u.def} · VIT ${u.vit}</p>
+    <h4>Effets en cours</h4>
+    <ul>${temporaires.map(ligne).join('') || '<li class="neutre"><span>Aucun effet pour l’instant.</span></li>'}${charge}</ul>
+    ${capacites.length ? `<h4>Capacités</h4><ul>${capacites.map(ligne).join('')}</ul>` : ''}
+    <button class="btn btn-ghost btn-wide">Fermer</button>
+  </div>`;
+  f.addEventListener('click', (ev) => { if (ev.target === f || ev.target.closest('button')) fermerFiche(); });
+  $('s-combat').appendChild(f);
+}
+
+function fermerFiche() {
+  const f = document.querySelector('.fiche-unite');
+  if (f) f.remove();
+}
+
 function maj() {
+  majEffetsGroupe();
   for (const u of [...b.heros, ...b.ennemis]) majUnite(u);
   $('manche').textContent = `Manche ${Math.max(1, b.manche)}`;
   const a = actif(b);
@@ -229,6 +293,7 @@ async function jouerUn(ev) {
     case 'pm': {
       vue.get(cle(ev.camp, ev.idx)).pm = ev.pm;
       if (ev.n > 0) flotter(ev.camp, ev.idx, `+${ev.n} PM`, 'pm');
+      else if (ev.n < 0) flotter(ev.camp, ev.idx, `${ev.n} PM`, 'pm perte');
       majUnite(uniteDe(ev.camp, ev.idx));
       await attendre(100);
       break;
@@ -236,8 +301,10 @@ async function jouerUn(ev) {
     case 'releve': {
       vue.get(cle(ev.camp, ev.idx)).pv = ev.pv;
       s.soin();
+      if (ev.relique) $('journal').innerHTML = `<span>🔥 Le <b>Cœur de phénix</b> relève ${txt(uniteDe(ev.camp, ev.idx).nom)} !</span>`;
       majUnite(uniteDe(ev.camp, ev.idx));
-      await attendre(250);
+      majEffetsGroupe();
+      await attendre(ev.relique ? 600 : 250);
       break;
     }
     case 'ko': {
@@ -360,10 +427,7 @@ function toucherUnite(camp, idx) {
     if (bon) executer({ type: choix, cible: idx });
     return;
   }
-  if (camp === 'e') {
-    const traits = u.traits.map((t) => TRAITS_RPG[t] && TRAITS_RPG[t].texte).filter(Boolean);
-    o.toast(`${u.nom} — ATQ ${u.atk} · DEF ${u.def}${traits.length ? ` · ${traits.join(' ')}` : ''}`);
-  }
+  ouvrirFiche(u);
 }
 
 function executer(action) {

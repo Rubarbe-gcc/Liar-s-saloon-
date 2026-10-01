@@ -174,6 +174,106 @@ const ART = {
       <path d="M88 54 v10 M94 54 v12 M100 54 v13 M106 54 v12 M112 54 v10" stroke="#07080a" stroke-width="2"/>
       ${[[70, 30], [130, 30], [70, 58], [130, 58], [60, 70], [140, 70], [58, 150], [142, 150]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.2" fill="#c9ced6" stroke="#07080a" stroke-width=".8"/>`).join('')}
     </g>`,
+
+  /* ---------------------------------------------------------------- */
+  /* Minotaure des forges                                              */
+  /* ---------------------------------------------------------------- */
+  minotaure: () => `${defs('mn', '#24100a', '#8f4d2e')}
+    <ellipse cx="100" cy="96" rx="92" ry="64" fill="url(#mn-halo)" opacity=".28" class="b-pouls"/>
+    <g class="b-bras">
+      <path d="M150 156 L178 22" stroke="#4a3018" stroke-width="7" stroke-linecap="round"/>
+      <path d="M178 22 C202 14 204 44 192 56 C184 46 178 42 172 42 Z" fill="#b9bcc2" stroke="#15151a" stroke-width="2"/>
+      <path d="M178 22 C154 16 146 42 154 58 C162 48 168 44 174 42 Z" fill="#9a9da6" stroke="#15151a" stroke-width="2"/>
+    </g>
+    <g class="b-souffle">
+      <path d="M26 160 C26 112 58 94 100 94 C142 94 174 112 174 160 Z" fill="url(#mn-corps)" stroke="#120805" stroke-width="2"/>
+      <path d="M74 110 Q100 124 126 110 M70 128 Q100 142 130 128" stroke="#5a2a18" stroke-width="3" fill="none"/>
+      ${miroir(`
+        <path d="M74 50 C42 50 20 32 24 4 C36 28 56 34 84 36 Z" fill="#e2d6bd" stroke="#120805" stroke-width="2"/>
+        <path d="M64 56 L38 60 L62 72 Z" fill="#8f4d2e" stroke="#120805" stroke-width="1.5"/>`)}
+      <path d="M100 30 L136 44 L142 78 L122 104 L114 130 L86 130 L78 104 L58 78 L64 44 Z" fill="url(#mn-corps)" stroke="#120805" stroke-width="2"/>
+      <path d="M100 30 L108 50 L100 60 L92 50 Z" fill="#5a2a18"/>
+      <ellipse cx="100" cy="114" rx="21" ry="16" fill="#c9906c" stroke="#120805" stroke-width="1.5"/>
+      ${miroir(`<ellipse cx="91" cy="114" rx="3.5" ry="4.5" fill="#120805"/>
+        <path class="b-oeil" d="M72 66 L95 73 L77 81 Z" fill="${A}"/>
+        <path d="M66 60 L97 68" stroke="#120805" stroke-width="4" stroke-linecap="round"/>`)}
+      <path d="M89 124 a11 11 0 0 0 22 0" fill="none" stroke="#e2b33c" stroke-width="3.5"/>
+    </g>
+    ${[[84, 104, 0], [116, 104, .8], [78, 96, 1.6], [122, 96, 2.3]].map(([x, y, d]) => `<circle class="b-braise" style="animation-delay:-${d}s" cx="${x}" cy="${y}" r="4" fill="#f4ecd8" opacity=".5"/>`).join('')}`,
+
+  /* ---------------------------------------------------------------- */
+  /* La Tisseuse                                                       */
+  /* ---------------------------------------------------------------- */
+  tisseuse: () => `${defs('ts', '#0d0712', '#4a2b58')}
+    <circle cx="100" cy="80" r="76" fill="url(#ts-halo)" opacity=".28" class="b-pouls"/>
+    <path d="M100 0 V50 M40 0 L84 60 M160 0 L116 60 M0 30 L70 70 M200 30 L130 70" stroke="#e8e2f0" stroke-width="1" opacity=".35"/>
+    <g class="b-souffle">
+      ${miroir(`
+        <path d="M84 92 Q52 34 12 62" stroke="#1a0f1f" stroke-width="7" fill="none" stroke-linecap="round"/>
+        <path d="M82 100 Q38 64 6 104" stroke="#1a0f1f" stroke-width="7" fill="none" stroke-linecap="round"/>
+        <path d="M84 108 Q42 106 12 148" stroke="#1a0f1f" stroke-width="7" fill="none" stroke-linecap="round"/>
+        <path d="M88 116 Q62 130 46 160" stroke="#1a0f1f" stroke-width="7" fill="none" stroke-linecap="round"/>
+        <circle cx="50" cy="48" r="4" fill="#4a2b58"/><circle cx="40" cy="78" r="4" fill="#4a2b58"/><circle cx="44" cy="112" r="4" fill="#4a2b58"/>`)}
+      <ellipse cx="100" cy="58" rx="46" ry="40" fill="url(#ts-corps)" stroke="#07030a" stroke-width="2"/>
+      <path class="b-oeil" d="M90 36 L110 36 L102 56 L110 78 L90 78 L98 56 Z" fill="${A}"/>
+      <ellipse cx="100" cy="108" rx="31" ry="25" fill="url(#ts-corps)" stroke="#07030a" stroke-width="2"/>
+      ${miroir(`
+        <circle class="b-oeil" cx="89" cy="104" r="6" fill="${A}"/><circle cx="90" cy="104" r="2.2" fill="#07030a"/>
+        <circle class="b-oeil" cx="77" cy="98" r="3.5" fill="${A}"/>
+        <circle class="b-oeil" cx="84" cy="92" r="2.8" fill="${A}"/>
+        <circle class="b-oeil" cx="94" cy="92" r="2.2" fill="${A}"/>
+        <path d="M90 124 Q84 142 94 150 Q97 136 97 126 Z" fill="#ece5d0" stroke="#07030a" stroke-width="1.5"/>`)}
+    </g>
+    <circle class="b-braise" cx="94" cy="150" r="2.5" fill="#8be06a"/><circle class="b-braise" style="animation-delay:-1.4s" cx="106" cy="150" r="2.5" fill="#8be06a"/>`,
+
+  /* ---------------------------------------------------------------- */
+  /* Ysolde, la Reine de Givre                                         */
+  /* ---------------------------------------------------------------- */
+  ysolde: () => `${defs('ys', '#0c1a2e', '#3f74a8')}
+    <circle cx="100" cy="74" r="76" fill="url(#ys-halo)" opacity=".35" class="b-pouls"/>
+    <g class="b-flotte">
+      <path d="M100 38 C58 42 42 92 26 160 L174 160 C158 92 142 42 100 38 Z" fill="url(#ys-corps)" stroke="#050b14" stroke-width="2"/>
+      ${miroir(`
+        <path d="M80 42 C58 60 62 102 48 124 C66 112 74 90 80 64 Z" fill="#d4ecfa" stroke="#050b14" stroke-width="1.5"/>
+        <path d="M70 94 L38 80 L52 100 L34 110 L66 112 Z" fill="#9fd0ee" stroke="#050b14" stroke-width="1.5"/>
+        <path d="M82 40 L64 8 L92 32 Z" fill="#e8f7ff" stroke="#050b14" stroke-width="1.5"/>
+        <path d="M72 50 L46 30 L78 42 Z" fill="#bfe2f6" stroke="#050b14" stroke-width="1.5"/>`)}
+      <path d="M92 36 L100 0 L108 36 Z" fill="#e8f7ff" stroke="#050b14" stroke-width="1.5"/>
+      <path d="M80 92 L120 92 L136 160 L64 160 Z" fill="#dff3ff" stroke="#050b14" stroke-width="1.5" opacity=".92"/>
+      <path d="M100 96 V160 M90 100 L80 160 M110 100 L120 160" stroke="#9fd0ee" stroke-width="1.5"/>
+      <path d="M100 34 C84 34 77 48 77 61 C77 80 90 92 100 96 C110 92 123 80 123 61 C123 48 116 34 100 34 Z" fill="#f1faff" stroke="#050b14" stroke-width="1.5"/>
+      ${miroir(`<path class="b-oeil" d="M81 59 L96 62 L84 68 Z" fill="${A}"/><path d="M80 54 L96 57" stroke="#050b14" stroke-width="2" stroke-linecap="round"/>`)}
+      <path d="M94 80 Q100 84 106 80" stroke="#3f74a8" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      <circle class="b-flamme" cx="100" cy="126" r="15" fill="url(#ys-halo)"/>
+      <path class="b-oeil" d="M100 112 V140 M88 119 L112 133 M112 119 L88 133" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+    ${[[24, 40, 0], [176, 30, 1], [14, 110, 2], [186, 100, .5], [60, 14, 1.5], [140, 10, 2.6]].map(([x, y, d]) => `<circle class="b-braise" style="animation-delay:-${d}s" cx="${x}" cy="${y}" r="2.2" fill="#ffffff"/>`).join('')}`,
+
+  /* ---------------------------------------------------------------- */
+  /* Kharn, le Titan de Lave                                           */
+  /* ---------------------------------------------------------------- */
+  kharn: () => `${defs('kh', '#0e0a09', '#463632')}
+    <ellipse cx="100" cy="150" rx="96" ry="26" fill="url(#kh-halo)" opacity=".8" class="b-pouls"/>
+    <g class="b-souffle">
+      ${miroir(`
+        <path d="M34 98 L10 70 L40 50 L64 70 Z" fill="url(#kh-corps)" stroke="#050303" stroke-width="2"/>
+        <path d="M22 120 L6 136 L16 158 L42 152 L44 128 Z" fill="url(#kh-corps)" stroke="#050303" stroke-width="2"/>
+        <path d="M72 32 L54 4 L86 22 Z" fill="#2a1f1c" stroke="#050303" stroke-width="2"/>`)}
+      <path d="M24 160 L34 96 L62 70 L138 70 L166 96 L176 160 Z" fill="url(#kh-corps)" stroke="#050303" stroke-width="2"/>
+      <path d="M100 16 L132 32 L138 66 L116 86 L84 86 L62 66 L68 32 Z" fill="url(#kh-corps)" stroke="#050303" stroke-width="2"/>
+      <g class="b-oeil" stroke="${A}" stroke-width="3.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M100 88 L92 108 L104 124 L96 150"/>
+        <path d="M58 100 L74 118 L66 142"/>
+        <path d="M142 100 L128 120 L136 144"/>
+        <path d="M92 108 L74 118 M104 124 L128 120 M100 18 L96 34 L104 44"/>
+        <path d="M20 132 L32 142 M180 132 L168 142"/>
+      </g>
+      ${miroir(`<path class="b-oeil" d="M74 48 L95 53 L79 60 Z" fill="${A}"/>`)}
+      <path d="M80 66 L120 66 L114 80 L86 80 Z" fill="#120403"/>
+      <path class="b-flamme" d="M84 69 L116 69 L111 78 L89 78 Z" fill="${A}"/>
+      <path d="M86 66 l4 7 l4 -7 Z M98 66 l4 7 l4 -7 Z M108 66 l3 6 l4 -6 Z" fill="#2a1f1c"/>
+    </g>
+    ${braises('kh')}`,
 };
 
 /** Vrai si ce monstre a son portrait (les boss et les élites). */

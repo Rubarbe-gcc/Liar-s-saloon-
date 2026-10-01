@@ -21,8 +21,11 @@ import { rendreRegles } from './regles.js';
 import { sfx, basculer as basculerSon, estActif as sonActif, debloquer } from './sfx.js';
 import { installerMusique } from '../../../shared/musique.js';
 import {
-  txt, pc, teinte, nomEcole, nomRole, texteSort, cartePiece, couleurRarete,
+  txt, pc, teinte, nomEcole, nomRole, texteSort, cartePiece, couleurRarete, carteRelique,
 } from './textes.js';
+import {
+  ARBRES, RANG_MAX, rangDe, pointsLibres, peutApprendre, apprendre, texteTalent,
+} from '../../../shared/raid/talents.js';
 
 const $ = (id) => document.getElementById(id);
 const CLE = 'raid.aventure';
@@ -249,6 +252,13 @@ function rendreCarte() {
   $('carte-aide').textContent = av.position
     ? 'Choisissez une porte qui brille. Seuls les marchands 💰 se voient de loin.'
     : `${acte.texte} Choisissez une porte pour commencer.`;
+  const libres = av.groupe.reduce((n, p) => n + pointsLibres(p), 0);
+  $('groupe-libelle').innerHTML = libres
+    ? `Groupe et sac <b class="pastille">${libres} talent${libres > 1 ? 's' : ''}</b>` : 'Groupe et sac';
+  const q = av.quete;
+  $('quete-titre').textContent = q ? `${A.QUETES_PAR_ID[q.id].glyphe} ${A.QUETES_PAR_ID[q.id].nom} — ${q.progres}/${q.but}` : 'Quêtes';
+  $('quete-note').textContent = q ? A.texteQuete(q)
+    : (av.offresQuetes || []).length ? `${av.offresQuetes.length} quête${av.offresQuetes.length > 1 ? 's' : ''} proposée${av.offresQuetes.length > 1 ? 's' : ''} pour cet acte` : 'Rien à faire ici pour l’instant';
   $('legende').innerHTML = '<span>🚪 Porte close</span>' + Object.values(TYPES).map((t) => `<span>${t.glyphe} ${t.nom}</span>`).join('');
 }
 
@@ -333,6 +343,7 @@ function rendreEtape() {
     compagnon: etapeCompagnon,
     defaite: etapeDefaite,
     balade: etapeBalade,
+    quetes: etapeQuetes,
     victoire: etapeVictoire,
   };
   zone.innerHTML = rendus[e.type] ? rendus[e.type](e) : '';
@@ -386,6 +397,15 @@ function rendreEtape() {
       clic('#b-reprendre', () => { A.reprendre(av); suite(); });
       clic('#b-fin-hardcore', () => { av = null; sauver(); aller('choix'); });
       break;
+    case 'quetes':
+      clic('[data-quete]', (el) => {
+        const r = A.accepterQuete(av, el.dataset.quete);
+        if (r.ok) { sfx.butin(); toast('Quête acceptée.'); } else toast(r.raison || 'Impossible.');
+        sauver();
+        rendreEtape();
+      });
+      clic('#b-suite', () => { A.terminerEtape(av); suite(); });
+      break;
     case 'balade':
       clic('[data-zone]', (el) => { A.choisirZone(av, +el.dataset.zone); sauver(); rendreEtape(); });
       clic('#b-chasser', () => {
@@ -428,6 +448,7 @@ function etapeRecompense(e) {
   return tete(e.salle === 'boss' ? '👑' : '🏆', titre)
     + `<div class="et-effet">+${e.or} pièces d’or</div>`
     + `<div class="gains">${gains}</div>`
+    + (e.relique ? `<h3 class="section">Relique du boss</h3><div class="et-liste">${carteRelique(A.RELIQUES_PAR_ID[e.relique])}</div>` : '')
     + (e.pieces.length ? `<h3 class="section">Butin — une pièce au choix</h3><div class="et-liste">${pieces}</div>` : '')
     + `<button class="btn ${e.pieces.length ? 'btn-ghost' : 'btn-go'} btn-wide" id="b-rien">${e.pieces.length ? 'Ne rien prendre' : 'Continuer'}</button>`;
 }
@@ -458,18 +479,19 @@ function etapeResultat(e) {
   return tete(e.glyphe, titre, txt(e.dit))
     + (e.effet && e.effet !== 'aucun effet' ? `<div class="et-effet">${txt(e.effet)}</div>` : '')
     + (it ? `<div class="et-liste">${cartePiece(it, { actions: boutonsEquiper(it) })}</div>` : '')
+    + (e.relique ? `<div class="et-liste">${carteRelique(A.RELIQUES_PAR_ID[e.relique])}</div>` : '')
     + '<button class="btn btn-go btn-wide" id="b-suite">Continuer</button>';
 }
 
 function etapeMarchand(e) {
-  const prix = A.PRIX_OBJETS(av.acte);
+  const prix = A.prixObjets(av);
   const objets = Object.entries(OBJETS).map(([k, o]) => `<button class="choix" data-acheter="${k}" ${av.or < prix[k] ? 'disabled' : ''}>
     <b>${o.glyphe} ${txt(o.nom)} — ${prix[k]} or</b><i>${txt(o.texte)} (vous en avez ${av.inventaire[k]})</i></button>`).join('');
   const stock = e.stock.map((it) => {
     const conseil = A.conseilEquipement(av, it);
     return cartePiece(it, {
       note: conseil !== null ? `idéal pour ${av.groupe[conseil].nom}` : 'personne n’y gagne',
-      actions: `<button class="mini-btn mieux" data-acheter="${it.uid}" ${av.or < it.prix ? 'disabled' : ''}>Acheter · ${it.prix} or</button>`,
+      actions: `<button class="mini-btn mieux" data-acheter="${it.uid}" ${av.or < A.prixPour(av, it.prix) ? 'disabled' : ''}>Acheter · ${A.prixPour(av, it.prix)} or</button>`,
     });
   }).join('') || '<p class="vide-note">Tout est vendu.</p>';
   const sac = av.sac.map((it) => cartePiece(it, {
@@ -480,6 +502,9 @@ function etapeMarchand(e) {
     : tete('💰', 'Le marchand', '« Tout se vend, tout s’achète. Surtout les potions, par ici. »'))
     + `<div class="or-dispo">Vous avez <b>${av.or} or</b></div>`
     + `<div class="et-liste">${objets}</div>`
+    + (e.relique ? `<h3 class="section">En vitrine</h3><div class="et-liste">${carteRelique(A.RELIQUES_PAR_ID[e.relique.id], {
+      actions: `<button class="mini-btn mieux" data-acheter="relique" ${av.or < A.prixPour(av, e.relique.prix) ? 'disabled' : ''}>Acheter · ${A.prixPour(av, e.relique.prix)} or</button>`,
+    })}</div>` : '')
     + `<h3 class="section">Équipement</h3><div class="et-liste">${stock}</div>`
     + `<h3 class="section">Votre sac</h3><div class="et-liste">${sac}</div>`
     + '<button class="btn btn-go btn-wide" id="b-suite">Quitter la boutique</button>';
@@ -529,6 +554,26 @@ function etapeBalade(e) {
     + `<div class="et-liste">
       <button class="btn btn-go btn-wide" id="b-chasser">Chasser dans cette zone</button>
       <button class="btn btn-ghost btn-wide" id="b-suite">Revenir à la carte</button></div>`;
+}
+
+function etapeQuetes() {
+  const carte = (q, bouton) => {
+    const d = A.QUETES_PAR_ID[q.id];
+    return `<div class="piece" style="--r:#ffd76a">
+      <b>${d.glyphe} ${txt(d.nom)}</b>
+      <i>${txt(A.texteQuete(q))}</i>
+      <small>Récompense : ${txt(A.texteEffet(q.recompense))}</small>
+      ${bouton}</div>`;
+  };
+  const q = av.quete;
+  const enCours = q
+    ? `<h3 class="section">En cours</h3><div class="et-liste">${carte(q, `<div class="jauge xp" style="--v:${(q.progres / q.but).toFixed(3)}"><i></i></div><small>${q.progres} / ${q.but}</small>`)}</div>` : '';
+  const offres = (av.offresQuetes || []).map((o) => carte(o,
+    `<div class="piece-actions"><button class="mini-btn mieux" data-quete="${o.id}" ${q ? 'disabled' : ''}>Accepter</button></div>`)).join('');
+  return tete('📜', 'Quêtes', 'Une seule quête à la fois. Elle vaut pour l’acte en cours : au boss vaincu, le tableau se renouvelle.')
+    + enCours
+    + (offres ? `<h3 class="section">Proposées</h3><div class="et-liste">${offres}</div>` : (q ? '' : '<p class="vide-note">Plus de quête à prendre dans cet acte.</p>'))
+    + '<button class="btn btn-go btn-wide" id="b-suite">Revenir à la carte</button>';
 }
 
 function etapeDefaite(e) {
@@ -581,11 +626,15 @@ function rendreGroupe() {
       <div class="cp-xp"><span>${prochain}</span><div class="jauge xp" style="--v:${(p.niveau >= NIVEAU_MAX ? 1 : progressionNiveau(p.xp)).toFixed(3)}"><i></i></div></div>
       ${statsHtml(p, bonus)}${sortsHtml(p)}
       <div class="equip">${slots}</div>
+      ${talentsHtml(p, idx)}
       ${objets ? `<div class="cp-objets">${objets}</div>` : ''}</div>`;
   }).join('');
 
   $('sac').innerHTML = av.sac.map((it) => cartePiece(it, { actions: boutonsEquiper(it) })).join('')
     || '<p class="sac-vide">Le sac est vide. Les pièces se trouvent sur les monstres, dans les coffres et chez le marchand.</p>';
+
+  $('reliques').innerHTML = A.reliquesDe(av).map((r) => carteRelique(r)).join('')
+    || '<p class="sac-vide">Aucune relique. Les boss en lâchent une, certaines quêtes aussi, et les boutiques en vendent parfois.</p>';
 
   const lignes = [];
   if (A.bonusSolo(av)) lignes.push(`<div>⚔ <b>Seul contre tous</b> : +${pc(A.bonusSolo(av))} de dégâts tant que ${txt(A.heros(av).nom)} voyage seul.</div>`);
@@ -612,7 +661,38 @@ function rendreGroupe() {
       rendreGroupe();
     });
   }
+  for (const el of racine.querySelectorAll('[data-talent]')) {
+    el.addEventListener('click', () => {
+      const p = av.groupe[+el.dataset.idx];
+      const r = apprendre(p, el.dataset.talent);
+      if (r.ok) sfx.butin(); else toast(r.raison);
+      sauver();
+      rendreGroupe();
+    });
+  }
   brancherEquiper(racine, rendreGroupe);
+}
+
+/** L'arbre de talents d'un personnage : deux branches, trois paliers, trois rangs. */
+function talentsHtml(p, idx) {
+  const libres = pointsLibres(p);
+  const branches = (ARBRES[p.role] || []).map((br) => {
+    const talents = br.talents.map((tal) => {
+      const rang = rangDe(p, tal.id);
+      const peut = peutApprendre(p, tal.id);
+      const etat = rang >= RANG_MAX ? 'max' : peut.ok ? 'dispo' : rang > 0 ? 'pris' : 'bloque';
+      const pips = '●'.repeat(rang) + '○'.repeat(RANG_MAX - rang);
+      const texte = rang > 0 ? texteTalent(tal, rang) : texteTalent(tal, 1);
+      const note = rang >= RANG_MAX ? 'rang maximum' : peut.ok ? `suivant : ${texteTalent(tal, rang + 1)}` : peut.raison;
+      return `<button class="talent ${etat}" data-talent="${tal.id}" data-idx="${idx}">
+        <b>${tal.glyphe} ${txt(tal.nom)} <span class="pips">${pips}</span></b>
+        <i>${txt(texte)}</i><small>${txt(note)}</small></button>`;
+    }).join('');
+    return `<div class="branche"><div class="br-nom">${br.glyphe} ${txt(br.nom)}</div>${talents}</div>`;
+  }).join('');
+  return `<div class="talents">
+    <div class="tal-tete">Talents ${libres ? `<b class="pastille">${libres} point${libres > 1 ? 's' : ''} à dépenser</b>` : '<span>aucun point à dépenser</span>'}</div>
+    <div class="branches">${branches}</div></div>`;
 }
 
 const SIGLES = { atk: 'ATQ', def: 'DEF', pv: 'PV', pm: 'PM', vit: 'VIT', crit: '% CRIT' };
@@ -634,6 +714,7 @@ function brancher() {
     });
   }
   $('b-continuer').addEventListener('click', () => { debloquer(); sfx.clic(); suite(); });
+  $('b-quetes').addEventListener('click', () => { debloquer(); sfx.clic(); if (av && A.ouvrirQuetes(av).ok) suite(); });
   $('b-roder').addEventListener('click', () => { debloquer(); sfx.clic(); if (av && A.roder(av).ok) suite(); });
   $('b-partir').addEventListener('click', () => {
     debloquer();

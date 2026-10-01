@@ -43,6 +43,8 @@ export const TRAITS_RPG = {
   epines: { glyphe: '🌵', texte: 'Épines : renvoie une part des coups qu’il reçoit.' },
   drain: { glyphe: '🩸', texte: 'Drain : se soigne en frappant.' },
   enrage: { glyphe: '😡', texte: 'Enrage : sous la moitié de sa vie, il entre en rage.' },
+  regen: { glyphe: '💚', texte: 'Régénération : reprend 4 % de sa vie à chaque fin de manche.' },
+  gel: { glyphe: '🥶', texte: 'Gel : ses coups font perdre 3 PM.' },
 };
 
 export const couleurRarete = (r) => (RARETES[r] || RARETES.commun).teinte;
@@ -54,6 +56,16 @@ export function cartePiece(it, { actions = '', note = '' } = {}) {
     <b>${it.glyphe} ${txt(it.nom)}</b>
     <i>${texteBonus(it)}</i>
     <small>${EMPLACEMENTS[it.emplacement].nom} · ${r.nom}${note ? ` · ${note}` : ''}</small>
+    ${actions ? `<div class="piece-actions">${actions}</div>` : ''}
+  </div>`;
+}
+
+/** Une relique, en carte. */
+export function carteRelique(r, { actions = '' } = {}) {
+  return `<div class="piece relique" style="--r:#ffd76a">
+    <b>${r.glyphe} ${txt(r.nom)}</b>
+    <i>${txt(r.texte)}</i>
+    <small>Relique · vaut pour tout le groupe</small>
     ${actions ? `<div class="piece-actions">${actions}</div>` : ''}
   </div>`;
 }

@@ -10,6 +10,7 @@
  */
 
 import { HEROS, PAR_ID, ROLES } from './heros.js';
+import { effetsTalents } from './talents.js';
 
 export const NIVEAU_MAX = 12;
 
@@ -83,6 +84,7 @@ export function creerPersonnage(id, niveau = 1) {
     role: f.role, peuple: f.peuple,
     niveau, xp: 0, pv: 0, pm: 0,
     equip: { arme: null, armure: null, bijou: null },
+    talents: {},
   };
   p.xp = Math.max(0, (SEUILS_XP[niveau] || 0));
   const s = statsBase(p);
@@ -106,8 +108,8 @@ export function statsBase(p) {
 }
 
 /**
- * Statistiques effectives : base, équipement, puis bonus du groupe (dons,
- * bénédictions) en parts. `bonus` suit le vocabulaire de l'aventure.
+ * Statistiques effectives : base, équipement, puis talents du personnage et
+ * bonus du groupe (dons, bénédictions, reliques) en parts.
  */
 export function statsDe(p, bonus = {}) {
   const s = statsBase(p);
@@ -121,13 +123,14 @@ export function statsDe(p, bonus = {}) {
     plus.vit += it.vit || 0;
     plus.crit += it.crit || 0;
   }
+  const t = effetsTalents(p);
   return {
-    pvMax: Math.round((s.pvMax + plus.pvMax) * (1 + (bonus.pv || 0))),
-    pmMax: s.pmMax + plus.pmMax + (bonus.pm || 0),
-    atk: Math.round((s.atk + plus.atk) * (1 + (bonus.atk || 0))),
-    def: Math.round((s.def + plus.def) * (1 + (bonus.def || 0))),
-    vit: s.vit + plus.vit,
-    crit: plus.crit,
+    pvMax: Math.round((s.pvMax + plus.pvMax) * (1 + (bonus.pv || 0) + (t.pv || 0))),
+    pmMax: s.pmMax + plus.pmMax + (bonus.pm || 0) + (t.pm || 0),
+    atk: Math.round((s.atk + plus.atk) * (1 + (bonus.atk || 0) + (t.atk || 0))),
+    def: Math.round((s.def + plus.def) * (1 + (bonus.def || 0) + (t.def || 0))),
+    vit: s.vit + plus.vit + (t.vit || 0),
+    crit: plus.crit + (t.crit || 0),
   };
 }
 

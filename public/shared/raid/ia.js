@@ -13,11 +13,12 @@ import { multiplicateur } from './ecoles.js';
 import {
   sallesAccessibles, entrer, bataillePour, conclureCombat, prendreRecompense, choisirDon,
   evenementCourant, choisirEvenement, terminerEtape, acheter, vendre, faireRepos, prendreTresor,
-  recruter, reprendre, equiper, conseilEquipement, utiliser, PRIX_OBJETS, bonusDe,
+  recruter, reprendre, equiper, conseilEquipement, utiliser, prixObjets, prixPour, bonusDe,
 } from './aventure.js';
 import { avancer, agir } from './bataille.js';
 import { statsDe } from './personnages.js';
 import { valeurPiece } from './equipement.js';
+import { repartir } from './talents.js';
 
 const part = (u) => u.pv / u.pvMax;
 
@@ -127,6 +128,7 @@ export function jouerEtape(av) {
   const e = av.etape;
   if (!e) {
     equiperSac(av);
+    for (const p of av.groupe) repartir(p);
     soignerSurCarte(av);
     const n = choisirSalle(av);
     if (!n) return false;
@@ -154,11 +156,11 @@ export function jouerEtape(av) {
     }
     case 'marchand': {
       for (const it of [...av.sac]) vendre(av, it.uid);
-      const prix = PRIX_OBJETS(av.acte);
+      const prix = prixObjets(av);
       while (av.inventaire.potion < 3 && av.or >= prix.potion) acheter(av, 'potion');
       if (av.inventaire.phenix < 1 && av.or >= prix.phenix) acheter(av, 'phenix');
       for (const it of [...e.stock].sort((a, b) => valeurPiece(b) - valeurPiece(a))) {
-        if (conseilEquipement(av, it) !== null && av.or >= it.prix) acheter(av, it.uid);
+        if (conseilEquipement(av, it) !== null && av.or >= prixPour(av, it.prix)) acheter(av, it.uid);
       }
       terminerEtape(av);
       break;
@@ -167,6 +169,7 @@ export function jouerEtape(av) {
     case 'tresor': prendreTresor(av); break;
     case 'compagnon': recruter(av, e.offres[0]); break;
     case 'resultat':
+    case 'quetes':
     case 'balade': terminerEtape(av); break;
     default: return false;
   }

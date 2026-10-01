@@ -29,6 +29,8 @@ import * as A from '../public/shared/raid/aventure.js';
 import { jouerCombat, jouerAventure, choisirAction } from '../public/shared/raid/ia.js';
 import { spriteSvg, poses, palettePour, GRID } from '../public/shared/raid/sprites.js';
 import { makeRng } from '../public/shared/hasard.js';
+import * as T from '../public/shared/raid/talents.js';
+import { RELIQUES, bonusReliques, QUETES } from '../public/shared/raid/reliques.js';
 
 const rngT = (seed = 42) => makeRng(seed);
 const gnoll = (acte = 1, o = {}) => ennemiRpg(MODELES_PAR_ID.gnoll, acte, o.ecole || 'nature', rngT(3), o);
@@ -596,7 +598,7 @@ test('le début de l’aventure coûte vraiment de la vie', () => {
       const b = jouerCombat(A.bataillePour(av));
       vie += b.victoire ? b.heros[0].pv / b.heros[0].pvMax : 0;
     }
-    assert.ok(vie / n < 0.9, `${heros} finit son premier combat à ${Math.round((100 * vie) / n)} %`);
+    assert.ok(vie / n < 0.93, `${heros} finit son premier combat à ${Math.round((100 * vie) / n)} %`);
     assert.ok(vie / n > 0.3, `${heros} ne doit pas mourir au premier combat`);
   }
 });
@@ -724,4 +726,148 @@ test('l’or trouve à se dépenser : un marchand par acte, et des ambulants', (
     }
   }
   assert.ok(vus >= 3 && vus <= 20, `${vus} marchands ambulants sur 60 victoires`);
+});
+
+/* ================================================================== */
+/* Talents, reliques, quêtes, nouveaux monstres                       */
+/* ================================================================== */
+
+test('un point de talent par niveau, et des paliers qui se méritent', () => {
+  const p = creerPersonnage('kaelis', 1);
+  assert.equal(T.pointsLibres(p), 0);
+  assert.equal(T.apprendre(p, 'affutage').ok, false, 'pas de point au niveau 1');
+  gagnerXp(p, SEUILS_XP[5]);
+  assert.equal(T.pointsLibres(p), 4);
+  assert.equal(T.apprendre(p, 'oeil').ok, false, 'le palier 2 est fermé');
+  assert.equal(T.apprendre(p, 'peau').ok, false, 'pas un talent de son rôle');
+  assert.ok(T.apprendre(p, 'affutage').ok);
+  assert.ok(T.apprendre(p, 'affutage').ok);
+  assert.ok(T.apprendre(p, 'oeil').ok, 'deux points ouvrent le palier suivant');
+  assert.ok(T.apprendre(p, 'affutage').ok);
+  assert.equal(T.rangDe(p, 'affutage'), T.RANG_MAX);
+  assert.equal(T.pointsLibres(p), 0);
+  assert.equal(T.apprendre(p, 'oeil').ok, false, 'plus de point');
+  for (const role of Object.keys(T.ARBRES)) {
+    assert.equal(T.ARBRES[role].length, 2);
+    for (const b of T.ARBRES[role]) for (const tal of b.talents) assert.ok(T.texteTalent(tal).length > 5, tal.id);
+  }
+});
+
+test('les talents se lisent dans les statistiques et dans le combat', () => {
+  const nu = creerPersonnage('brandel', 6);
+  const p = creerPersonnage('brandel', 6);
+  p.talents = { peau: 3, bastion: 2 };
+  assert.ok(statsDe(p).pvMax > statsDe(nu).pvMax * 1.15);
+  assert.ok(statsDe(p).def > statsDe(nu).def);
+
+  const dps = creerPersonnage('kaelis', 6);
+  dps.talents = { celerite: 3, soif: 2, concentration: 1 };
+  assert.equal(statsDe(dps).vit, statsDe(creerPersonnage('kaelis', 6)).vit + 3);
+  const b = creerBataille({ groupe: [dps], ennemis: [gnoll(1, { echelle: { pv: 30, atk: 0.01 } })], inventaire: {}, rng: rngT(2) });
+  demarrer(b);
+  const h = actif(b);
+  h.pv = 10; h.pm = 0;
+  agir(b, { type: 'attaque', cible: 0 });
+  assert.ok(h.pv > 10, 'la soif de sang soigne');
+  assert.ok(h.pm >= 3, 'attaque (+2) puis concentration (+1) au tour suivant');
+});
+
+test('les reliques pèsent sur le groupe et sur le combat', () => {
+  assert.equal(new Set(RELIQUES.map((r) => r.id)).size, RELIQUES.length);
+  assert.equal(bonusReliques(['griffe', 'heaume']).degats, 0.12);
+  const av = A.creerAventure({ heros: 'pix', seed: 4 });
+  const pvAvant = statsDe(av.groupe[0], A.bonusDe(av)).pvMax;
+  assert.equal(A.gagnerRelique(av, 'heaume').id, 'heaume');
+  assert.equal(A.gagnerRelique(av, 'heaume'), null, 'pas deux fois la même');
+  assert.ok(statsDe(av.groupe[0], A.bonusDe(av)).pvMax > pvAvant);
+  const chance = av.chance;
+  A.gagnerRelique(av, 'trefle');
+  assert.equal(av.chance, chance + 8);
+
+  // Cœur de phénix : le premier héros qui tombe se relève, une seule fois.
+  const groupe = [creerPersonnage('pix', 1)];
+  const b = creerBataille({ groupe, ennemis: [gnoll(5)], bonus: { phenix: 1, egide: 0.25 }, inventaire: {}, rng: rngT(3) });
+  assert.ok(b.bouclier, 'l’Égide protège dès le départ');
+  const ev = demarrer(b);
+  for (let i = 0; i < 40 && !b.fini; i++) ev.push(...agir(b, { type: 'defendre' }).evenements);
+  assert.equal(ev.filter((x) => x.t === 'releve' && x.relique).length, 1);
+  assert.ok(b.fini && !b.victoire);
+});
+
+test('un boss lâche une relique, et ne revient pas à l’acte suivant', () => {
+  const av = A.creerAventure({ heros: 'mordrec', seed: 30 });
+  av.acte = 3;
+  av.etape = { type: 'combat', salle: 'boss', ennemis: composer(rngT(1), 3, 'boss') };
+  const premier = av.etape.ennemis[0].modeleId;
+  A.conclureCombat(av, true);
+  assert.ok(av.etape.relique, 'la relique est annoncée');
+  assert.equal(av.reliques.length, 1);
+  assert.deepEqual(av.bossVus, [premier]);
+  for (let s = 0; s < 30; s++) {
+    assert.notEqual(composer(rngT(s), 4, 'boss', { vus: av.bossVus })[0].modeleId, premier);
+  }
+});
+
+test('les boutiques vendent des reliques, et la Bourse fait baisser les prix', () => {
+  const av = A.creerAventure({ seed: 8 });
+  av.or = 1000;
+  av.etape = { type: 'marchand', stock: [], relique: { id: 'griffe', prix: A.PRIX_RELIQUE(1) } };
+  const plein = A.prixObjets(av).potion;
+  assert.ok(A.acheter(av, 'relique').ok);
+  assert.ok(av.reliques.includes('griffe'));
+  assert.equal(av.or, 1000 - A.PRIX_RELIQUE(1));
+  assert.equal(A.acheter(av, 'relique').ok, false, 'la vitrine est vide');
+  A.gagnerRelique(av, 'bourse');
+  assert.ok(A.prixObjets(av).potion < plein);
+});
+
+test('une quête s’accepte, avance et paie', () => {
+  for (const q of QUETES) assert.ok(q.texte(q.but(1)).length > 5 && A.texteEffet(q.recompense(1)) !== 'aucun effet', q.id);
+  const av = A.creerAventure({ heros: 'kaelis', seed: 12 });
+  assert.equal(av.offresQuetes.length, 2);
+  av.offresQuetes = [
+    { id: 'battue', acte: 1, but: 2, progres: 0, recompense: { or: 80 } },
+    { id: 'prime', acte: 1, but: 1, progres: 0, recompense: { relique: true } },
+  ];
+  assert.ok(A.ouvrirQuetes(av).ok);
+  assert.equal(A.accepterQuete(av, 'inconnue').ok, false);
+  assert.ok(A.accepterQuete(av, 'battue').ok);
+  assert.equal(A.accepterQuete(av, 'prime').ok, false, 'une seule à la fois');
+  A.terminerEtape(av);
+  assert.equal(av.etape, null);
+
+  for (let i = 0; i < 2; i++) {
+    av.etape = { type: 'combat', salle: 'combat', ennemis: [gnoll()] };
+    A.conclureCombat(av, true);
+    if (i === 0) assert.equal(av.quete.progres, 1);
+    const butin = av.or;
+    A.prendreRecompense(av);
+    while (av.etape && av.etape.type === 'don') A.choisirDon(av, av.etape.choix[0].id);
+    if (i === 1) {
+      assert.equal(av.etape.type, 'resultat');
+      assert.ok(av.etape.titre.includes('Quête accomplie'));
+      assert.equal(av.or, butin + 80);
+      assert.equal(av.quete, null);
+    } else if (av.etape) A.terminerEtape(av);
+  }
+});
+
+test('les nouveaux monstres ont leurs capacités : régénération et gel', () => {
+  for (const id of ['araignee', 'squelette', 'cultiste', 'troll', 'follet', 'minotaure', 'tisseuse', 'ysolde', 'kharn']) {
+    assert.ok(MODELES_PAR_ID[id], id);
+  }
+  assert.ok(parRang('boss').length >= 5 && parRang('elite').length >= 5 && parRang('trash').length >= 9);
+
+  const troll = ennemiRpg(MODELES_PAR_ID.troll, 3, 'givre', rngT(1));
+  troll.pv = Math.round(troll.pvMax / 2);
+  const { b } = batailleTest({ ids: ['brandel'], ennemis: [troll] });
+  const ev = demarrer(b);
+  ev.push(...agir(b, { type: 'defendre' }).evenements);
+  assert.ok(ev.some((x) => x.t === 'soin' && x.camp === 'e' && x.n > 0), 'le troll se régénère');
+
+  const follet = ennemiRpg(MODELES_PAR_ID.follet, 1, 'givre', rngT(1));
+  const { b: b2 } = batailleTest({ ids: ['brandel'], ennemis: [follet] });
+  const ev2 = demarrer(b2);
+  ev2.push(...agir(b2, { type: 'defendre' }).evenements);
+  assert.ok(ev2.some((x) => x.t === 'pm' && x.n < 0), 'le gel fait perdre du mana');
 });

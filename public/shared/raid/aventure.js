@@ -21,6 +21,9 @@ import {
 import { pieceAuHasard, valeurPiece, texteBonus } from './equipement.js';
 import { genererCarte, accessibles, noeud, composer, ACTES, TYPES } from './carte.js';
 import { OBJETS, creerBataille } from './bataille.js';
+import {
+  RELIQUES, RELIQUES_PAR_ID, bonusReliques, QUETES, QUETES_PAR_ID, instancierQuete, texteQuete,
+} from './reliques.js';
 
 export const TAILLE_GROUPE = 4;
 export const CHANCE_DEPART = 5;
@@ -118,12 +121,17 @@ export function creerAventure({ heros = DEPARTS[0], seed = null, difficulte = 'n
     recrueOfferte: false,
     blessures: 0,
     balade: null,
+    reliques: [],
+    bossVus: [],
+    quete: null,
+    offresQuetes: [],
     reprise: null,
     termine: false,
     victoire: false,
     stats: { combats: 0, ors: 0, morts: 0 },
   };
   av.carte = genererCarte(rng(av), 1);
+  av.offresQuetes = tirerQuetes(av);
   sauvegarder(av);
   return av;
 }
@@ -133,7 +141,11 @@ export const acteCourant = (av) => ACTES[av.acte - 1];
 export const sallesAccessibles = (av) => accessibles(av.carte, av.position);
 
 /** Bonus du groupe, dans le vocabulaire des statistiques. */
-export const bonusDe = (av) => ({ ...av.benedictions });
+export function bonusDe(av) {
+  const b = { ...av.benedictions };
+  for (const [k, v] of Object.entries(bonusReliques(av.reliques))) b[k] = (b[k] || 0) + v;
+  return b;
+}
 
 /**
  * Seul contre tous : un tank ou un soigneur qui part sans personne frappe
@@ -186,7 +198,7 @@ export function entrer(av, id) {
       ouvrirEvenement(av);
       break;
     case 'marchand':
-      av.etape = { type: 'marchand', stock: stockMarchand(av) };
+      av.etape = { type: 'marchand', stock: stockMarchand(av), relique: vitrine(av) };
       break;
     case 'repos':
       av.etape = { type: 'repos' };
@@ -221,7 +233,9 @@ function durcir(av, ennemis) {
 }
 
 function rencontre(av, type) {
-  const ennemis = composer(rng(av), av.acte, type, { taille: av.groupe.length });
+  const ennemis = composer(rng(av), av.acte, type, {
+    taille: av.groupe.length, vus: type === 'boss' ? (av.bossVus || []) : [],
+  });
   if (type === 'boss') {
     const m = menacesDuBoss(av);
     const b = ennemis[0];
@@ -315,14 +329,15 @@ export function conclureCombat(av, victoire) {
   }
 
   const bonus = bonusDe(av);
+  const intact = av.groupe.every((p) => p.pv > 0);
   for (const p of av.groupe) {
     const s = statsDe(p, bonus);
     if (p.pv <= 0) p.pv = Math.max(1, Math.round(s.pvMax * 0.15));
     if (bonus.recup) p.pv = Math.min(s.pvMax, p.pv + Math.round(s.pvMax * bonus.recup));
   }
 
-  const gainXp = ennemis.reduce((s, e) => s + xpDe(e, acte), 0);
-  const or = ennemis.reduce((s, e) => s + orDe(e, acte), 0) + entier(av, 6);
+  const gainXp = Math.round(ennemis.reduce((s, e) => s + xpDe(e, acte), 0) * (1 + (bonus.xpPlus || 0)));
+  const or = Math.round((ennemis.reduce((s, e) => s + orDe(e, acte), 0) + entier(av, 6)) * (1 + (bonus.orPlus || 0)));
   av.or += or;
   av.stats.ors += or;
 
@@ -337,7 +352,20 @@ export function conclureCombat(av, victoire) {
   else if (salle === 'embuscade') pieces = [piece(av, { plancher: 'rare' })];
   else if (rng(av)() < 0.35) pieces = [piece(av, { acte })];
 
-  av.etape = { type: 'recompense', salle, xp, or, pieces };
+  // Un boss lâche toujours une relique, tant qu'il en reste à trouver.
+  let relique = null;
+  if (salle === 'boss') {
+    const b = ennemis.find((e) => e.rang === 'boss');
+    if (b) av.bossVus = [...(av.bossVus || []), b.modeleId];
+    relique = gagnerRelique(av);
+  }
+
+  avancerQuete(av, 'monstres', ennemis.length);
+  avancerQuete(av, 'elites', ennemis.filter((e) => e.rang === 'elite').length);
+  if (intact) avancerQuete(av, 'intacts', 1);
+  if (salle === 'chasse' || salle === 'embuscade') avancerQuete(av, 'chasses', 1);
+
+  av.etape = { type: 'recompense', salle, xp, or, pieces, relique: relique ? relique.id : null };
   return { ok: true, etape: av.etape };
 }
 
@@ -361,6 +389,11 @@ export function prendreRecompense(av, uid = null) {
 function suite(av) {
   if (av.donsEnAttente > 0) {
     av.etape = { type: 'don', choix: proposerDons(av) };
+    return;
+  }
+  // Une quête vient d'être accomplie : sa récompense.
+  if (av.quete && av.quete.progres >= av.quete.but) {
+    recompenserQuete(av);
     return;
   }
   // Un marchand ambulant passait par là.
@@ -400,6 +433,8 @@ export function passerActe(av) {
   av.position = null;
   av.visites = [];
   av.blessures = 0;
+  av.quete = null;
+  av.offresQuetes = tirerQuetes(av);
   av.menaces = av.menaces.filter((m) => m.cible === 'final');
   // Entre deux actes, le groupe se refait une santé.
   const bonus = bonusDe(av);
@@ -549,6 +584,8 @@ export function texteEffet(e) {
     out.push(k === 'pm' ? `+${v} PM max` : `${pc(v)} ${NOMS_BONUS[k] || k}`);
   }
   if (e.piece) out.push('une pièce d’équipement');
+  if (e.pieceEpique) out.push('une pièce d’équipement épique');
+  if (e.relique) out.push('une relique');
   if (e.boss) {
     const qui = e.boss.cible === 'final' ? 'le Dragon' : 'le boss de l’acte';
     if (e.boss.pv) out.push(`${qui} : ${pc(e.boss.pv)} de vie`);
@@ -723,7 +760,7 @@ export function choisirEvenement(av, choixId) {
 
 /** Referme une étape sans décision (résultat lu, marchand quitté, rencontre déclinée). */
 export function terminerEtape(av) {
-  if (!av.etape || !['resultat', 'marchand', 'compagnon', 'balade'].includes(av.etape.type)) return { ok: false };
+  if (!av.etape || !['resultat', 'marchand', 'compagnon', 'balade', 'quetes'].includes(av.etape.type)) return { ok: false };
   if (av.etape.type === 'balade') av.balade = null;
   av.etape = null;
   suite(av);
@@ -751,7 +788,7 @@ export function menacesDuBoss(av) {
  */
 export const blessuresBoss = (av) => Math.min(0.4, 0.1 * (av.blessures || 0));
 
-const ORDRE_TRAITS = ['enrage', 'fureur', 'frenesie', 'drain', 'poison', 'epines', 'carapace'];
+const ORDRE_TRAITS = ['enrage', 'fureur', 'frenesie', 'regen', 'drain', 'gel', 'poison', 'epines', 'carapace'];
 function retirerTrait(e) {
   const t = ORDRE_TRAITS.find((x) => e.traits.includes(x)) || e.traits[0];
   if (t) e.traits = e.traits.filter((x) => x !== t);
@@ -762,6 +799,13 @@ function retirerTrait(e) {
 /* ------------------------------------------------------------------ */
 
 export const PRIX_OBJETS = (acte) => ({ potion: 18 + 5 * acte, elixir: 16 + 4 * acte, phenix: 50 + 10 * acte });
+export const PRIX_RELIQUE = (acte) => 110 + 45 * acte;
+
+/** Un prix, après le rabais du groupe (la Bourse sans fond). */
+export const prixPour = (av, prix) => Math.max(1, Math.round(prix * (1 - (bonusDe(av).rabais || 0))));
+export const prixObjets = (av) => Object.fromEntries(
+  Object.entries(PRIX_OBJETS(av.acte)).map(([k, v]) => [k, prixPour(av, v)]),
+);
 
 function stockMarchand(av, combien = 4) {
   return Array.from({ length: combien }, () => piece(av));
@@ -770,18 +814,29 @@ function stockMarchand(av, combien = 4) {
 /** Acheter : une pièce du stock (par uid) ou un objet (par son nom). */
 export function acheter(av, quoi) {
   if (!av.etape || av.etape.type !== 'marchand') return { ok: false };
-  if (OBJETS[quoi]) {
-    const prix = PRIX_OBJETS(av.acte)[quoi];
-    if (av.or < prix) return { ok: false, raison: 'or' };
+  const payer = (prix) => {
+    if (av.or < prix) return false;
     av.or -= prix;
+    avancerQuete(av, 'depense', prix);
+    return true;
+  };
+  if (OBJETS[quoi]) {
+    if (!payer(prixObjets(av)[quoi])) return { ok: false, raison: 'or' };
     av.inventaire[quoi]++;
     return { ok: true };
+  }
+  if (quoi === 'relique') {
+    const r = av.etape.relique;
+    if (!r || (av.reliques || []).includes(r.id)) return { ok: false, raison: 'introuvable' };
+    if (!payer(prixPour(av, r.prix))) return { ok: false, raison: 'or' };
+    gagnerRelique(av, r.id);
+    av.etape.relique = null;
+    return { ok: true, relique: RELIQUES_PAR_ID[r.id] };
   }
   const i = av.etape.stock.findIndex((x) => x.uid === quoi);
   if (i < 0) return { ok: false, raison: 'introuvable' };
   const it = av.etape.stock[i];
-  if (av.or < it.prix) return { ok: false, raison: 'or' };
-  av.or -= it.prix;
+  if (!payer(prixPour(av, it.prix))) return { ok: false, raison: 'or' };
   av.sac.push(it);
   av.etape.stock.splice(i, 1);
   return { ok: true, piece: it };
@@ -921,4 +976,83 @@ export function conseilEquipement(av, it) {
   return meilleur && meilleur.gain > 0 ? meilleur.idx : null;
 }
 
-export { TYPES, ACTES, noeud, NIVEAU_MAX, texteBonus, OBJETS };
+/* ------------------------------------------------------------------ */
+/* Reliques                                                            */
+/* ------------------------------------------------------------------ */
+
+export const reliquesDe = (av) => (av.reliques || []).map((id) => RELIQUES_PAR_ID[id]).filter(Boolean);
+
+/** Donne une relique au groupe : celle demandée, ou une au hasard parmi celles qui manquent. */
+export function gagnerRelique(av, id = null) {
+  const a = av.reliques || [];
+  const libres = RELIQUES.filter((r) => !a.includes(r.id));
+  const r = id ? libres.find((x) => x.id === id) : (libres.length ? piocher(av, libres) : null);
+  if (!r) return null;
+  av.reliques = [...a, r.id];
+  if (r.chance) av.chance = Math.min(CHANCE_MAX, av.chance + r.chance);
+  const bonus = bonusDe(av);
+  for (const p of av.groupe) borner(p, bonus);
+  return r;
+}
+
+/** La relique qu'un marchand met en vitrine (une boutique sur deux en a une). */
+function vitrine(av) {
+  const libres = RELIQUES.filter((r) => !(av.reliques || []).includes(r.id));
+  if (!libres.length || rng(av)() < 0.4) return null;
+  return { id: piocher(av, libres).id, prix: PRIX_RELIQUE(av.acte) };
+}
+
+/* ------------------------------------------------------------------ */
+/* Quêtes                                                              */
+/* ------------------------------------------------------------------ */
+
+/** Deux quêtes à proposer pour l'acte en cours. */
+function tirerQuetes(av) {
+  return melanger(av, QUETES.map((q) => q.id)).slice(0, 2).map((id) => instancierQuete(id, av.acte));
+}
+
+/** Ouvre le tableau des quêtes, depuis la carte. */
+export function ouvrirQuetes(av) {
+  if (av.etape || av.termine) return { ok: false };
+  if (!av.offresQuetes) av.offresQuetes = tirerQuetes(av);
+  av.etape = { type: 'quetes' };
+  return { ok: true };
+}
+
+/** Accepte une des quêtes proposées : une seule à la fois, pour l'acte en cours. */
+export function accepterQuete(av, id) {
+  if (!av.etape || av.etape.type !== 'quetes') return { ok: false };
+  if (av.quete) return { ok: false, raison: 'une quête est déjà en cours' };
+  const q = (av.offresQuetes || []).find((x) => x.id === id);
+  if (!q) return { ok: false, raison: 'inconnue' };
+  av.quete = { ...q, progres: 0 };
+  av.offresQuetes = av.offresQuetes.filter((x) => x.id !== id);
+  return { ok: true, quete: av.quete };
+}
+
+function avancerQuete(av, compte, n) {
+  const q = av.quete;
+  if (!q || n <= 0 || QUETES_PAR_ID[q.id].compte !== compte) return;
+  q.progres = Math.min(q.but, q.progres + n);
+}
+
+/** La quête est accomplie : on donne la récompense, et on le raconte. */
+function recompenserQuete(av) {
+  const q = av.quete;
+  const def = QUETES_PAR_ID[q.id];
+  const r = q.recompense;
+  av.quete = null;
+  const { piece: p1 } = appliquer(av, r, def.nom);
+  let obtenu = p1;
+  if (r.pieceEpique) { obtenu = piece(av, { plancher: 'epique' }); av.sac.push(obtenu); }
+  const relique = r.relique ? gagnerRelique(av) : null;
+  // Plus de relique à trouver : de l'or à la place.
+  if (r.relique && !relique) av.or += 120;
+  av.etape = {
+    type: 'resultat', titre: `Quête accomplie — ${def.nom}`, glyphe: def.glyphe,
+    dit: 'Le commanditaire tient parole.', reussi: null, piece: obtenu,
+    effet: r.relique && !relique ? '+120 or' : texteEffet(r), relique: relique ? relique.id : null,
+  };
+}
+
+export { TYPES, ACTES, noeud, NIVEAU_MAX, texteBonus, OBJETS, RELIQUES, RELIQUES_PAR_ID, QUETES_PAR_ID, texteQuete };

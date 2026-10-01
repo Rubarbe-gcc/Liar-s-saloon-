@@ -15,6 +15,8 @@ import {
   CHANCE_COLPORTEUR, CHANCE_COLPORTEUR_ZONE,
 } from '../../../shared/raid/aventure.js';
 import { TRAITS_RPG, pc } from './textes.js';
+import { RANG_MAX, SEUIL_PALIER } from '../../../shared/raid/talents.js';
+import { RELIQUES, QUETES } from '../../../shared/raid/reliques.js';
 
 const bloc = (titre, corps) => `<div class="regle-bloc"><h3>${titre}</h3>${corps}</div>`;
 
@@ -67,6 +69,22 @@ export function rendreRegles() {
     <p>Les salles « ❓ » posent des questions. Certaines réponses rendent plus fort, d’autres coûtent de la
     vie, et certaines pèsent sur <b>les boss</b> : un boss affaibli par vos ruses, ou un Dragon renforcé par
     un pacte que vous avez accepté. Tout est écrit avant de choisir.</p>`)
+    + bloc('Talents', `
+    <p>Chaque niveau gagné donne <b>un point de talent</b> au personnage. Il se dépense dans l’écran du groupe :
+    deux branches par rôle, trois talents par branche, <b>${RANG_MAX} rangs</b> chacun. Un palier s’ouvre quand le
+    précédent a reçu ${SEUIL_PALIER} points — on ne peut pas tout prendre, il faut choisir.</p>`)
+    + bloc('Effets en combat', `
+    <p>Les effets en cours s’affichent en pastilles sur chaque combattant : <span style="color:#8ee06a">vert</span>
+    pour ce qui l’aide, <span style="color:#ef6a4a">rouge</span> pour ce qui lui nuit. <b>Touchez un combattant</b>
+    — héros ou ennemi — pour lire le détail : durée restante, valeur, capacités du monstre et attaque chargée.</p>`)
+    + bloc('Reliques', `
+    <p>Une relique vaut pour tout le groupe jusqu’à la fin de l’aventure. Chaque boss en lâche une, certaines
+    quêtes aussi, et les boutiques en vendent parfois. Il en existe ${RELIQUES.length} :</p>
+    <ul>${RELIQUES.map((r) => `<li>${r.glyphe} <b>${r.nom}</b> — ${r.texte}</li>`).join('')}</ul>`)
+    + bloc('Quêtes', `
+    <p>Le bouton <b>📜 Quêtes</b>, sous la carte, propose deux quêtes par acte. On n’en mène qu’une à la fois, et
+    elle doit être finie avant le boss de l’acte. Il en existe ${QUETES.length} :</p>
+    <ul>${QUETES.map((q) => `<li>${q.glyphe} <b>${q.nom}</b> — ${q.texte(q.but(1))}</li>`).join('')}</ul>`)
     + bloc('Difficulté', `
     <p>Elle se choisit au départ, avec le héros, et ne change plus :</p>
     <ul>${Object.entries(DIFFICULTES).map(([k, d]) => `<li>${d.glyphe} <b>${d.nom}</b> — ${texteDifficulte(k)}</li>`).join('')}</ul>`)
