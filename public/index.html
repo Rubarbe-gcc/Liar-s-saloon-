@@ -39,8 +39,12 @@
     </h1>
     <p class="tagline">
       Des jeux faits maison, jouables tout de suite dans le navigateur.
-      Rien à installer, rien à créer comme compte.
+      Rien à créer comme compte — et ça s’installe comme une appli.
     </p>
+    <div class="installer" id="installer" hidden>
+      <button class="installer-btn" id="b-installer">📲 Installer l’application</button>
+      <div class="installer-aide" id="installer-aide" hidden></div>
+    </div>
     <div class="coin">▸ Choisissez votre machine</div>
   </div>
 </header>
@@ -168,6 +172,72 @@ function esc(s) {
   return String(s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+
+/* Installer l'application.
+   Sur Android et sur ordinateur, le navigateur nous confie sa fenêtre
+   d'installation : le bouton l'ouvre directement. Ailleurs (iPhone,
+   navigateurs intégrés aux applis), il n'existe aucun moyen de la déclencher :
+   le bouton explique alors le geste à faire, selon l'appareil. */
+(() => {
+  const zone = document.getElementById('installer');
+  const bouton = document.getElementById('b-installer');
+  const aide = document.getElementById('installer-aide');
+  const installee = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  if (installee) return;          // on est déjà dans l'application
+  zone.hidden = false;
+
+  let invite = null;
+  addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); invite = e; aide.hidden = true; });
+  addEventListener('appinstalled', () => {
+    invite = null;
+    bouton.hidden = true;
+    aide.hidden = false;
+    aide.innerHTML = '✅ <b>Application installée.</b> Retrouvez l’icône « Insert Coin » sur votre écran d’accueil.';
+  });
+
+  const ua = navigator.userAgent;
+  const iOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const integre = /FBAN|FBAV|Instagram|Snapchat|TikTok|Line\/|WhatsApp|; wv\)|GSA\//.test(ua);
+  const safari = iOS && /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS|OPiOS/.test(ua);
+  const android = /Android/.test(ua);
+
+  function expliquer() {
+    let html;
+    if (integre) {
+      html = '<b>Cette page est ouverte dans une autre appli</b> (scanner, réseau social…), qui ne sait pas installer.'
+        + '<ol><li>Touchez le menu <b>⋮</b> ou <b>⋯</b> de cette fenêtre.</li>'
+        + `<li>Choisissez <b>« Ouvrir dans ${iOS ? 'Safari' : 'Chrome'} »</b>.</li>`
+        + '<li>Revenez toucher ce bouton.</li></ol>';
+    } else if (iOS && !safari) {
+      html = '<b>Sur iPhone, l’installation se fait depuis Safari.</b>'
+        + '<ol><li>Ouvrez cette page dans <b>Safari</b>.</li>'
+        + '<li>Touchez le bouton <b>Partager</b> (le carré avec une flèche vers le haut).</li>'
+        + '<li>Choisissez <b>« Sur l’écran d’accueil »</b>, puis <b>Ajouter</b>.</li></ol>';
+    } else if (iOS) {
+      html = '<ol><li>Touchez le bouton <b>Partager</b> en bas de l’écran (le carré avec une flèche vers le haut).</li>'
+        + '<li>Faites défiler et choisissez <b>« Sur l’écran d’accueil »</b>.</li>'
+        + '<li>Touchez <b>Ajouter</b>. L’icône « Insert Coin » apparaît sur l’écran d’accueil.</li></ol>';
+    } else if (android) {
+      html = '<ol><li>Touchez le menu <b>⋮</b> en haut à droite du navigateur.</li>'
+        + '<li>Choisissez <b>« Installer l’application »</b> (ou <b>« Ajouter à l’écran d’accueil »</b>).</li>'
+        + '<li>Validez. L’icône « Insert Coin » apparaît sur l’écran d’accueil.</li></ol>'
+        + 'Si vous ne voyez pas cette ligne, ouvrez la page dans <b>Chrome</b>.';
+    } else {
+      html = '<ol><li>Dans la barre d’adresse, cliquez sur l’icône <b>d’installation</b> (un écran avec une flèche), à droite.</li>'
+        + '<li>Ou ouvrez le menu <b>⋮</b> du navigateur, puis <b>« Installer Insert Coin »</b>.</li></ol>'
+        + 'L’installation fonctionne avec Chrome et Edge.';
+    }
+    aide.innerHTML = html;
+    aide.hidden = false;
+  }
+
+  bouton.addEventListener('click', async () => {
+    if (!invite) { expliquer(); return; }
+    invite.prompt();
+    try { await invite.userChoice; } catch { /* fenêtre fermée */ }
+    invite = null;
+  });
+})();
 
 /* Service worker : rend le site installable et jouable sans réseau.
    Un échec ici ne doit jamais empêcher de jouer. */
