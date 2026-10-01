@@ -11,6 +11,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isWebSocketUpgrade, upgrade } from './wsproto.js';
 import { handleOpen, handleMessage, handleClose, sweep, stats } from './hub.js';
+import { traiter as traiterSauvegarde } from './sauvegarde.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..', 'public');
@@ -62,7 +63,22 @@ function resolveFile(urlPath) {
   }
 }
 
+/** La sauvegarde en ligne de RAID : même logique que la Function Vercel. */
+function serveSauvegarde(req, res) {
+  const url = new URL(req.url, 'http://x');
+  const morceaux = [];
+  req.on('data', (m) => morceaux.push(m));
+  req.on('end', async () => {
+    let corps = null;
+    try { corps = JSON.parse(Buffer.concat(morceaux).toString('utf8') || 'null'); } catch { /* corps illisible */ }
+    const { statut, json } = await traiterSauvegarde({ methode: req.method, cle: url.searchParams.get('cle'), corps });
+    res.writeHead(statut, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+    res.end(JSON.stringify(json));
+  });
+}
+
 function serveStatic(req, res) {
+  if ((req.url || '').split('?')[0] === '/api/sauvegarde') return serveSauvegarde(req, res);
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.writeHead(405, { 'content-type': 'text/plain' });
     return res.end('Méthode non autorisée');

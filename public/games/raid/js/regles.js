@@ -139,5 +139,6 @@ export function rendreRegles() {
     On ne bute jamais sans fin sur le même mur.</p>
     <p>Quand le jeu est mis à jour, une partie en cours reçoit les nouveautés toute seule : inutile de recommencer.</p>
     <p>La partie est enregistrée à chaque étape, <b>sur cet appareil</b> : vous pouvez fermer le jeu et reprendre plus tard.</p>
-    <p>Pour continuer sur un autre appareil (téléphone, PC), ouvrez <b>📱 Changer d’appareil</b> dans le menu : le jeu affiche un code de 5 caractères, à taper sur l’autre appareil dans les dix minutes.</p>`);
+    <p>Pour jouer la même partie sur plusieurs appareils, ouvrez <b>📱 Mes appareils</b> dans le menu et activez la <b>synchronisation automatique</b> : un code de synchro, à taper une seule fois sur chaque appareil, et la partie suit toute seule. La plus récente gagne.</p>
+    <p>Sans synchronisation, le même écran permet une copie ponctuelle par un code de 5 caractères.</p>`);
 }

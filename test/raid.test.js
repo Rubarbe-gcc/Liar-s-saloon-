@@ -35,6 +35,7 @@ import { makeRng } from '../public/shared/hasard.js';
 import * as T from '../public/shared/raid/talents.js';
 import { versCode, depuisCode } from '../public/games/raid/js/transfert.js';
 import * as relais from '../server/relais.js';
+import * as sauvegarde from '../server/sauvegarde.js';
 import { EVEILS, texteEveil, eveilDe, COUT_EVEIL } from '../public/shared/raid/eveils.js';
 import { RELIQUES, bonusReliques, QUETES } from '../public/shared/raid/reliques.js';
 
@@ -1419,4 +1420,39 @@ test('une vieille sauvegarde reçoit les nouveautés sans rien perdre', () => {
   assert.equal(vieille.format, A.FORMAT, 'le feu de camp ancien est mis à jour lui aussi');
   const fin = jouerAventure(vieille, { maxEtapes: 6000 });
   assert.ok(fin.acte > temoin.acte || fin.victoire, 'la partie continue vers les nouveaux chapitres');
+});
+
+test('la sauvegarde en ligne garde la plus récente, et refuse d’être écrasée par une plus vieille', async () => {
+  sauvegarde.vider();
+  const cle = 'ABCDEFGHJK';
+  const get = (c) => sauvegarde.traiter({ methode: 'GET', cle: c });
+  const put = (corps) => sauvegarde.traiter({ methode: 'PUT', corps });
+
+  assert.equal((await get(cle)).statut, 404, 'rien sous ce code pour l’instant');
+  assert.equal((await get('trop-court')).statut, 400);
+  assert.equal((await put({ cle, charge: 'RAID1.pc', date: 1000 })).statut, 200);
+  // Le code se tape comme on veut : minuscules, tiret.
+  assert.deepEqual((await get('abcde-fghjk')).json, { charge: 'RAID1.pc', date: 1000 });
+
+  assert.equal((await put({ cle, charge: 'RAID1.tel', date: 2000 })).statut, 200, 'le téléphone joue après');
+  const retard = await put({ cle, charge: 'RAID1.vieux', date: 1500 });
+  assert.equal(retard.statut, 409, 'un appareil en retard n’écrase rien');
+  assert.equal(retard.json.charge, 'RAID1.tel', 'et reçoit la partie à jour');
+  assert.equal((await get(cle)).json.charge, 'RAID1.tel');
+
+  assert.equal((await put({ cle, charge: 'x'.repeat(sauvegarde.CHARGE_MAX + 1), date: 3000 })).statut, 400);
+  assert.equal((await put({ cle: 'non', charge: 'a', date: 1 })).statut, 400);
+  assert.equal((await sauvegarde.traiter({ methode: 'DELETE', cle })).statut, 405);
+
+  // Sur Vercel sans base de données, le service dit qu'il n'est pas disponible.
+  process.env.VERCEL = '1';
+  try { assert.equal((await get(cle)).statut, 503); } finally { delete process.env.VERCEL; }
+});
+
+test('aucun personnage n’a deux sorts qui font la même chose', () => {
+  for (const h of [...HEROS, ...LEGENDES]) {
+    const a = h.special.effet ? h.special.effet.type : 'coup';
+    const b = h.ultime.effet ? h.ultime.effet.type : 'coup';
+    assert.notEqual(a, b, `${h.id} : ${h.special.nom} et ${h.ultime.nom} ont le même effet (${a})`);
+  }
 });

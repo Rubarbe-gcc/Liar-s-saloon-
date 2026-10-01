@@ -20,6 +20,7 @@ import { lancerCombat, basculerAuto } from './combat.js';
 import { jouerCinematique } from './cinematique.js';
 import { versCode, depuisCode } from './transfert.js';
 import { deposer, retirer } from './relais.js';
+import * as synchro from './synchro.js';
 import { scenesIntro, scenesBoss, scenesFin, scenesChapitre, CHAPITRES, artBoss } from './histoire.js';
 import { MODELES_PAR_ID } from '../../../shared/raid/ennemis.js';
 import { EVEILS, texteEveil, COUT_EVEIL, eveilDe } from '../../../shared/raid/eveils.js';
@@ -68,11 +69,138 @@ const COULEUR_DIFF = { facile: '#7fc95c', normal: '#e8c060', difficile: '#ff8a3d
 /* Sauvegarde                                                          */
 /* ------------------------------------------------------------------ */
 
+let derniereEcriture = null;   // ce qui a été écrit en dernier, pour ne dater que les vrais changements
+
 function sauver() {
+  const texte = !av || av.termine ? '' : JSON.stringify(av);
   try {
-    if (!av || av.termine) localStorage.removeItem(CLE);
-    else localStorage.setItem(CLE, JSON.stringify(av));
+    if (!texte) localStorage.removeItem(CLE);
+    else localStorage.setItem(CLE, texte);
   } catch { /* stockage plein ou interdit : on joue quand même */ }
+  if (derniereEcriture !== null && texte !== derniereEcriture) {
+    synchro.marquer();
+    planifierEnvoi();
+  }
+  derniereEcriture = texte;
+}
+
+/* ------------------------------------------------------------------ */
+/* Synchronisation entre appareils                                     */
+/* ------------------------------------------------------------------ */
+
+let envoiPrevu = null;
+let etatSynchro = '';
+
+/** Ce que cet appareil a à déposer : la partie en cours (ou son absence) et la progression. */
+const chargeCourante = () => versCode(av && !av.termine ? av : { version: 2, vide: true, groupe: [{ id: 'aucun' }] }, progres);
+
+function direSynchro(texte) {
+  etatSynchro = texte;
+  const el = document.getElementById('sy-etat');
+  if (el) el.textContent = texte;
+}
+
+/** Remplace la partie de cet appareil par celle reçue. */
+async function adopter(charge, date) {
+  const r = await depuisCode(charge);
+  if (!r.ok) return false;
+  if (r.progression) {
+    progres.max = Math.max(progres.max, Math.min(ACTES.length, r.progression.max | 0));
+    progres.fini = progres.fini || !!r.progression.fini;
+    try { localStorage.setItem(CLE_PROGRES, JSON.stringify(progres)); } catch { /* ignore */ }
+  }
+  if (r.partie.vide) av = null;
+  else if (r.partie.groupe.every((p) => PAR_ID[p.id])) { av = r.partie; A.mettreAJour(av); }
+  else return false;
+  finJouee = false;
+  derniereEcriture = null;       // cette écriture vient d'ailleurs : elle n'est pas à renvoyer
+  sauver();
+  synchro.marquer(date);
+  return true;
+}
+
+async function envoyer({ survie = false } = {}) {
+  clearTimeout(envoiPrevu);
+  envoiPrevu = null;
+  if (!synchro.relie()) return;
+  const r = await synchro.pousser(await chargeCourante(), synchro.dateLocale() || Date.now(), { survie });
+  if (r.ok) direSynchro(`Synchronisé à ${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}.`);
+  else if (r.plusRecente) await recevoir(r.plusRecente);
+  else direSynchro(r.hors ? 'Hors connexion : la partie sera envoyée au retour du réseau.' : r.msg);
+}
+
+function planifierEnvoi() {
+  if (!synchro.relie()) return;
+  clearTimeout(envoiPrevu);
+  envoiPrevu = setTimeout(envoyer, 2500);
+}
+
+/** Une partie plus récente existe en ligne : on la prend, et on revient au menu. */
+async function recevoir({ charge, date }) {
+  if (!(await adopter(charge, date))) return false;
+  direSynchro('Partie reprise depuis un autre appareil.');
+  toast('🔄 Partie reprise depuis votre autre appareil.');
+  aller('menu');
+  return true;
+}
+
+/** Au lancement et à chaque retour sur l'application : la plus récente des deux gagne. */
+async function synchroniser() {
+  if (!synchro.relie()) return;
+  const r = await synchro.tirer();
+  if (r.ok && r.date > synchro.dateLocale()) { await recevoir(r); return; }
+  if (r.ok || r.vide) {
+    if (!r.ok || synchro.dateLocale() > r.date) await envoyer();
+    else direSynchro('À jour.');
+    return;
+  }
+  direSynchro(r.hors ? 'Hors connexion : synchronisation au retour du réseau.' : r.msg);
+}
+
+function rendreSynchro() {
+  const on = synchro.relie();
+  $('sy-off').hidden = on;
+  $('sy-on').hidden = !on;
+  if (on) {
+    $('sy-code').textContent = synchro.joli(synchro.code());
+    $('sy-etat').textContent = etatSynchro || 'Relié.';
+  }
+  $('sy-message').textContent = '';
+}
+
+async function activerSynchro() {
+  const msg = $('sy-message');
+  msg.textContent = 'Activation…';
+  synchro.definirCode(synchro.nouveauCode());
+  synchro.marquer();
+  const r = await synchro.pousser(await chargeCourante(), synchro.dateLocale());
+  if (!r.ok) {
+    synchro.oublier();
+    msg.textContent = `⚠ ${r.indisponible ? 'La synchronisation n’est pas encore activée sur le site. En attendant, utilisez la copie ci-dessous.' : r.msg}`;
+    return;
+  }
+  sfx.victoire();
+  direSynchro('Relié. La partie de cet appareil est en ligne.');
+  rendreSynchro();
+}
+
+async function relierSynchro() {
+  const msg = $('sy-message');
+  const c = synchro.normaliser($('sy-saisie').value);
+  if (c.length !== synchro.LONGUEUR) { msg.textContent = '⚠ Le code de synchro fait 10 caractères.'; return; }
+  msg.textContent = 'Recherche…';
+  const r = await synchro.tirer(c);
+  if (!r.ok) {
+    msg.textContent = `⚠ ${r.vide ? 'Aucune partie sous ce code. Vérifiez-le sur l’autre appareil.' : r.indisponible ? 'La synchronisation n’est pas encore activée sur le site.' : r.msg}`;
+    return;
+  }
+  if (av && !av.termine && !confirm('Cet appareil a déjà une partie en cours. La remplacer par celle de vos autres appareils ?')) { msg.textContent = ''; return; }
+  synchro.definirCode(c);
+  if (!(await adopter(r.charge, r.date))) { synchro.oublier(); msg.textContent = '⚠ Sauvegarde illisible. Rechargez la page et réessayez.'; return; }
+  sfx.victoire();
+  direSynchro('Relié. Partie reprise depuis vos autres appareils.');
+  toast('🔄 Appareil relié : la partie est là.');
+  aller('menu');
 }
 
 function charger() {
@@ -157,6 +285,9 @@ function rendreMenu() {
     $('continuer-note').textContent = `${A.difficulteDe(av).glyphe} ${A.difficulteDe(av).nom} · ${h.nom} · niveau ${h.niveau} · chapitre ${av.acte}/${ACTES.length}`
       + (av.groupe.length > 1 ? ` · ${av.groupe.length} dans le groupe` : ' · seul');
   }
+  $('transfert-note').textContent = synchro.relie()
+    ? `Synchronisation active${etatSynchro ? ` · ${etatSynchro}` : ''}`
+    : 'Jouer la même partie sur téléphone et sur PC';
   const maj = $('maj-partie');
   maj.hidden = !(ok && nouveautes.length);
   if (!maj.hidden) {
@@ -256,6 +387,7 @@ function rendreTransfert() {
     : `Pas de partie en cours sur cet appareil. Le code emportera seulement vos chapitres débloqués (${progres.max}/${ACTES.length}).`;
   $('tr-sortie').hidden = true;
   $('tr-message').textContent = '';
+  rendreSynchro();
   annulerDepot();
   $('tr-court').hidden = true;
   $('tr-envoyer').hidden = false;
@@ -1064,6 +1196,15 @@ function brancher() {
     try { $('tr-entree').value = await navigator.clipboard.readText(); } catch { toast('Collez le code à la main dans la case.'); }
   });
   $('tr-charger').addEventListener('click', () => chargerCode());
+  $('sy-activer').addEventListener('click', () => { debloquer(); sfx.clic(); activerSynchro(); });
+  $('sy-relier').addEventListener('click', () => { debloquer(); sfx.clic(); relierSynchro(); });
+  $('sy-saisie').addEventListener('keydown', (e) => { if (e.key === 'Enter') relierSynchro(); });
+  $('sy-maintenant').addEventListener('click', async () => { sfx.clic(); direSynchro('Synchronisation…'); await synchroniser(); });
+  $('sy-couper').addEventListener('click', () => {
+    if (!confirm('Délier cet appareil ? La partie reste ici, mais ne suivra plus les autres appareils.')) return;
+    synchro.oublier();
+    rendreSynchro();
+  });
   $('tr-envoyer').addEventListener('click', () => { debloquer(); sfx.clic(); envoyerParRelais(); });
   $('tr-recevoir').addEventListener('click', () => { debloquer(); sfx.clic(); recevoirParRelais(); });
   $('tr-saisie').addEventListener('keydown', (e) => { if (e.key === 'Enter') recevoirParRelais(); });
@@ -1071,7 +1212,14 @@ function brancher() {
 }
 
 av = charger();
+derniereEcriture = !av || av.termine ? '' : JSON.stringify(av);
 brancher();
+// Un appareil relié prend la partie la plus récente dès l'ouverture, puis à
+// chaque retour dessus ; en le quittant, il dépose ce qui reste à envoyer.
+synchroniser().then(rendreMenu);
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { if (envoiPrevu) envoyer({ survie: true }); } else synchroniser();
+});
 installerMusique('raid', { actif: sonActif });
 rendreMenu();
 

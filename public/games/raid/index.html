@@ -52,7 +52,7 @@
       </button>
       <button class="btn btn-big" data-go="transfert">
         <span class="bi">📱</span>
-        <span class="bt"><b>Changer d’appareil</b><i>Reprendre sa partie sur un téléphone ou un PC</i></span>
+        <span class="bt"><b>Mes appareils</b><i id="transfert-note">Jouer la même partie sur téléphone et sur PC</i></span>
       </button>
       <div class="menu-row">
         <button class="btn btn-thin" data-go="regles"><span class="bi">❓</span> Règles</button>
@@ -174,10 +174,34 @@
     <header class="page-head">
       <button class="retour" data-go="menu" aria-label="Retour">‹</button>
       <div>
-        <h2 class="page-titre">Changer d’appareil</h2>
-        <p class="page-sous">Un code de 5 caractères suffit pour emporter sa partie.</p>
+        <h2 class="page-titre">Mes appareils</h2>
+        <p class="page-sous">Jouer la même partie sur le téléphone et sur l’ordinateur.</p>
       </div>
     </header>
+
+    <div class="regle-bloc" id="sy-bloc">
+      <h3>🔄 Synchronisation automatique</h3>
+      <div id="sy-off">
+        <p>Reliez vos appareils une seule fois : ensuite la partie suit toute seule, dans les deux sens.</p>
+        <button class="btn btn-go btn-wide" id="sy-activer">Activer sur cet appareil</button>
+        <p class="tr-ou">— ou, si un autre appareil est déjà relié —</p>
+        <input class="tr-saisie sy-saisie" id="sy-saisie" maxlength="11" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCDE-FGHJK" aria-label="Code de synchro">
+        <button class="btn btn-ghost btn-wide" id="sy-relier">Relier cet appareil avec ce code</button>
+      </div>
+      <div id="sy-on" hidden>
+        <p>Cet appareil est relié. Son code de synchro :</p>
+        <div class="tr-gros sy-code" id="sy-code">—</div>
+        <p class="fp-note">Tapez ce code <b>une seule fois</b> sur vos autres appareils, dans ce même écran. Gardez-le pour vous : il donne accès à votre partie.</p>
+        <p class="fp-note" id="sy-etat">—</p>
+        <div class="tr-actions">
+          <button class="btn btn-ghost" id="sy-maintenant">Synchroniser</button>
+          <button class="btn btn-ghost" id="sy-couper">Délier</button>
+        </div>
+      </div>
+      <p class="fp-note" id="sy-message"></p>
+    </div>
+
+    <h3 class="section">Copier une fois, sans synchroniser</h3>
 
     <div class="regle-bloc">
       <h3>📤 J’ai ma partie sur cet appareil</h3>
