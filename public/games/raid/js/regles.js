@@ -98,7 +98,7 @@ export function rendreRegles() {
       <li><b>Lui payer la route</b> : retour assuré, avec l’éveil. Le prix suit le chapitre : ${prixViatique({ acte: 2 })} or au chapitre 2, puis ${prixViatique({ acte: 3 }) - prixViatique({ acte: 2 })} de plus à chaque chapitre (${prixViatique({ acte: 10 })} or au dernier).</li>
       <li><b>Le retenir</b> : le groupe reste entier, au prix d’un peu de chance.</li>
     </ul>
-    <p>Sa place l’attend : personne ne peut la prendre pendant son voyage.</p>
+    <p>Sa place l’attend : personne ne peut la prendre pendant son voyage. Un compagnon ne s’éveille qu’une fois : une fois revenu, il n’est plus jamais rappelé.</p>
     <p>L’éveil débloque aussi une <b>compétence d’éveil</b> (${COUT_EVEIL} PM) : un troisième sort, puissant, <b>propre à chaque personnage</b>. Elle est annoncée avant de choisir, et se lit ensuite sur sa fiche.</p>`)
     + bloc('Talents', `
     <p>Chaque niveau gagné donne <b>un point de talent</b> au personnage. Il se dépense dans l’écran du groupe :

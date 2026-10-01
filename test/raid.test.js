@@ -1456,3 +1456,31 @@ test('payer la route coûte un montant fixe, qui suit le chapitre', () => {
   assert.equal(av.or, 2000 - 170, 'le prix ne dépend pas de la bourse');
   assert.equal(av.absents[0].adieu, false, 'retour garanti');
 });
+
+test('un compagnon déjà éveillé ne repart pas en voyage', () => {
+  let departs = 0;
+  for (let seed = 0; seed < 300; seed++) {
+    const av = A.creerAventure({ heros: 'kaelis', seed });
+    av.acte = 3;
+    av.groupe.push(creerPersonnage('brandel', 6), creerPersonnage('mei', 6), creerPersonnage('pix', 6));
+    av.groupe[1].eveil = true;
+    av.groupe[3].eveil = true;
+    av.carte.noeuds.find((n) => n.rangee === 0).type = 'evenement';
+    A.entrer(av, av.carte.noeuds.find((n) => n.rangee === 0).id);
+    if (av.etape.type !== 'depart') continue;
+    departs++;
+    assert.equal(av.groupe[av.etape.idx].id, 'mei', 'seul le compagnon pas encore éveillé peut partir');
+  }
+  assert.ok(departs > 50, 'l’appel arrive toujours pour ceux qui restent');
+
+  // Tout le monde est éveillé : plus aucun appel.
+  for (let seed = 0; seed < 150; seed++) {
+    const av = A.creerAventure({ heros: 'kaelis', seed });
+    av.acte = 3;
+    av.groupe.push(creerPersonnage('brandel', 6), creerPersonnage('mei', 6));
+    for (const p of av.groupe.slice(1)) p.eveil = true;
+    av.carte.noeuds.find((n) => n.rangee === 0).type = 'evenement';
+    A.entrer(av, av.carte.noeuds.find((n) => n.rangee === 0).id);
+    assert.notEqual(av.etape.type, 'depart');
+  }
+});

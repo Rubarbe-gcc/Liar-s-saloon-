@@ -883,10 +883,13 @@ export const EVENEMENTS = [
 export const EVENEMENTS_PAR_ID = Object.fromEntries(EVENEMENTS.map((e) => [e.id, e]));
 
 function ouvrirEvenement(av) {
-  if (av.acte >= ACTE_ABSENCES && av.groupe.length >= 2 && !(av.absents || []).length
+  // Seul un compagnon qui n'a pas encore fait son voyage peut être appelé :
+  // on ne s'éveille qu'une fois.
+  const partants = av.groupe.map((p, idx) => ({ p, idx })).filter((x) => x.idx >= 1 && !x.p.eveil);
+  if (av.acte >= ACTE_ABSENCES && partants.length && !(av.absents || []).length
       && av.departActe !== av.acte && rng(av)() < CHANCE_ABSENCE) {
     av.departActe = av.acte;
-    av.etape = { type: 'depart', idx: 1 + entier(av, av.groupe.length - 1), histoire: piocher(av, HISTOIRES).id };
+    av.etape = { type: 'depart', idx: piocher(av, partants).idx, histoire: piocher(av, HISTOIRES).id };
     return;
   }
   let pot = EVENEMENTS.filter((ev) => !av.evenementsVus.includes(ev.id)

@@ -56,6 +56,39 @@
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js', { scope: '/' }).then(verifier).catch(() => { /* le site marche sans */ });
   });
+  /* Le numéro de version, en bas à droite du menu de chaque jeu : un repère
+     pour savoir d'un coup d'œil si deux appareils sont sur la même. Il se lit
+     dans le nom du cache que le service worker tient à jour. */
+  async function versionCourante() {
+    try {
+      const noms = (await caches.keys()).filter((n) => n.startsWith('insert-coin-v'));
+      const n = Math.max(...noms.map((x) => Number(x.slice('insert-coin-v'.length)) || 0));
+      return n > 0 ? `v${n}` : '';
+    } catch { return ''; }
+  }
+
+  function afficherVersion() {
+    if (!location.pathname.startsWith('/games/')) return;
+    const e = document.createElement('div');
+    e.id = 'version-appli';
+    e.setAttribute('aria-label', 'Version de l’application');
+    e.style.cssText = 'position:fixed;right:calc(8px + env(safe-area-inset-right,0px));bottom:calc(6px + env(safe-area-inset-bottom,0px));z-index:30;'
+      + 'font:11px/1 ui-monospace,Consolas,monospace;letter-spacing:.06em;color:rgba(255,255,255,.42);pointer-events:none;user-select:none';
+    document.body.appendChild(e);
+    // Seulement sur le menu du jeu : en partie, le coin est occupé.
+    const surMenu = () => !!document.querySelector('#s-menu.is-active, #screen-menu.is-active, #e-menu.actif');
+    const rafraichir = async () => {
+      e.hidden = !surMenu();
+      if (!e.hidden) e.textContent = await versionCourante();
+    };
+    new MutationObserver(rafraichir).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'] });
+    navigator.serviceWorker.addEventListener('controllerchange', rafraichir);
+    rafraichir();
+    // Au tout premier lancement, le cache se remplit quelques secondes après.
+    setTimeout(rafraichir, 4000);
+  }
+  if (document.body) afficherVersion(); else addEventListener('DOMContentLoaded', afficherVersion);
+
   // À chaque retour sur l'application, et toutes les demi-heures tant qu'elle reste ouverte.
   document.addEventListener('visibilitychange', () => { if (!document.hidden) verifier(); });
   setInterval(verifier, 30 * 60 * 1000);
