@@ -19,7 +19,7 @@ import {
   creerPersonnage, gagnerXp, statsDe, borner, DEPARTS, NIVEAU_MAX, SEUILS_XP,
 } from './personnages.js';
 import {
-  pieceAuHasard, valeurPiece, texteBonus, forgerTrophee, TROPHEES, CHANCE_TROPHEE_ELITE,
+  pieceAuHasard, valeurPiece, texteBonus, forgerTrophee, TROPHEES, CHANCE_TROPHEE_ELITE, CHANCE_TROPHEE_BOSS,
 } from './equipement.js';
 import { genererCarte, accessibles, noeud, composer, ACTES, TYPES, RANGEES } from './carte.js';
 import { OBJETS, creerBataille } from './bataille.js';
@@ -422,15 +422,18 @@ export function conclureCombat(av, victoire) {
     relique = gagnerRelique(av);
   }
 
-  // Les trophées : un boss lâche toujours le sien, une élite parfois. Ils
-  // vont droit dans le sac, en plus de la pièce à choisir.
-  const trophees = [];
-  for (const e of ennemis) {
-    if (!TROPHEES[e.modeleId]) continue;
-    if (e.rang === 'boss' || (e.rang === 'elite' && rng(av)() < CHANCE_TROPHEE_ELITE)) {
-      const t = forgerTrophee(e.modeleId, acte, rng(av));
-      av.sac.push(t);
-      trophees.push(t.uid);
+  // Les trophées : jamais garantis. Quand le sort en décide, l'un d'eux prend
+  // la place d'une des pièces à choisir. Le boss lâche le sien, quatre fois sur
+  // dix. Une élite (dans sa salle ou en embuscade) le fait plus rarement :
+  // le sien, ou celui d'un boss que le groupe a déjà vaincu.
+  const chef = ennemis.find((e) => e.rang === 'boss') || ennemis.find((e) => e.rang === 'elite');
+  if (chef && pieces.length) {
+    const deBoss = chef.rang === 'boss';
+    if (rng(av)() < (deBoss ? CHANCE_TROPHEE_BOSS : CHANCE_TROPHEE_ELITE)) {
+      const vaincus = (av.bossVus || []).filter((id) => TROPHEES[id]);
+      const qui = deBoss || !vaincus.length || rng(av)() < 0.5 ? chef.modeleId : piocher(av, vaincus);
+      const t = forgerTrophee(qui, acte, rng(av));
+      if (t) pieces[0] = t;
     }
   }
 
@@ -439,7 +442,7 @@ export function conclureCombat(av, victoire) {
   if (intact) avancerQuete(av, 'intacts', 1);
   if (salle === 'chasse' || salle === 'embuscade') avancerQuete(av, 'chasses', 1);
 
-  av.etape = { type: 'recompense', salle, xp, or, pieces, relique: relique ? relique.id : null, trophees };
+  av.etape = { type: 'recompense', salle, xp, or, pieces, relique: relique ? relique.id : null };
   return { ok: true, etape: av.etape };
 }
 

@@ -758,14 +758,9 @@ function etapeRecompense(e) {
     }).join('') + `<button class="mini-btn" data-prendre="${it.uid}" data-idx="">Au sac</button>`;
     return cartePiece(it, { actions, note: conseil !== null ? `idéal pour ${av.groupe[conseil].nom}` : '' });
   }).join('');
-  // Les trophées sont déjà dans le sac : on propose seulement de les porter.
-  const prises = (e.trophees || []).map((uid) => av.sac.find((x) => x.uid === uid)).filter(Boolean);
-  const trophees = prises.length
-    ? `<h3 class="section">Trophée${prises.length > 1 ? 's' : ''}</h3><div class="et-liste">${prises.map((it) => cartePiece(it, { actions: boutonsEquiper(it), note: 'déjà dans le sac' })).join('')}</div>` : '';
   return tete(e.salle === 'boss' ? '👑' : '🏆', titre)
     + `<div class="et-effet">+${e.or} pièces d’or</div>`
     + `<div class="gains">${gains}</div>`
-    + trophees
     + (e.relique ? `<h3 class="section">Relique du boss</h3><div class="et-liste">${carteRelique(A.RELIQUES_PAR_ID[e.relique])}</div>` : '')
     + (e.pieces.length ? `<h3 class="section">Butin — une pièce au choix</h3><div class="et-liste">${pieces}</div>` : '')
     + `<button class="btn ${e.pieces.length ? 'btn-ghost' : 'btn-go'} btn-wide" id="b-rien">${e.pieces.length ? 'Ne rien prendre' : 'Continuer'}</button>`;

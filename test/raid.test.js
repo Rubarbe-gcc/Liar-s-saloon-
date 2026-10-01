@@ -1307,35 +1307,54 @@ test('chaque boss et chaque élite a son trophée, à son nom', () => {
   assert.ok(RARETES.boss.facteur > RARETES.legendaire.facteur);
 });
 
-test('un boss lâche toujours son trophée, une élite parfois, et jamais ailleurs', () => {
-  const av = A.creerAventure({ heros: 'mordrec', seed: 30 });
-  av.acte = 2;
-  av.etape = { type: 'combat', salle: 'boss', ennemis: composer(rngT(1), 2, 'boss') };
-  A.conclureCombat(av, true);
-  assert.equal(av.etape.trophees.length, 1);
-  const t = av.sac.find((x) => x.uid === av.etape.trophees[0]);
-  assert.equal(t.trophee, 'vorgath');
-  assert.equal(t.rarete, 'boss');
-  A.prendreRecompense(av);
-  assert.ok(av.sac.includes(t), 'il reste dans le sac même sans rien choisir');
+test('un trophée n’est jamais garanti : il tombe parfois, parmi les pièces à choisir', () => {
+  const N = 400;
+  const tirer = (salle, acte, ennemis, vaincus = []) => {
+    let trophees = 0, duBoss = 0;
+    for (let seed = 0; seed < N; seed++) {
+      const x = A.creerAventure({ heros: 'mordrec', seed });
+      x.acte = acte;
+      x.bossVus = [...vaincus];
+      x.etape = { type: 'combat', salle, ennemis: ennemis(seed) };
+      const sac = x.sac.length;
+      A.conclureCombat(x, true);
+      assert.equal(x.sac.length, sac, 'rien n’arrive dans le sac sans qu’on l’ait choisi');
+      const t = x.etape.pieces.filter((p) => p.rarete === 'boss');
+      assert.ok(t.length <= 1);
+      if (t.length) {
+        trophees++;
+        if (MODELES_PAR_ID[t[0].trophee].rang === 'boss') {
+          duBoss++;
+          if (salle !== 'boss') assert.ok(vaincus.includes(t[0].trophee), 'seulement un boss déjà vaincu');
+        }
+        // Il se prend comme une autre pièce : c'est un choix.
+        A.prendreRecompense(x, t[0].uid);
+        assert.ok(x.sac.includes(t[0]));
+      }
+    }
+    return { part: trophees / N, duBoss: duBoss / Math.max(1, trophees) };
+  };
+  const boss = tirer('boss', 2, (s) => composer(rngT(s), 2, 'boss'));
+  const elite = tirer('elite', 3, (s) => composer(rngT(s), 3, 'elite'), ['morvase', 'vorgath']);
+  const embuscade = tirer('embuscade', 3, (s) => composer(rngT(s), 3, 'elite'), ['morvase', 'vorgath']);
+  const debut = tirer('elite', 1, (s) => composer(rngT(s), 1, 'elite'));
+  assert.ok(boss.part > 0.32 && boss.part < 0.48, `boss : ${Math.round(boss.part * 100)} %`);
+  assert.equal(boss.duBoss, 1, 'le boss ne lâche que le sien');
+  assert.ok(elite.part > 0.12 && elite.part < 0.28, `élite : ${Math.round(elite.part * 100)} %`);
+  assert.ok(boss.part > elite.part * 1.5, 'le boss le lâche nettement plus souvent qu’une élite');
+  assert.ok(elite.duBoss > 0.3 && elite.duBoss < 0.7, 'une élite lâche le sien, ou celui d’un boss déjà vaincu');
+  assert.ok(embuscade.part > 0.12 && embuscade.part < 0.28, 'une embuscade compte comme une élite');
+  assert.equal(debut.duBoss, 0, 'aucun trophée de boss tant qu’aucun boss n’est tombé');
 
-  let trouves = 0;
-  const N = 300;
-  for (let seed = 0; seed < N; seed++) {
-    const x = A.creerAventure({ heros: 'mordrec', seed });
-    x.etape = { type: 'combat', salle: 'elite', ennemis: composer(rngT(seed), 1, 'elite') };
-    A.conclureCombat(x, true);
-    trouves += x.etape.trophees.length;
-    // Chez le marchand et dans les coffres : jamais de trophée.
-    x.etape = null;
-    for (let i = 0; i < 6; i++) assert.notEqual(pieceAuHasard(A.rng(x), 3, { chance: 40, faveur: 3 }).rarete, 'boss');
-  }
-  assert.ok(trouves / N > 0.25 && trouves / N < 0.45, `${trouves} trophées d’élite sur ${N}`);
-
+  // Ni les monstres ordinaires, ni les marchands, ni les coffres.
   const banal = A.creerAventure({ heros: 'mordrec', seed: 1 });
-  banal.etape = { type: 'combat', salle: 'combat', ennemis: [gnoll()] };
-  A.conclureCombat(banal, true);
-  assert.equal(banal.etape.trophees.length, 0);
+  for (let i = 0; i < 60; i++) {
+    banal.etape = { type: 'combat', salle: 'combat', ennemis: [gnoll()] };
+    A.conclureCombat(banal, true);
+    assert.ok(banal.etape.pieces.every((p) => p.rarete !== 'boss'));
+    banal.etape = null;
+    assert.notEqual(pieceAuHasard(A.rng(banal), 3, { chance: 40, faveur: 3 }).rarete, 'boss');
+  }
 });
 
 /* ================================================================== */

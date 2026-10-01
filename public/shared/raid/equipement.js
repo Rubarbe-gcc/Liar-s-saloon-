@@ -91,8 +91,15 @@ export const TROPHEES = {
   tisseuse: { nom: 'Soie de la Tisseuse', emplacement: 'armure', glyphe: '🕸', def: 2, vit: 1, crit: 3 },
 };
 
-/** Chance qu'une élite lâche son trophée. Un boss le lâche toujours. */
-export const CHANCE_TROPHEE_ELITE = 0.35;
+/**
+ * Un trophée ne tombe pas à tous les coups. Quand il tombe, il prend la place
+ * d'une des pièces à choisir : il faut encore le préférer aux autres.
+ *   • sur le boss du chapitre : son propre trophée, quatre fois sur dix ;
+ *   • sur une élite (salle ou embuscade) : une fois sur cinq, le sien ou
+ *     celui d'un boss déjà vaincu.
+ */
+export const CHANCE_TROPHEE_BOSS = 0.4;
+export const CHANCE_TROPHEE_ELITE = 0.2;
 
 /** Le trophée d'un boss ou d'une élite, forgé pour le chapitre où il est tombé. */
 export function forgerTrophee(modeleId, acte = 1, rng = Math.random) {

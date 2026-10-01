@@ -19,7 +19,7 @@ import { TRAITS_RPG, pc } from './textes.js';
 import { RANG_MAX, SEUIL_PALIER } from '../../../shared/raid/talents.js';
 import { RELIQUES, QUETES } from '../../../shared/raid/reliques.js';
 import { COUT_EVEIL } from '../../../shared/raid/eveils.js';
-import { RARETES, ORDRE_RARETES, TROPHEES, CHANCE_TROPHEE_ELITE } from '../../../shared/raid/equipement.js';
+import { RARETES, ORDRE_RARETES, TROPHEES, CHANCE_TROPHEE_ELITE, CHANCE_TROPHEE_BOSS } from '../../../shared/raid/equipement.js';
 import { LEGENDES } from '../../../shared/raid/heros.js';
 import { sortsDe } from '../../../shared/raid/personnages.js';
 import { texteSort, nomRole } from './textes.js';
@@ -74,7 +74,7 @@ export function rendreRegles() {
     Gérez l’équipement depuis l’écran du groupe.</p>
     <p>La rareté <b style="color:${RARETES.boss.teinte}">BOSS</b> est à part : ce sont des <b>trophées</b>, une pièce
     unique par boss et par élite, à son nom, avec des caractéristiques qui lui ressemblent. On ne les trouve
-    que sur lui : un boss lâche toujours le sien, une élite ${pc(CHANCE_TROPHEE_ELITE)} du temps. Il en existe
+    sur eux, et pas à tous les coups : un boss a ${pc(CHANCE_TROPHEE_BOSS)} de chances de proposer le sien parmi les pièces à choisir ; une élite (dans sa salle ou en embuscade), ${pc(CHANCE_TROPHEE_ELITE)} de proposer le sien ou celui d’un boss que vous avez déjà vaincu. Il en existe
     ${Object.keys(TROPHEES).length}.</p>
     <p>La <b>chance</b> (${CHANCE_DEPART} au départ) fait réussir les choix risqués, tomber de meilleures
     pièces et rend les critiques plus fréquents.</p>`)
