@@ -852,3 +852,15 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .tr-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
 .tr-actions .btn { justify-content: center; padding: 11px 10px; font-size: 14px; }
 #tr-message { color: #ffb35c; min-height: 1.2em; }
+
+/* Chapitres : flèches et points, pour défiler aussi à la souris. */
+.chapitres { padding-left: calc(50% - min(190px, 41vw)); padding-right: calc(50% - min(190px, 41vw)); margin: 0; }
+.chapitre { flex: 0 0 auto; width: min(380px, 82vw); max-width: none; }
+.chap-nav { display: flex; align-items: center; justify-content: center; gap: 14px; margin-top: 4px; }
+.chap-fleche {
+  width: 44px; height: 44px; border-radius: 50%; font-size: 24px; line-height: 1;
+  background: var(--carte); border: 1px solid var(--bord); box-shadow: 0 4px 0 rgba(0,0,0,.45);
+}
+.chap-fleche:disabled { opacity: .3; pointer-events: none; }
+.chap-points i { cursor: pointer; }
+.chap-points i.ouvert { cursor: pointer; }

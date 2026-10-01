@@ -311,7 +311,7 @@ function rendreChapitres() {
       </div>` : ''}
     </article>`;
   }).join('');
-  $('chap-points').innerHTML = ACTES.map((_, i) => `<i class="${i + 1 <= progres.max ? 'ouvert' : ''}"></i>`).join('');
+  $('chap-points').innerHTML = ACTES.map((_, i) => `<i class="${i + 1 <= progres.max ? 'ouvert' : ''}" title="Chapitre ${i + 1}"></i>`).join('');
 
   const zone = $('chapitres');
   for (const el of zone.querySelectorAll('[data-chap-revoir]')) {
@@ -328,20 +328,45 @@ function rendreChapitres() {
   for (const el of zone.querySelectorAll('[data-chap-continuer]')) {
     el.addEventListener('click', () => { sfx.clic(); suite(); });
   }
-  // On s'ouvre sur le chapitre en cours, ou sur le dernier débloqué.
-  const cible = zone.querySelector(`[data-n="${enCours || progres.max}"]`);
-  if (cible) zone.scrollLeft = cible.offsetLeft - (zone.clientWidth - cible.clientWidth) / 2;
+  // Les positions se mesurent à l'écran : c'est juste quelle que soit la mise
+  // en page autour (téléphone, ordinateur, fenêtre étroite).
+  const cartes = [...zone.children];
   const points = [...$('chap-points').children];
+  const centre = (el) => { const r = el.getBoundingClientRect(); return r.left + r.width / 2; };
+  const proche = () => {
+    const milieu = centre(zone);
+    let i = 0, ecart = Infinity;
+    cartes.forEach((c, k) => { const d = Math.abs(centre(c) - milieu); if (d < ecart) { ecart = d; i = k; } });
+    return i;
+  };
+  const allerA = (i, doux = true) => {
+    const c = cartes[Math.max(0, Math.min(cartes.length - 1, i))];
+    const but = zone.scrollLeft + centre(c) - centre(zone);
+    zone.scrollTo({ left: but, behavior: doux ? 'smooth' : 'auto' });
+    // Certains navigateurs n'animent pas le défilement doux : on s'assure d'arriver.
+    setTimeout(() => {
+      if (doux && Math.abs(centre(c) - centre(zone)) > 8) zone.scrollTo({ left: but, behavior: 'auto' });
+      marquer();
+    }, doux ? 450 : 0);
+  };
   const marquer = () => {
-    const milieu = zone.scrollLeft + zone.clientWidth / 2;
-    let proche = 0, ecart = Infinity;
-    [...zone.children].forEach((c, i) => {
-      const d = Math.abs(c.offsetLeft + c.clientWidth / 2 - milieu);
-      if (d < ecart) { ecart = d; proche = i; }
-    });
-    points.forEach((p, i) => p.classList.toggle('ici', i === proche));
+    const i = proche();
+    points.forEach((p, k) => p.classList.toggle('ici', k === i));
+    $('chap-prec').disabled = i === 0;
+    $('chap-suiv').disabled = i === cartes.length - 1;
   };
   zone.onscroll = marquer;
+  $('chap-prec').onclick = () => allerA(proche() - 1);
+  $('chap-suiv').onclick = () => allerA(proche() + 1);
+  points.forEach((p, k) => { p.onclick = () => allerA(k); });
+  // À la souris, la molette fait défiler les chapitres.
+  zone.onwheel = (ev) => {
+    if (Math.abs(ev.deltaY) <= Math.abs(ev.deltaX)) return;
+    ev.preventDefault();
+    allerA(proche() + (ev.deltaY > 0 ? 1 : -1));
+  };
+  // On s'ouvre sur le chapitre en cours, ou sur le dernier débloqué.
+  allerA((enCours || progres.max) - 1, false);
   marquer();
 }
 
