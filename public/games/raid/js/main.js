@@ -19,6 +19,7 @@ import { spriteSvg } from '../../../shared/raid/sprites.js';
 import { lancerCombat, basculerAuto } from './combat.js';
 import { jouerCinematique } from './cinematique.js';
 import { versCode, depuisCode } from './transfert.js';
+import { deposer, retirer } from './relais.js';
 import { scenesIntro, scenesBoss, scenesFin, scenesChapitre, CHAPITRES, artBoss } from './histoire.js';
 import { MODELES_PAR_ID } from '../../../shared/raid/ennemis.js';
 import { EVEILS, texteEveil, COUT_EVEIL, eveilDe } from '../../../shared/raid/eveils.js';
@@ -99,6 +100,7 @@ const RENDUS = {
 };
 
 function aller(nom) {
+  if (nom !== 'transfert') { annulerDepot(); annulerDepot = () => {}; clearInterval(compteARebours); }
   for (const s of document.querySelectorAll('.screen')) s.classList.toggle('is-active', s.id === `s-${nom}`);
   if (RENDUS[nom]) RENDUS[nom]();
   scrollTo(0, 0);
@@ -244,6 +246,66 @@ function rendreTransfert() {
     : `Pas de partie en cours sur cet appareil. Le code emportera seulement vos chapitres débloqués (${progres.max}/${ACTES.length}).`;
   $('tr-sortie').hidden = true;
   $('tr-message').textContent = '';
+  annulerDepot();
+  $('tr-court').hidden = true;
+  $('tr-envoyer').hidden = false;
+  $('tr-saisie').value = '';
+}
+
+/* Le code court : la partie passe par le relais du site. */
+let annulerDepot = () => {};
+let compteARebours = null;
+
+async function envoyerParRelais() {
+  annulerDepot();
+  clearInterval(compteARebours);
+  $('tr-envoyer').hidden = true;
+  $('tr-court').hidden = false;
+  $('tr-gros').textContent = '· · · · ·';
+  $('tr-court-note').textContent = 'Connexion au serveur…';
+  const partie = av && !av.termine ? av : { version: 2, vide: true, groupe: [{ id: 'aucun' }] };
+  const charge = await versCode(partie, progres);
+  annulerDepot = await deposer(charge, {
+    surCode: (code, duree) => {
+      $('tr-gros').textContent = code.split('').join(' ');
+      const fin = Date.now() + duree;
+      const dire = () => {
+        const reste = Math.max(0, Math.ceil((fin - Date.now()) / 60000));
+        $('tr-court-note').textContent = reste > 0
+          ? `Tapez ce code sur l’autre appareil. Gardez cet écran ouvert. Valable encore ${reste} min.`
+          : 'Code expiré. Demandez-en un nouveau.';
+        if (reste <= 0) { clearInterval(compteARebours); $('tr-envoyer').hidden = false; }
+      };
+      dire();
+      compteARebours = setInterval(dire, 15000);
+      sfx.butin();
+    },
+    surPris: () => {
+      clearInterval(compteARebours);
+      $('tr-gros').textContent = '✅';
+      $('tr-court-note').textContent = 'Partie récupérée sur l’autre appareil. Elle reste aussi sur celui-ci.';
+      $('tr-envoyer').hidden = false;
+      sfx.victoire();
+    },
+    surErreur: (message) => {
+      clearInterval(compteARebours);
+      $('tr-gros').textContent = '⚠';
+      $('tr-court-note').textContent = `${message} Vous pouvez réessayer, ou utiliser la méthode sans serveur plus bas.`;
+      $('tr-envoyer').hidden = false;
+    },
+  });
+}
+
+async function recevoirParRelais() {
+  const msg = $('tr-message');
+  const code = $('tr-saisie').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code.length !== 5) { msg.textContent = '⚠ Le code fait 5 caractères.'; return; }
+  msg.textContent = 'Recherche de la partie…';
+  try {
+    await chargerCode(await retirer(code));
+  } catch (e) {
+    msg.textContent = `⚠ ${e.message}`;
+  }
 }
 
 /** Le code de ce qui est enregistré ici : la partie en cours et la progression. */
@@ -255,9 +317,9 @@ async function codeCourant() {
   return code;
 }
 
-async function chargerCode() {
+async function chargerCode(texte = null) {
   const msg = $('tr-message');
-  const r = await depuisCode($('tr-entree').value);
+  const r = await depuisCode(texte === null ? $('tr-entree').value : texte);
   if (!r.ok) { msg.textContent = `⚠ ${r.raison}`; return; }
   const vide = !!r.partie.vide;
   if (!vide && !r.partie.groupe.every((p) => PAR_ID[p.id])) { msg.textContent = '⚠ Ce code vient d’une version du jeu que cet appareil ne connaît pas : rechargez la page, puis réessayez.'; return; }
@@ -824,7 +886,7 @@ function etapeDefaite(e) {
 
 function etapeVictoire() {
   const s = av.stats;
-  return tete('🐉', 'Le Dragon Cendré est tombé !', `Au départ, ${txt(A.heros(av).nom)} voyageait seul. Au sommet du Pic de l’Aube, le groupe compte ${av.groupe.length} héros.`)
+  return tete('👑', 'Le Roi Sans Aube est tombé !', `Au départ, ${txt(A.heros(av).nom)} voyageait seul. Dix chapitres plus tard, le groupe compte ${av.groupe.length} héros — et la montagne s’est tue.`)
     + `<div class="gains">${av.groupe.map((p) => `<div class="gain">${spriteSvg(p)}<div><b>${txt(p.nom)}</b> niveau ${p.niveau}</div></div>`).join('')}</div>`
     + `<div class="journal-voyage"><div>Combats : <b>${s.combats}</b> · Défaites : <b>${s.morts}</b> · Or amassé : <b>${s.ors}</b></div></div>`
     + `<div class="et-liste" style="margin-top:14px">
@@ -984,7 +1046,10 @@ function brancher() {
   $('tr-coller').addEventListener('click', async () => {
     try { $('tr-entree').value = await navigator.clipboard.readText(); } catch { toast('Collez le code à la main dans la case.'); }
   });
-  $('tr-charger').addEventListener('click', chargerCode);
+  $('tr-charger').addEventListener('click', () => chargerCode());
+  $('tr-envoyer').addEventListener('click', () => { debloquer(); sfx.clic(); envoyerParRelais(); });
+  $('tr-recevoir').addEventListener('click', () => { debloquer(); sfx.clic(); recevoirParRelais(); });
+  $('tr-saisie').addEventListener('keydown', (e) => { if (e.key === 'Enter') recevoirParRelais(); });
   $('b-auto').addEventListener('click', () => { sfx.tap(); basculerAuto(); });
 }
 

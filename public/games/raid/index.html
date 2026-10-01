@@ -173,31 +173,42 @@
       <button class="retour" data-go="menu" aria-label="Retour">‹</button>
       <div>
         <h2 class="page-titre">Changer d’appareil</h2>
-        <p class="page-sous">La partie est enregistrée sur cet appareil. Un code permet de l’emporter ailleurs.</p>
+        <p class="page-sous">Un code de 5 caractères suffit pour emporter sa partie.</p>
       </div>
     </header>
 
     <div class="regle-bloc">
-      <h3>1 · Sur l’appareil où se trouve la partie</h3>
+      <h3>📤 J’ai ma partie sur cet appareil</h3>
       <p id="tr-etat">—</p>
-      <div class="tr-actions">
-        <button class="btn btn-go" id="tr-partager">Envoyer le code</button>
-        <button class="btn btn-ghost" id="tr-copier">Copier le code</button>
+      <button class="btn btn-go btn-wide" id="tr-envoyer">Obtenir un code</button>
+      <div class="tr-court" id="tr-court" hidden>
+        <div class="tr-gros" id="tr-gros" aria-live="polite">— — — — —</div>
+        <p class="fp-note" id="tr-court-note">Tapez ce code sur l’autre appareil. Gardez cet écran ouvert.</p>
       </div>
-      <textarea class="tr-code" id="tr-sortie" readonly rows="3" aria-label="Code de la partie" hidden></textarea>
-      <p class="fp-note">Envoyez-vous ce code (message, mail, note). Il contient la partie en cours et les chapitres débloqués.</p>
     </div>
 
     <div class="regle-bloc">
-      <h3>2 · Sur l’autre appareil</h3>
-      <p>Ouvrez RAID, revenez sur cet écran, collez le code ici.</p>
-      <textarea class="tr-code" id="tr-entree" rows="4" placeholder="Collez ici le code qui commence par RAID1…" aria-label="Code à charger"></textarea>
-      <div class="tr-actions">
-        <button class="btn btn-ghost" id="tr-coller">Coller</button>
-        <button class="btn btn-go" id="tr-charger">Charger cette partie</button>
-      </div>
+      <h3>📥 Je veux la récupérer ici</h3>
+      <p>Tapez le code affiché sur l’autre appareil.</p>
+      <input class="tr-saisie" id="tr-saisie" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" placeholder="ABCDE" aria-label="Code à 5 caractères">
+      <button class="btn btn-go btn-wide" id="tr-recevoir">Récupérer la partie</button>
       <p class="fp-note" id="tr-message"></p>
     </div>
+
+    <details class="regle-bloc tr-secours">
+      <summary>Ça ne marche pas ? La méthode sans serveur</summary>
+      <p>Un code long, à copier d’un appareil et à coller sur l’autre (par message ou par mail). Il marche même si le code court échoue.</p>
+      <div class="tr-actions">
+        <button class="btn btn-ghost" id="tr-partager">Envoyer le code long</button>
+        <button class="btn btn-ghost" id="tr-copier">Le copier</button>
+      </div>
+      <textarea class="tr-code" id="tr-sortie" readonly rows="3" aria-label="Code long de la partie" hidden></textarea>
+      <textarea class="tr-code" id="tr-entree" rows="3" placeholder="Sur l’autre appareil : collez ici le code long (RAID1…)" aria-label="Code long à charger"></textarea>
+      <div class="tr-actions">
+        <button class="btn btn-ghost" id="tr-coller">Coller</button>
+        <button class="btn btn-ghost" id="tr-charger">Charger</button>
+      </div>
+    </details>
   </div>
 </section>
 

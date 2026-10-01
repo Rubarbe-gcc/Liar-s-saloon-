@@ -85,6 +85,7 @@ export function creerBataille({ groupe, ennemis, bonus = {}, inventaire, chance 
     bouclier: bonus.egide ? { valeur: bonus.egide, tours: 2 } : null,
     coeur: !!bonus.phenix,   // le Cœur de phénix n'a pas encore servi
     provoc: null,            // { idx, tours } : le héros que tous les ennemis doivent frapper
+    serment: null,           // { tours } : aucun héros ne peut tomber sous 1 PV
     elan: null,       // { valeur, tours } sur tout le groupe
     fini: false,
     victoire: false,
@@ -135,6 +136,7 @@ function finDeManche(etat, ev) {
   if (etat.bouclier && --etat.bouclier.tours <= 0) etat.bouclier = null;
   if (etat.elan && --etat.elan.tours <= 0) etat.elan = null;
   if (etat.provoc && --etat.provoc.tours <= 0) etat.provoc = null;
+  if (etat.serment && --etat.serment.tours <= 0) etat.serment = null;
 }
 
 function verifierFin(etat, ev) {
@@ -232,7 +234,9 @@ export function estimer(etat, src, cible, mult, { perce = 0, basique = false, al
 
 function subir(etat, cible, n, ev, extra = {}) {
   const avant = cible.pv;
-  cible.pv = Math.max(0, cible.pv - n);
+  // Le Serment d'acier : tant qu'il tient, un héros debout le reste.
+  const plancher = cible.camp === 'h' && etat.serment && avant > 0 ? 1 : 0;
+  cible.pv = Math.max(plancher, cible.pv - n);
   ev.push({ t: 'degats', ...ref(cible), n: avant - cible.pv, pv: cible.pv, ...extra });
   if (cible.pv <= 0 && avant > 0 && cible.camp === 'h' && etat.coeur) {
     // Le Cœur de phénix : le premier héros qui tombe se relève aussitôt.
@@ -360,9 +364,13 @@ function lancerOffensif(etat, h, cle, e, ev) {
   const perce = eff.type === 'perce' ? eff.valeur : 0;
   const mult = s.mult * (1 + (h.tal.sorts || 0));
   let total = 0;
-  if (eff.type === 'zone') {
+  const tous = ['zone', 'fracas', 'fournaise'].includes(eff.type);
+  const touches = tous ? vivants(etat.ennemis) : [e];
+  if (tous) {
     // Le balayage frappe tous les ennemis debout, de plein fouet.
-    for (const x of vivants(etat.ennemis)) total += frapper(etat, h, x, mult, ev);
+    for (const x of touches) total += frapper(etat, h, x, mult, ev);
+  } else if (eff.type === 'execution') {
+    total = frapper(etat, h, e, mult * (e.pv / e.pvMax < SEUIL_EXECUTION ? 2 : 1), ev);
   } else if (eff.type === 'double') {
     total += frapper(etat, h, e, mult * 0.6, ev);
     if (e.pv > 0) total += frapper(etat, h, e, mult * 0.6, ev);
@@ -380,6 +388,21 @@ function lancerOffensif(etat, h, cle, e, ev) {
   if (eff.type === 'vol') {
     const blesse = vivants(etat.heros).sort((a, b) => a.pv / a.pvMax - b.pv / b.pvMax)[0];
     if (blesse) soigner(blesse, total * eff.valeur * 1.5, ev);
+  }
+  for (const x of touches) {
+    if (x.pv <= 0) continue;
+    if (eff.type === 'fracas') {
+      x.entrave = { valeur: eff.valeur, tours: 2 };
+      ev.push({ t: 'effet', quoi: 'entrave', ...ref(x) });
+    }
+    if (eff.type === 'fournaise') {
+      x.brasier = { degats: Math.max(1, Math.round((total / touches.length) * eff.valeur * 1.4)), tours: 3 };
+      ev.push({ t: 'effet', quoi: 'brasier', ...ref(x) });
+    }
+    if (eff.type === 'assommer' && x.rang !== 'boss') {
+      x.etourdi = true;
+      ev.push({ t: 'effet', quoi: 'etourdi', ...ref(x) });
+    }
   }
 }
 
@@ -424,6 +447,15 @@ function lancerSoutien(etat, h, cle, ev) {
         x.poison = null;
       }
       ev.push({ t: 'effet', quoi: 'purge' });
+      break;
+    case 'renouveau':
+      for (const x of vivants(etat.heros)) {
+        soigner(x, x.pvMax * eff.valeur * 2 * (1 + (etat.bonus.soin || 0) + (h.tal.soins || 0)), ev);
+        if (x === h) continue;
+        const avant = x.pm;
+        x.pm = Math.min(x.pmMax, x.pm + 12);
+        ev.push({ t: 'pm', ...ref(x), n: Math.round(x.pm - avant), pm: x.pm });
+      }
       break;
     case 'resurrection':
       for (const x of etat.heros) {
@@ -490,6 +522,10 @@ function lancerEveil(etat, h, e, ev) {
           x.pm = Math.min(x.pmMax, x.pm + o.v);
           ev.push({ t: 'pm', ...ref(x), n: Math.round(x.pm - avant), pm: x.pm });
         }
+        break;
+      case 'serment':
+        etat.serment = { tours: o.tours };
+        ev.push({ t: 'effet', quoi: 'serment' });
         break;
       case 'purge':
         for (const x of vivants(etat.heros)) x.poison = null;

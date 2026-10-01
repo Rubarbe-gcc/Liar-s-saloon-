@@ -55,6 +55,7 @@ export function choisirAction(etat) {
     if (t === 'elan' && !etat.elan && allies.length >= 2) return { type: cle };
     if (t === 'mana' && allies.some((x) => x !== h && x.pm < x.pmMax * 0.3)) return { type: cle };
     if (t === 'resurrection' && tombes.length) return { type: cle };
+    if (t === 'renouveau' && (part(blesse) < 0.55 || allies.some((x) => x !== h && x.pm < x.pmMax * 0.3))) return { type: cle };
     if (t === 'purge' && (part(blesse) < 0.5 || allies.some((x) => x.poison))) return { type: cle };
     if (t === 'bastion' && menace && !etat.provoc) return { type: cle };
     if (t === 'provoc' && !etat.provoc && allies.length >= 2 && part(h) > 0.4) return { type: cle };

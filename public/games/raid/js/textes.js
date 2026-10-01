@@ -35,6 +35,11 @@ export function texteSort(s) {
     case 'bastion': return `Bouclier de ${pc(v)} sur tout le groupe et provocation, pendant 3 manches.`;
     case 'zone': return `Frappe TOUS les ennemis, dégâts ×${s.mult.toFixed(1)} chacun.`;
     case 'purge': return `Soigne tout le groupe de ${pc(v * 2)} de sa vie et lève les poisons.`;
+    case 'fracas': return `Frappe TOUS les ennemis, dégâts ×${s.mult.toFixed(1)}, et ils frappent ${pc(v)} moins fort pendant 2 manches.`;
+    case 'assommer': return `${coup}, et la cible perd son prochain tour (sauf les boss).`;
+    case 'fournaise': return `Frappe TOUS les ennemis, dégâts ×${s.mult.toFixed(1)}, et les brûle pendant 3 manches.`;
+    case 'execution': return `${coup} — doublés si la cible est sous 40 % de vie.`;
+    case 'renouveau': return `Soigne tout le groupe de ${pc(v * 2)} de sa vie et rend 12 PM à chaque allié.`;
     case 'resurrection': return `Relève tous les héros tombés à ${pc(v)} de leur vie, et soigne les autres de ${pc(v * 0.6)}.`;
     default: return `${coup}.`;
   }

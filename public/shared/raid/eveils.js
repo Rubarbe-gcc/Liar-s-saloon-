@@ -22,6 +22,7 @@
  *              brasier   { part, tours } : brûle les ennemis touchés
  *              entrave   { v, tours } : affaiblit les ennemis (touchés, ou tous)
  *              etourdi   les ennemis touchés passent leur prochain tour (pas les boss)
+ *              serment   { tours } : aucun héros debout ne peut tomber sous 1 PV
  *
  * Le texte affiché est écrit depuis ces mêmes champs : ce qui est annoncé
  * est ce qui est appliqué.
@@ -46,7 +47,9 @@ export const EVEILS = {
   korgath: { nom: 'Cri du volcan', glyphe: '📣',
     degats: { mult: 2.2 }, puis: [{ type: 'etourdi' }, { type: 'provoc', tours: 2 }] },
   aldric: { nom: 'Serment d’acier', glyphe: '⚜️',
-    puis: [{ type: 'provoc', tours: 3 }, { type: 'bouclier', v: 0.6, tours: 3 }, { type: 'soin', v: 0.25 }] },
+    puis: [{ type: 'serment', tours: 2 }] },
+  ignar: { nom: 'Cœur d’étoile', glyphe: '🌟',
+    puis: [{ type: 'soinSoi', v: 0.4 }, { type: 'elan', v: 0.3, tours: 3 }, { type: 'provoc', tours: 2 }] },
 
   /* -------------------------------- dps ------------------------------- */
   vaelor: { nom: 'Châtiment céleste', glyphe: '⚡',
@@ -61,6 +64,8 @@ export const EVEILS = {
     degats: { mult: 1.7, zone: true }, puis: [{ type: 'brasier', part: 0.3, tours: 3 }] },
   noctis: { nom: 'Nuit sans fin', glyphe: '🌌',
     degats: { mult: 1.6, zone: true, coups: 2 } },
+  lyra: { nom: 'Constellation', glyphe: '✨',
+    degats: { mult: 1.5, zone: true, perce: 0.5 }, puis: [{ type: 'entrave', v: 0.3, tours: 2 }] },
 
   /* ------------------------------ soigneurs ---------------------------- */
   elissende: { nom: 'Miracle', glyphe: '🕊',
@@ -75,6 +80,8 @@ export const EVEILS = {
     degats: { mult: 2.8 }, puis: [{ type: 'soin', v: 0.3 }] },
   selene: { nom: 'Aube sans fin', glyphe: '☀️',
     puis: [{ type: 'releve', v: 0.7 }, { type: 'soin', v: 0.5 }, { type: 'elan', v: 0.3, tours: 2 }] },
+  orion: { nom: 'Heure suspendue', glyphe: '⏳',
+    degats: { mult: 0.6, zone: true }, puis: [{ type: 'etourdi' }, { type: 'bouclier', v: 0.3, tours: 2 }] },
 };
 
 /** La compétence d'éveil d'un personnage, s'il est éveillé. */
@@ -106,6 +113,7 @@ export function texteEveil(sp) {
       case 'provoc': out.push(`provoque tous les ennemis, ${manches(o.tours)}`); break;
       case 'mana': out.push(`rend ${o.v} PM à chaque allié`); break;
       case 'purge': out.push('lève les poisons'); break;
+      case 'serment': out.push(`pendant ${manches(o.tours)}, aucun héros debout ne peut tomber : il lui reste toujours 1 PV`); break;
       case 'releve': out.push(`relève les héros tombés à ${pc(o.v)} de leur vie`); break;
       case 'brasier': out.push(`brûle les ennemis touchés, ${manches(o.tours)}`); break;
       case 'entrave': out.push(`${d ? 'les ennemis touchés' : 'tous les ennemis'} frappent ${pc(o.v)} moins fort, ${manches(o.tours)}`); break;

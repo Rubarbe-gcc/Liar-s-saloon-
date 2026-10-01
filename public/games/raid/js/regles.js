@@ -29,7 +29,7 @@ export function rendreRegles() {
   const ecoles = CYCLE.map((a) => `${ECOLES[a].glyphe} ${ECOLES[a].nom} bat ${ECOLES[domine(a)].nom}`).join(' · ');
   return bloc('L’aventure', `
     <p>Vous choisissez <b>un seul héros</b>. Il part seul au pied du donjon et doit gravir
-    <b>${ACTES.length} chapitres</b> en dix chapitres : cinq pour monter jusqu’au Dragon Cendré, cinq pour descendre vers ce qu’il gardait.</p>
+    <b>${ACTES.length} chapitres</b> : cinq pour monter jusqu’au Dragon Cendré, cinq pour descendre vers ce qu’il gardait.</p>
     <p>L’écran <b>📖 Chapitres</b> du menu les fait défiler : un chapitre se débloque quand vous l’atteignez, et vous pouvez ensuite y recommencer une aventure directement, avec un héros au bon niveau et des compagnons à choisir.</p>
     <p>En chemin, des aventuriers proposent de vous suivre : le groupe monte jusqu’à
     <b>${TAILLE_GROUPE} personnages</b>. Après chaque boss des trois premiers chapitres, une recrue se présente
@@ -131,5 +131,5 @@ export function rendreRegles() {
     <p>Un boss qui vous a battus garde ses blessures : il perd 10 % de sa vie à chaque défaite, jusqu’à 40 %.
     On ne bute jamais sans fin sur le même mur.</p>
     <p>La partie est enregistrée à chaque étape, <b>sur cet appareil</b> : vous pouvez fermer le jeu et reprendre plus tard.</p>
-    <p>Pour continuer sur un autre appareil (téléphone, PC), ouvrez <b>📱 Changer d’appareil</b> dans le menu : le jeu fabrique un code à vous envoyer, que vous collez sur l’autre appareil.</p>`);
+    <p>Pour continuer sur un autre appareil (téléphone, PC), ouvrez <b>📱 Changer d’appareil</b> dans le menu : le jeu affiche un code de 5 caractères, à taper sur l’autre appareil dans les dix minutes.</p>`);
 }

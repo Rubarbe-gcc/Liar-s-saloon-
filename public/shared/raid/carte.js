@@ -16,7 +16,7 @@ import { entier, piocher, melanger } from '../hasard.js';
 
 /**
  * Les dix chapitres. Chacun a son décor, son école dominante et son maître
- * (`boss`). Les cinq premiers montent vers le Dragon ; les cinq suivants
+ * (`boss`), dont le nom rappelle toujours celui du chapitre. Les cinq premiers montent vers le Dragon ; les cinq suivants
  * descendent vers ce que le Dragon gardait.
  */
 export const ACTES = [
@@ -24,12 +24,12 @@ export const ACTES = [
   { nom: 'Le Cloître Profané', ecole: 'ombre', boss: 'vorgath', texte: 'On y priait. On y prie encore, mais pas la même chose.' },
   { nom: 'La Forge Ardente', ecole: 'feu', boss: 'kharn', texte: 'Les soufflets tournent, et personne ne les tient.' },
   { nom: 'Le Sanctuaire Gelé', ecole: 'givre', boss: 'ysolde', texte: 'Tout y est intact. Tout y est figé.' },
-  { nom: 'Le Pic de l’Aube', ecole: 'sacre', boss: 'sarkhavel', ecoleBoss: 'feu', texte: 'Au sommet, le Dragon Cendré attend son heure.' },
+  { nom: 'Le Pic Cendré', ecole: 'sacre', boss: 'sarkhavel', ecoleBoss: 'feu', texte: 'Au sommet, le Dragon Cendré attend son heure.' },
   { nom: 'Les Racines du Monde', ecole: 'nature', boss: 'yggmar', texte: 'Sous la montagne, la forêt d’avant les hommes. Elle se souvient de tout.' },
   { nom: 'La Nécropole Engloutie', ecole: 'ombre', boss: 'nelizar', texte: 'Les rois d’autrefois dorment ici. L’un d’eux n’a jamais su s’endormir.' },
   { nom: 'La Citadelle Inversée', ecole: 'sacre', boss: 'seraphiel', texte: 'Une forteresse bâtie la tête en bas, pour garder ce qui est dessous.' },
   { nom: 'Le Seuil du Néant', ecole: 'givre', boss: 'ozrath', texte: 'Ici, le monde s’arrête. Quelque chose regarde par la fente.' },
-  { nom: 'Le Trône de Cendre', ecole: 'feu', boss: 'azhar', texte: 'Tout en bas, un roi attend depuis mille ans qu’on vienne lui ouvrir.' },
+  { nom: 'Le Trône Sans Aube', ecole: 'feu', boss: 'azhar', texte: 'Tout en bas, un roi attend depuis mille ans qu’on vienne lui ouvrir.' },
 ];
 
 export const RANGEES = 7;

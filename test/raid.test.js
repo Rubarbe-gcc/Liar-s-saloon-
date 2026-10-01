@@ -31,6 +31,7 @@ import { spriteSvg, poses, palettePour, GRID } from '../public/shared/raid/sprit
 import { makeRng } from '../public/shared/hasard.js';
 import * as T from '../public/shared/raid/talents.js';
 import { versCode, depuisCode } from '../public/games/raid/js/transfert.js';
+import * as relais from '../server/relais.js';
 import { EVEILS, texteEveil, eveilDe, COUT_EVEIL } from '../public/shared/raid/eveils.js';
 import { RELIQUES, bonusReliques, QUETES } from '../public/shared/raid/reliques.js';
 
@@ -876,9 +877,9 @@ test('les nouveaux monstres ont leurs capacités : régénération et gel', () =
 /* Héros légendaires et départs                                       */
 /* ================================================================== */
 
-test('trois légendaires, un par rôle, plus forts que la guilde', () => {
-  assert.equal(LEGENDES.length, 3);
-  assert.deepEqual(LEGENDES.map((h) => h.role).sort(), ['dps', 'soigneur', 'tank']);
+test('six légendaires, deux par rôle, plus forts que la guilde', () => {
+  assert.equal(LEGENDES.length, 6);
+  assert.deepEqual(LEGENDES.map((h) => h.role).sort(), ['dps', 'dps', 'soigneur', 'soigneur', 'tank', 'tank']);
   assert.equal(HEROS.length, 15, 'ils ne font pas partie de la guilde');
   for (const h of LEGENDES) {
     assert.ok(PAR_ID[h.id] && h.legendaire);
@@ -1201,4 +1202,94 @@ test('une partie voyage d’un appareil à l’autre par un code', async () => {
   assert.equal((await depuisCode('bonjour')).ok, false);
   assert.equal((await depuisCode(code.slice(0, code.length - 30))).ok, false, 'un code tronqué est refusé');
   assert.equal((await depuisCode('RAID0.e30')).ok, false, 'un code sans partie est refusé');
+});
+
+test('le relais échange une partie contre un code de cinq caractères, une seule fois', () => {
+  relais.vider();
+  const boite = (id) => { const recu = []; return { id, recu, send: (m) => { recu.push(m); return true; } }; };
+  const pc = boite('pc'), tel = boite('tel'), curieux = boite('curieux');
+  for (const c of [pc, tel, curieux]) relais.handleOpen(c);
+
+  relais.handleMessage(pc, { t: 'r:deposer', charge: 'RAID1.abc' });
+  const { code, t } = pc.recu[0];
+  assert.equal(t, 'r:code');
+  assert.match(code, /^[A-HJ-NP-Z2-9]{5}$/, 'cinq caractères, sans I, O, 0 ni 1');
+
+  relais.handleMessage(curieux, { t: 'r:retirer', code: 'ZZZZZ' });
+  assert.equal(curieux.recu[0].t, 'r:erreur');
+
+  // Le téléphone tape le code comme il vient : minuscules, espaces.
+  relais.handleMessage(tel, { t: 'r:retirer', code: ` ${code.toLowerCase().slice(0, 2)} ${code.toLowerCase().slice(2)} ` });
+  assert.deepEqual(tel.recu[0], { t: 'r:charge', charge: 'RAID1.abc' });
+  assert.equal(pc.recu[1].t, 'r:pris', 'le premier appareil est prévenu');
+
+  relais.handleMessage(curieux, { t: 'r:retirer', code });
+  assert.equal(curieux.recu[1].t, 'r:erreur', 'un code ne sert qu’une fois');
+  assert.equal(relais.stats().relais, 0);
+
+  relais.handleMessage(pc, { t: 'r:deposer', charge: 'x'.repeat(relais.CHARGE_MAX + 1) });
+  assert.equal(pc.recu[2].t, 'r:erreur', 'une charge trop lourde est refusée');
+
+  // Le dépôt survit à la fermeture de l'onglet qui l'a fait.
+  relais.handleMessage(pc, { t: 'r:deposer', charge: 'RAID1.def' });
+  const second = pc.recu[3].code;
+  relais.handleClose(pc);
+  relais.handleMessage(tel, { t: 'r:retirer', code: second });
+  assert.equal(tel.recu[1].charge, 'RAID1.def');
+});
+
+test('les trois sorts d’un légendaire font trois choses différentes', () => {
+  for (const h of LEGENDES) {
+    const gestes = [h.special.effet.type, h.ultime.effet.type, JSON.stringify(EVEILS[h.id])];
+    assert.equal(new Set(gestes).size, 3, h.id);
+    assert.notEqual(h.special.effet.type, h.ultime.effet.type, h.id);
+  }
+  // Aldric : il provoque, il fracasse, il jure. Plus de bouclier en double.
+  assert.equal(PAR_ID.aldric.special.effet.type, 'provoc');
+  assert.equal(PAR_ID.aldric.ultime.effet.type, 'fracas');
+  assert.deepEqual(EVEILS.aldric.puis.map((o) => o.type), ['serment']);
+});
+
+test('le Serment d’acier empêche de tomber, le Fracas affaiblit tout le monde', () => {
+  const groupe = ['aldric', 'kaelis'].map((id) => creerPersonnage(id, 8));
+  groupe[0].eveil = true;
+  const gros = () => { const e = gnoll(6); e.atk = 9999; e.vit = -5; return e; };
+  const b = creerBataille({ groupe, ennemis: [gros(), gros()], inventaire: {}, rng: rngT(5) });
+  b.heros[0].vit = 99;
+  demarrer(b);
+  assert.equal(actif(b).id, 'aldric');
+  actif(b).pm = 40;
+  const ev = agir(b, { type: 'eveil' }).evenements;
+  assert.ok(b.serment || ev.some((x) => x.quoi === 'serment'));
+  while (!b.fini && b.manche === 1) ev.push(...agir(b, { type: 'defendre' }).evenements);
+  assert.ok(!ev.some((x) => x.t === 'ko' && x.camp === 'h'), 'personne n’est tombé malgré des coups mortels');
+  assert.ok(b.heros.every((x) => x.pv >= 1));
+
+  const b2 = creerBataille({ groupe: [creerPersonnage('aldric', 8)], ennemis: [gnoll(3), gnoll(3)], inventaire: {}, rng: rngT(6) });
+  for (const e of b2.ennemis) { e.vit = -5; e.pvMax = e.pv = 9999; }
+  demarrer(b2);
+  actif(b2).pm = 40;
+  agir(b2, { type: 'ultime', cible: 0 });
+  assert.ok(b2.ennemis.every((e) => e.entrave), 'les deux ennemis sont affaiblis');
+  assert.ok(b2.ennemis.every((e) => e.pv < 9999), 'et les deux ont été frappés');
+
+  // Ignar assomme : la cible perd son tour.
+  const b3 = creerBataille({ groupe: [creerPersonnage('ignar', 8)], ennemis: [gnoll(3)], inventaire: {}, rng: rngT(7) });
+  b3.ennemis[0].vit = -5; b3.ennemis[0].pvMax = b3.ennemis[0].pv = 9999;
+  demarrer(b3);
+  actif(b3).pm = 40;
+  const ev3 = agir(b3, { type: 'special', cible: 0 }).evenements;
+  assert.ok(ev3.some((x) => x.t === 'action' && x.genre === 'etourdi'));
+});
+
+test('le nom de chaque boss rappelle le nom de son chapitre', () => {
+  const mots = (t) => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .split(/[^a-z]+/).filter((m) => m.length >= 4)
+    // On compare les racines : « Noyées » et « Noyée », « Gelé » et « Gelée ».
+    .map((m) => m.replace(/(ees|es|ee|e|s)$/, ''));
+  for (const [i, a] of ACTES.entries()) {
+    const boss = MODELES_PAR_ID[a.boss].nom;
+    const commun = mots(a.nom).filter((m) => mots(boss).includes(m));
+    assert.ok(commun.length >= 1, `chapitre ${i + 1} « ${a.nom} » et son boss « ${boss} » n’ont aucun mot en commun`);
+  }
 });

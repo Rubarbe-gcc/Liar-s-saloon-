@@ -61,7 +61,7 @@ export const CHAPITRES = [
   { glyphe: '👑',
     resume: 'Azhar-Khûl, premier maître de la guilde. Il a voulu un jour sans fin ; on l’a enfermé sous une montagne, avec un dragon pour verrou. Vous avez tué le verrou.',
     scenes: [
-      'Un trône de cendre, au fond de tout. Dessus, un roi couronné que les livres de la guilde ont rayé de toutes leurs pages.',
+      'Un trône, au fond de tout, dans un noir qui n’a jamais connu d’aube. Dessus, un roi couronné que les livres de la guilde ont rayé de toutes leurs pages.',
       'Azhar-Khûl. Le premier maître. Il a voulu un jour qui ne finisse jamais, et ses propres compagnons l’ont enfermé ici, un dragon posé sur la porte.',
       'Trente raids sont morts pour tuer ce dragon. Vous avez réussi. Il ne reste plus qu’à réparer ce que vous avez fait.',
     ] },
@@ -71,7 +71,7 @@ export const CHAPITRES = [
 export function scenesIntro(heros, nomChapitre) {
   return [
     { art: glyphe('🌋'), couleur: '#ff6a3d', titre: 'Il y a trois hivers',
-      texte: 'Le Pic de l’Aube s’est mis à fumer. Puis la cendre est tombée sur la vallée, jour et nuit, sans un bruit.' },
+      texte: 'Le Pic s’est mis à fumer. Puis la cendre est tombée sur la vallée, jour et nuit, sans un bruit.' },
     { art: glyphe('🐉'), couleur: '#ff6a3d', titre: 'Sarkhavel',
       texte: 'Les anciens ont reconnu le signe : le Dragon Cendré s’est réveillé dans son donjon, et tout ce qui dormait sous la montagne s’est réveillé avec lui.' },
     { art: glyphe('⚰️'), couleur: '#a855f7',
@@ -170,6 +170,6 @@ export function scenesFin(groupe) {
     { art: glyphe('🕳'), couleur: '#a855f7',
       texte: 'La montagne se referme derrière vous, étage après étage. Cette fois il n’y a plus de verrou : il n’y a plus rien à enfermer.' },
     { art: glyphe('🌅'), couleur: '#ffd45e', titre: 'L’aube',
-      texte: `La cendre cesse de tomber. Le soleil se lève sur le Pic — et ce soir, il se couchera. ${liste} ${noms.length > 1 ? 'redescendent' : 'redescend'} vers la vallée.` },
+      texte: `La cendre cesse de tomber. Le soleil se lève sur le Pic Cendré — et ce soir, il se couchera. ${liste} ${noms.length > 1 ? 'redescendent' : 'redescend'} vers la vallée.` },
   ];
 }
