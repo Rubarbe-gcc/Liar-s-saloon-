@@ -137,6 +137,7 @@ export function rendreRegles() {
     de l’expérience gagnée depuis reste acquise ; l’or et le butin sont perdus.</p>
     <p>Un boss qui vous a battus garde ses blessures : il perd 10 % de sa vie à chaque défaite, jusqu’à 40 %.
     On ne bute jamais sans fin sur le même mur.</p>
+    <p>Quand le jeu est mis à jour, une partie en cours reçoit les nouveautés toute seule : inutile de recommencer.</p>
     <p>La partie est enregistrée à chaque étape, <b>sur cet appareil</b> : vous pouvez fermer le jeu et reprendre plus tard.</p>
     <p>Pour continuer sur un autre appareil (téléphone, PC), ouvrez <b>📱 Changer d’appareil</b> dans le menu : le jeu affiche un code de 5 caractères, à taper sur l’autre appareil dans les dix minutes.</p>`);
 }

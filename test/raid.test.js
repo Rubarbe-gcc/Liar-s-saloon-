@@ -1371,3 +1371,52 @@ test('un boss lâche toujours son trophée, une élite parfois, et jamais ailleu
   A.conclureCombat(banal, true);
   assert.equal(banal.etape.trophees.length, 0);
 });
+
+/* ================================================================== */
+/* Une partie en cours suit les mises à jour                          */
+/* ================================================================== */
+
+test('une vieille sauvegarde reçoit les nouveautés sans rien perdre', () => {
+  // Une partie telle qu'on en sauvegardait avant les talents, les quêtes,
+  // les reliques, les départs, les chapitres et les difficultés.
+  const neuve = jouerAventure(A.creerAventure({ heros: 'kaelis', seed: 23 }), { maxEtapes: 70 });
+  const vieille = JSON.parse(JSON.stringify(neuve));
+  for (const k of ['format', 'difficulte', 'reliques', 'bossVus', 'absents', 'recruesDues', 'departActe',
+    'balade', 'quete', 'offresQuetes', 'cines']) delete vieille[k];
+  for (const p of vieille.groupe) { delete p.talents; delete p.legendaire; }
+  for (const n of vieille.carte.noeuds) if (n.type === 'marchand') n.type = 'combat';
+  vieille.etape = null;
+  vieille.position = null;      // au pied de la carte du chapitre
+  vieille.visites = [];
+  vieille.groupe[0].xp = SEUILS_XP[13];
+  vieille.groupe[0].niveau = 13;
+  vieille.dons = ['ferveur', 'robustesse', 'rempart', 'arcanes'];   // les quatre dons d'avant, niveaux 3 à 9
+  vieille.donsEnAttente = 0;
+  vieille.reprise = JSON.stringify({ ...vieille, reprise: undefined });
+  const temoin = { or: vieille.or, niveaux: vieille.groupe.map((p) => p.niveau), sac: vieille.sac.length, acte: vieille.acte };
+
+  const fait = A.mettreAJour(vieille);
+  assert.ok(fait.length >= 3, 'on dit au joueur ce qui a changé');
+  assert.equal(vieille.format, A.FORMAT);
+  assert.deepEqual({ or: vieille.or, niveaux: vieille.groupe.map((p) => p.niveau), sac: vieille.sac.length, acte: vieille.acte }, temoin, 'rien n’est retiré');
+  assert.equal(vieille.difficulte, 'normal');
+  assert.equal(vieille.offresQuetes.length, 2);
+  assert.ok(vieille.groupe.every((p) => p.talents && T.pointsLibres(p) === p.niveau - 1), 'les points de talent sont là');
+  assert.equal(vieille.donsEnAttente, 1, 'le don du niveau 12 est rattrapé');
+  // Un marchand est désormais devant, sur un chemin qu'on peut encore prendre.
+  const devant = new Set();
+  const pile = A.sallesAccessibles(vieille).map((n) => n.id);
+  while (pile.length) { const id = pile.pop(); if (devant.has(id)) continue; devant.add(id); pile.push(...vieille.carte.noeuds.find((n) => n.id === id).suivants); }
+  assert.ok(vieille.carte.noeuds.some((n) => devant.has(n.id) && n.type === 'marchand'));
+
+  assert.deepEqual(A.mettreAJour(vieille), [], 'sans effet la deuxième fois');
+  assert.deepEqual(A.mettreAJour(A.creerAventure({ seed: 1 })), [], 'une partie neuve est déjà à jour');
+
+  // Elle se joue jusqu'au bout avec tout le reste du jeu, feu de camp d'avant la mise à jour compris.
+  vieille.etape = { type: 'combat', salle: 'combat', ennemis: [gnoll()] };
+  A.conclureCombat(vieille, false);
+  assert.ok(A.reprendre(vieille).ok);
+  assert.equal(vieille.format, A.FORMAT, 'le feu de camp ancien est mis à jour lui aussi');
+  const fin = jouerAventure(vieille, { maxEtapes: 6000 });
+  assert.ok(fin.acte > temoin.acte || fin.victoire, 'la partie continue vers les nouveaux chapitres');
+});

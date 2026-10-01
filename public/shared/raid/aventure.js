@@ -21,7 +21,7 @@ import {
 import {
   pieceAuHasard, valeurPiece, texteBonus, forgerTrophee, TROPHEES, CHANCE_TROPHEE_ELITE,
 } from './equipement.js';
-import { genererCarte, accessibles, noeud, composer, ACTES, TYPES } from './carte.js';
+import { genererCarte, accessibles, noeud, composer, ACTES, TYPES, RANGEES } from './carte.js';
 import { OBJETS, creerBataille } from './bataille.js';
 import { EVEILS, texteEveil } from './eveils.js';
 import {
@@ -118,12 +118,19 @@ export const CHANCE_LEGENDE = 0.4;
  *   héros arrive au niveau du chapitre, avec de l'or, du matériel, des
  *   reliques — et des compagnons à choisir avant de se mettre en route.
  */
+/**
+ * Le format de la sauvegarde. Il monte à chaque nouveauté qui demande quelque
+ * chose à une partie déjà commencée ; `mettreAJour` s'occupe du rattrapage.
+ */
+export const FORMAT = 4;
+
 export function creerAventure({ heros = DEPARTS[0], seed = null, difficulte = 'normal', chapitre = 1 } = {}) {
   if (!PAR_ID[heros]) throw new Error(`héros inconnu : ${heros}`);
   if (!DIFFICULTES[difficulte]) throw new Error(`difficulté inconnue : ${difficulte}`);
   if (!(Number.isInteger(chapitre) && chapitre >= 1 && chapitre <= ACTES.length)) throw new Error(`chapitre inconnu : ${chapitre}`);
   const av = {
     version: 2,
+    format: FORMAT,
     difficulte,
     alea: (seed ?? Math.floor(Math.random() * 2 ** 31)) >>> 0,
     acte: chapitre,
@@ -550,6 +557,8 @@ export function reprendre(av) {
   const r = JSON.parse(av.reprise);
   for (const k of Object.keys(av)) if (k !== 'reprise') delete av[k];
   Object.assign(av, r);
+  // Le feu de camp a pu être allumé avant une mise à jour du jeu.
+  mettreAJour(av);
   av.stats.morts = morts;
   av.stats.combats = combats;
   av.blessures = blessures;
@@ -565,6 +574,87 @@ export function reprendre(av) {
   if (!av.etape) suite(av);
   sauvegarder(av);
   return { ok: true };
+}
+
+/* ------------------------------------------------------------------ */
+/* Mise à jour d'une partie en cours                                   */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Met une partie commencée avec une version plus ancienne du jeu au niveau de
+ * la version courante, sans rien lui retirer : on ne recommence pas une
+ * aventure pour profiter d'une nouveauté.
+ *
+ * Tout ce qui manque est ajouté avec sa valeur de départ ; ce qui se décide
+ * d'ordinaire à la création d'un chapitre (quêtes, boutique visible) est
+ * rattrapé pour le chapitre en cours. Renvoie la liste, en clair, de ce qui a
+ * été rattrapé — vide si la partie était déjà à jour. Sans effet la deuxième
+ * fois.
+ */
+export function mettreAJour(av) {
+  const fait = [];
+  if (!av || av.format === FORMAT) return fait;
+
+  // 1. Les champs apparus au fil des versions.
+  const defauts = {
+    difficulte: 'normal', reliques: [], bossVus: [], absents: [], recruesDues: 0, departActe: 0,
+    balade: null, quete: null, blessures: 0, donsEnAttente: 0, dons: [], menaces: [], evenementsVus: [],
+    benedictions: {}, sac: [], visites: [], bossVaincu: false, recrueOfferte: false,
+  };
+  for (const [k, v] of Object.entries(defauts)) if (av[k] === undefined) av[k] = Array.isArray(v) ? [] : (v && typeof v === 'object' ? {} : v);
+  if (!DIFFICULTES[av.difficulte]) av.difficulte = 'normal';
+  av.stats = { combats: 0, ors: 0, morts: 0, ...(av.stats || {}) };
+  av.inventaire = { potion: 0, elixir: 0, phenix: 0, ...(av.inventaire || {}) };
+  av.acte = Math.max(1, Math.min(ACTES.length, av.acte | 0));
+  // Les cinématiques déjà passées : on ne rejoue pas l'ouverture d'une partie entamée.
+  if (!Array.isArray(av.cines)) av.cines = ['intro'];
+
+  // 2. Les personnages : talents, marque des légendaires, emplacements d'équipement.
+  for (const p of [...av.groupe, ...av.absents.map((a) => a.perso)]) {
+    if (!p.talents) { p.talents = {}; }
+    p.legendaire = !!(PAR_ID[p.id] && PAR_ID[p.id].legendaire);
+    p.equip = { arme: null, armure: null, bijou: null, ...(p.equip || {}) };
+  }
+  if (av.groupe.some((p) => p.niveau > 1)) fait.push('Des points de talent sont à dépenser dans l’écran du groupe.');
+
+  // 3. Les quêtes du chapitre en cours.
+  if (!Array.isArray(av.offresQuetes)) {
+    av.offresQuetes = tirerQuetes(av);
+    fait.push('Deux quêtes sont proposées pour ce chapitre.');
+  }
+
+  // 4. Une boutique visible sur le reste de la carte, s'il n'y en a pas devant soi.
+  if (av.carte && Array.isArray(av.carte.noeuds)) {
+    const devant = new Set();
+    const pile = sallesAccessibles(av).map((n) => n.id);
+    while (pile.length) {
+      const id = pile.pop();
+      if (devant.has(id)) continue;
+      devant.add(id);
+      const n = noeud(av.carte, id);
+      if (n) pile.push(...n.suivants);
+    }
+    const aVenir = av.carte.noeuds.filter((n) => devant.has(n.id) && n.type !== 'boss');
+    if (aVenir.length && !aVenir.some((n) => n.type === 'marchand')) {
+      const libres = aVenir.filter((n) => n.rangee >= 1 && n.rangee <= RANGEES - 2 && !['compagnon', 'repos'].includes(n.type));
+      if (libres.length) {
+        piocher(av, libres).type = 'marchand';
+        fait.push('Un marchand s’est installé plus loin sur la carte.');
+      }
+    }
+  }
+
+  // 5. Les dons que le niveau du héros aurait dû ouvrir (les paliers 12, 15 et 18 sont récents).
+  if (av.groupe.length) {
+    const dus = NIVEAUX_DON.filter((n) => n <= heros(av).niveau).length - av.dons.length - av.donsEnAttente;
+    if (dus > 0) {
+      av.donsEnAttente += dus;
+      fait.push(`${dus} don${dus > 1 ? 's' : ''} à choisir après la prochaine étape.`);
+    }
+  }
+
+  av.format = FORMAT;
+  return fait;
 }
 
 /* ------------------------------------------------------------------ */

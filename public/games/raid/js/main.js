@@ -56,6 +56,7 @@ function noterProgres() {
 }
 let chapitreDepart = 1;   // chapitre où commencera la prochaine aventure
 
+let nouveautes = [];   // ce qu'une mise à jour vient d'apporter à la partie en cours
 let finJouee = false;   // la cinématique de fin ne passe qu'une fois
 let depart = DEPARTS[0];
 let difficulte = 'normal';
@@ -81,6 +82,9 @@ function charger() {
     if (!brut) return null;
     const x = JSON.parse(brut);
     if (x.version !== 2 || !Array.isArray(x.groupe) || !x.groupe.every((p) => PAR_ID[p.id])) return null;
+    // Une partie commencée avant une mise à jour du jeu reçoit les nouveautés.
+    nouveautes = A.mettreAJour(x);
+    if (nouveautes.length) localStorage.setItem(CLE, JSON.stringify(x));
     return x;
   } catch { return null; }
 }
@@ -152,6 +156,12 @@ function rendreMenu() {
     const h = A.heros(av);
     $('continuer-note').textContent = `${A.difficulteDe(av).glyphe} ${A.difficulteDe(av).nom} · ${h.nom} · niveau ${h.niveau} · chapitre ${av.acte}/${ACTES.length}`
       + (av.groupe.length > 1 ? ` · ${av.groupe.length} dans le groupe` : ' · seul');
+  }
+  const maj = $('maj-partie');
+  maj.hidden = !(ok && nouveautes.length);
+  if (!maj.hidden) {
+    maj.innerHTML = `<b>✨ Votre partie a reçu les nouveautés du jeu</b><ul>${nouveautes.map((n) => `<li>${txt(n)}</li>`).join('')}</ul>`
+      + '<small>Rien n’a été retiré : niveau, équipement, or et progression sont intacts.</small>';
   }
   $('b-son').querySelector('.bi').textContent = sonActif() ? '🔊' : '🔇';
   $('chapitres-note').textContent = progres.fini ? 'Histoire terminée · 10/10 débloqués'
@@ -332,6 +342,7 @@ async function chargerCode(texte = null) {
   }
   if (!vide) {
     av = r.partie;
+    A.mettreAJour(av);
     finJouee = false;
     sauver();
   }
@@ -513,7 +524,7 @@ function rendreCarte() {
   const q = av.quete;
   $('quete-titre').textContent = q ? `${A.QUETES_PAR_ID[q.id].glyphe} ${A.QUETES_PAR_ID[q.id].nom} — ${q.progres}/${q.but}` : 'Quêtes';
   $('quete-note').textContent = q ? A.texteQuete(q)
-    : (av.offresQuetes || []).length ? `${av.offresQuetes.length} quête${av.offresQuetes.length > 1 ? 's' : ''} proposée${av.offresQuetes.length > 1 ? 's' : ''} pour cet acte` : 'Rien à faire ici pour l’instant';
+    : (av.offresQuetes || []).length ? `${av.offresQuetes.length} quête${av.offresQuetes.length > 1 ? 's' : ''} proposée${av.offresQuetes.length > 1 ? 's' : ''} pour ce chapitre` : 'Rien à faire ici pour l’instant';
   $('legende').innerHTML = '<span>🚪 Porte close</span>' + Object.values(TYPES).map((t) => `<span>${t.glyphe} ${t.nom}</span>`).join('');
 }
 
@@ -871,9 +882,9 @@ function etapeQuetes() {
     ? `<h3 class="section">En cours</h3><div class="et-liste">${carte(q, `<div class="jauge xp" style="--v:${(q.progres / q.but).toFixed(3)}"><i></i></div><small>${q.progres} / ${q.but}</small>`)}</div>` : '';
   const offres = (av.offresQuetes || []).map((o) => carte(o,
     `<div class="piece-actions"><button class="mini-btn mieux" data-quete="${o.id}" ${q ? 'disabled' : ''}>Accepter</button></div>`)).join('');
-  return tete('📜', 'Quêtes', 'Une seule quête à la fois. Elle vaut pour l’acte en cours : au boss vaincu, le tableau se renouvelle.')
+  return tete('📜', 'Quêtes', 'Une seule quête à la fois. Elle vaut pour le chapitre en cours : au boss vaincu, le tableau se renouvelle.')
     + enCours
-    + (offres ? `<h3 class="section">Proposées</h3><div class="et-liste">${offres}</div>` : (q ? '' : '<p class="vide-note">Plus de quête à prendre dans cet acte.</p>'))
+    + (offres ? `<h3 class="section">Proposées</h3><div class="et-liste">${offres}</div>` : (q ? '' : '<p class="vide-note">Plus de quête à prendre dans ce chapitre.</p>'))
     + '<button class="btn btn-go btn-wide" id="b-suite">Revenir à la carte</button>';
 }
 
@@ -1017,7 +1028,7 @@ function brancher() {
       aller(but);
     });
   }
-  $('b-continuer').addEventListener('click', () => { debloquer(); sfx.clic(); suite(); });
+  $('b-continuer').addEventListener('click', () => { debloquer(); sfx.clic(); nouveautes = []; suite(); });
   $('b-quetes').addEventListener('click', () => { debloquer(); sfx.clic(); if (av && A.ouvrirQuetes(av).ok) suite(); });
   $('b-roder').addEventListener('click', () => { debloquer(); sfx.clic(); if (av && A.roder(av).ok) suite(); });
   $('b-partir').addEventListener('click', () => {
