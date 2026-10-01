@@ -1,7 +1,7 @@
 {
   "name": "RAID — jeu de rôle solo",
   "short_name": "Raid",
-  "description": "Partez seul, trouvez des compagnons, choisissez votre chemin sur la carte et montez jusqu'au Dragon Cendré.",
+  "description": "Dix chapitres : partez seul, trouvez des compagnons, choisissez votre chemin et découvrez ce que gardait le Dragon Cendré.",
   "id": "/games/raid/",
   "start_url": "/games/raid/",
   "scope": "/games/raid/",

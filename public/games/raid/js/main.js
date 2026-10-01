@@ -18,12 +18,14 @@ import { OBJETS } from '../../../shared/raid/bataille.js';
 import { spriteSvg } from '../../../shared/raid/sprites.js';
 import { lancerCombat, basculerAuto } from './combat.js';
 import { jouerCinematique } from './cinematique.js';
-import { scenesIntro, scenesBoss, scenesFin } from './histoire.js';
+import { scenesIntro, scenesBoss, scenesFin, scenesChapitre, CHAPITRES, artBoss } from './histoire.js';
+import { MODELES_PAR_ID } from '../../../shared/raid/ennemis.js';
+import { EVEILS, texteEveil, COUT_EVEIL, eveilDe } from '../../../shared/raid/eveils.js';
 import { rendreRegles } from './regles.js';
 import { sfx, basculer as basculerSon, estActif as sonActif, debloquer } from './sfx.js';
 import { installerMusique } from '../../../shared/musique.js';
 import {
-  txt, pc, teinte, nomEcole, nomRole, texteSort, cartePiece, couleurRarete, carteRelique,
+  txt, pc, teinte, nomEcole, nomRole, texteSort, cartePiece, couleurRarete, carteRelique, ligneEveil,
 } from './textes.js';
 import {
   ARBRES, RANG_MAX, rangDe, pointsLibres, peutApprendre, apprendre, texteTalent,
@@ -33,6 +35,25 @@ const $ = (id) => document.getElementById(id);
 const CLE = 'raid.aventure';
 
 let av = null;        // l'aventure en cours
+/**
+ * La progression : jusqu'où l'histoire a été lue, toutes aventures confondues.
+ * C'est elle qui débloque les chapitres.
+ */
+const CLE_PROGRES = 'raid.progression';
+const progres = { max: 1, fini: false };
+try { Object.assign(progres, JSON.parse(localStorage.getItem(CLE_PROGRES) || '{}')); } catch { /* première fois */ }
+progres.max = Math.max(1, Math.min(ACTES.length, progres.max | 0));
+function noterProgres() {
+  if (!av) return;
+  const avant = JSON.stringify(progres);
+  progres.max = Math.max(progres.max, av.acte);
+  if (av.victoire) progres.fini = true;
+  if (JSON.stringify(progres) !== avant) {
+    try { localStorage.setItem(CLE_PROGRES, JSON.stringify(progres)); } catch { /* ignore */ }
+  }
+}
+let chapitreDepart = 1;   // chapitre où commencera la prochaine aventure
+
 let finJouee = false;   // la cinématique de fin ne passe qu'une fois
 let depart = DEPARTS[0];
 let difficulte = 'normal';
@@ -72,6 +93,7 @@ const RENDUS = {
   carte: rendreCarte,
   groupe: rendreGroupe,
   regles: () => { $('regles').innerHTML = rendreRegles(); },
+  chapitres: rendreChapitres,
 };
 
 function aller(nom) {
@@ -93,7 +115,17 @@ function toast(message) {
 function suite() {
   sauver();
   if (!av) return aller('menu');
+  noterProgres();
   const e = av.etape;
+  // Un nouveau chapitre s'ouvre : sa cinématique, une seule fois.
+  const cle = `chap-${av.acte}`;
+  if (!av.termine && !(av.cines || []).includes(cle) && (!e || e.type !== 'combat')) {
+    av.cines = [...(av.cines || []), cle];
+    sauver();
+    const a = ACTES[av.acte - 1];
+    jouerCinematique(scenesChapitre(av.acte, a.nom, a.ecole), { sfx }).then(suite);
+    return;
+  }
   if (!e) return aller('carte');
   if (e.type === 'combat') return combattre();
   if (e.type === 'victoire' && !finJouee) {
@@ -114,10 +146,12 @@ function rendreMenu() {
   $('b-continuer').hidden = !ok;
   if (ok) {
     const h = A.heros(av);
-    $('continuer-note').textContent = `${A.difficulteDe(av).glyphe} ${A.difficulteDe(av).nom} · ${h.nom} · niveau ${h.niveau} · acte ${av.acte}/${ACTES.length}`
+    $('continuer-note').textContent = `${A.difficulteDe(av).glyphe} ${A.difficulteDe(av).nom} · ${h.nom} · niveau ${h.niveau} · chapitre ${av.acte}/${ACTES.length}`
       + (av.groupe.length > 1 ? ` · ${av.groupe.length} dans le groupe` : ' · seul');
   }
   $('b-son').querySelector('.bi').textContent = sonActif() ? '🔊' : '🔇';
+  $('chapitres-note').textContent = progres.fini ? 'Histoire terminée · 10/10 débloqués'
+    : `${progres.max}/${ACTES.length} débloqué${progres.max > 1 ? 's' : ''}`;
 }
 
 function statsHtml(p, bonus = {}) {
@@ -139,7 +173,8 @@ function sortsHtml(p) {
     return `<div class="sort${verrou ? ' verrou' : ''}"><b>${cle === 'ultime' ? '★ ' : ''}${txt(sort.nom)}</b> · ${sort.cout} PM
       <i>${verrou ? `🔒 S’apprend au niveau ${NIVEAU_ULTIME}. ` : ''}${txt(texteSort(sort))}</i></div>`;
   };
-  return `<div class="sorts">${ligne('special', s.special)}${ligne('ultime', s.ultime)}</div>`;
+  const ev = eveilDe(p);
+  return `<div class="sorts">${ligne('special', s.special)}${ligne('ultime', s.ultime)}${ev ? ligneEveil(ev, texteEveil(ev), COUT_EVEIL) : ''}</div>`;
 }
 
 function tetePerso(p, extra = '') {
@@ -186,6 +221,79 @@ function rendreChoix() {
     });
   }
   $('diff-texte').textContent = A.texteDifficulte(difficulte);
+  const dc = $('depart-chapitre');
+  dc.hidden = chapitreDepart <= 1;
+  if (chapitreDepart > 1) {
+    dc.innerHTML = `📖 Départ au <b>chapitre ${chapitreDepart} — ${txt(ACTES[chapitreDepart - 1].nom)}</b> : héros au niveau ${A.niveauDuChapitre(chapitreDepart)}, de l’équipement, des reliques, et ${Math.min(3, chapitreDepart - 1)} compagnon${chapitreDepart > 2 ? 's' : ''} à choisir.
+      <button class="mini-btn" id="b-chap-1">Repartir du chapitre 1</button>`;
+    $('b-chap-1').addEventListener('click', () => { chapitreDepart = 1; rendreChoix(); });
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Chapitres                                                           */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Les dix chapitres, à faire défiler. Un chapitre atteint une fois reste
+ * débloqué : on peut relire son histoire, et y recommencer une aventure.
+ */
+function rendreChapitres() {
+  const enCours = av && !av.termine ? av.acte : 0;
+  $('chapitres-sous').textContent = progres.fini
+    ? 'Histoire terminée. Tous les chapitres sont ouverts.'
+    : `${progres.max} chapitre${progres.max > 1 ? 's' : ''} sur ${ACTES.length}. Un chapitre se débloque quand vous l’atteignez.`;
+  $('chapitres').innerHTML = ACTES.map((a, i) => {
+    const n = i + 1;
+    const ouvert = n <= progres.max;
+    const fait = progres.fini || n < progres.max;
+    const boss = { ...MODELES_PAR_ID[a.boss], modeleId: a.boss, ecole: a.ecoleBoss || a.ecole, rang: 'boss' };
+    const etat = n === enCours ? 'En cours' : fait ? 'Terminé' : ouvert ? 'Débloqué' : 'Verrouillé';
+    return `<article class="chapitre${ouvert ? '' : ' verrou'}${n === enCours ? ' courant' : ''}" style="--aff:${teinte(a.ecole)}" data-n="${n}">
+      <div class="chap-num">Chapitre ${n} <span>${etat}</span></div>
+      <div class="chap-art">${ouvert ? artBoss(boss) : '<div class="cine-glyphe">🔒</div>'}</div>
+      <h3>${ouvert ? txt(a.nom) : '???'}</h3>
+      <p class="chap-boss">${ouvert ? `👑 ${txt(boss.nom)}` : 'Boss inconnu'}</p>
+      <p class="chap-resume">${ouvert ? txt(CHAPITRES[i].resume) : 'Atteignez ce chapitre pour le découvrir.'}</p>
+      ${ouvert ? `<div class="chap-actions">
+        ${n === enCours ? '<button class="btn btn-go btn-wide" data-chap-continuer>Continuer l’aventure</button>' : ''}
+        <button class="btn btn-ghost btn-wide" data-chap-revoir="${n}">▶ Revoir la cinématique</button>
+        ${n !== enCours ? `<button class="btn btn-ghost btn-wide" data-chap-partir="${n}">Commencer une aventure ici</button>` : ''}
+      </div>` : ''}
+    </article>`;
+  }).join('');
+  $('chap-points').innerHTML = ACTES.map((_, i) => `<i class="${i + 1 <= progres.max ? 'ouvert' : ''}"></i>`).join('');
+
+  const zone = $('chapitres');
+  for (const el of zone.querySelectorAll('[data-chap-revoir]')) {
+    el.addEventListener('click', () => {
+      const n = +el.dataset.chapRevoir;
+      const a = ACTES[n - 1];
+      const boss = { ...MODELES_PAR_ID[a.boss], modeleId: a.boss, ecole: a.ecoleBoss || a.ecole };
+      jouerCinematique([...scenesChapitre(n, a.nom, a.ecole), ...scenesBoss(boss, n, a.nom)], { sfx });
+    });
+  }
+  for (const el of zone.querySelectorAll('[data-chap-partir]')) {
+    el.addEventListener('click', () => { sfx.clic(); chapitreDepart = +el.dataset.chapPartir; aller('choix'); });
+  }
+  for (const el of zone.querySelectorAll('[data-chap-continuer]')) {
+    el.addEventListener('click', () => { sfx.clic(); suite(); });
+  }
+  // On s'ouvre sur le chapitre en cours, ou sur le dernier débloqué.
+  const cible = zone.querySelector(`[data-n="${enCours || progres.max}"]`);
+  if (cible) zone.scrollLeft = cible.offsetLeft - (zone.clientWidth - cible.clientWidth) / 2;
+  const points = [...$('chap-points').children];
+  const marquer = () => {
+    const milieu = zone.scrollLeft + zone.clientWidth / 2;
+    let proche = 0, ecart = Infinity;
+    [...zone.children].forEach((c, i) => {
+      const d = Math.abs(c.offsetLeft + c.clientWidth / 2 - milieu);
+      if (d < ecart) { ecart = d; proche = i; }
+    });
+    points.forEach((p, i) => p.classList.toggle('ici', i === proche));
+  };
+  zone.onscroll = marquer;
+  marquer();
 }
 
 /* ------------------------------------------------------------------ */
@@ -220,7 +328,7 @@ function rendreCarte() {
   if (!av) return aller('menu');
   const acte = ACTES[av.acte - 1];
   $('acte-nom').textContent = acte.nom;
-  $('acte-num').innerHTML = `Acte ${av.acte} / ${ACTES.length} · <span class="badge-diff" style="--d:${COULEUR_DIFF[av.difficulte] || COULEUR_DIFF.normal}">${A.difficulteDe(av).glyphe} ${A.difficulteDe(av).nom}</span>`;
+  $('acte-num').innerHTML = `Chapitre ${av.acte} / ${ACTES.length} · <span class="badge-diff" style="--d:${COULEUR_DIFF[av.difficulte] || COULEUR_DIFF.normal}">${A.difficulteDe(av).glyphe} ${A.difficulteDe(av).nom}</span>`;
   $('ressources').innerHTML = ressources();
   $('groupe-mini').innerHTML = groupeMini();
 
@@ -510,6 +618,7 @@ function etapeResultat(e) {
     + (e.effet && e.effet !== 'aucun effet' ? `<div class="et-effet">${txt(e.effet)}</div>` : '')
     + (it ? `<div class="et-liste">${cartePiece(it, { actions: boutonsEquiper(it) })}</div>` : '')
     + (e.relique ? `<div class="et-liste">${carteRelique(A.RELIQUES_PAR_ID[e.relique])}</div>` : '')
+    + (e.eveil && EVEILS[e.eveil] ? `<div class="sorts" style="margin-bottom:14px">${ligneEveil(EVEILS[e.eveil], texteEveil(EVEILS[e.eveil]), COUT_EVEIL)}</div>` : '')
     + '<button class="btn btn-go btn-wide" id="b-suite">Continuer</button>';
 }
 
@@ -568,7 +677,9 @@ function etapeCompagnon(e) {
     return `<div class="carte-perso${legende ? ' legendaire' : ''}" style="--aff:${teinte(p.ecole)}">${tetePerso(p)}${statsHtml(p)}${sortsHtml(p)}${boutons}</div>`;
   }).join('');
   const legendaire = e.offres.some((id) => PAR_ID[id].legendaire);
-  const texte = legendaire
+  const texte = e.depart
+    ? 'Avant de reprendre l’histoire, des compagnons de route se présentent. Choisissez qui vous suit.'
+    : legendaire
     ? 'Une silhouette que les chansons décrivent se tient devant vous. Un héros légendaire propose de marcher à vos côtés.'
     : e.apresBoss
       ? 'Votre victoire a fait du bruit. Des aventuriers proposent de se joindre à vous.'
@@ -583,10 +694,10 @@ function etapeBalade(e) {
     const n = i + 1;
     const note = n === av.acte ? 'zone en cours : expérience et or au plein tarif' : 'zone passée : monstres plus faibles, gains plus maigres';
     return `<button class="choix zone${n === e.acte ? ' choisi' : ''}" data-zone="${n}">
-      <b>Acte ${n} — ${txt(a.nom)}</b><i>${note}</i></button>`;
+      <b>Chapitre ${n} — ${txt(a.nom)}</b><i>${note}</i></button>`;
   }).join('');
   return tete('🧭', 'Rôder', 'Retournez dans une zone déjà ouverte pour y chasser : de l’expérience et de l’or, autant de fois que vous voulez.')
-    + `<p class="alerte-embuscade">⚠ À chaque chasse, ${pc(A.CHANCE_EMBUSCADE)} de risque d’<b>embuscade</b> : une élite de l’acte ${av.acte} vous tombe dessus et frappe la première.</p>`
+    + `<p class="alerte-embuscade">⚠ À chaque chasse, ${pc(A.CHANCE_EMBUSCADE)} de risque d’<b>embuscade</b> : une élite du chapitre ${av.acte} vous tombe dessus et frappe la première.</p>`
     + `<div class="groupe-mini">${groupeMini()}</div>`
     + `<div class="zones">${zones}</div>`
     + `<div class="et-liste">
@@ -599,7 +710,8 @@ function etapeDepart() {
   const choix = d.choix.map((c) => `<button class="choix" data-depart="${c.id}" ${c.possible ? '' : 'disabled'}>
     <b>${txt(c.label)}</b><i>${txt(c.annonce)}</i></button>`).join('');
   return tete(d.glyphe, txt(d.titre), txt(d.texte))
-    + `<div class="carte-perso" style="--aff:${teinte(d.perso.ecole)};margin-bottom:14px">${tetePerso(d.perso)}</div>`
+    + `<div class="carte-perso" style="--aff:${teinte(d.perso.ecole)};margin-bottom:14px">${tetePerso(d.perso)}
+      ${d.eveil ? `<p class="fp-note">S’il y a un retour, ${txt(d.perso.nom)} rapportera une compétence d’éveil :</p><div class="sorts">${ligneEveil(d.eveil, texteEveil(d.eveil), COUT_EVEIL)}</div>` : ''}</div>`
     + `<div class="et-liste">${choix}</div>`;
 }
 
@@ -626,7 +738,7 @@ function etapeQuetes() {
 function etapeDefaite(e) {
   if (e.definitive) {
     const h = A.heros(av);
-    return tete('💀', 'Mort définitive', `Mode Hardcore : il n’y a pas de feu de camp où revenir. ${txt(h.nom)} tombe au niveau ${h.niveau}, à l’acte ${av.acte}, après ${av.stats.combats} combat${av.stats.combats > 1 ? "s" : ""}. L’aventure repart de zéro.`)
+    return tete('💀', 'Mort définitive', `Mode Hardcore : il n’y a pas de feu de camp où revenir. ${txt(h.nom)} tombe au niveau ${h.niveau}, au chapitre ${av.acte}, après ${av.stats.combats} combat${av.stats.combats > 1 ? "s" : ""}. L’aventure repart de zéro.`)
       + '<button class="btn btn-go btn-wide" id="b-fin-hardcore">Recommencer une aventure</button>';
   }
   const blesse = A.blessuresBoss(av);
@@ -769,12 +881,13 @@ function brancher() {
   $('b-partir').addEventListener('click', () => {
     debloquer();
     if (av && !av.termine && !confirm('Une aventure est en cours. L’abandonner pour en commencer une nouvelle ?')) return;
-    av = A.creerAventure({ heros: depart, difficulte });
-    av.cines = ['intro'];
+    av = A.creerAventure({ heros: depart, difficulte, chapitre: chapitreDepart });
     finJouee = false;
-    sauver();
     sfx.victoire();
-    jouerCinematique(scenesIntro(A.heros(av)), { sfx }).then(suite);
+    if (chapitreDepart > 1) { av.cines = ['intro']; suite(); return; }
+    av.cines = ['intro', 'chap-1'];
+    sauver();
+    jouerCinematique(scenesIntro(A.heros(av), ACTES[0].nom), { sfx }).then(suite);
   });
   $('b-son').addEventListener('click', () => { basculerSon(); rendreMenu(); });
   $('b-auto').addEventListener('click', () => { sfx.tap(); basculerAuto(); });

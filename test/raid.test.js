@@ -30,6 +30,7 @@ import { jouerCombat, jouerAventure, choisirAction } from '../public/shared/raid
 import { spriteSvg, poses, palettePour, GRID } from '../public/shared/raid/sprites.js';
 import { makeRng } from '../public/shared/hasard.js';
 import * as T from '../public/shared/raid/talents.js';
+import { EVEILS, texteEveil, eveilDe, COUT_EVEIL } from '../public/shared/raid/eveils.js';
 import { RELIQUES, bonusReliques, QUETES } from '../public/shared/raid/reliques.js';
 
 const rngT = (seed = 42) => makeRng(seed);
@@ -224,9 +225,9 @@ test('les ennemis se règlent sur l’acte et sur la taille du groupe', () => {
   for (let s = 0; s < 20; s++) {
     assert.equal(composer(rngT(s), 1, 'combat', { taille: 1 }).length, 1, 'seul, un monstre à la fois');
     assert.equal(composer(rngT(s), 1, 'boss', { taille: 1 }).length, 1);
-    const b = composer(rngT(s), 3, 'boss');
-    assert.notEqual(b[0].modeleId, BOSS_FINAL, 'le Dragon attend l’acte 5');
-    assert.equal(composer(rngT(s), 5, 'boss')[0].modeleId, BOSS_FINAL);
+    assert.equal(composer(rngT(s), 5, 'boss')[0].modeleId, 'sarkhavel', 'le Dragon garde le chapitre 5');
+    assert.equal(composer(rngT(s), ACTES.length, 'boss')[0].modeleId, BOSS_FINAL);
+    assert.equal(composer(rngT(s), ACTES.length, 'boss').length, 1, 'le dernier boss est seul');
   }
 });
 
@@ -466,7 +467,7 @@ test('les choix pèsent sur les boss', () => {
   assert.equal(A.menacesDuBoss(av).retire, 1);
   A.appliquer(av, { boss: { cible: 'final', atk: 0.2 } });
   assert.equal(A.menacesDuBoss(av).atk, 0, 'le Dragon est loin');
-  av.acte = 5;
+  av.acte = ACTES.length;
   assert.equal(A.menacesDuBoss(av).atk, 0.2);
 });
 
@@ -794,7 +795,7 @@ test('les reliques pèsent sur le groupe et sur le combat', () => {
   assert.ok(b.fini && !b.victoire);
 });
 
-test('un boss lâche une relique, et ne revient pas à l’acte suivant', () => {
+test('un boss lâche une relique, et chaque chapitre a le sien', () => {
   const av = A.creerAventure({ heros: 'mordrec', seed: 30 });
   av.acte = 3;
   av.etape = { type: 'combat', salle: 'boss', ennemis: composer(rngT(1), 3, 'boss') };
@@ -803,9 +804,7 @@ test('un boss lâche une relique, et ne revient pas à l’acte suivant', () => 
   assert.ok(av.etape.relique, 'la relique est annoncée');
   assert.equal(av.reliques.length, 1);
   assert.deepEqual(av.bossVus, [premier]);
-  for (let s = 0; s < 30; s++) {
-    assert.notEqual(composer(rngT(s), 4, 'boss', { vus: av.bossVus })[0].modeleId, premier);
-  }
+  assert.notEqual(composer(rngT(1), 4, 'boss')[0].modeleId, premier, 'chaque chapitre a son propre maître');
 });
 
 test('les boutiques vendent des reliques, et la Bourse fait baisser les prix', () => {
@@ -1029,26 +1028,26 @@ test('un compagnon parti sans rien peut ne jamais revenir, et le retenir coûte 
   for (const h of A.HISTOIRES) assert.ok(h.texte('X') && h.retour('X') && h.adieu('X'), h.id);
 });
 
-test('le Dragon est un cran au-dessus, et ne lâche rien : sa mort finit l’aventure', () => {
+test('le dernier boss est un cran au-dessus, et ne lâche rien : sa mort finit l’aventure', () => {
   const dragon = (acteFinal) => {
     const av = A.creerAventure({ heros: 'kaelis', seed: 9 });
     for (const id of ['brandel', 'mei', 'pix']) av.groupe.push(creerPersonnage(id, 10));
-    av.acte = 5;
-    av.carte = genererCarte(rngT(2), 5);
+    av.acte = ACTES.length;
+    av.carte = genererCarte(rngT(2), ACTES.length);
     const chemin = [];
     let n = av.carte.noeuds.find((x) => x.rangee === 0);
     while (n) { chemin.push(n.id); n = av.carte.noeuds.find((x) => x.id === n.suivants[0]); }
     av.visites = chemin.slice(0, -1);
     av.position = chemin[chemin.length - 2];
-    if (!acteFinal) av.acte = 4;
+    if (!acteFinal) av.acte = ACTES.length - 1;
     A.entrer(av, 'boss');
     return av;
   };
   const av = dragon(true);
   assert.equal(av.etape.salle, 'boss');
   const b = av.etape.ennemis[0];
-  assert.equal(b.modeleId, 'sarkhavel');
-  const nu = composer(A.rng({ alea: 1 }), 5, 'boss', { taille: 4 })[0];
+  assert.equal(b.modeleId, BOSS_FINAL);
+  const nu = composer(A.rng({ alea: 1 }), ACTES.length, 'boss', { taille: 4 })[0];
   assert.ok(b.pvMax > nu.pvMax * 1.05, 'plus de vie que sa fiche');
   const or = av.or, xp = av.groupe[0].xp;
   const r = A.conclureCombat(av, true);
@@ -1058,4 +1057,125 @@ test('le Dragon est un cran au-dessus, et ne lâche rien : sa mort finit l’ave
   assert.equal(av.or, or);
   assert.equal(av.groupe[0].xp, xp);
   assert.equal(av.reliques.length, 0);
+});
+
+/* ================================================================== */
+/* Dix chapitres                                                      */
+/* ================================================================== */
+
+test('dix chapitres, dix maîtres différents, et des niveaux jusqu’à vingt', () => {
+  assert.equal(ACTES.length, 10);
+  const boss = ACTES.map((a) => a.boss);
+  assert.equal(new Set(boss).size, 10);
+  for (const id of boss) assert.equal(MODELES_PAR_ID[id].rang, 'boss', id);
+  assert.equal(boss[4], 'sarkhavel');
+  assert.equal(boss[9], BOSS_FINAL);
+  assert.equal(NIVEAU_MAX, 20);
+  assert.equal(SEUILS_XP.length, NIVEAU_MAX + 1);
+  let fort = 0;
+  for (let c = 1; c <= 10; c++) {
+    const b = composer(rngT(1), c, 'boss')[0];
+    assert.ok(b.pvMax > fort, `le boss du chapitre ${c} est plus solide que le précédent`);
+    fort = b.pvMax * 0.8;
+  }
+});
+
+test('on peut reprendre l’histoire à un chapitre avancé, avec de quoi le tenir', () => {
+  assert.throws(() => A.creerAventure({ chapitre: 11 }));
+  const av = A.creerAventure({ heros: 'pix', seed: 7, chapitre: 6 });
+  assert.equal(av.acte, 6);
+  assert.equal(av.groupe[0].niveau, A.niveauDuChapitre(6));
+  assert.ok(av.sac.length >= 6 && av.reliques.length === 2 && av.or > 300);
+  // Les dons que le niveau a déjà ouverts, puis trois compagnons à choisir.
+  let dons = 0, recrues = 0;
+  for (let i = 0; i < 30 && av.etape; i++) {
+    const e = av.etape;
+    if (e.type === 'don') { dons++; A.choisirDon(av, e.choix[0].id); }
+    else if (e.type === 'compagnon') { assert.ok(e.depart); recrues++; A.recruter(av, e.offres[0]); }
+    else A.terminerEtape(av);
+  }
+  assert.equal(dons, A.NIVEAUX_DON.filter((n) => n <= av.groupe[0].niveau).length);
+  assert.equal(recrues, 3);
+  assert.equal(av.groupe.length, 4);
+  assert.equal(av.etape, null);
+  assert.ok(A.sallesAccessibles(av).length >= 1);
+});
+
+/* ================================================================== */
+/* Compétences d'éveil                                                */
+/* ================================================================== */
+
+test('chaque personnage a sa propre compétence d’éveil', () => {
+  const tous = [...HEROS, ...LEGENDES];
+  assert.equal(Object.keys(EVEILS).length, tous.length);
+  for (const h of tous) {
+    const sp = EVEILS[h.id];
+    assert.ok(sp, `${h.id} n’a pas de compétence d’éveil`);
+    assert.ok(sp.degats || (sp.puis && sp.puis.length), h.id);
+    assert.ok(texteEveil(sp).length > 15, h.id);
+    if (h.role === 'dps') assert.ok(sp.degats, `${h.id} : un DPS éveillé frappe`);
+  }
+  assert.equal(new Set(Object.values(EVEILS).map((s) => s.nom)).size, tous.length, 'pas deux fois le même nom');
+  assert.equal(new Set(Object.values(EVEILS).map((s) => JSON.stringify([s.degats, s.puis]))).size, tous.length, 'pas deux fois le même effet');
+});
+
+test('la compétence d’éveil n’existe qu’après l’éveil, et fait ce qu’elle annonce', () => {
+  const p = creerPersonnage('pix', 8);
+  assert.equal(eveilDe(p), null);
+  const b0 = creerBataille({ groupe: [p], ennemis: [gnoll(3)], inventaire: {}, rng: rngT(1) });
+  demarrer(b0);
+  assert.ok(!actionsDe(b0).some((a) => a.type === 'eveil'));
+
+  // Pix éveillé : frappe tous les ennemis et les étourdit.
+  p.eveil = true;
+  const b = creerBataille({ groupe: [p], ennemis: [gnoll(3), gnoll(3), gnoll(3)], inventaire: {}, rng: rngT(2) });
+  for (const e of b.ennemis) { e.vit = -5; e.pvMax = e.pv = 9999; }
+  demarrer(b);
+  const a = actionsDe(b).find((x) => x.type === 'eveil');
+  assert.ok(a && a.cibles === 'groupe', 'un sort de zone ne demande pas de cible');
+  actif(b).pm = 5;
+  assert.equal(agir(b, { type: 'eveil' }).ok, false, 'il coûte du mana');
+  actif(b).pm = 30;
+  const ev = agir(b, { type: 'eveil' }).evenements;
+  assert.equal(actif(b).pm >= 30 - COUT_EVEIL, true);
+  assert.equal(new Set(ev.filter((x) => x.t === 'degats' && x.camp === 'e').map((x) => x.idx)).size, 3);
+  assert.equal(ev.filter((x) => x.t === 'action' && x.genre === 'etourdi').length, 3, 'les trois ennemis perdent leur tour');
+  assert.ok(!ev.some((x) => x.t === 'degats' && x.camp === 'h'), 'personne n’a pu frapper');
+});
+
+test('un boss ne se laisse pas étourdir, et l’éveil d’un soigneur relève les morts', () => {
+  const pix = creerPersonnage('pix', 10);
+  pix.eveil = true;
+  const boss = ennemiRpg(MODELES_PAR_ID.vorgath, 3, 'feu', rngT(1), { boss: true });
+  boss.vit = -5;
+  const b = creerBataille({ groupe: [pix], ennemis: [boss], inventaire: {}, rng: rngT(2) });
+  demarrer(b);
+  actif(b).pm = 30;
+  const ev = agir(b, { type: 'eveil' }).evenements;
+  assert.ok(!ev.some((x) => x.genre === 'etourdi'));
+
+  const groupe = ['elissende', 'brandel'].map((id) => creerPersonnage(id, 8));
+  groupe[0].eveil = true;
+  const b2 = creerBataille({ groupe, ennemis: [gnoll(1)], inventaire: {}, rng: rngT(3) });
+  b2.ennemis[0].vit = -5;
+  b2.heros[0].vit = 99;
+  demarrer(b2);
+  b2.heros[1].pv = 0;
+  actif(b2).pm = 30;
+  const ev2 = agir(b2, { type: 'eveil' }).evenements;
+  assert.ok(ev2.some((x) => x.t === 'releve' && x.idx === 1));
+  assert.ok(b2.heros[1].pv > 0);
+});
+
+test('au retour de voyage, le compagnon rapporte sa compétence', () => {
+  const av = A.creerAventure({ heros: 'kaelis', seed: 3 });
+  av.groupe.push(creerPersonnage('mei', 4));
+  av.etape = { type: 'depart', idx: 1, histoire: 'lettre' };
+  assert.equal(A.departCourant(av).eveil, EVEILS.mei, 'elle est annoncée avant de choisir');
+  av.absents = [{ perso: av.groupe.pop(), reste: 0, adieu: false, histoire: 'lettre' }];
+  av.etape = { type: 'resultat', titre: 't', glyphe: '', dit: '', effet: '' };
+  A.terminerEtape(av);
+  assert.equal(av.etape.eveil, 'mei');
+  assert.ok(av.etape.effet.includes(EVEILS.mei.nom));
+  assert.equal(eveilDe(av.groupe[1]), EVEILS.mei);
 });

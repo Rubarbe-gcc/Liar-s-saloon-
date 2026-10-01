@@ -795,3 +795,50 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 @keyframes cine-sort { to { opacity: 0; } }
 @keyframes cine-art { from { opacity: 0; transform: scale(.7) translateY(14px); } to { opacity: 1; transform: none; } }
 @keyframes cine-titre { from { opacity: 0; letter-spacing: .4em; } to { opacity: 1; letter-spacing: .06em; } }
+
+/* ------------------------------------------------------------------ */
+/* Chapitres                                                           */
+/* ------------------------------------------------------------------ */
+
+.chapitres {
+  display: flex; gap: 14px;
+  overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
+  padding: 6px 9% 16px; margin: 0 -14px;
+  scrollbar-width: none;
+}
+.chapitres::-webkit-scrollbar { display: none; }
+.chapitre {
+  --aff: var(--or);
+  flex: 0 0 82%; max-width: 380px; scroll-snap-align: center;
+  display: grid; gap: 8px; align-content: start; text-align: center;
+  padding: 16px 16px 18px; border-radius: 20px;
+  border: 2px solid color-mix(in srgb, var(--aff) 60%, #000);
+  background:
+    radial-gradient(90% 55% at 50% 22%, color-mix(in srgb, var(--aff) 26%, transparent), transparent 75%),
+    linear-gradient(180deg, #241a10, #120c07);
+  box-shadow: 0 8px 0 rgba(0,0,0,.5), 0 20px 34px rgba(0,0,0,.45);
+}
+.chapitre.courant { box-shadow: 0 0 0 2px var(--or), 0 8px 0 rgba(0,0,0,.5), 0 0 34px rgba(232, 192, 96, .35); }
+.chapitre.verrou { --aff: #666; filter: grayscale(.8) brightness(.7); }
+.chap-num { display: flex; justify-content: space-between; align-items: center; font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--doux); }
+.chap-num span { padding: 2px 9px; border-radius: 999px; background: rgba(0,0,0,.5); border: 1px solid color-mix(in srgb, var(--aff) 50%, transparent); color: var(--aff); letter-spacing: .06em; }
+.chap-art { height: clamp(150px, 26svh, 210px); display: grid; place-items: center; }
+.chap-art .cine-portrait { width: 100%; height: 100%; }
+.chap-art .cine-glyphe { font-size: 84px; animation: none; }
+.chapitre h3 { margin: 0; font-size: 21px; color: #fff3d6; text-shadow: 0 0 18px color-mix(in srgb, var(--aff) 70%, transparent); }
+.chap-boss { margin: 0; font-size: 13px; color: var(--aff); font-weight: 700; }
+.chap-resume { margin: 2px 0 6px; font-size: 13px; line-height: 1.5; color: var(--doux); min-height: 5.6em; }
+.chap-actions { display: grid; gap: 8px; }
+.chap-actions .btn { padding: 11px 14px; font-size: 14px; }
+.chap-points { display: flex; justify-content: center; gap: 7px; }
+.chap-points i { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.12); transition: transform .2s, background .2s; }
+.chap-points i.ouvert { background: rgba(232, 192, 96, .45); }
+.chap-points i.ici { background: var(--or); transform: scale(1.5); }
+.depart-chapitre { font-size: 13px; color: var(--texte); background: rgba(232, 192, 96, .1); border: 1px solid var(--bord); border-radius: 12px; padding: 10px 12px; margin: 0 0 6px; line-height: 1.5; }
+.depart-chapitre .mini-btn { margin-top: 6px; display: block; }
+
+/* Compétences d'éveil */
+.sort.eveil { border: 1px solid #7fd8ff; background: linear-gradient(120deg, rgba(94, 208, 255, .16), rgba(0,0,0,.22)); }
+.sort.eveil b { color: #bfeeff; }
+.cmd.eveil { border-color: #7fd8ff; background: linear-gradient(120deg, rgba(40, 110, 150, .55), var(--carte)); }
+.cmd.eveil b { color: #d6f4ff; }

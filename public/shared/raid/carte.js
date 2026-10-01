@@ -1,7 +1,7 @@
 /**
- * RAID — la carte de chaque acte, et ce qu'on y rencontre.
+ * RAID — la carte de chaque chapitre, et ce qu'on y rencontre.
  *
- * Chaque acte est une carte à chemins : sept étapes à gravir, trois ou quatre
+ * Chaque chapitre est une carte à chemins : sept étapes à gravir, trois ou quatre
  * routes qui se croisent, et le boss au sommet. À chaque étape, le joueur
  * choisit sa prochaine salle parmi celles que son chemin relie : un combat
  * pour l'expérience, un feu de camp pour souffler, un marchand, un coffre,
@@ -11,15 +11,25 @@
  */
 
 import { CYCLE } from './ecoles.js';
-import { MODELES, MODELES_PAR_ID, BOSS_FINAL, parRang } from './ennemis.js';
+import { MODELES, MODELES_PAR_ID, parRang } from './ennemis.js';
 import { entier, piocher, melanger } from '../hasard.js';
 
+/**
+ * Les dix chapitres. Chacun a son décor, son école dominante et son maître
+ * (`boss`). Les cinq premiers montent vers le Dragon ; les cinq suivants
+ * descendent vers ce que le Dragon gardait.
+ */
 export const ACTES = [
-  { nom: 'Les Galeries Noyées', ecole: 'nature', texte: 'L’eau monte, et quelque chose nage dedans.' },
-  { nom: 'Le Cloître Profané', ecole: 'ombre', texte: 'On y priait. On y prie encore, mais pas la même chose.' },
-  { nom: 'La Forge Ardente', ecole: 'feu', texte: 'Les soufflets tournent, et personne ne les tient.' },
-  { nom: 'Le Sanctuaire Gelé', ecole: 'givre', texte: 'Tout y est intact. Tout y est figé.' },
-  { nom: 'Le Pic de l’Aube', ecole: 'sacre', texte: 'Au sommet, le Dragon Cendré attend son heure.' },
+  { nom: 'Les Galeries Noyées', ecole: 'nature', boss: 'morvase', texte: 'L’eau monte, et quelque chose nage dedans.' },
+  { nom: 'Le Cloître Profané', ecole: 'ombre', boss: 'vorgath', texte: 'On y priait. On y prie encore, mais pas la même chose.' },
+  { nom: 'La Forge Ardente', ecole: 'feu', boss: 'kharn', texte: 'Les soufflets tournent, et personne ne les tient.' },
+  { nom: 'Le Sanctuaire Gelé', ecole: 'givre', boss: 'ysolde', texte: 'Tout y est intact. Tout y est figé.' },
+  { nom: 'Le Pic de l’Aube', ecole: 'sacre', boss: 'sarkhavel', ecoleBoss: 'feu', texte: 'Au sommet, le Dragon Cendré attend son heure.' },
+  { nom: 'Les Racines du Monde', ecole: 'nature', boss: 'yggmar', texte: 'Sous la montagne, la forêt d’avant les hommes. Elle se souvient de tout.' },
+  { nom: 'La Nécropole Engloutie', ecole: 'ombre', boss: 'nelizar', texte: 'Les rois d’autrefois dorment ici. L’un d’eux n’a jamais su s’endormir.' },
+  { nom: 'La Citadelle Inversée', ecole: 'sacre', boss: 'seraphiel', texte: 'Une forteresse bâtie la tête en bas, pour garder ce qui est dessous.' },
+  { nom: 'Le Seuil du Néant', ecole: 'givre', boss: 'ozrath', texte: 'Ici, le monde s’arrête. Quelque chose regarde par la fente.' },
+  { nom: 'Le Trône de Cendre', ecole: 'feu', boss: 'azhar', texte: 'Tout en bas, un roi attend depuis mille ans qu’on vienne lui ouvrir.' },
 ];
 
 export const RANGEES = 7;
@@ -33,7 +43,7 @@ export const TYPES = {
   repos: { nom: 'Feu de camp', glyphe: '🔥', texte: 'Souffler, s’entraîner. La partie y est sauvegardée.' },
   tresor: { nom: 'Trésor', glyphe: '📦', texte: 'Un coffre, et ce qu’il contient.' },
   compagnon: { nom: 'Rencontre', glyphe: '🤝', texte: 'Un aventurier qui pourrait se joindre à vous.' },
-  boss: { nom: 'Boss', glyphe: '👑', texte: 'Le maître de l’acte.' },
+  boss: { nom: 'Boss', glyphe: '👑', texte: 'Le maître du chapitre.' },
 };
 
 /**
@@ -59,7 +69,7 @@ function tirerType(rng, rangee, acte) {
 }
 
 /**
- * Génère la carte d'un acte : quelques chemins qui montent d'une rangée à
+ * Génère la carte d'un chapitre : quelques chemins qui montent d'une rangée à
  * l'autre, en décalant d'au plus une colonne, et qui se rejoignent parfois.
  */
 export function genererCarte(rng, acte = 1) {
@@ -95,7 +105,7 @@ export function genererCarte(rng, acte = 1) {
     }
   }
 
-  // Chaque acte a au moins un marchand : l'or doit pouvoir se dépenser.
+  // Chaque chapitre a au moins un marchand : l'or doit pouvoir se dépenser.
   const milieu = [...noeuds.values()].filter((n) => n.rangee >= 2 && n.rangee <= RANGEES - 2);
   if (!milieu.some((n) => n.type === 'marchand')) {
     const libres = milieu.filter((n) => n.type !== 'compagnon');
@@ -119,8 +129,12 @@ export function accessibles(carte, position) {
 /* Ennemis à l'échelle du jeu de rôle                                  */
 /* ------------------------------------------------------------------ */
 
-/** Croissance par acte : la vie monte plus vite que les coups. */
+/** Croissance par chapitre : la vie monte plus vite que les coups. */
 export const CROISSANCE = { pv: 1.05, atk: 0.78, def: 0.45 };
+/** Ce que la courbe prend en plus, passé le troisième chapitre (puissance 1,5). */
+export const COURBURE = 0.45;
+/** Les boss montent moins vite : leurs attaques de zone pèsent déjà bien assez. */
+export const COURBURE_BOSS = 0.4;
 
 /**
  * Un ennemi jouable, tiré d'un modèle du bestiaire. Les fiches du bestiaire
@@ -128,7 +142,7 @@ export const CROISSANCE = { pv: 1.05, atk: 0.78, def: 0.45 };
  * groupe de quatre, puis on les étire selon l'acte.
  */
 export function ennemiRpg(modele, acte, ecole, rng, { rang = modele.rang, boss = false, echelle = ECHELLE[4] } = {}) {
-  const k = (part) => 1 + part * (acte - 1) + 0.15 * Math.max(0, acte - 3) ** 2;
+  const k = (part) => 1 + part * (acte - 1) + (boss ? COURBURE_BOSS : COURBURE) * Math.max(0, acte - 3) ** 1.5;
   const grain = 0.94 + rng() * 0.12;
   const renfort = boss && modele.rang !== 'boss' ? (acte === 1 ? 1.35 : 1.7) : 1;
   const pv = Math.round((modele.pv / 640) * k(CROISSANCE.pv) * grain * renfort * echelle.pv);
@@ -174,7 +188,7 @@ export function composer(rng, acte, type, { vus = [], taille = 4 } = {}) {
   const echelle = ECHELLE[Math.max(1, Math.min(4, taille))];
   const ecole = () => (rng() < 0.55 ? act.ecole : CYCLE[entier(rng, CYCLE.length)]);
   const tirer = (rang) => {
-    const tous = parRang(rang).filter((m) => m.id !== BOSS_FINAL);
+    const tous = parRang(rang);
     const pool = tous.filter((m) => !vus.includes(m.id));
     const l = pool.length ? pool : tous;
     return l[entier(rng, l.length)];
@@ -182,19 +196,21 @@ export function composer(rng, acte, type, { vus = [], taille = 4 } = {}) {
   const creer = (m, o = {}) => ennemiRpg(m, acte, o.ecole || ecole(), rng, { echelle, ...o });
 
   if (type === 'boss') {
-    const modele = acte === ACTES.length ? MODELES_PAR_ID[BOSS_FINAL]
-      : acte >= 3 ? tirer('boss') : tirer('elite');
-    const b = creer(modele, { ecole: modele.id === BOSS_FINAL ? 'feu' : act.ecole, boss: true });
-    const escorte = acte >= 2 && taille >= 2 && modele.id !== BOSS_FINAL ? [creer(tirer('trash'))] : [];
+    // Chaque chapitre a son maître, toujours le même : c'est lui que l'histoire raconte.
+    const modele = MODELES_PAR_ID[act.boss];
+    const b = creer(modele, { ecole: act.ecoleBoss || act.ecole, boss: true });
+    const escorte = acte >= 2 && taille >= 2 && acte !== ACTES.length ? [creer(tirer('trash'))] : [];
     return [b, ...escorte];
   }
-  if (type === 'elite') return [creer(tirer('elite'))];
+  // Passé la moitié de l'histoire, une élite ne se déplace plus seule.
+  if (type === 'elite') return [creer(tirer('elite')), ...(acte >= 6 && taille >= 3 ? [creer(tirer('trash'))] : [])];
 
   // Une meute : de un à trois monstres, selon l'acte et la taille du groupe.
-  let n = 1 + (rng() < 0.3 + 0.15 * taille ? 1 : 0) + (acte >= 3 && taille >= 3 && rng() < 0.4 ? 1 : 0);
+  let n = 1 + (rng() < 0.3 + 0.15 * taille ? 1 : 0) + (acte >= 3 && taille >= 3 && rng() < 0.4 ? 1 : 0)
+    + (acte >= 6 && taille >= 4 && rng() < 0.5 ? 1 : 0);
   if (taille === 1 && acte === 1) n = 1;
   const out = [];
-  for (let i = 0; i < Math.min(3, n); i++) out.push(creer(tirer('trash')));
+  for (let i = 0; i < Math.min(4, n); i++) out.push(creer(tirer('trash')));
   return out;
 }
 

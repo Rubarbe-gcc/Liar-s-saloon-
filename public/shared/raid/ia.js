@@ -19,6 +19,7 @@ import { avancer, agir } from './bataille.js';
 import { statsDe } from './personnages.js';
 import { valeurPiece } from './equipement.js';
 import { repartir } from './talents.js';
+import { PAR_ID } from './heros.js';
 
 const part = (u) => u.pv / u.pvMax;
 
@@ -63,6 +64,12 @@ export function choisirAction(etat) {
   if (menace && part(h) < 0.5) return { type: 'defendre' };
 
   const e = meilleureCible(etat, h);
+  // La compétence d'éveil : dès qu'elle sert.
+  if (a.eveil && a.eveil.possible) {
+    const sp = a.eveil.eveil;
+    if (sp.degats) return { type: 'eveil', cible: e.idx };
+    if (tombes.length || part(blesse) < 0.55 || menace) return { type: 'eveil' };
+  }
   for (const cle of ['ultime', 'special']) {
     const s = sortDe(cle);
     if (s && !s.soutien) {
@@ -173,7 +180,7 @@ export function jouerEtape(av) {
     case 'tresor': prendreTresor(av); break;
     case 'compagnon':
       // Groupe complet : le légendaire prend la place du dernier arrivé.
-      if (!recruter(av, e.offres[e.offres.length - 1], av.groupe.length >= 4 ? av.groupe.length - 1 : null).ok) terminerEtape(av);
+      if (!recruter(av, e.offres.find((id) => PAR_ID[id].legendaire) || e.offres[0], av.groupe.length >= 4 ? av.groupe.length - 1 : null).ok) terminerEtape(av);
       break;
     case 'depart': choisirDepart(av, av.or >= 40 ? 'viatique' : 'retenir'); break;
     case 'resultat':

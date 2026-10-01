@@ -21,6 +21,7 @@ import {
 import { pieceAuHasard, valeurPiece, texteBonus } from './equipement.js';
 import { genererCarte, accessibles, noeud, composer, ACTES, TYPES } from './carte.js';
 import { OBJETS, creerBataille } from './bataille.js';
+import { EVEILS, texteEveil } from './eveils.js';
 import {
   RELIQUES, RELIQUES_PAR_ID, bonusReliques, QUETES, QUETES_PAR_ID, instancierQuete, texteQuete,
 } from './reliques.js';
@@ -28,7 +29,7 @@ import {
 export const TAILLE_GROUPE = 4;
 export const CHANCE_DEPART = 5;
 export const CHANCE_MAX = 40;
-export const NIVEAUX_DON = [3, 5, 7, 9];
+export const NIVEAUX_DON = [3, 5, 7, 9, 12, 15, 18];
 
 /* ------------------------------------------------------------------ */
 /* Hasard sauvegardable                                                */
@@ -95,28 +96,40 @@ export const CHANCE_EMBUSCADE = 0.22;
 export const CHANCE_COLPORTEUR = 0.15;
 export const CHANCE_COLPORTEUR_ZONE = 0.12;
 /**
- * Les héros légendaires : à partir de cet acte, une rencontre a une chance
+ * Les héros légendaires : à partir de ce chapitre, une rencontre a une chance
  * d'en amener un. Un groupe complet peut l'accueillir à la place d'un
  * compagnon.
  */
-/** Le Dragon Cendré est le dernier combat : il est un cran au-dessus de sa fiche. */
-export const DRAGON = { pv: 1.18, atk: 1.08 };
+/**
+ * Le dernier boss : un peu plus de vie que sa fiche, un peu moins de frappe —
+ * à ce chapitre la courbe est déjà raide, et le combat doit durer, pas trancher.
+ */
+export const DRAGON = { pv: 1.1, atk: 0.9 };
+/** Niveau du héros quand on reprend l'histoire à un chapitre déjà débloqué. */
+export const niveauDuChapitre = (chapitre) => Math.min(NIVEAU_MAX, 2 * chapitre - 1);
 export const ACTE_LEGENDES = 3;
 export const CHANCE_LEGENDE = 0.4;
 
-export function creerAventure({ heros = DEPARTS[0], seed = null, difficulte = 'normal' } = {}) {
+/**
+ * @param {object} o
+ * @param {number} [o.chapitre]  chapitre de départ. Au-delà du premier, le
+ *   héros arrive au niveau du chapitre, avec de l'or, du matériel, des
+ *   reliques — et des compagnons à choisir avant de se mettre en route.
+ */
+export function creerAventure({ heros = DEPARTS[0], seed = null, difficulte = 'normal', chapitre = 1 } = {}) {
   if (!PAR_ID[heros]) throw new Error(`héros inconnu : ${heros}`);
   if (!DIFFICULTES[difficulte]) throw new Error(`difficulté inconnue : ${difficulte}`);
+  if (!(Number.isInteger(chapitre) && chapitre >= 1 && chapitre <= ACTES.length)) throw new Error(`chapitre inconnu : ${chapitre}`);
   const av = {
     version: 2,
     difficulte,
     alea: (seed ?? Math.floor(Math.random() * 2 ** 31)) >>> 0,
-    acte: 1,
+    acte: chapitre,
     carte: null,
     position: null,
     visites: [],
-    groupe: [creerPersonnage(heros, 1)],
-    or: 35,
+    groupe: [creerPersonnage(heros, niveauDuChapitre(chapitre))],
+    or: 35 + 70 * (chapitre - 1),
     inventaire: { potion: DIFFICULTES[difficulte].potions, elixir: 1, phenix: 0 },
     sac: [],
     chance: CHANCE_DEPART,
@@ -136,16 +149,34 @@ export function creerAventure({ heros = DEPARTS[0], seed = null, difficulte = 'n
     offresQuetes: [],
     absents: [],
     departActe: 0,
+    recruesDues: 0,
     cines: [],
     reprise: null,
     termine: false,
     victoire: false,
     stats: { combats: 0, ors: 0, morts: 0 },
   };
-  av.carte = genererCarte(rng(av), 1);
+  av.carte = genererCarte(rng(av), chapitre);
   av.offresQuetes = tirerQuetes(av);
+  if (chapitre > 1) equiperPourChapitre(av, chapitre);
   sauvegarder(av);
   return av;
+}
+
+/**
+ * On reprend l'histoire en cours de route : de quoi tenir le chapitre. Des
+ * potions, quelques pièces rares, des reliques, les dons que le niveau du
+ * héros a déjà ouverts, et jusqu'à trois compagnons à recruter d'entrée.
+ */
+function equiperPourChapitre(av, chapitre) {
+  av.inventaire.potion += 2;
+  av.inventaire.elixir += 1;
+  av.inventaire.phenix += 1;
+  for (let i = 0; i < 6; i++) av.sac.push(piece(av, { acte: chapitre - 1, plancher: 'rare' }));
+  for (let i = 0; i < Math.floor((chapitre - 1) / 2); i++) gagnerRelique(av);
+  av.donsEnAttente = NIVEAUX_DON.filter((n) => n <= heros(av).niveau).length;
+  av.recruesDues = Math.min(TAILLE_GROUPE - 1, chapitre - 1);
+  suite(av);
 }
 
 export const heros = (av) => av.groupe[0];
@@ -267,7 +298,7 @@ function rencontre(av, type) {
 
 /**
  * Depuis la carte, on peut retourner rôder dans une zone déjà ouverte (l'acte
- * en cours ou un acte passé) pour y chasser : de l'expérience et de l'or au
+ * en cours ou un chapitre passé) pour y chasser : de l'expérience et de l'or au
  * tarif de la zone. Mais chaque chasse a une chance de tourner à l'embuscade
  * — des monstres de l'acte en cours, menés par une élite, qui frappent les
  * premiers. Le combat s'engage alors d'office.
@@ -413,6 +444,15 @@ function suite(av) {
     av.etape = { type: 'don', choix: proposerDons(av) };
     return;
   }
+  // On reprend l'histoire à un chapitre avancé : les compagnons se présentent un à un.
+  if (av.recruesDues > 0) {
+    av.recruesDues--;
+    const offres = offresCompagnons(av);
+    if (offres.length) {
+      av.etape = { type: 'compagnon', offres, depart: true };
+      return;
+    }
+  }
   // Un compagnon parti en voyage revient — ou fait savoir qu'il ne reviendra pas.
   if ((av.absents || []).some((a) => a.reste <= 0)) {
     retourAbsent(av);
@@ -463,7 +503,7 @@ export function passerActe(av) {
   av.quete = null;
   av.offresQuetes = tirerQuetes(av);
   av.menaces = av.menaces.filter((m) => m.cible === 'final');
-  // Entre deux actes, le groupe se refait une santé.
+  // Entre deux chapitres, le groupe se refait une santé.
   const bonus = bonusDe(av);
   for (const p of av.groupe) {
     const s = statsDe(p, bonus);
@@ -614,7 +654,7 @@ export function texteEffet(e) {
   if (e.pieceEpique) out.push('une pièce d’équipement épique');
   if (e.relique) out.push('une relique');
   if (e.boss) {
-    const qui = e.boss.cible === 'final' ? 'le Dragon' : 'le boss de l’acte';
+    const qui = e.boss.cible === 'final' ? 'le dernier boss' : 'le boss du chapitre';
     if (e.boss.pv) out.push(`${qui} : ${pc(e.boss.pv)} de vie`);
     if (e.boss.atk) out.push(`${qui} : ${pc(e.boss.atk)} d’attaque`);
     if (e.boss.retire) out.push(`${qui} perd une capacité`);
@@ -643,7 +683,7 @@ export const EVENEMENTS = [
     texte: 'Un éclaireur enchaîné au mur. Il jure connaître la faiblesse du maître de ces lieux.',
     choix: [
       { id: 'liberer', label: 'Le libérer', effet: { vie: -0.1, chance: 2, boss: { cible: 'acte', retire: true } },
-        dit: 'Les gardes tombent, l’éclaireur parle. Le boss de l’acte perd l’un de ses atouts.' },
+        dit: 'Les gardes tombent, l’éclaireur parle. Le boss du chapitre perd l’un de ses atouts.' },
       { id: 'depouiller', label: 'Le dépouiller', effet: { or: 30, chance: -3 },
         dit: 'Sa bourse est lourde. Personne ne vous regarde, mais la chance, si.' },
       { id: 'ignorer', label: 'L’ignorer', effet: {}, dit: 'Ses cris vous suivent un moment.' },
@@ -691,7 +731,7 @@ export const EVENEMENTS = [
       { id: 'reposer', label: 'Se reposer', effet: { vie: 0.4 }, dit: 'Le groupe dort d’un sommeil sans rêves.' },
     ] },
   { id: 'nid', titre: 'L’antre du boss', glyphe: '👁',
-    texte: 'Par une fissure, vous apercevez le maître de l’acte. Il ne vous a pas encore vus.',
+    texte: 'Par une fissure, vous apercevez le maître du chapitre. Il ne vous a pas encore vus.',
     choix: [
       { id: 'espionner', label: 'L’espionner', risque: { base: 0.55,
         succes: { boss: { cible: 'acte', pv: -0.15 } }, echec: { boss: { cible: 'acte', atk: 0.1 } },
@@ -701,11 +741,11 @@ export const EVENEMENTS = [
         dit: 'Poser les pièges coûte, mais il y laissera des plumes.' },
       { id: 'passer', label: 'Passer', effet: {}, dit: 'Chaque chose en son temps.' },
     ] },
-  { id: 'pacte', titre: 'La voix du Dragon', glyphe: '🐉', actes: [3, 5],
-    texte: 'Une voix résonne dans vos têtes : « Je peux vous rendre forts. Assez pour venir me voir. »',
+  { id: 'pacte', titre: 'La voix sous la montagne', glyphe: '🕳', actes: [3, 9],
+    texte: 'Une voix monte du plus profond : « Je peux vous rendre forts. Assez pour descendre jusqu’à moi. »',
     choix: [
       { id: 'accepter', label: 'Accepter le pacte', effet: { butin: { atk: 0.18 }, boss: { cible: 'final', atk: 0.2 } },
-        dit: 'Une force brûlante vous envahit. Le Dragon aussi s’en nourrit.' },
+        dit: 'Une force brûlante vous envahit. Celui qui parle s’en nourrit aussi.' },
       { id: 'refuser', label: 'Refuser', effet: { chance: 4 }, dit: 'La voix se tait. Vous vous sentez étrangement protégés.' },
     ] },
   { id: 'forgeron', titre: 'Le forgeron errant', glyphe: '⚒',
@@ -1036,7 +1076,7 @@ export function conseilEquipement(av, it) {
 /* Les départs : un compagnon a sa propre histoire                     */
 /* ------------------------------------------------------------------ */
 
-/** À partir de cet acte, un compagnon peut demander à s'absenter. */
+/** À partir de ce chapitre, un compagnon peut demander à s'absenter. */
 export const ACTE_ABSENCES = 2;
 export const CHANCE_ABSENCE = 0.35;
 /** Combien de salles dure le voyage. */
@@ -1080,7 +1120,7 @@ export function departCourant(av) {
   const p = av.groupe[e.idx];
   const h = HISTOIRES_PAR_ID[e.histoire];
   return {
-    perso: p, titre: h.titre, glyphe: h.glyphe, texte: h.texte(p.nom),
+    perso: p, titre: h.titre, glyphe: h.glyphe, texte: h.texte(p.nom), eveil: EVEILS[p.id] || null,
     choix: [
       { id: 'partir', label: `Laisser partir ${p.nom}`, possible: true,
         annonce: `Absence de ${DUREE_ABSENCE} salles. Au retour : l’éveil (+${Math.round(0.12 * 100)} % vie, attaque, armure, et un niveau)… s’il y a un retour (${Math.round(RISQUE_ADIEU * 100)} % de risque que non).` },
@@ -1138,7 +1178,9 @@ function retourAbsent(av) {
   p.pm = st.pmMax;
   av.groupe.push(p);
   av.etape = { type: 'resultat', titre: `${p.nom} est de retour`, glyphe: '✦', reussi: null,
-    dit: h.retour(p.nom), effet: `Éveil : +12 % de vie, d’attaque et d’armure · niveau ${p.niveau}` };
+    dit: h.retour(p.nom), effet: `Éveil : +12 % de vie, d’attaque et d’armure · niveau ${p.niveau}`
+      + (EVEILS[p.id] ? ` · nouvelle compétence : ${EVEILS[p.id].nom}` : ''),
+    eveil: EVEILS[p.id] ? p.id : null };
 }
 
 /* ------------------------------------------------------------------ */
@@ -1220,4 +1262,5 @@ function recompenserQuete(av) {
   };
 }
 
+export { EVEILS, texteEveil };
 export { TYPES, ACTES, noeud, NIVEAU_MAX, texteBonus, OBJETS, RELIQUES, RELIQUES_PAR_ID, QUETES_PAR_ID, texteQuete };

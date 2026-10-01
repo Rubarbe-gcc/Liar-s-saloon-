@@ -29,7 +29,7 @@
 <section class="screen is-active" id="s-menu">
   <div class="menu">
     <header class="logo">
-      <div class="logo-kicker">jeu de rôle solo · cinq actes</div>
+      <div class="logo-kicker">jeu de rôle solo · dix chapitres</div>
       <h1 class="logo-title">RAID</h1>
       <div class="logo-rule"><i></i><span>✧ ☾ ❦ ❄ ✹</span><i></i></div>
       <p class="logo-tag">On part seul. On revient à quatre — ou on ne revient pas.</p>
@@ -43,6 +43,10 @@
       <button class="btn btn-big" data-go="choix">
         <span class="bi">⚔</span>
         <span class="bt"><b>Nouvelle aventure</b><i>Choisissez votre héros</i></span>
+      </button>
+      <button class="btn btn-big" data-go="chapitres">
+        <span class="bi">📖</span>
+        <span class="bt"><b>Chapitres</b><i id="chapitres-note">L’histoire, en dix chapitres</i></span>
       </button>
       <div class="menu-row">
         <button class="btn btn-thin" data-go="regles"><span class="bi">❓</span> Règles</button>
@@ -65,6 +69,7 @@
     </header>
     <div class="departs" id="departs"></div>
     <div class="fiche-depart" id="fiche-depart"></div>
+    <p class="depart-chapitre" id="depart-chapitre" hidden></p>
     <h3 class="section">Difficulté</h3>
     <div class="difficultes" id="difficultes" role="radiogroup" aria-label="Difficulté"></div>
     <p class="diff-texte" id="diff-texte"></p>
@@ -135,6 +140,21 @@
     <div class="sac" id="sac"></div>
     <h3 class="section">Le voyage</h3>
     <div class="journal-voyage" id="voyage"></div>
+  </div>
+</section>
+
+<!-- ============================== CHAPITRES ========================= -->
+<section class="screen" id="s-chapitres">
+  <div class="page">
+    <header class="page-head">
+      <button class="retour" data-go="menu" aria-label="Retour">‹</button>
+      <div>
+        <h2 class="page-titre">Chapitres</h2>
+        <p class="page-sous" id="chapitres-sous">Faites défiler. Un chapitre se débloque quand vous l’atteignez.</p>
+      </div>
+    </header>
+    <div class="chapitres" id="chapitres"></div>
+    <div class="chap-points" id="chap-points"></div>
   </div>
 </section>
 

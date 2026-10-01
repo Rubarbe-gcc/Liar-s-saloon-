@@ -16,6 +16,7 @@
 import { multiplicateur } from './ecoles.js';
 import { statsDe, sortsDe, NIVEAU_ULTIME } from './personnages.js';
 import { effetsTalents } from './talents.js';
+import { eveilDe, eveilCible, COUT_EVEIL, SEUIL_EXECUTION } from './eveils.js';
 import { PAR_ID } from './heros.js';
 import { entier } from '../hasard.js';
 
@@ -69,6 +70,7 @@ export function creerBataille({ groupe, ennemis, bonus = {}, inventaire, chance 
       atk: s.atk, def: s.def, vit: s.vit, crit: s.crit,
       sorts: sortsDe(PAR_ID[p.id]),
       tal: effetsTalents(p),
+      eveil: eveilDe(p),   // sa compétence d'éveil, s'il est revenu de voyage
       defense: false, poison: null,
     };
   });
@@ -295,6 +297,10 @@ export function actionsDe(etat) {
     { type: 'attaque', nom: 'Attaque', cout: 0, possible: true, cibles: 'ennemi', mult: 1 },
     sort('special'),
     sort('ultime'),
+    ...(h.eveil ? [{
+      type: 'eveil', nom: h.eveil.nom, cout: COUT_EVEIL, possible: h.pm >= COUT_EVEIL, verrou: null,
+      cibles: eveilCible(h.eveil) ? 'ennemi' : 'groupe', eveil: h.eveil,
+    }] : []),
     { type: 'defendre', nom: 'Défendre', cout: 0, possible: true, cibles: 'aucune' },
     { type: 'potion', nom: OBJETS.potion.nom, possible: inv.potion > 0, cibles: 'allie', quantite: inv.potion },
     { type: 'elixir', nom: OBJETS.elixir.nom, possible: inv.elixir > 0, cibles: 'allie', quantite: inv.elixir },
@@ -322,11 +328,14 @@ export function agir(etat, { type, cible = null }) {
       const fait = frapper(etat, h, e, 1, ev, { basique: true });
       h.pm = Math.min(h.pmMax, h.pm + 2);   // frapper remplit un peu la jauge
       if (h.tal.vampire && h.pv > 0) soigner(h, fait * h.tal.vampire, ev);
+    } else if (type === 'eveil') {
+      lancerEveil(etat, h, e, ev);
     } else {
       lancerOffensif(etat, h, type, e, ev);
     }
   } else if (a.cibles === 'groupe') {
-    lancerSoutien(etat, h, type, ev);
+    if (type === 'eveil') lancerEveil(etat, h, null, ev);
+    else lancerSoutien(etat, h, type, ev);
   } else if (type === 'defendre') {
     h.defense = true;
     h.pm = Math.min(h.pmMax, h.pm + 4);
@@ -430,6 +439,93 @@ function lancerSoutien(etat, h, cle, ev) {
   }
 }
 
+/**
+ * La compétence d'éveil : un coup (ou pas), puis une suite d'effets. Voir
+ * `eveils.js` pour le vocabulaire.
+ */
+function lancerEveil(etat, h, e, ev) {
+  const sp = h.eveil;
+  h.pm -= COUT_EVEIL;
+  ev.push({ t: 'action', ...ref(h), nom: sp.nom, genre: 'eveil', ...(e ? { cible: ref(e) } : {}) });
+  let total = 0;
+  let touches = [];
+  const d = sp.degats;
+  if (d) {
+    touches = d.zone ? vivants(etat.ennemis) : [e];
+    for (let i = 0; i < (d.coups || 1); i++) {
+      for (const c of touches) {
+        if (c.pv <= 0) continue;
+        let mult = d.mult * (1 + (h.tal.sorts || 0));
+        if (d.execution && c.pv / c.pvMax < SEUIL_EXECUTION) mult *= 2;
+        total += frapper(etat, h, c, mult, ev, { perce: d.perce || 0 });
+      }
+    }
+  }
+  const visees = d ? touches.filter((c) => c.pv > 0) : vivants(etat.ennemis);
+  for (const o of sp.puis || []) {
+    switch (o.type) {
+      case 'soin':
+        for (const x of vivants(etat.heros)) soigner(x, x.pvMax * o.v * (1 + (etat.bonus.soin || 0) + (h.tal.soins || 0)), ev);
+        break;
+      case 'soinSoi': soigner(h, h.pvMax * o.v, ev); break;
+      case 'sang': soigner(h, total * o.v, ev); break;
+      case 'bouclier':
+        etat.bouclier = { valeur: o.v, tours: o.tours };
+        ev.push({ t: 'effet', quoi: 'bouclier' });
+        break;
+      case 'elan':
+        etat.elan = { valeur: o.v, tours: o.tours };
+        ev.push({ t: 'effet', quoi: 'elan' });
+        break;
+      case 'provoc':
+        if (h.pv > 0) {
+          etat.provoc = { idx: h.idx, tours: o.tours };
+          ev.push({ t: 'effet', quoi: 'provoc', ...ref(h) });
+        }
+        break;
+      case 'mana':
+        for (const x of vivants(etat.heros)) {
+          if (x === h) continue;
+          const avant = x.pm;
+          x.pm = Math.min(x.pmMax, x.pm + o.v);
+          ev.push({ t: 'pm', ...ref(x), n: Math.round(x.pm - avant), pm: x.pm });
+        }
+        break;
+      case 'purge':
+        for (const x of vivants(etat.heros)) x.poison = null;
+        ev.push({ t: 'effet', quoi: 'purge' });
+        break;
+      case 'releve':
+        for (const x of etat.heros) {
+          if (x.pv > 0) continue;
+          x.pv = Math.round(x.pvMax * o.v);
+          ev.push({ t: 'releve', ...ref(x), pv: x.pv });
+        }
+        break;
+      case 'brasier':
+        for (const c of visees) {
+          c.brasier = { degats: Math.max(1, Math.round((total / Math.max(1, touches.length)) * o.part)), tours: o.tours };
+          ev.push({ t: 'effet', quoi: 'brasier', ...ref(c) });
+        }
+        break;
+      case 'entrave':
+        for (const c of visees) {
+          c.entrave = { valeur: o.v, tours: o.tours };
+          ev.push({ t: 'effet', quoi: 'entrave', ...ref(c) });
+        }
+        break;
+      case 'etourdi':
+        for (const c of visees) {
+          if (c.rang === 'boss') continue;      // un boss ne se laisse pas étourdir
+          c.etourdi = true;
+          ev.push({ t: 'effet', quoi: 'etourdi', ...ref(c) });
+        }
+        break;
+      default: break;
+    }
+  }
+}
+
 function utiliserObjet(etat, h, type, allie, ev) {
   etat.inventaire[type]--;
   ev.push({ t: 'action', ...ref(h), nom: OBJETS[type].nom, genre: 'objet', cible: ref(allie) });
@@ -484,6 +580,12 @@ function coupEnnemi(etat, e, h, mult, ev) {
 
 function jouerEnnemi(etat, e, ev) {
   ev.push({ t: 'tour', ...ref(e) });
+  if (e.etourdi) {
+    // Étourdi : il perd son tour, et sa charge n'avance pas.
+    e.etourdi = false;
+    ev.push({ t: 'action', ...ref(e), nom: 'Étourdi', genre: 'etourdi' });
+    return;
+  }
   const charge = e.charge.reste <= 1;
   if (charge) {
     ev.push({ t: 'action', ...ref(e), nom: e.charge.nom, genre: 'charge' });

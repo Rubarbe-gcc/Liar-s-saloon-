@@ -26,6 +26,11 @@ export const RELIQUES = [
   { id: 'coeur', nom: 'Cœur de phénix', glyphe: '🔥', bonus: { phenix: 1 }, texte: 'Une fois par combat, le premier héros qui tombe se relève avec 30 % de sa vie.' },
   { id: 'pierre', nom: 'Pierre de mana', glyphe: '💎', bonus: { pm: 6 }, texte: '+6 PM max pour chacun.' },
   { id: 'bourse', nom: 'Bourse sans fond', glyphe: '👛', bonus: { rabais: 0.2 }, texte: 'Les marchands vendent 20 % moins cher.' },
+  { id: 'couronne', nom: 'Couronne brisée', glyphe: '👑', bonus: { atk: 0.1 }, texte: '+10 % d’attaque pour tout le groupe.' },
+  { id: 'sceau', nom: 'Sceau du gardien', glyphe: '🪬', bonus: { def: 0.15 }, texte: '+15 % d’armure pour tout le groupe.' },
+  { id: 'lanterne', nom: 'Lanterne des morts', glyphe: '🏮', bonus: { critique: 0.3 }, chance: 6, texte: 'Les coups critiques font 30 % de dégâts en plus, et +6 de chance.' },
+  { id: 'ancre', nom: 'Ancre des vivants', glyphe: '⚓', bonus: { soin: 0.25 }, texte: '+25 % aux soins lancés par le groupe.' },
+  { id: 'orbe', nom: 'Orbe du chasseur de rois', glyphe: '🔮', bonus: { boss: 0.15 }, texte: '+15 % de dégâts contre les boss.' },
   { id: 'heaume', nom: 'Heaume du colosse', glyphe: '⛑', bonus: { pv: 0.1, def: 0.08 }, texte: '+10 % de vie et +8 % d’armure pour tout le groupe.' },
 ];
 export const RELIQUES_PAR_ID = Object.fromEntries(RELIQUES.map((r) => [r.id, r]));

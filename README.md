@@ -66,7 +66,10 @@ les étoiles de ses survivants, sous un plafond qui monte avec les tours.
 ## RAID — comment ça marche
 
 Un jeu de rôle solo. On choisit **un seul héros** parmi cinq ; il part niveau 1
-au pied du donjon et gravit **cinq actes** jusqu'au Dragon Cendré.
+au pied du donjon. L'histoire tient en **dix chapitres** : cinq pour monter
+jusqu'au Dragon Cendré, cinq pour descendre vers ce qu'il gardait. Chaque
+chapitre a son boss, sa cinématique, et se débloque quand on l'atteint ;
+l'écran « Chapitres » les fait défiler et permet d'y recommencer une aventure.
 
 - **La carte** (`shared/raid/carte.js`) : chaque acte est une carte à chemins,
   sept paliers et le boss au sommet. On choisit sa prochaine salle parmi
@@ -98,6 +101,8 @@ au pied du donjon et gravit **cinq actes** jusqu'au Dragon Cendré.
   compagnon peut partir en voyage et revenir « éveillé » — ou ne pas revenir.
   Une cinématique ouvre l'aventure, une autre précède chaque boss
   (`games/raid/js/histoire.js`, `cinematique.js`).
+- **Éveil** (`eveils.js`) : un compagnon revenu de voyage gagne une
+  compétence d'éveil, propre à chaque personnage.
 - **La défaite** ramène au dernier feu de camp ; la moitié de l'expérience
   gagnée depuis reste acquise, et un boss qui a gagné garde ses blessures —
   on ne bute jamais sans fin sur le même mur. La partie est sauvegardée à

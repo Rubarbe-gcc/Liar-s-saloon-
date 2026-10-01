@@ -97,6 +97,21 @@ export const MODELES = [
   e({ id: 'kharn', nom: 'Kharn, le Titan de Lave', silhouette: 'colosse', rang: 'boss',
       pv: 78000, atk: 4400, def: 3600, traits: ['enrage', 'fureur'],
       charge: { nom: 'Éruption', tours: 3, mult: 2.7 } }),
+  e({ id: 'morvase', nom: 'Morvase, la Mère des Vases', silhouette: 'spectre', rang: 'boss',
+      pv: 62000, atk: 4000, def: 2600, traits: ['poison', 'regen'],
+      charge: { nom: 'Marée acide', tours: 3, mult: 2.3 } }),
+  e({ id: 'yggmar', nom: 'Yggmar, le Cœur-Racine', silhouette: 'colosse', rang: 'boss',
+      pv: 80000, atk: 4300, def: 3800, traits: ['enrage', 'regen', 'epines'],
+      charge: { nom: 'Étreinte des racines', tours: 3, mult: 2.5 } }),
+  e({ id: 'seraphiel', nom: 'Séraphiel, l’Ange Déchu', silhouette: 'spectre', rang: 'boss',
+      pv: 72000, atk: 5000, def: 3200, traits: ['enrage', 'frenesie', 'drain'],
+      charge: { nom: 'Jugement dernier', tours: 3, mult: 2.7 } }),
+  e({ id: 'ozrath', nom: 'Ozrath, l’Œil du Néant', silhouette: 'spectre', rang: 'boss',
+      pv: 76000, atk: 4900, def: 3400, traits: ['enrage', 'gel', 'fureur'],
+      charge: { nom: 'Regard d’abîme', tours: 3, mult: 2.7 } }),
+  e({ id: 'azhar', nom: 'Azhar-Khûl, le Roi Sans Aube', silhouette: 'colosse', rang: 'boss',
+      pv: 84000, atk: 5000, def: 3800, traits: ['enrage', 'fureur', 'gel'],
+      charge: { nom: 'Éclipse', tours: 3, mult: 2.8 } }),
   e({ id: 'sarkhavel', nom: 'Sarkhavel, le Dragon Cendré', silhouette: 'colosse', rang: 'boss',
       pv: 82000, atk: 5000, def: 3800, traits: ['enrage', 'fureur', 'epines'],
       charge: { nom: 'Souffle cendré', tours: 2, mult: 2.6 } }),
@@ -105,8 +120,8 @@ export const MODELES = [
 export const MODELES_PAR_ID = Object.fromEntries(MODELES.map((m) => [m.id, m]));
 export const parRang = (r) => MODELES.filter((m) => m.rang === r);
 
-/** Le boss de fin de donjon : celui qu'on vient chercher. */
-export const BOSS_FINAL = 'sarkhavel';
+/** Le boss de la toute fin : celui que la montagne enfermait. */
+export const BOSS_FINAL = 'azhar';
 
 /**
  * Croissance par palier. Les dégâts montent plus lentement que la vie : sans

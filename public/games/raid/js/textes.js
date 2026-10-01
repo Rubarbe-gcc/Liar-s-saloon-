@@ -74,3 +74,9 @@ export function carteRelique(r, { actions = '' } = {}) {
     ${actions ? `<div class="piece-actions">${actions}</div>` : ''}
   </div>`;
 }
+
+/** Une compétence d'éveil, en ligne de fiche. */
+export function ligneEveil(sp, texte, cout) {
+  return `<div class="sort eveil"><b>✦ ${sp.glyphe} ${txt(sp.nom)}</b> · ${cout} PM
+    <i>Compétence d’éveil. ${txt(texte)}</i></div>`;
+}

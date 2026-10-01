@@ -12,10 +12,13 @@
 import { HEROS, PAR_ID, ROLES } from './heros.js';
 import { effetsTalents } from './talents.js';
 
-export const NIVEAU_MAX = 12;
+export const NIVEAU_MAX = 20;
 
 /** Expérience cumulée pour atteindre chaque niveau (index = niveau). */
-export const SEUILS_XP = [0, 0, 30, 75, 135, 210, 300, 405, 525, 660, 810, 975, 1160];
+export const SEUILS_XP = [
+  0, 0, 30, 75, 135, 210, 300, 405, 525, 660, 810, 975, 1160,
+  1365, 1590, 1835, 2100, 2385, 2690, 3015, 3360,
+];
 
 export function niveauDe(xp) {
   let n = 1;

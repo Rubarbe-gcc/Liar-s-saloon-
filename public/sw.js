@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v27';
+const VERSION = 'v28';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -73,6 +73,7 @@ const SHELL = [
   '/shared/raid/aventure.js',
   '/shared/raid/ia.js',
   '/shared/raid/talents.js',
+  '/shared/raid/eveils.js',
   '/shared/raid/reliques.js',
   '/games/echo/',
   '/games/echo/manifest.webmanifest',

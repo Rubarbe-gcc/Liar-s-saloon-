@@ -14,6 +14,7 @@ import { spriteSvg } from '../../../shared/raid/sprites.js';
 import { choisirAction } from '../../../shared/raid/ia.js';
 import { txt, teinte, texteSort, TRAITS_RPG } from './textes.js';
 import { aUnPortrait, portraitSvg } from './boss.js';
+import { texteEveil } from '../../../shared/raid/eveils.js';
 import { RAGE } from '../../../shared/raid/bataille.js';
 
 const $ = (id) => document.getElementById(id);
@@ -55,7 +56,7 @@ export function lancerCombat(bataille, options) {
   ban.className = 'banniere-boss';
   ban.style.setProperty('--aff', teinte(boss.ecole));
   const [nom, ...titre] = boss.nom.split(/, | (?=l[ea] )/);
-  ban.innerHTML = `<i>Boss de l’acte</i><b>${txt(nom)}</b>${titre.length ? `<span>${txt(titre.join(' '))}</span>` : ''}`;
+  ban.innerHTML = `<i>Boss du chapitre</i><b>${txt(nom)}</b>${titre.length ? `<span>${txt(titre.join(' '))}</span>` : ''}`;
   $('s-combat').appendChild(ban);
   o.sfx.rage();
   setTimeout(() => {
@@ -148,6 +149,7 @@ function effetsDe(u) {
   } else {
     if (u.enrage) out.push({ glyphe: '😡', nom: 'Enragé', bon: true, texte: `+${Math.round(RAGE * 100)} % d’attaque jusqu’à la fin du combat.` });
     if (u.brasier && u.brasier.tours > 0) out.push({ glyphe: '🔥', nom: 'Brûlure', bon: false, texte: `${u.brasier.degats} dégâts à chaque fin de manche, encore ${manches(u.brasier.tours)}.` });
+    if (u.etourdi) out.push({ glyphe: '💫', nom: 'Étourdi', bon: false, texte: 'Passe son prochain tour.' });
     if (u.entrave) out.push({ glyphe: '⛓', nom: 'Affaibli', bon: false, texte: `−${Math.round(u.entrave.valeur * 100)} % d’attaque, encore ${manches(u.entrave.tours)}.` });
     for (const t of u.traits) {
       const tr = TRAITS_RPG[t];
@@ -262,6 +264,8 @@ async function jouerUn(ev) {
         await attendre(420);
       }
       secouer(ev.camp, ev.idx, 'frappe');
+      if (ev.genre === 'etourdi') { $('journal').innerHTML = `<span>💫 <b>${txt(u.nom)}</b> est étourdi et perd son tour.</span>`; await attendre(420); break; }
+      if (ev.genre === 'eveil') { $('journal').innerHTML = `<span>✦ <b>${txt(u.nom)}</b> s’éveille : <b>${txt(ev.nom)}</b> !</span>`; s.ultime(); await attendre(620); break; }
       if (ev.genre === 'ultime') s.ultime();
       else if (ev.genre === 'sort') s.special();
       else if (ev.genre === 'defense') s.garde();
@@ -328,6 +332,7 @@ async function jouerUn(ev) {
         entrave: () => `⛓ <b>${txt(u.nom)}</b> est affaibli.`,
         provoc: () => `🎯 <b>${txt(u.nom)}</b> provoque : tous les ennemis doivent le frapper !`,
         purge: () => '🌿 Les poisons se dissipent.',
+        etourdi: () => `💫 <b>${txt(u.nom)}</b> est étourdi.`,
       };
       if (dits[ev.quoi]) $('journal').innerHTML = `<span>${dits[ev.quoi]()}</span>`;
       maj();
@@ -366,6 +371,8 @@ function commandes() {
       ${sort(par.special)}
       ${sort(par.ultime)}
     </div>
+    ${par.eveil ? `<button class="cmd eveil${choix === 'eveil' ? ' choisi' : ''}" data-a="eveil" ${par.eveil.possible ? '' : 'disabled'}>
+      <b>✦ ${par.eveil.eveil.glyphe} ${txt(par.eveil.nom)}</b><i>${par.eveil.cout} PM · ${txt(texteEveil(par.eveil.eveil))}</i></button>` : ''}
     <div class="cmd-objets">${objet('potion')}${objet('elixir')}${objet('phenix')}</div>
     <div class="cmd-aide">${choix ? '<button class="mini-btn" data-a="annuler">Annuler</button>' : ''}</div>`;
   for (const el of $('commandes').querySelectorAll('[data-a]')) {
@@ -407,9 +414,10 @@ function marquerCibles() {
     for (const e of vivants(b.ennemis)) {
       const el = noeud('e', e.idx);
       el.classList.add('ciblable');
-      const s = h.sorts[choix];
-      const mult = choix === 'attaque' ? 1 : s.mult * (s.effet && s.effet.type === 'double' ? 1.2 : 1);
-      const perce = s && s.effet && s.effet.type === 'perce' && choix !== 'attaque' ? s.effet.valeur : 0;
+      const dg = choix === 'eveil' ? h.eveil.degats : null;
+      const s = dg ? null : h.sorts[choix];
+      const mult = dg ? dg.mult * (dg.coups || 1) : choix === 'attaque' ? 1 : s.mult * (s.effet && s.effet.type === 'double' ? 1.2 : 1);
+      const perce = dg ? (dg.perce || 0) : s && s.effet && s.effet.type === 'perce' && choix !== 'attaque' ? s.effet.valeur : 0;
       const d = estimer(b, h, e, mult, { perce, basique: choix === 'attaque' }).degats;
       const m = multiplicateur(h.ecole, e.ecole);
       el.insertAdjacentHTML('beforeend', `<span class="estime">≈${d}${m > 1 ? ' ▲' : m < 1 ? ' ▼' : ''}</span>`);
