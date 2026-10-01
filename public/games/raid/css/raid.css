@@ -842,3 +842,13 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .sort.eveil b { color: #bfeeff; }
 .cmd.eveil { border-color: #7fd8ff; background: linear-gradient(120deg, rgba(40, 110, 150, .55), var(--carte)); }
 .cmd.eveil b { color: #d6f4ff; }
+
+/* Changer d'appareil */
+.tr-code {
+  width: 100%; margin: 8px 0; padding: 10px; border-radius: 10px;
+  background: rgba(0,0,0,.4); border: 1px solid var(--bord); color: var(--texte);
+  font: 12px/1.4 ui-monospace, Consolas, monospace; word-break: break-all; resize: vertical;
+}
+.tr-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 8px 0; }
+.tr-actions .btn { justify-content: center; padding: 11px 10px; font-size: 14px; }
+#tr-message { color: #ffb35c; min-height: 1.2em; }

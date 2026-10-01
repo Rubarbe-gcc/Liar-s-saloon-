@@ -18,6 +18,7 @@ import { OBJETS } from '../../../shared/raid/bataille.js';
 import { spriteSvg } from '../../../shared/raid/sprites.js';
 import { lancerCombat, basculerAuto } from './combat.js';
 import { jouerCinematique } from './cinematique.js';
+import { versCode, depuisCode } from './transfert.js';
 import { scenesIntro, scenesBoss, scenesFin, scenesChapitre, CHAPITRES, artBoss } from './histoire.js';
 import { MODELES_PAR_ID } from '../../../shared/raid/ennemis.js';
 import { EVEILS, texteEveil, COUT_EVEIL, eveilDe } from '../../../shared/raid/eveils.js';
@@ -94,6 +95,7 @@ const RENDUS = {
   groupe: rendreGroupe,
   regles: () => { $('regles').innerHTML = rendreRegles(); },
   chapitres: rendreChapitres,
+  transfert: rendreTransfert,
 };
 
 function aller(nom) {
@@ -228,6 +230,53 @@ function rendreChoix() {
       <button class="mini-btn" id="b-chap-1">Repartir du chapitre 1</button>`;
     $('b-chap-1').addEventListener('click', () => { chapitreDepart = 1; rendreChoix(); });
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Changer d'appareil                                                  */
+/* ------------------------------------------------------------------ */
+
+function rendreTransfert() {
+  const ok = av && !av.termine;
+  const h = ok ? A.heros(av) : null;
+  $('tr-etat').innerHTML = ok
+    ? `Partie en cours : <b>${txt(h.nom)}</b>, niveau ${h.niveau}, chapitre ${av.acte}/${ACTES.length}, ${av.groupe.length} dans le groupe.`
+    : `Pas de partie en cours sur cet appareil. Le code emportera seulement vos chapitres débloqués (${progres.max}/${ACTES.length}).`;
+  $('tr-sortie').hidden = true;
+  $('tr-message').textContent = '';
+}
+
+/** Le code de ce qui est enregistré ici : la partie en cours et la progression. */
+async function codeCourant() {
+  const partie = av && !av.termine ? av : { version: 2, vide: true, groupe: [{ id: 'aucun' }] };
+  const code = await versCode(partie, progres);
+  $('tr-sortie').value = code;
+  $('tr-sortie').hidden = false;
+  return code;
+}
+
+async function chargerCode() {
+  const msg = $('tr-message');
+  const r = await depuisCode($('tr-entree').value);
+  if (!r.ok) { msg.textContent = `⚠ ${r.raison}`; return; }
+  const vide = !!r.partie.vide;
+  if (!vide && !r.partie.groupe.every((p) => PAR_ID[p.id])) { msg.textContent = '⚠ Ce code vient d’une version du jeu que cet appareil ne connaît pas : rechargez la page, puis réessayez.'; return; }
+  if (!vide && av && !av.termine
+      && !confirm('Une partie est déjà en cours sur cet appareil. La remplacer par celle du code ?')) return;
+  if (r.progression) {
+    progres.max = Math.max(progres.max, Math.min(ACTES.length, r.progression.max | 0));
+    progres.fini = progres.fini || !!r.progression.fini;
+    try { localStorage.setItem(CLE_PROGRES, JSON.stringify(progres)); } catch { /* ignore */ }
+  }
+  if (!vide) {
+    av = r.partie;
+    finJouee = false;
+    sauver();
+  }
+  sfx.victoire();
+  $('tr-entree').value = '';
+  toast(vide ? 'Chapitres débloqués récupérés.' : 'Partie chargée : vous pouvez continuer.');
+  aller('menu');
 }
 
 /* ------------------------------------------------------------------ */
@@ -890,6 +939,27 @@ function brancher() {
     jouerCinematique(scenesIntro(A.heros(av), ACTES[0].nom), { sfx }).then(suite);
   });
   $('b-son').addEventListener('click', () => { basculerSon(); rendreMenu(); });
+  $('tr-copier').addEventListener('click', async () => {
+    const code = await codeCourant();
+    try { await navigator.clipboard.writeText(code); toast('Code copié.'); } catch {
+      $('tr-sortie').select();
+      toast('Sélectionné : copiez-le à la main.');
+    }
+  });
+  $('tr-partager').addEventListener('click', async () => {
+    const code = await codeCourant();
+    if (navigator.share) {
+      try { await navigator.share({ title: 'Ma partie RAID', text: code }); return; } catch { /* annulé : on copie */ }
+    }
+    try { await navigator.clipboard.writeText(code); toast('Code copié : collez-le dans un message à vous-même.'); } catch {
+      $('tr-sortie').select();
+      toast('Sélectionné : copiez-le à la main.');
+    }
+  });
+  $('tr-coller').addEventListener('click', async () => {
+    try { $('tr-entree').value = await navigator.clipboard.readText(); } catch { toast('Collez le code à la main dans la case.'); }
+  });
+  $('tr-charger').addEventListener('click', chargerCode);
   $('b-auto').addEventListener('click', () => { sfx.tap(); basculerAuto(); });
 }
 

@@ -30,6 +30,7 @@ import { jouerCombat, jouerAventure, choisirAction } from '../public/shared/raid
 import { spriteSvg, poses, palettePour, GRID } from '../public/shared/raid/sprites.js';
 import { makeRng } from '../public/shared/hasard.js';
 import * as T from '../public/shared/raid/talents.js';
+import { versCode, depuisCode } from '../public/games/raid/js/transfert.js';
 import { EVEILS, texteEveil, eveilDe, COUT_EVEIL } from '../public/shared/raid/eveils.js';
 import { RELIQUES, bonusReliques, QUETES } from '../public/shared/raid/reliques.js';
 
@@ -1178,4 +1179,26 @@ test('au retour de voyage, le compagnon rapporte sa compétence', () => {
   assert.equal(av.etape.eveil, 'mei');
   assert.ok(av.etape.effet.includes(EVEILS.mei.nom));
   assert.equal(eveilDe(av.groupe[1]), EVEILS.mei);
+});
+
+/* ================================================================== */
+/* Changer d'appareil                                                 */
+/* ================================================================== */
+
+test('une partie voyage d’un appareil à l’autre par un code', async () => {
+  const av = jouerAventure(A.creerAventure({ heros: 'pix', seed: 41 }), { maxEtapes: 60 });
+  const code = await versCode(av, { max: 3, fini: false });
+  assert.match(code, /^RAID[01]\.[A-Za-z0-9_-]+$/, 'du texte sans caractère gênant');
+  assert.ok(code.length < JSON.stringify(av).length, 'le code est plus court que la partie');
+  const r = await depuisCode(`  ${code.slice(0, 40)}\n${code.slice(40)}  `);
+  assert.ok(r.ok, 'les espaces et retours à la ligne d’un copier-coller ne gênent pas');
+  assert.deepEqual(r.partie, JSON.parse(JSON.stringify(av)));
+  assert.deepEqual(r.progression, { max: 3, fini: false });
+  // La partie relue se joue : elle n'a rien perdu en route.
+  const suite = jouerAventure(r.partie, { maxEtapes: 40 });
+  assert.ok(suite.stats.combats >= av.stats.combats);
+
+  assert.equal((await depuisCode('bonjour')).ok, false);
+  assert.equal((await depuisCode(code.slice(0, code.length - 30))).ok, false, 'un code tronqué est refusé');
+  assert.equal((await depuisCode('RAID0.e30')).ok, false, 'un code sans partie est refusé');
 });
