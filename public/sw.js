@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v33';
+const VERSION = 'v35';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -18,6 +18,7 @@ const SHELL = [
   '/',
   '/css/hub.css',
   '/manifest.webmanifest',
+  '/maj.js',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/games/liars-saloon/',
