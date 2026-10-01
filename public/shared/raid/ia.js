@@ -13,7 +13,7 @@ import { multiplicateur } from './ecoles.js';
 import {
   sallesAccessibles, entrer, bataillePour, conclureCombat, prendreRecompense, choisirDon,
   evenementCourant, choisirEvenement, terminerEtape, acheter, vendre, faireRepos, prendreTresor,
-  recruter, reprendre, equiper, conseilEquipement, utiliser, prixObjets, prixPour, bonusDe,
+  recruter, reprendre, choisirDepart, equiper, conseilEquipement, utiliser, prixObjets, prixPour, bonusDe,
 } from './aventure.js';
 import { avancer, agir } from './bataille.js';
 import { statsDe } from './personnages.js';
@@ -53,6 +53,10 @@ export function choisirAction(etat) {
     if (t === 'garde' && menace && !etat.bouclier) return { type: cle };
     if (t === 'elan' && !etat.elan && allies.length >= 2) return { type: cle };
     if (t === 'mana' && allies.some((x) => x !== h && x.pm < x.pmMax * 0.3)) return { type: cle };
+    if (t === 'resurrection' && tombes.length) return { type: cle };
+    if (t === 'purge' && (part(blesse) < 0.5 || allies.some((x) => x.poison))) return { type: cle };
+    if (t === 'bastion' && menace && !etat.provoc) return { type: cle };
+    if (t === 'provoc' && !etat.provoc && allies.length >= 2 && part(h) > 0.4) return { type: cle };
   }
 
   if (part(blesse) < 0.3 && a.potion.possible) return { type: 'potion', cible: blesse.idx };
@@ -167,7 +171,11 @@ export function jouerEtape(av) {
     }
     case 'repos': faireRepos(av, vieMoyenne(av) < 0.8 ? 'repos' : 'entrainement'); break;
     case 'tresor': prendreTresor(av); break;
-    case 'compagnon': recruter(av, e.offres[0]); break;
+    case 'compagnon':
+      // Groupe complet : le légendaire prend la place du dernier arrivé.
+      if (!recruter(av, e.offres[e.offres.length - 1], av.groupe.length >= 4 ? av.groupe.length - 1 : null).ok) terminerEtape(av);
+      break;
+    case 'depart': choisirDepart(av, av.or >= 40 ? 'viatique' : 'retenir'); break;
     case 'resultat':
     case 'quetes':
     case 'balade': terminerEtape(av); break;

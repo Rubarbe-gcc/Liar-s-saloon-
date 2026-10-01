@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 import {
   CYCLE, ECOLES, domine, craint, multiplicateur, roueSvg, AVANTAGE, DESAVANTAGE,
 } from '../public/shared/raid/ecoles.js';
-import { HEROS, PAR_ID, ROLES, EFFETS, parEcole } from '../public/shared/raid/heros.js';
+import { HEROS, PAR_ID, ROLES, EFFETS, parEcole, LEGENDES } from '../public/shared/raid/heros.js';
 import { MODELES, MODELES_PAR_ID, TRAITS, SILHOUETTES, parRang, BOSS_FINAL } from '../public/shared/raid/ennemis.js';
 import {
   creerPersonnage, statsDe, statsBase, gagnerXp, niveauDe, SEUILS_XP, NIVEAU_MAX, NIVEAU_ULTIME,
@@ -23,7 +23,7 @@ import {
   genererCarte, accessibles, composer, ennemiRpg, ACTES, RANGEES, ECHELLE,
 } from '../public/shared/raid/carte.js';
 import {
-  creerBataille, demarrer, actif, actionsDe, agir, estimer, vivants, critiqueDe,
+  creerBataille, demarrer, actif, actionsDe, agir, estimer, vivants, critiqueDe, provocateur,
 } from '../public/shared/raid/bataille.js';
 import * as A from '../public/shared/raid/aventure.js';
 import { jouerCombat, jouerAventure, choisirAction } from '../public/shared/raid/ia.js';
@@ -870,4 +870,161 @@ test('les nouveaux monstres ont leurs capacités : régénération et gel', () =
   const ev2 = demarrer(b2);
   ev2.push(...agir(b2, { type: 'defendre' }).evenements);
   assert.ok(ev2.some((x) => x.t === 'pm' && x.n < 0), 'le gel fait perdre du mana');
+});
+
+/* ================================================================== */
+/* Héros légendaires et départs                                       */
+/* ================================================================== */
+
+test('trois légendaires, un par rôle, plus forts que la guilde', () => {
+  assert.equal(LEGENDES.length, 3);
+  assert.deepEqual(LEGENDES.map((h) => h.role).sort(), ['dps', 'soigneur', 'tank']);
+  assert.equal(HEROS.length, 15, 'ils ne font pas partie de la guilde');
+  for (const h of LEGENDES) {
+    assert.ok(PAR_ID[h.id] && h.legendaire);
+    for (const coup of [h.special, h.ultime]) assert.ok(EFFETS[coup.effet.type], `${h.id} : ${coup.effet.type}`);
+    const ordinaire = HEROS.find((x) => x.role === h.role);
+    const a = statsBase(creerPersonnage(h.id, 8));
+    const b = statsBase(creerPersonnage(ordinaire.id, 8));
+    assert.ok(a.pvMax > b.pvMax && a.atk > b.atk, h.id);
+    assert.ok(spriteSvg(h).startsWith('<svg'));
+  }
+});
+
+test('la provocation force tous les ennemis à frapper le tank, même en attaque chargée', () => {
+  const boss = ennemiRpg(MODELES_PAR_ID.vorgath, 3, 'feu', rngT(1), { boss: true });
+  boss.charge.reste = 1;
+  const groupe = ['aldric', 'kaelis', 'mei'].map((id) => creerPersonnage(id, 8));
+  const b = creerBataille({ groupe, ennemis: [boss, gnoll(3)], inventaire: {}, rng: rngT(4) });
+  for (const e of b.ennemis) e.vit = -5;       // les héros d'abord
+  b.heros[0].vit = 99;
+  demarrer(b);
+  assert.equal(actif(b).id, 'aldric');
+  const ev = agir(b, { type: 'special' }).evenements;
+  assert.ok(provocateur(b) === b.heros[0]);
+  while (!b.fini && b.manche === 1) ev.push(...agir(b, { type: 'defendre' }).evenements);
+  const touches = ev.filter((x) => x.t === 'degats' && x.camp === 'h' && !x.dot);
+  assert.ok(touches.length >= 2, 'les deux ennemis ont frappé');
+  assert.ok(touches.every((x) => x.idx === 0), 'tous les coups vont sur le tank, y compris la charge de zone');
+  assert.ok(estimer(b, boss, b.heros[0], 1).degats > 0);
+});
+
+test('le légendaire qui frappe balaie tous les ennemis, celui qui soigne relève les morts', () => {
+  const groupe = ['noctis', 'selene', 'brandel'].map((id) => creerPersonnage(id, 8));
+  const b = creerBataille({ groupe, ennemis: [gnoll(3), gnoll(3), gnoll(3)], inventaire: {}, rng: rngT(6) });
+  for (const e of b.ennemis) e.vit = -5;
+  demarrer(b);
+  while (actif(b).id !== 'noctis') agir(b, { type: 'defendre' });
+  actif(b).pm = 40;
+  const ev = agir(b, { type: 'ultime', cible: 0 }).evenements;
+  assert.equal(new Set(ev.filter((x) => x.t === 'degats' && x.camp === 'e').map((x) => x.idx)).size, 3);
+
+  while (!b.fini && actif(b).id !== 'selene') agir(b, { type: 'defendre' });
+  if (b.fini) return;
+  const tombe = b.heros.find((x) => x.id === 'brandel');
+  tombe.pv = 0;
+  actif(b).pm = 40;
+  const ev2 = agir(b, { type: 'ultime' }).evenements;
+  assert.ok(ev2.some((x) => x.t === 'releve' && x.idx === tombe.idx));
+  assert.ok(tombe.pv > 0);
+});
+
+test('les légendaires n’apparaissent qu’à partir de l’acte 3, et peuvent prendre une place', () => {
+  const offres = (acte, taille, n = 200) => {
+    let vus = 0;
+    for (let seed = 0; seed < n; seed++) {
+      const av = A.creerAventure({ heros: 'kaelis', seed });
+      av.acte = acte;
+      for (const id of ['brandel', 'mei', 'pix'].slice(0, taille - 1)) av.groupe.push(creerPersonnage(id, 5));
+      av.position = null;
+      av.carte.noeuds.find((x) => x.rangee === 0).type = 'compagnon';
+      A.entrer(av, av.carte.noeuds.find((x) => x.rangee === 0).id);
+      if (av.etape.type === 'compagnon' && av.etape.offres.some((id) => PAR_ID[id].legendaire)) vus++;
+    }
+    return vus / n;
+  };
+  assert.equal(offres(2, 2), 0, 'pas avant l’acte 3');
+  const part = offres(3, 2);
+  assert.ok(part > 0.25 && part < 0.55, `${Math.round(part * 100)} % de rencontres légendaires`);
+  assert.ok(offres(4, 4) > 0.25, 'même groupe complet');
+
+  const av = A.creerAventure({ heros: 'kaelis', seed: 1 });
+  for (const id of ['brandel', 'mei', 'pix']) av.groupe.push(creerPersonnage(id, 5));
+  av.groupe[2].equip.arme = pieceAuHasard(rngT(1), 1, { emplacement: 'arme' });
+  av.etape = { type: 'compagnon', offres: ['aldric'] };
+  assert.equal(A.recruter(av, 'aldric').ok, false, 'il faut dire qui part');
+  assert.equal(A.recruter(av, 'aldric', 0).ok, false, 'jamais le héros');
+  assert.ok(A.recruter(av, 'aldric', 2).ok);
+  assert.deepEqual(av.groupe.map((p) => p.id), ['kaelis', 'brandel', 'aldric', 'pix']);
+  assert.equal(av.sac.length, 1, 'l’équipement du partant revient au sac');
+});
+
+test('un compagnon peut partir en voyage et revenir éveillé', () => {
+  const av = A.creerAventure({ heros: 'kaelis', seed: 3 });
+  av.acte = 2;
+  av.or = 100;
+  av.groupe.push(creerPersonnage('brandel', 4), creerPersonnage('mei', 4));
+  av.etape = { type: 'depart', idx: 1, histoire: 'lettre' };
+  const vue = A.departCourant(av);
+  assert.equal(vue.perso.id, 'brandel');
+  assert.equal(vue.choix.length, 3);
+  const avant = statsDe(av.groupe[1]);
+  assert.ok(A.choisirDepart(av, 'viatique').ok);
+  assert.equal(av.or, 100 - A.PRIX_VIATIQUE);
+  assert.deepEqual(av.groupe.map((p) => p.id), ['kaelis', 'mei']);
+  assert.equal(A.effectif(av), 3, 'sa place reste la sienne');
+  A.terminerEtape(av);
+
+  let revenu = false;
+  for (let i = 0; i < 40 && !revenu; i++) {
+    if (!av.etape) { A.entrer(av, A.sallesAccessibles(av)[0].id); continue; }
+    const e = av.etape;
+    if (e.type === 'resultat' && e.titre.includes('de retour')) { revenu = true; break; }
+    if (e.type === 'combat') A.conclureCombat(av, true);
+    else if (e.type === 'recompense') A.prendreRecompense(av);
+    else if (e.type === 'don') A.choisirDon(av, e.choix[0].id);
+    else if (e.type === 'evenement') A.choisirEvenement(av, A.evenementCourant(av).choix.find((c) => c.possible).id);
+    else if (e.type === 'repos') A.faireRepos(av, 'repos');
+    else if (e.type === 'tresor') A.prendreTresor(av);
+    else if (e.type === 'depart') A.choisirDepart(av, 'retenir');
+    else A.terminerEtape(av);
+  }
+  assert.ok(revenu, 'le compagnon revient');
+  const b = av.groupe.find((p) => p.id === 'brandel');
+  assert.ok(b && b.eveil);
+  assert.ok(b.niveau >= 5);
+  assert.ok(statsDe(b).pvMax > avant.pvMax * 1.1);
+  assert.equal(av.absents.length, 0);
+});
+
+test('un compagnon parti sans rien peut ne jamais revenir, et le retenir coûte de la chance', () => {
+  let adieux = 0;
+  const N = 300;
+  for (let seed = 0; seed < N; seed++) {
+    const av = A.creerAventure({ heros: 'pix', seed });
+    av.acte = 2;
+    av.groupe.push(creerPersonnage('brandel', 3));
+    av.etape = { type: 'depart', idx: 1, histoire: 'dette' };
+    if (A.choisirDepart(av, 'partir').adieu) adieux++;
+  }
+  assert.ok(adieux / N > 0.15 && adieux / N < 0.35, `${adieux} adieux sur ${N}`);
+
+  const av = A.creerAventure({ heros: 'pix', seed: 1 });
+  av.groupe.push(creerPersonnage('brandel', 3));
+  av.groupe[1].equip.arme = pieceAuHasard(rngT(1), 1, { emplacement: 'arme' });
+  av.absents = [{ perso: av.groupe.pop(), reste: 0, adieu: true, histoire: 'serment' }];
+  av.etape = { type: 'resultat', titre: 't', glyphe: '', dit: '', effet: '' };
+  A.terminerEtape(av);
+  assert.ok(av.etape.titre.includes('ne reviendra pas'));
+  assert.equal(av.groupe.length, 1);
+  assert.equal(av.sac.length, 1);
+
+  const reste = A.creerAventure({ heros: 'pix', seed: 2 });
+  reste.groupe.push(creerPersonnage('brandel', 3));
+  reste.etape = { type: 'depart', idx: 1, histoire: 'maitre' };
+  const chance = reste.chance;
+  A.choisirDepart(reste, 'retenir');
+  assert.equal(reste.groupe.length, 2);
+  assert.equal(reste.chance, chance - 2);
+  for (const h of A.HISTOIRES) assert.ok(h.texte('X') && h.retour('X') && h.adieu('X'), h.id);
 });

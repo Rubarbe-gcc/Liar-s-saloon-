@@ -31,6 +31,11 @@ export function texteSort(s) {
     case 'brasier': return `${coup}, puis brûle la cible pendant 3 manches.`;
     case 'entrave': return `${coup}, et la cible frappe ${pc(v)} moins fort pendant 2 manches.`;
     case 'vol': return `${coup}, et soigne l’allié le plus blessé.`;
+    case 'provoc': return `Provocation : pendant ${v} manches, tous les ennemis sont forcés de frapper ce héros, qui encaisse 30 % de dégâts en moins. Même les attaques chargées des boss se concentrent sur lui seul.`;
+    case 'bastion': return `Bouclier de ${pc(v)} sur tout le groupe et provocation, pendant 3 manches.`;
+    case 'zone': return `Frappe TOUS les ennemis, dégâts ×${s.mult.toFixed(1)} chacun.`;
+    case 'purge': return `Soigne tout le groupe de ${pc(v * 2)} de sa vie et lève les poisons.`;
+    case 'resurrection': return `Relève tous les héros tombés à ${pc(v)} de leur vie, et soigne les autres de ${pc(v * 0.6)}.`;
     default: return `${coup}.`;
   }
 }

@@ -17,6 +17,8 @@ import { TYPES, ACTES, RANGEES, COLONNES } from '../../../shared/raid/carte.js';
 import { OBJETS } from '../../../shared/raid/bataille.js';
 import { spriteSvg } from '../../../shared/raid/sprites.js';
 import { lancerCombat, basculerAuto } from './combat.js';
+import { jouerCinematique } from './cinematique.js';
+import { scenesIntro, scenesBoss, scenesFin } from './histoire.js';
 import { rendreRegles } from './regles.js';
 import { sfx, basculer as basculerSon, estActif as sonActif, debloquer } from './sfx.js';
 import { installerMusique } from '../../../shared/musique.js';
@@ -31,6 +33,7 @@ const $ = (id) => document.getElementById(id);
 const CLE = 'raid.aventure';
 
 let av = null;        // l'aventure en cours
+let finJouee = false;   // la cinématique de fin ne passe qu'une fois
 let depart = DEPARTS[0];
 let difficulte = 'normal';
 try { difficulte = localStorage.getItem('raid.difficulte') || 'normal'; } catch { /* ignore */ }
@@ -93,6 +96,11 @@ function suite() {
   const e = av.etape;
   if (!e) return aller('carte');
   if (e.type === 'combat') return combattre();
+  if (e.type === 'victoire' && !finJouee) {
+    finJouee = true;
+    jouerCinematique(scenesFin(av.groupe), { sfx }).then(() => { aller('etape'); rendreEtape(); });
+    return;
+  }
   aller('etape');
   rendreEtape();
 }
@@ -138,10 +146,10 @@ function tetePerso(p, extra = '') {
   return `<div class="fp-tete">
     ${spriteSvg(p)}
     <div>
-      <h3>${txt(p.nom)}${p.niveau ? ` <small class="tag">niv. ${p.niveau}</small>` : ''}</h3>
+      <h3>${PAR_ID[p.id].legendaire ? '🌟 ' : ''}${txt(p.nom)}${p.niveau ? ` <small class="tag">niv. ${p.niveau}</small>` : ''}</h3>
       <p>${txt(p.titre)} · ${txt(p.classe)}</p>
       <div class="fp-tags"><span class="tag">${nomRole(p.role)}</span>
-        <span class="tag ecole" style="--aff:${teinte(p.ecole)}">${nomEcole(p.ecole)}</span>${extra}</div>
+        <span class="tag ecole" style="--aff:${teinte(p.ecole)}">${nomEcole(p.ecole)}</span>${PAR_ID[p.id].legendaire ? '<span class="tag legende">Légendaire</span>' : ''}${p.eveil ? '<span class="tag eveil">✦ Éveil</span>' : ''}${extra}</div>
     </div>
   </div>`;
 }
@@ -201,6 +209,9 @@ function groupeMini() {
         <div class="jauge pv${v < 0.3 ? ' bas' : ''}" style="--v:${v.toFixed(3)}"><i></i></div>
         <div class="jauge pm" style="--v:${(p.pm / s.pmMax).toFixed(3)}"><i></i></div></div></div>`;
   });
+  for (const a of av.absents || []) {
+    cases.push(`<div class="mini vide absent">🚶 ${txt(a.perso.nom)} · retour dans ${Math.max(1, a.reste)} salle${a.reste > 1 ? 's' : ''}</div>`);
+  }
   while (cases.length < A.TAILLE_GROUPE) cases.push('<div class="mini vide">compagnon ?</div>');
   return cases.join('');
 }
@@ -280,8 +291,18 @@ function entrerSalle(id) {
 /* ------------------------------------------------------------------ */
 
 function combattre() {
-  aller('combat');
   const e = av.etape;
+  // Chaque boss a droit à son entrée — une seule fois : on ne la rejoue pas
+  // après une défaite.
+  const cle = `boss-${av.acte}`;
+  if (e.salle === 'boss' && !(av.cines || []).includes(cle)) {
+    av.cines = [...(av.cines || []), cle];
+    sauver();
+    const boss = e.ennemis.find((x) => x.rang === 'boss') || e.ennemis[0];
+    jouerCinematique(scenesBoss(boss, av.acte, ACTES[av.acte - 1].nom), { sfx }).then(combattre);
+    return;
+  }
+  aller('combat');
   const menaces = e.salle === 'boss' ? A.menacesDuBoss(av) : null;
   let intro = e.salle === 'boss' ? `👑 <b>${txt(e.ennemis[0].nom)}</b>, maître de l’acte, vous attend.`
     : e.salle === 'elite' ? `💀 Un adversaire redoutable : <b>${txt(e.ennemis[0].nom)}</b>.`
@@ -343,6 +364,7 @@ function rendreEtape() {
     compagnon: etapeCompagnon,
     defaite: etapeDefaite,
     balade: etapeBalade,
+    depart: etapeDepart,
     quetes: etapeQuetes,
     victoire: etapeVictoire,
   };
@@ -390,12 +412,19 @@ function rendreEtape() {
       clic('#b-ouvrir', () => { A.prendreTresor(av); sfx.butin(); suite(); });
       break;
     case 'compagnon':
-      clic('[data-recruter]', (el) => { A.recruter(av, el.dataset.recruter); sfx.victoire(); suite(); });
+      clic('[data-recruter]', (el) => {
+        const r = A.recruter(av, el.dataset.recruter, el.dataset.remplace ? +el.dataset.remplace : null);
+        if (r.ok) sfx.victoire();
+        suite();
+      });
       clic('#b-suite', () => { A.terminerEtape(av); suite(); });
       break;
     case 'defaite':
       clic('#b-reprendre', () => { A.reprendre(av); suite(); });
       clic('#b-fin-hardcore', () => { av = null; sauver(); aller('choix'); });
+      break;
+    case 'depart':
+      clic('[data-depart]', (el) => { A.choisirDepart(av, el.dataset.depart); suite(); });
       break;
     case 'quetes':
       clic('[data-quete]', (el) => {
@@ -527,15 +556,23 @@ function etapeTresor(e) {
 
 function etapeCompagnon(e) {
   const niveau = A.niveauRecrue(av);
+  const complet = av.groupe.length >= A.TAILLE_GROUPE;
   const offres = e.offres.map((id) => {
     const p = creerPersonnage(id, niveau);
-    return `<div class="carte-perso" style="--aff:${teinte(p.ecole)}">${tetePerso(p)}${statsHtml(p)}${sortsHtml(p)}
-      <button class="btn btn-go btn-wide" data-recruter="${id}" style="margin-top:10px">Recruter ${txt(p.nom)}</button></div>`;
+    const legende = !!PAR_ID[id].legendaire;
+    const boutons = complet
+      ? `<p class="fp-note">Le groupe est complet : qui cède sa place ? Son équipement retournera dans le sac.</p>
+        <div class="piece-actions">${av.groupe.slice(1).map((m, i) => `<button class="mini-btn mieux" data-recruter="${id}" data-remplace="${i + 1}">Remplacer ${txt(m.nom)} (niv. ${m.niveau})</button>`).join('')}</div>`
+      : `<button class="btn btn-go btn-wide" data-recruter="${id}" style="margin-top:10px">Recruter ${txt(p.nom)}</button>`;
+    return `<div class="carte-perso${legende ? ' legendaire' : ''}" style="--aff:${teinte(p.ecole)}">${tetePerso(p)}${statsHtml(p)}${sortsHtml(p)}${boutons}</div>`;
   }).join('');
-  const texte = e.apresBoss
-    ? 'Votre victoire a fait du bruit. Des aventuriers proposent de se joindre à vous.'
-    : 'Au détour d’un couloir, deux aventuriers cherchent une troupe. Un seul vous suivra.';
-  return tete('🤝', 'Une rencontre', `${texte} (${av.groupe.length}/${A.TAILLE_GROUPE} dans le groupe)`)
+  const legendaire = e.offres.some((id) => PAR_ID[id].legendaire);
+  const texte = legendaire
+    ? 'Une silhouette que les chansons décrivent se tient devant vous. Un héros légendaire propose de marcher à vos côtés.'
+    : e.apresBoss
+      ? 'Votre victoire a fait du bruit. Des aventuriers proposent de se joindre à vous.'
+      : 'Au détour d’un couloir, deux aventuriers cherchent une troupe. Un seul vous suivra.';
+  return tete(legendaire ? '🌟' : '🤝', legendaire ? 'Une rencontre légendaire' : 'Une rencontre', `${texte} (${av.groupe.length}/${A.TAILLE_GROUPE} dans le groupe)`)
     + `<div class="membres">${offres}</div>`
     + '<button class="btn btn-ghost btn-wide" id="b-suite" style="margin-top:12px">Continuer sans eux</button>';
 }
@@ -554,6 +591,15 @@ function etapeBalade(e) {
     + `<div class="et-liste">
       <button class="btn btn-go btn-wide" id="b-chasser">Chasser dans cette zone</button>
       <button class="btn btn-ghost btn-wide" id="b-suite">Revenir à la carte</button></div>`;
+}
+
+function etapeDepart() {
+  const d = A.departCourant(av);
+  const choix = d.choix.map((c) => `<button class="choix" data-depart="${c.id}" ${c.possible ? '' : 'disabled'}>
+    <b>${txt(c.label)}</b><i>${txt(c.annonce)}</i></button>`).join('');
+  return tete(d.glyphe, txt(d.titre), txt(d.texte))
+    + `<div class="carte-perso" style="--aff:${teinte(d.perso.ecole)};margin-bottom:14px">${tetePerso(d.perso)}</div>`
+    + `<div class="et-liste">${choix}</div>`;
 }
 
 function etapeQuetes() {
@@ -637,6 +683,9 @@ function rendreGroupe() {
     || '<p class="sac-vide">Aucune relique. Les boss en lâchent une, certaines quêtes aussi, et les boutiques en vendent parfois.</p>';
 
   const lignes = [];
+  for (const a of av.absents || []) {
+    lignes.push(`<div>🚶 <b>${txt(a.perso.nom)}</b> est en voyage : retour dans ${Math.max(1, a.reste)} salle${a.reste > 1 ? 's' : ''}.</div>`);
+  }
   if (A.bonusSolo(av)) lignes.push(`<div>⚔ <b>Seul contre tous</b> : +${pc(A.bonusSolo(av))} de dégâts tant que ${txt(A.heros(av).nom)} voyage seul.</div>`);
   for (const id of av.dons) {
     const d = A.DONS_PAR_ID[id];
@@ -720,8 +769,11 @@ function brancher() {
     debloquer();
     if (av && !av.termine && !confirm('Une aventure est en cours. L’abandonner pour en commencer une nouvelle ?')) return;
     av = A.creerAventure({ heros: depart, difficulte });
+    av.cines = ['intro'];
+    finJouee = false;
+    sauver();
     sfx.victoire();
-    suite();
+    jouerCinematique(scenesIntro(A.heros(av)), { sfx }).then(suite);
   });
   $('b-son').addEventListener('click', () => { basculerSon(); rendreMenu(); });
   $('b-auto').addEventListener('click', () => { sfx.tap(); basculerAuto(); });

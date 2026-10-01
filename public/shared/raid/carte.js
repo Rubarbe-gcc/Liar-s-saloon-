@@ -50,7 +50,7 @@ function tirerType(rng, rangee, acte) {
     elite: rangee >= 2 ? 11 : 0,
     marchand: rangee >= 2 ? 8 : 0,
     tresor: rangee >= 1 ? 7 : 0,
-    compagnon: acte <= 3 ? 9 : 3,
+    compagnon: acte <= 3 ? 9 : 6,
     repos: rangee >= 3 ? 5 : 0,
   };
   let x = rng() * Object.values(poids).reduce((s, p) => s + p, 0);

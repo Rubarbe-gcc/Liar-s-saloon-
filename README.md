@@ -92,6 +92,12 @@ au pied du donjon et gravit **cinq actes** jusqu'au Dragon Cendré.
   groupe lâchées par les boss, vendues en boutique ou gagnées en quête ; deux
   quêtes proposées par acte. En combat, chaque effet en cours se lit en
   pastille verte ou rouge, et se détaille en touchant le combattant.
+- **Légendaires, départs, récit** : à partir de l'acte 3, une rencontre peut
+  amener un héros légendaire (un tank qui provoque, une lame qui balaie tous
+  les ennemis, une oracle qui relève les morts) ; à partir de l'acte 2, un
+  compagnon peut partir en voyage et revenir « éveillé » — ou ne pas revenir.
+  Une cinématique ouvre l'aventure, une autre précède chaque boss
+  (`games/raid/js/histoire.js`, `cinematique.js`).
 - **La défaite** ramène au dernier feu de camp ; la moitié de l'expérience
   gagnée depuis reste acquise, et un boss qui a gagné garde ses blessures —
   on ne bute jamais sans fin sur le même mur. La partie est sauvegardée à

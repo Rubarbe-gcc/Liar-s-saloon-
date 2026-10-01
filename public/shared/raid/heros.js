@@ -49,6 +49,11 @@ export const PEUPLES = {
  * qui est écrit ici doit avoir un sens dans `combat.js`.
  */
 export const EFFETS = {
+  provoc:   { nom: 'Provocation', texte: (v) => `force tous les ennemis à l'attaquer pendant ${v} manches` },
+  bastion:  { nom: 'Citadelle',   texte: (v) => `bouclier de ${Math.round(v * 100)} % et provocation, trois manches` },
+  zone:     { nom: 'Balayage',    texte: () => 'frappe tous les ennemis' },
+  purge:    { nom: 'Purification', texte: (v) => `rend ${Math.round(v * 200)} % de vie et lève les poisons` },
+  resurrection: { nom: 'Résurrection', texte: (v) => `relève les tombés à ${Math.round(v * 100)} % de leur vie` },
   soin:     { nom: 'Soin',        texte: (v) => `rend ${Math.round(v * 100)} % de la vie du raid` },
   garde:    { nom: 'Bouclier',    texte: (v) => `absorbe ${Math.round(v * 100)} % des dégâts subis ce tour` },
   elan:     { nom: 'Buff',        texte: (v) => `+${Math.round(v * 100)} % d'attaque au raid au tour suivant` },
@@ -254,7 +259,46 @@ export const HEROS = [
   }),
 ];
 
-export const PAR_ID = Object.fromEntries(HEROS.map((x) => [x.id, x]));
+/**
+ * Les héros légendaires. Ils ne font pas partie de la guilde : on ne les
+ * choisit pas au départ et on ne les croise pas avant le troisième acte.
+ * Leurs fiches dépassent celles de leur rôle, et leurs sorts font ce
+ * qu'aucun autre ne fait — provoquer, balayer, relever les morts.
+ */
+export const LEGENDES = [
+  h({
+    id: 'aldric', nom: 'Aldric', titre: 'le Rempart Éternel', legendaire: true,
+    classe: 'Gardien légendaire', peuple: 'humain', ecole: 'sacre', role: 'tank',
+    pv: 19800, atk: 4400, def: 5400,
+    special: { nom: 'Défi du colosse', mana: 12, mult: 2.0, effet: { type: 'provoc', valeur: 3 } },
+    ultime:  { nom: 'Citadelle', mana: 18, mult: 3.1, effet: { type: 'bastion', valeur: 0.5 } },
+    talent:  { type: 'plates', valeur: 0.15 },
+    liens: ['lumière', 'gardien'],
+    meneur: { nom: 'Mur vivant', cible: 'tous', pv: 0.25, def: 0.25, texte: 'Tout le raid : +25 % PV, +25 % armure' },
+  }),
+  h({
+    id: 'noctis', nom: 'Noctis', titre: 'la Lame sans Ombre', legendaire: true,
+    classe: 'Assassin légendaire', peuple: 'elfe', ecole: 'ombre', role: 'dps',
+    pv: 11400, atk: 6400, def: 2950,
+    special: { nom: 'Lame fantôme', mana: 12, mult: 2.9, effet: { type: 'perce', valeur: 0.5 } },
+    ultime:  { nom: 'Mille coupes', mana: 18, mult: 3.3, effet: { type: 'zone' } },
+    talent:  { type: 'traque', valeur: 0.2 },
+    liens: ['ombre', 'assaut'],
+    meneur: { nom: 'Danse des lames', cible: 'tous', atk: 0.2, texte: 'Tout le raid : +20 % ATK' },
+  }),
+  h({
+    id: 'selene', nom: 'Séléné', titre: 'la Voix de l’Aube', legendaire: true,
+    classe: 'Oracle légendaire', peuple: 'elfe', ecole: 'nature', role: 'soigneur',
+    pv: 14000, atk: 4900, def: 3800,
+    special: { nom: 'Aube radieuse', mana: 12, mult: 1.9, effet: { type: 'purge', valeur: 0.18 } },
+    ultime:  { nom: 'Second matin', mana: 18, mult: 3.0, effet: { type: 'resurrection', valeur: 0.5 } },
+    talent:  { type: 'meditation', valeur: 3 },
+    liens: ['nature', 'soigneur'],
+    meneur: { nom: 'Chant de l’aube', cible: 'tous', pv: 0.2, atk: 0.1, texte: 'Tout le raid : +20 % PV, +10 % ATK' },
+  }),
+];
+
+export const PAR_ID = Object.fromEntries([...HEROS, ...LEGENDES].map((x) => [x.id, x]));
 
 export const parEcole = (e) => HEROS.filter((x) => x.ecole === e);
 export const parRole = (r) => HEROS.filter((x) => x.role === r);

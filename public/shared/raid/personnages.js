@@ -39,6 +39,9 @@ export const GABARITS = {
   soigneur: { pv: 48, pvN: 8, pm: 26, pmN: 3, atk: 9, atkN: 2.0, def: 4, defN: 1.1, vit: 5 },
 };
 
+/** Ce qu'un compagnon revenu « éveillé » de son voyage gagne en vie, attaque et armure. */
+export const EVEIL = 0.12;
+
 /** Coût des sorts, et niveau auquel l'ultime s'apprend. */
 export const COUT = { special: 8, ultime: 16 };
 export const NIVEAU_ULTIME = 3;
@@ -58,7 +61,7 @@ function ecart(h, k) {
 }
 
 /** Les effets de soutien visent les alliés et ne blessent personne. */
-const SOUTIENS = ['soin', 'garde', 'elan', 'mana'];
+const SOUTIENS = ['soin', 'garde', 'elan', 'mana', 'provoc', 'bastion', 'purge', 'resurrection'];
 export const estSoutien = (sort) => !!sort.effet && SOUTIENS.includes(sort.effet.type);
 
 /** Les sorts d'un personnage, à l'échelle du jeu de rôle. */
@@ -81,7 +84,7 @@ export function creerPersonnage(id, niveau = 1) {
   if (!f) throw new Error(`personnage inconnu : ${id}`);
   const p = {
     id: f.id, nom: f.nom, titre: f.titre, classe: f.classe, ecole: f.ecole,
-    role: f.role, peuple: f.peuple,
+    role: f.role, peuple: f.peuple, legendaire: !!f.legendaire,
     niveau, xp: 0, pv: 0, pm: 0,
     equip: { arme: null, armure: null, bijou: null },
     talents: {},
@@ -124,11 +127,12 @@ export function statsDe(p, bonus = {}) {
     plus.crit += it.crit || 0;
   }
   const t = effetsTalents(p);
+  const e = p.eveil ? EVEIL : 0;
   return {
-    pvMax: Math.round((s.pvMax + plus.pvMax) * (1 + (bonus.pv || 0) + (t.pv || 0))),
+    pvMax: Math.round((s.pvMax + plus.pvMax) * (1 + (bonus.pv || 0) + (t.pv || 0) + e)),
     pmMax: s.pmMax + plus.pmMax + (bonus.pm || 0) + (t.pm || 0),
-    atk: Math.round((s.atk + plus.atk) * (1 + (bonus.atk || 0) + (t.atk || 0))),
-    def: Math.round((s.def + plus.def) * (1 + (bonus.def || 0) + (t.def || 0))),
+    atk: Math.round((s.atk + plus.atk) * (1 + (bonus.atk || 0) + (t.atk || 0) + e)),
+    def: Math.round((s.def + plus.def) * (1 + (bonus.def || 0) + (t.def || 0) + e)),
     vit: s.vit + plus.vit + (t.vit || 0),
     crit: plus.crit + (t.crit || 0),
   };

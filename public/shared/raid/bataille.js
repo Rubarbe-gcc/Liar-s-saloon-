@@ -34,6 +34,8 @@ export const POIDS_TANK = 3;
 export const REGEN = 0.04;
 /** PM qu'un coup glacé fait perdre. */
 export const GEL_PM = 3;
+/** Ce qu'un tank qui provoque encaisse en moins, tant que la provocation dure. */
+export const PROVOC_REDUC = 0.3;
 /** Vie rendue par le Cœur de phénix, une fois par combat. */
 export const VIE_COEUR = 0.3;
 
@@ -80,6 +82,7 @@ export function creerBataille({ groupe, ennemis, bonus = {}, inventaire, chance 
     // { valeur, tours } sur tout le groupe ; l'Égide en pose un d'entrée
     bouclier: bonus.egide ? { valeur: bonus.egide, tours: 2 } : null,
     coeur: !!bonus.phenix,   // le Cœur de phénix n'a pas encore servi
+    provoc: null,            // { idx, tours } : le héros que tous les ennemis doivent frapper
     elan: null,       // { valeur, tours } sur tout le groupe
     fini: false,
     victoire: false,
@@ -129,6 +132,7 @@ function finDeManche(etat, ev) {
   }
   if (etat.bouclier && --etat.bouclier.tours <= 0) etat.bouclier = null;
   if (etat.elan && --etat.elan.tours <= 0) etat.elan = null;
+  if (etat.provoc && --etat.provoc.tours <= 0) etat.provoc = null;
 }
 
 function verifierFin(etat, ev) {
@@ -218,6 +222,7 @@ export function estimer(etat, src, cible, mult, { perce = 0, basique = false, al
     if (cible.defense) d *= 0.5;
     if (etat.bouclier) d *= 1 - etat.bouclier.valeur;
     if (cible.tal && cible.tal.reduc) d *= 1 - cible.tal.reduc;
+    if (etat.provoc && etat.provoc.idx === cible.idx) d *= 1 - PROVOC_REDUC;
   }
   if (crit) d *= MULT_CRIT + (etat.bonus.critique || 0);
   return { degats: Math.max(1, Math.round(d)), elem };
@@ -234,7 +239,11 @@ function subir(etat, cible, n, ev, extra = {}) {
     ev.push({ t: 'releve', ...ref(cible), pv: cible.pv, relique: 'coeur' });
   } else if (cible.pv <= 0 && avant > 0) {
     ev.push({ t: 'ko', ...ref(cible) });
-    if (cible.camp === 'h') { cible.poison = null; cible.pm = 0; }
+    if (cible.camp === 'h') {
+      cible.poison = null;
+      cible.pm = 0;
+      if (etat.provoc && etat.provoc.idx === cible.idx) etat.provoc = null;
+    }
   } else if (cible.camp === 'e' && cible.traits.includes('enrage') && !cible.enrage
       && cible.pv <= cible.pvMax / 2) {
     cible.enrage = true;
@@ -342,7 +351,10 @@ function lancerOffensif(etat, h, cle, e, ev) {
   const perce = eff.type === 'perce' ? eff.valeur : 0;
   const mult = s.mult * (1 + (h.tal.sorts || 0));
   let total = 0;
-  if (eff.type === 'double') {
+  if (eff.type === 'zone') {
+    // Le balayage frappe tous les ennemis debout, de plein fouet.
+    for (const x of vivants(etat.ennemis)) total += frapper(etat, h, x, mult, ev);
+  } else if (eff.type === 'double') {
     total += frapper(etat, h, e, mult * 0.6, ev);
     if (e.pv > 0) total += frapper(etat, h, e, mult * 0.6, ev);
   } else {
@@ -387,6 +399,33 @@ function lancerSoutien(etat, h, cle, ev) {
         ev.push({ t: 'pm', ...ref(x), n: x.pm - avant, pm: x.pm });
       }
       break;
+    case 'provoc':
+      etat.provoc = { idx: h.idx, tours: eff.valeur };
+      ev.push({ t: 'effet', quoi: 'provoc', ...ref(h) });
+      break;
+    case 'bastion':
+      etat.bouclier = { valeur: eff.valeur, tours: 3 };
+      etat.provoc = { idx: h.idx, tours: 3 };
+      ev.push({ t: 'effet', quoi: 'bouclier' });
+      ev.push({ t: 'effet', quoi: 'provoc', ...ref(h) });
+      break;
+    case 'purge':
+      for (const x of vivants(etat.heros)) {
+        soigner(x, x.pvMax * eff.valeur * 2 * (1 + (etat.bonus.soin || 0) + (h.tal.soins || 0)), ev);
+        x.poison = null;
+      }
+      ev.push({ t: 'effet', quoi: 'purge' });
+      break;
+    case 'resurrection':
+      for (const x of etat.heros) {
+        if (x.pv <= 0) {
+          x.pv = Math.round(x.pvMax * eff.valeur);
+          ev.push({ t: 'releve', ...ref(x), pv: x.pv });
+        } else {
+          soigner(x, x.pvMax * eff.valeur * 0.6, ev);
+        }
+      }
+      break;
     default: break;
   }
 }
@@ -411,7 +450,15 @@ function utiliserObjet(etat, h, type, allie, ev) {
 /* ------------------------------------------------------------------ */
 
 /** Cible d'un ennemi : au hasard, mais les tanks attirent les coups. */
+/** Le héros qui provoque, s'il est encore debout. */
+export function provocateur(etat) {
+  const h = etat.provoc ? etat.heros[etat.provoc.idx] : null;
+  return h && h.pv > 0 ? h : null;
+}
+
 function cibleEnnemie(etat) {
+  const prov = provocateur(etat);
+  if (prov) return prov;
   const l = vivants(etat.heros);
   const poids = l.map((h) => (h.role === 'tank' ? POIDS_TANK : 1));
   let x = etat.rng() * poids.reduce((s, p) => s + p, 0);
@@ -441,8 +488,11 @@ function jouerEnnemi(etat, e, ev) {
   if (charge) {
     ev.push({ t: 'action', ...ref(e), nom: e.charge.nom, genre: 'charge' });
     // Les boss et les élites frappent tout le groupe ; la meute, un seul.
-    const cibles = e.charge.zone ? vivants(etat.heros) : [cibleEnnemie(etat)];
-    for (const h of cibles) coupEnnemi(etat, e, h, e.charge.mult * (e.charge.zone ? 0.7 : 1), ev);
+    // Un héros qui provoque prend l'attaque chargée pour lui seul, même celle d'un boss.
+    const prov = provocateur(etat);
+    const zone = e.charge.zone && !prov;
+    const cibles = zone ? vivants(etat.heros) : [prov || cibleEnnemie(etat)];
+    for (const h of cibles) coupEnnemi(etat, e, h, e.charge.mult * (zone ? 0.7 : 1), ev);
     e.charge.reste = e.charge.tours;
     return;
   }

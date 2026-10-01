@@ -142,6 +142,7 @@ function effetsDe(u) {
   if (u.camp === 'h') {
     if (u.defense) out.push({ glyphe: '🛡', nom: 'En défense', bon: true, texte: 'Moitié des dégâts jusqu’à son prochain tour.' });
     if (b.bouclier) out.push({ glyphe: '🔰', nom: 'Bouclier', bon: true, texte: `−${Math.round(b.bouclier.valeur * 100)} % de dégâts subis, encore ${manches(b.bouclier.tours)}.` });
+    if (b.provoc && b.provoc.idx === u.idx) out.push({ glyphe: '🎯', nom: 'Provocation', bon: true, texte: `Tous les ennemis doivent l’attaquer, et il encaisse 30 % de dégâts en moins. Encore ${manches(b.provoc.tours)}.` });
     if (b.elan) out.push({ glyphe: '✨', nom: 'Élan', bon: true, texte: `+${Math.round(b.elan.valeur * 100)} % de dégâts, encore ${manches(b.elan.tours)}.` });
     if (u.poison && u.poison.tours > 0) out.push({ glyphe: '☠', nom: 'Empoisonné', bon: false, texte: `${u.poison.degats} dégâts à chaque fin de manche, encore ${manches(u.poison.tours)}.` });
   } else {
@@ -164,6 +165,7 @@ function majEffetsGroupe() {
   const l = [];
   if (b.bouclier) l.push(`<span class="bon">🔰 Bouclier −${Math.round(b.bouclier.valeur * 100)} % · ${manches(b.bouclier.tours)}</span>`);
   if (b.elan) l.push(`<span class="bon">✨ Élan +${Math.round(b.elan.valeur * 100)} % · ${manches(b.elan.tours)}</span>`);
+  if (b.provoc && b.heros[b.provoc.idx].pv > 0) l.push(`<span class="bon">🎯 ${txt(b.heros[b.provoc.idx].nom)} provoque · ${manches(b.provoc.tours)}</span>`);
   if (b.coeur) l.push('<span class="bon">🔥 Cœur de phénix prêt</span>');
   $('effets-groupe').innerHTML = l.join('');
   $('effets-groupe').hidden = !l.length;
@@ -324,6 +326,8 @@ async function jouerUn(ev) {
         elan: () => '✨ Le groupe est galvanisé.',
         brasier: () => `🔥 <b>${txt(u.nom)}</b> brûle.`,
         entrave: () => `⛓ <b>${txt(u.nom)}</b> est affaibli.`,
+        provoc: () => `🎯 <b>${txt(u.nom)}</b> provoque : tous les ennemis doivent le frapper !`,
+        purge: () => '🌿 Les poisons se dissipent.',
       };
       if (dits[ev.quoi]) $('journal').innerHTML = `<span>${dits[ev.quoi]()}</span>`;
       maj();

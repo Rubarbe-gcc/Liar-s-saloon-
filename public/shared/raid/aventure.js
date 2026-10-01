@@ -14,9 +14,9 @@
  * Module ISO : ni DOM ni Node.
  */
 
-import { HEROS, PAR_ID } from './heros.js';
+import { HEROS, PAR_ID, LEGENDES } from './heros.js';
 import {
-  creerPersonnage, gagnerXp, statsDe, borner, DEPARTS, NIVEAU_MAX,
+  creerPersonnage, gagnerXp, statsDe, borner, DEPARTS, NIVEAU_MAX, SEUILS_XP,
 } from './personnages.js';
 import { pieceAuHasard, valeurPiece, texteBonus } from './equipement.js';
 import { genererCarte, accessibles, noeud, composer, ACTES, TYPES } from './carte.js';
@@ -94,6 +94,13 @@ export const CHANCE_EMBUSCADE = 0.22;
  */
 export const CHANCE_COLPORTEUR = 0.15;
 export const CHANCE_COLPORTEUR_ZONE = 0.12;
+/**
+ * Les héros légendaires : à partir de cet acte, une rencontre a une chance
+ * d'en amener un. Un groupe complet peut l'accueillir à la place d'un
+ * compagnon.
+ */
+export const ACTE_LEGENDES = 3;
+export const CHANCE_LEGENDE = 0.4;
 
 export function creerAventure({ heros = DEPARTS[0], seed = null, difficulte = 'normal' } = {}) {
   if (!PAR_ID[heros]) throw new Error(`héros inconnu : ${heros}`);
@@ -125,6 +132,9 @@ export function creerAventure({ heros = DEPARTS[0], seed = null, difficulte = 'n
     bossVus: [],
     quete: null,
     offresQuetes: [],
+    absents: [],
+    departActe: 0,
+    cines: [],
     reprise: null,
     termine: false,
     victoire: false,
@@ -187,6 +197,7 @@ export function entrer(av, id) {
   if (!n) return { ok: false, raison: 'inaccessible' };
   av.position = id;
   av.visites.push(id);
+  for (const a of av.absents || []) a.reste--;
 
   switch (n.type) {
     case 'combat':
@@ -391,6 +402,11 @@ function suite(av) {
     av.etape = { type: 'don', choix: proposerDons(av) };
     return;
   }
+  // Un compagnon parti en voyage revient — ou fait savoir qu'il ne reviendra pas.
+  if ((av.absents || []).some((a) => a.reste <= 0)) {
+    retourAbsent(av);
+    return;
+  }
   // Une quête vient d'être accomplie : sa récompense.
   if (av.quete && av.quete.progres >= av.quete.but) {
     recompenserQuete(av);
@@ -408,7 +424,7 @@ function suite(av) {
     return;
   }
   if (!av.bossVaincu) return;
-  if (!av.recrueOfferte && av.acte <= 3 && av.groupe.length < TAILLE_GROUPE) {
+  if (!av.recrueOfferte && av.acte <= 3 && effectif(av) < TAILLE_GROUPE) {
     av.recrueOfferte = true;
     const offres = offresCompagnons(av);
     if (offres.length) {
@@ -709,6 +725,12 @@ export const EVENEMENTS = [
 export const EVENEMENTS_PAR_ID = Object.fromEntries(EVENEMENTS.map((e) => [e.id, e]));
 
 function ouvrirEvenement(av) {
+  if (av.acte >= ACTE_ABSENCES && av.groupe.length >= 2 && !(av.absents || []).length
+      && av.departActe !== av.acte && rng(av)() < CHANCE_ABSENCE) {
+    av.departActe = av.acte;
+    av.etape = { type: 'depart', idx: 1 + entier(av, av.groupe.length - 1), histoire: piocher(av, HISTOIRES).id };
+    return;
+  }
   let pot = EVENEMENTS.filter((ev) => !av.evenementsVus.includes(ev.id)
     && (!ev.actes || (av.acte >= ev.actes[0] && av.acte <= ev.actes[1])));
   if (!pot.length) {
@@ -889,8 +911,13 @@ export function prendreTresor(av) {
 }
 
 function offresCompagnons(av) {
-  if (av.groupe.length >= TAILLE_GROUPE) return [];
   const dedans = av.groupe.map((p) => p.id);
+  // À partir du troisième acte, un héros légendaire peut croiser la route du groupe.
+  const legendes = LEGENDES.filter((h) => !dedans.includes(h.id));
+  const legende = av.acte >= ACTE_LEGENDES && legendes.length && rng(av)() < CHANCE_LEGENDE
+    ? piocher(av, legendes).id : null;
+  // Groupe complet : seul un légendaire vaut qu'on se sépare de quelqu'un.
+  if (effectif(av) >= TAILLE_GROUPE) return legende && av.groupe.length >= 2 ? [legende] : [];
   const roles = av.groupe.map((p) => p.role);
   // Deux rôles différents, ceux qui manquent d'abord — et un groupe sans
   // personne pour frapper se voit proposer quelqu'un qui frappe.
@@ -903,20 +930,38 @@ function offresCompagnons(av) {
     if (h) offres.push(h.id);
     if (offres.length === 2) break;
   }
+  if (legende) offres[offres.length > 1 ? 1 : offres.length] = legende;
   return offres;
 }
 
 /** Niveau d'arrivée d'un compagnon : un de moins que le héros. */
 export const niveauRecrue = (av) => Math.max(1, heros(av).niveau - 1);
 
-export function recruter(av, id) {
+/**
+ * Recrute un compagnon. Si le groupe est complet, `remplace` désigne celui
+ * qui cède sa place (jamais le héros) : son équipement retourne au sac.
+ */
+export function recruter(av, id, remplace = null) {
   if (!av.etape || av.etape.type !== 'compagnon' || !av.etape.offres.includes(id)) return { ok: false };
-  if (av.groupe.length >= TAILLE_GROUPE) return { ok: false, raison: 'complet' };
+  const complet = effectif(av) >= TAILLE_GROUPE;
+  if (complet && !(Number.isInteger(remplace) && remplace >= 1 && remplace < av.groupe.length)) {
+    return { ok: false, raison: 'complet' };
+  }
   const p = creerPersonnage(id, niveauRecrue(av));
-  av.groupe.push(p);
-  av.etape = { type: 'resultat', titre: 'Un compagnon', glyphe: '🤝',
-    dit: `${p.nom}, ${p.titre.toLowerCase()}, rejoint le groupe au niveau ${p.niveau}.`, effet: '', reussi: null };
-  return { ok: true, perso: p };
+  let parti = null;
+  if (complet) {
+    parti = av.groupe[remplace];
+    for (const it of Object.values(parti.equip)) if (it) av.sac.push(it);
+    av.groupe[remplace] = p;
+  } else {
+    av.groupe.push(p);
+  }
+  const legende = !!PAR_ID[id].legendaire;
+  av.etape = { type: 'resultat', titre: legende ? 'Un héros légendaire' : 'Un compagnon', glyphe: legende ? '🌟' : '🤝',
+    dit: `${p.nom}, ${p.titre.toLowerCase()}, rejoint le groupe au niveau ${p.niveau}.`
+      + (parti ? ` ${parti.nom} reprend sa route ; son équipement est dans le sac.` : ''),
+    effet: '', reussi: null };
+  return { ok: true, perso: p, parti };
 }
 
 /* ------------------------------------------------------------------ */
@@ -974,6 +1019,115 @@ export function conseilEquipement(av, it) {
     if (!meilleur || gain > meilleur.gain) meilleur = { idx, gain };
   });
   return meilleur && meilleur.gain > 0 ? meilleur.idx : null;
+}
+
+/* ------------------------------------------------------------------ */
+/* Les départs : un compagnon a sa propre histoire                     */
+/* ------------------------------------------------------------------ */
+
+/** À partir de cet acte, un compagnon peut demander à s'absenter. */
+export const ACTE_ABSENCES = 2;
+export const CHANCE_ABSENCE = 0.35;
+/** Combien de salles dure le voyage. */
+export const DUREE_ABSENCE = 3;
+/** Risque qu'un compagnon parti sans rien ne revienne jamais. */
+export const RISQUE_ADIEU = 0.25;
+/** Ce qu'il en coûte de lui payer la route : il reviendra à coup sûr. */
+export const PRIX_VIATIQUE = 40;
+
+/** Le groupe, absents compris : leur place reste la leur. */
+export const effectif = (av) => av.groupe.length + (av.absents || []).length;
+
+/**
+ * Les histoires. Chacune a son appel (`texte`), son retour — le compagnon
+ * revient « éveillé », plus fort qu'il n'est parti — et son adieu.
+ */
+export const HISTOIRES = [
+  { id: 'lettre', titre: 'Une lettre du pays', glyphe: '✉️',
+    texte: (n) => `Un corbeau s’est posé sur l’épaule de ${n}. La lettre est courte : le village brûle, et il n’y a plus personne pour le défendre. ${n} vous regarde, sans rien demander.`,
+    retour: (n) => `${n} revient, de la suie plein les cheveux et le regard changé. « Ils sont en sécurité. J’ai appris là-bas ce que je venais chercher ici. »`,
+    adieu: (n) => `Un corbeau vous apporte un mot de ${n} : « Ils ont besoin de moi plus que vous. Pardonnez-moi. Finissez ce qu’on a commencé. » Dans le paquet, tout son équipement.` },
+  { id: 'maitre', titre: 'Le vieux maître', glyphe: '🧓',
+    texte: (n) => `Une silhouette attend au bout du couloir : celle qui a tout appris à ${n}, il y a longtemps. « Il te reste une leçon. Elle ne se donne pas ici. Viens, ou ne viens pas. »`,
+    retour: (n) => `${n} vous rattrape en courant, une cicatrice neuve en travers de la joue. « La dernière leçon, c’était de gagner ce duel-là. C’est fait. »`,
+    adieu: (n) => `Un apprenti essoufflé vous tend un sac. « ${n} garde l’école, maintenant. Le maître est mort cette nuit. » Tout son équipement est là, soigneusement plié.` },
+  { id: 'dette', titre: 'Une vieille dette', glyphe: '⚖️',
+    texte: (n) => `Trois hommes en manteau gris barrent la route. Ils ne vous veulent rien : ils viennent chercher ${n}, pour une dette qu’aucun or ne rachète. « Trois jours de service. Ou toute une vie de fuite. »`,
+    retour: (n) => `${n} réapparaît au détour d’une salle, les poignets marqués, un sourire en coin. « Quitte. Et ils m’ont laissé deviner deux ou trois de leurs secrets. »`,
+    adieu: (n) => `Un homme en gris dépose un paquet à vos pieds et repart sans un mot. ${n} a choisi de rester avec eux. Son équipement vous revient.` },
+  { id: 'serment', titre: 'Le serment', glyphe: '🕯',
+    texte: (n) => `Derrière un mur éboulé, une chapelle intacte — celle de l’ordre que ${n} a quitté. Une veillée y brûle encore. « J’ai un serment à finir. Seul. Ça ne prendra pas longtemps. »`,
+    retour: (n) => `${n} vous rejoint à l’aube, les traits tirés, une lueur nouvelle au fond des yeux. « J’ai veillé. On m’a répondu. »`,
+    adieu: (n) => `La chapelle est vide quand vous y repassez. Sur l’autel, l’équipement de ${n}, et trois mots tracés dans la cire : « Je reste. Priez. »` },
+];
+export const HISTOIRES_PAR_ID = Object.fromEntries(HISTOIRES.map((h) => [h.id, h]));
+
+/** L'appel en cours, tel que l'écran doit le présenter. */
+export function departCourant(av) {
+  const e = av.etape;
+  if (!e || e.type !== 'depart') return null;
+  const p = av.groupe[e.idx];
+  const h = HISTOIRES_PAR_ID[e.histoire];
+  return {
+    perso: p, titre: h.titre, glyphe: h.glyphe, texte: h.texte(p.nom),
+    choix: [
+      { id: 'partir', label: `Laisser partir ${p.nom}`, possible: true,
+        annonce: `Absence de ${DUREE_ABSENCE} salles. Au retour : l’éveil (+${Math.round(0.12 * 100)} % vie, attaque, armure, et un niveau)… s’il y a un retour (${Math.round(RISQUE_ADIEU * 100)} % de risque que non).` },
+      { id: 'viatique', label: `Lui payer la route (${PRIX_VIATIQUE} or)`, possible: av.or >= PRIX_VIATIQUE,
+        annonce: `Absence de ${DUREE_ABSENCE} salles, retour assuré, avec l’éveil.` },
+      { id: 'retenir', label: `Demander à ${p.nom} de rester`, possible: true,
+        annonce: 'Le groupe reste entier. −2 chance : un regret, ça pèse.' },
+    ],
+  };
+}
+
+export function choisirDepart(av, choix) {
+  const vue = departCourant(av);
+  const c = vue && vue.choix.find((x) => x.id === choix);
+  if (!c) return { ok: false, raison: 'inconnu' };
+  if (!c.possible) return { ok: false, raison: 'or' };
+  const p = vue.perso;
+  const histoire = av.etape.histoire;
+  if (choix === 'retenir') {
+    av.chance = Math.max(0, av.chance - 2);
+    av.etape = { type: 'resultat', titre: vue.titre, glyphe: vue.glyphe, reussi: null, effet: '−2 chance',
+      dit: `${p.nom} hoche la tête et reprend sa place dans la file. Personne ne dit rien pendant un long moment.` };
+    return { ok: true };
+  }
+  if (choix === 'viatique') av.or -= PRIX_VIATIQUE;
+  const adieu = choix === 'partir' && rng(av)() < RISQUE_ADIEU;
+  av.groupe = av.groupe.filter((x) => x !== p);
+  av.absents = [...(av.absents || []), { perso: p, reste: DUREE_ABSENCE, adieu, histoire }];
+  av.etape = { type: 'resultat', titre: vue.titre, glyphe: vue.glyphe, reussi: null,
+    effet: `${p.nom} quitte le groupe pour ${DUREE_ABSENCE} salles`,
+    dit: choix === 'viatique'
+      ? `${p.nom} empoche la bourse, vous serre le bras, et disparaît dans l’escalier. « Je vous retrouve plus haut. Promis. »`
+      : `${p.nom} part sans se retourner. Vous continuez à ${av.groupe.length === 1 ? 'un seul' : av.groupe.length}.` };
+  return { ok: true, adieu };
+}
+
+/** Le voyage est fini : le compagnon revient éveillé, ou envoie ses adieux. */
+function retourAbsent(av) {
+  const a = av.absents.find((x) => x.reste <= 0);
+  av.absents = av.absents.filter((x) => x !== a);
+  const p = a.perso;
+  const h = HISTOIRES_PAR_ID[a.histoire] || HISTOIRES[0];
+  if (a.adieu) {
+    for (const it of Object.values(p.equip)) if (it) av.sac.push(it);
+    av.or += 30;
+    av.etape = { type: 'resultat', titre: `${p.nom} ne reviendra pas`, glyphe: '🕊', reussi: null,
+      dit: h.adieu(p.nom), effet: 'Son équipement est dans le sac · +30 or' };
+    return;
+  }
+  const bonus = bonusDe(av);
+  p.eveil = true;
+  if (p.niveau < NIVEAU_MAX) gagnerXp(p, SEUILS_XP[p.niveau + 1] - p.xp, bonus);
+  const st = statsDe(p, bonus);
+  p.pv = st.pvMax;
+  p.pm = st.pmMax;
+  av.groupe.push(p);
+  av.etape = { type: 'resultat', titre: `${p.nom} est de retour`, glyphe: '✦', reussi: null,
+    dit: h.retour(p.nom), effet: `Éveil : +12 % de vie, d’attaque et d’armure · niveau ${p.niveau}` };
 }
 
 /* ------------------------------------------------------------------ */

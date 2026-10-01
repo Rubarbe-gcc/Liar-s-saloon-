@@ -12,11 +12,15 @@ import { ACTES, TYPES } from '../../../shared/raid/carte.js';
 import { OBJETS, MULT_CRIT } from '../../../shared/raid/bataille.js';
 import {
   TAILLE_GROUPE, NIVEAUX_DON, CHANCE_DEPART, SOLO, DIFFICULTES, texteDifficulte, CHANCE_EMBUSCADE,
-  CHANCE_COLPORTEUR, CHANCE_COLPORTEUR_ZONE,
+  CHANCE_COLPORTEUR, CHANCE_COLPORTEUR_ZONE, ACTE_LEGENDES, CHANCE_LEGENDE,
+  ACTE_ABSENCES, DUREE_ABSENCE, RISQUE_ADIEU, PRIX_VIATIQUE,
 } from '../../../shared/raid/aventure.js';
 import { TRAITS_RPG, pc } from './textes.js';
 import { RANG_MAX, SEUIL_PALIER } from '../../../shared/raid/talents.js';
 import { RELIQUES, QUETES } from '../../../shared/raid/reliques.js';
+import { LEGENDES } from '../../../shared/raid/heros.js';
+import { sortsDe } from '../../../shared/raid/personnages.js';
+import { texteSort, nomRole } from './textes.js';
 
 const bloc = (titre, corps) => `<div class="regle-bloc"><h3>${titre}</h3>${corps}</div>`;
 
@@ -69,6 +73,23 @@ export function rendreRegles() {
     <p>Les salles « ❓ » posent des questions. Certaines réponses rendent plus fort, d’autres coûtent de la
     vie, et certaines pèsent sur <b>les boss</b> : un boss affaibli par vos ruses, ou un Dragon renforcé par
     un pacte que vous avez accepté. Tout est écrit avant de choisir.</p>`)
+    + bloc('Héros légendaires', `
+    <p>À partir de l’acte ${ACTE_LEGENDES}, chaque rencontre 🤝 a <b>${pc(CHANCE_LEGENDE)}</b> de chances d’amener un
+    <b>héros légendaire</b> : plus solide que les autres, avec des sorts que personne d’autre n’a. Si le groupe est
+    complet, il peut prendre la place d’un compagnon (jamais celle de votre héros).</p>
+    <ul>${LEGENDES.map((h) => { const st = sortsDe(h); return `<li>🌟 <b>${h.nom}, ${h.titre}</b> (${nomRole(h.role)})<br>
+      <i>${st.special.nom}</i> — ${texteSort(st.special)}<br><i>${st.ultime.nom}</i> — ${texteSort(st.ultime)}</li>`; }).join('')}</ul>`)
+    + bloc('Les départs', `
+    <p>À partir de l’acte ${ACTE_ABSENCES}, un compagnon peut être rappelé par sa propre histoire — une lettre, un
+    maître, une dette, un serment. Trois réponses :</p>
+    <ul>
+      <li><b>Le laisser partir</b> : absent ${DUREE_ABSENCE} salles. Au retour, c’est <b>l’éveil</b> (+12 % de vie, d’attaque
+      et d’armure, et un niveau)… mais il y a ${pc(RISQUE_ADIEU)} de risque de ne jamais le revoir. Son équipement
+      vous est alors rendu.</li>
+      <li><b>Lui payer la route</b> (${PRIX_VIATIQUE} or) : retour assuré, avec l’éveil.</li>
+      <li><b>Le retenir</b> : le groupe reste entier, au prix d’un peu de chance.</li>
+    </ul>
+    <p>Sa place l’attend : personne ne peut la prendre pendant son voyage.</p>`)
     + bloc('Talents', `
     <p>Chaque niveau gagné donne <b>un point de talent</b> au personnage. Il se dépense dans l’écran du groupe :
     deux branches par rôle, trois talents par branche, <b>${RANG_MAX} rangs</b> chacun. Un palier s’ouvre quand le

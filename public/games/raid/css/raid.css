@@ -746,3 +746,52 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .talent.bloque { opacity: .5; }
 .talent.max { border-color: rgba(127, 201, 92, .6); }
 .talent.max .pips { color: #8ee06a; }
+
+/* Héros légendaires : un liseré d'or. */
+.tag.legende { color: #1a1206; background: linear-gradient(120deg, #ffe9a8, #e8c060); border-color: #ffe9a8; font-weight: 800; }
+.carte-perso.legendaire { border-color: #ffe9a8; box-shadow: 0 0 0 1px #e8c060, 0 0 30px rgba(232, 192, 96, .35), 0 5px 0 rgba(0,0,0,.45); background: linear-gradient(160deg, rgba(120, 84, 20, .45), var(--carte) 60%); }
+
+.tag.eveil { color: #c9f5ff; border-color: #7fd8ff; background: rgba(94, 208, 255, .15); font-weight: 700; }
+.mini.absent { font-size: 10px; text-align: center; padding: 4px; border-color: rgba(127, 216, 255, .45); color: #bfe6f7; }
+
+/* ------------------------------------------------------------------ */
+/* Cinématiques                                                        */
+/* ------------------------------------------------------------------ */
+
+.cine {
+  --aff: var(--or);
+  position: fixed; inset: 0; z-index: 60;
+  display: grid; grid-template-rows: auto 1fr auto; justify-items: center;
+  padding: calc(14px + var(--st)) 20px calc(22px + var(--sb));
+  background:
+    radial-gradient(90% 60% at 50% 32%, color-mix(in srgb, var(--aff) 30%, transparent), transparent 70%),
+    linear-gradient(180deg, #000, #0a0705 40%, #000);
+  animation: cine-entre .5s ease both;
+  cursor: pointer; user-select: none;
+}
+.cine::before, .cine::after {
+  content: ''; position: absolute; left: 0; right: 0; height: 9svh; background: #000; pointer-events: none;
+}
+.cine::before { top: 0; }
+.cine::after { bottom: 0; }
+.cine.part { animation: cine-sort .26s ease both; }
+.cine-passer {
+  position: relative; z-index: 2; justify-self: end;
+  padding: 7px 14px; border-radius: 999px; font-size: 13px;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2); color: var(--texte);
+}
+.cine-scene { align-self: center; display: grid; justify-items: center; gap: 16px; max-width: 520px; width: 100%; text-align: center; }
+.cine-scene.entre .cine-art { animation: cine-art .7s cubic-bezier(.2, .9, .3, 1) both; }
+.cine-scene.entre .cine-titre { animation: cine-titre .6s ease .15s both; }
+.cine-art { width: min(64vw, 280px); aspect-ratio: 5 / 4; display: grid; place-items: center; filter: drop-shadow(0 0 34px color-mix(in srgb, var(--aff) 60%, transparent)); }
+.cine-art .sprite { width: 62%; height: auto; }
+.cine-portrait { width: 100%; height: 100%; --aff: inherit; }
+.cine-glyphe { font-size: clamp(90px, 30vw, 150px); line-height: 1; animation: b-flotte 3.6s ease-in-out infinite; }
+.cine-titre { margin: 0; font-size: clamp(22px, 6.4vw, 32px); letter-spacing: .06em; color: #fff3d6; text-shadow: 0 0 22px var(--aff); }
+.cine-texte { margin: 0; min-height: 7.5em; font-size: clamp(16px, 4.4vw, 19px); line-height: 1.6; color: var(--texte); }
+.cine-suite { position: relative; z-index: 2; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--doux); opacity: 0; transition: opacity .3s; }
+.cine-suite.visible { opacity: 1; animation: clignote 1.6s ease-in-out infinite; }
+@keyframes cine-entre { from { opacity: 0; } to { opacity: 1; } }
+@keyframes cine-sort { to { opacity: 0; } }
+@keyframes cine-art { from { opacity: 0; transform: scale(.7) translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes cine-titre { from { opacity: 0; letter-spacing: .4em; } to { opacity: 1; letter-spacing: .06em; } }
