@@ -281,31 +281,81 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .mini.vide { justify-content: center; color: var(--doux); font-size: 11px; border-style: dashed; background: rgba(255,255,255,.02); min-height: 42px; }
 .mini.tombe { opacity: .5; filter: grayscale(1); }
 
+/* La carte est un plateau incliné : le sol fuit vers le boss, et les salles
+   sont des jetons dressés dessus. Tout est fait en transformations CSS. */
 .carte-wrap {
+  --pente: 42deg;
+  position: relative;
   border: 1px solid var(--bord); border-radius: var(--rayon);
-  background: linear-gradient(180deg, rgba(60, 22, 12, .55), rgba(20, 15, 9, .6) 30%, rgba(20, 15, 9, .6));
-  padding: 8px;
+  background:
+    radial-gradient(70% 45% at 50% 0%, rgba(224, 75, 72, .38), transparent 70%),
+    linear-gradient(180deg, #1c0d09, #0d0a07 55%);
+  padding: 70px 10px 26px;
+  perspective: 760px;
+  perspective-origin: 50% 30%;
+  overflow: hidden;
 }
-.carte { position: relative; height: min(64svh, 540px); min-height: 400px; }
+.carte-wrap::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, rgba(12, 10, 7, .7), transparent 28%);
+}
+.carte {
+  position: relative; height: 620px;
+  transform: rotateX(var(--pente)); transform-origin: 50% 100%;
+  transform-style: preserve-3d;
+  margin-top: -195px;
+  border-radius: 18px;
+  background:
+    radial-gradient(60% 30% at 50% 4%, rgba(255, 120, 60, .28), transparent 70%),
+    repeating-linear-gradient(0deg, rgba(0,0,0,.34) 0 2px, transparent 2px 62px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.34) 0 2px, transparent 2px 62px),
+    linear-gradient(180deg, #2a2018, #3b2c1c);
+  box-shadow: inset 0 0 60px rgba(0,0,0,.7), 0 30px 40px rgba(0,0,0,.6);
+}
 .carte svg.liens { position: absolute; inset: 0; width: 100%; height: 100%; }
-.carte svg.liens line { stroke: rgba(232, 192, 96, .22); stroke-width: 2; stroke-dasharray: 4 5; vector-effect: non-scaling-stroke; }
-.carte svg.liens line.fait { stroke: rgba(232, 192, 96, .75); stroke-dasharray: none; }
-.carte svg.liens line.ouvert { stroke: rgba(255, 233, 168, .6); }
-.salle {
-  position: absolute; transform: translate(-50%, -50%);
-  width: 44px; height: 44px; border-radius: 50%;
-  display: grid; place-items: center;
-  font-size: 20px;
-  background: #1f170d; border: 2px solid rgba(232, 192, 96, .25);
-  opacity: .55;
-  transition: transform .15s, opacity .2s;
+.carte svg.liens line { stroke: rgba(232, 192, 96, .5); stroke-width: 3; stroke-dasharray: 5 7; vector-effect: non-scaling-stroke; }
+.carte svg.liens line.fait { stroke: rgba(255, 210, 110, .95); stroke-dasharray: none; filter: drop-shadow(0 0 3px rgba(255, 200, 90, .8)); }
+.carte svg.liens line.ouvert { stroke: rgba(255, 240, 190, .85); }
+
+/* Le socle : un disque posé à plat sur le sol, sous chaque jeton. */
+.socle {
+  position: absolute; width: 46px; height: 46px; border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(0,0,0,.75) 35%, transparent 70%);
 }
-.salle.boss { width: 62px; height: 62px; font-size: 30px; opacity: .8; border-color: var(--rouge); }
-.salle.vue { opacity: .9; border-color: rgba(232, 192, 96, .7); background: #3a2a12; }
-.salle.ici { opacity: 1; border-color: var(--or); box-shadow: 0 0 0 4px rgba(232, 192, 96, .25); }
-.salle.ouverte { opacity: 1; border-color: #ffe9a8; box-shadow: 0 0 18px rgba(255, 220, 130, .55); animation: appel 1.4s ease-in-out infinite; cursor: pointer; }
-.salle.ouverte:active { transform: translate(-50%, -50%) scale(.92); }
-@keyframes appel { 50% { box-shadow: 0 0 4px rgba(255, 220, 130, .25); } }
+.socle.ouverte { background: radial-gradient(circle, rgba(255, 222, 140, .85), rgba(255, 190, 80, .25) 55%, transparent 72%); animation: halo 1.4s ease-in-out infinite; }
+.socle.ici { background: radial-gradient(circle, rgba(232, 192, 96, .7), transparent 70%); }
+.socle.boss { width: 86px; height: 86px; background: radial-gradient(circle, rgba(224, 75, 72, .75), transparent 70%); animation: halo 2.4s ease-in-out infinite; }
+@keyframes halo { 50% { opacity: .45; } }
+
+/* Le jeton : redressé face au joueur, les pieds sur son socle. */
+.salle {
+  position: absolute;
+  width: 46px; height: 50px; border-radius: 12px 12px 8px 8px;
+  display: grid; place-items: center;
+  font-size: 22px;
+  transform-origin: 50% 100%;
+  transform: translate(-50%, -100%) rotateX(calc(-1 * var(--pente)));
+  background: linear-gradient(160deg, #4a3a26, #1d150c 70%);
+  border: 2px solid rgba(232, 192, 96, .35);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.14), inset 0 -6px 10px rgba(0,0,0,.5), 0 6px 0 #0c0805, 0 10px 14px rgba(0,0,0,.6);
+  transition: filter .2s, border-color .2s;
+}
+.salle.cachee { filter: brightness(.6) saturate(.5); }
+.salle.vue { border-color: rgba(232, 192, 96, .8); background: linear-gradient(160deg, #6b5226, #2e2110 70%); filter: none; }
+.salle.ici { border-color: var(--or); filter: none; box-shadow: inset 0 2px 0 rgba(255,255,255,.2), 0 6px 0 #0c0805, 0 0 0 3px rgba(232, 192, 96, .35), 0 0 22px rgba(232, 192, 96, .6); }
+.salle.ouverte { filter: none; border-color: #ffe9a8; cursor: pointer; animation: appel 1.4s ease-in-out infinite; }
+.salle.ouverte:active { filter: brightness(1.4); }
+.salle.boss {
+  width: 70px; height: 74px; font-size: 36px; filter: none;
+  border-color: var(--rouge);
+  background: linear-gradient(160deg, #6a1f1a, #260b09 70%);
+  box-shadow: inset 0 2px 0 rgba(255,255,255,.16), 0 8px 0 #120403, 0 0 34px rgba(224, 75, 72, .7);
+}
+@keyframes appel {
+  0%, 100% { box-shadow: inset 0 2px 0 rgba(255,255,255,.14), 0 6px 0 #0c0805, 0 0 20px rgba(255, 220, 130, .75); translate: 0 0; }
+  50% { box-shadow: inset 0 2px 0 rgba(255,255,255,.14), 0 6px 0 #0c0805, 0 0 6px rgba(255, 220, 130, .3); translate: 0 -5px; }
+}
 .carte-aide { text-align: center; font-size: 12px; color: var(--doux); margin: 8px 0 4px; }
 .legende { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 12px; font-size: 11px; color: var(--doux); margin-bottom: 12px; }
 
@@ -505,3 +555,25 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
   .unite { width: min(31%, 150px); padding: 5px; }
   .groupe-mini { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* ------------------------------------------------------------------ */
+/* Relief                                                              */
+/* ------------------------------------------------------------------ */
+
+/* Chaque combattant a les pieds sur une ombre : il est posé, pas collé. */
+.pied { position: relative; }
+.pied::before {
+  content: ''; position: absolute; left: 50%; bottom: 2%;
+  width: 62%; height: 16%; border-radius: 50%;
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side, rgba(0,0,0,.7), transparent);
+}
+.pied .sprite { position: relative; }
+.unite, .btn, .cmd, .choix, .piece, .carte-perso, .fiche-depart, .mini, .gain {
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.09), 0 5px 0 rgba(0,0,0,.45), 0 12px 22px rgba(0,0,0,.35);
+}
+.btn:active, .cmd:active, .choix:active { translate: 0 3px; box-shadow: inset 0 1px 0 rgba(255,255,255,.09), 0 2px 0 rgba(0,0,0,.45); }
+.btn-go { box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 5px 0 #5a3a10, 0 14px 26px rgba(140, 90, 28, .45); }
+.ennemis .unite { background: linear-gradient(180deg, rgba(70, 26, 20, .8), var(--carte)); }
+.unite.actif { box-shadow: 0 0 0 2px var(--or), 0 5px 0 rgba(0,0,0,.45), 0 14px 28px rgba(232, 192, 96, .3); }
+.unite.ciblable { box-shadow: 0 0 16px rgba(255, 220, 130, .55), 0 5px 0 rgba(0,0,0,.45); }

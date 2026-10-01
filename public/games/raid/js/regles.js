@@ -26,7 +26,7 @@ export function rendreRegles() {
     <p>Seul, un tank ou un soigneur frappe plus fort (<b>+${pc(SOLO.tank)}</b> et <b>+${pc(SOLO.soigneur)}</b>
     de dégâts) : sans cela, il userait les monstres bien après qu’ils l’ont usé.</p>`)
     + bloc('La carte', `
-    <p>Chaque acte est une carte à chemins. Vous choisissez la salle suivante parmi celles que votre chemin relie :</p>
+    <p>Chaque acte est une carte à chemins. Vous choisissez la porte suivante parmi celles que votre chemin relie — mais <b>sans savoir ce qu’elle cache</b> : on ne le découvre qu’en entrant. Seul le boss, au sommet, se voit de loin. Derrière une porte :</p>
     <ul>${Object.values(TYPES).map((t) => `<li>${t.glyphe} <b>${t.nom}</b> — ${t.texte}</li>`).join('')}</ul>
     <p>Le dernier palier avant le boss est toujours un feu de camp. Entre deux actes, le groupe récupère une
     bonne partie de sa vie, et tout son mana.</p>`)

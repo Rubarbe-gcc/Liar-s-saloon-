@@ -210,27 +210,34 @@ function rendreCarte() {
       lignes += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" class="${fait ? 'fait' : ouvert ? 'ouvert' : ''}"/>`;
     }
   }
+  // Brouillard : on ne sait ce qu'une salle cache qu'en y entrant. Seuls le
+  // boss, au sommet, et les salles déjà traversées se montrent.
+  const connue = (n) => n.type === 'boss' || vues.has(n.id);
   const salles = av.carte.noeuds.map((n) => {
     const p = pos(n);
-    const cls = ['salle', n.type === 'boss' ? 'boss' : '', vues.has(n.id) ? 'vue' : '',
-      n.id === av.position ? 'ici' : '', ouvertes.has(n.id) ? 'ouverte' : ''].join(' ');
-    return `<button class="${cls}" data-id="${n.id}" style="left:${p.x}%;top:${p.y}%"
-      title="${txt(TYPES[n.type].nom)}" aria-label="${txt(TYPES[n.type].nom)}">${TYPES[n.type].glyphe}</button>`;
+    const etat = [n.type === 'boss' ? 'boss' : '', vues.has(n.id) ? 'vue' : '',
+      n.id === av.position ? 'ici' : '', ouvertes.has(n.id) ? 'ouverte' : '',
+      connue(n) ? '' : 'cachee'].join(' ');
+    const nom = connue(n) ? TYPES[n.type].nom : 'Porte close';
+    return `<span class="socle ${etat}" style="left:${p.x}%;top:${p.y}%"></span>
+      <button class="salle ${etat}" data-id="${n.id}" style="left:${p.x}%;top:${p.y}%"
+      title="${txt(nom)}" aria-label="${txt(nom)}">${connue(n) ? TYPES[n.type].glyphe : '🚪'}</button>`;
   }).join('');
   $('carte').innerHTML = `<svg class="liens" viewBox="0 0 100 100" preserveAspectRatio="none">${lignes}</svg>${salles}`;
   for (const el of $('carte').querySelectorAll('.salle')) {
     el.addEventListener('click', () => entrerSalle(el.dataset.id));
   }
   $('carte-aide').textContent = av.position
-    ? 'Touchez une salle qui brille pour continuer votre chemin.'
-    : `${acte.texte} Touchez une salle qui brille pour commencer.`;
-  $('legende').innerHTML = Object.values(TYPES).map((t) => `<span>${t.glyphe} ${t.nom}</span>`).join('');
+    ? 'Choisissez une porte qui brille. Vous ne saurez ce qu’elle cache qu’en la poussant.'
+    : `${acte.texte} Choisissez une porte pour commencer.`;
+  $('legende').innerHTML = '<span>🚪 Porte close</span>' + Object.values(TYPES).map((t) => `<span>${t.glyphe} ${t.nom}</span>`).join('');
 }
 
 function entrerSalle(id) {
   const n = av.carte.noeuds.find((x) => x.id === id);
   if (!A.sallesAccessibles(av).some((x) => x.id === id)) {
-    if (n) toast(`${TYPES[n.type].nom} — ${TYPES[n.type].texte}`);
+    const connue = n && (n.type === 'boss' || av.visites.includes(n.id));
+    if (n) toast(connue ? `${TYPES[n.type].nom} — ${TYPES[n.type].texte}` : 'Porte close : il faut la pousser pour savoir.');
     return;
   }
   debloquer();

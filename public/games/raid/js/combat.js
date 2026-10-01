@@ -61,7 +61,7 @@ function carteUnite(u) {
   return `<div class="unite" data-u="${cle(u.camp, u.idx)}" style="--aff:${teinte(u.ecole)}">
     <span class="ecole-pt"></span>
     <span class="etats"></span>
-    ${spriteSvg(u)}
+    <div class="pied">${spriteSvg(u)}</div>
     <div class="nom">${txt(u.nom)}${ennemi ? '' : ` <i>niv. ${u.niveau}</i>`}</div>
     <div class="jauge ${ennemi ? 'ennemi' : 'pv'}"><i></i></div>
     ${ennemi ? '' : '<div class="jauge pm"><i></i></div>'}
