@@ -897,3 +897,23 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .sy-code { font-size: clamp(24px, 8vw, 38px); letter-spacing: .06em; }
 .sy-saisie { font-size: 22px; letter-spacing: .12em; }
 .tr-ou { text-align: center; font-size: 12px; color: var(--doux); margin: 14px 0 4px; }
+
+/* ------------------------------------------------------------------ */
+/* Emplacements de sauvegarde                                          */
+/* ------------------------------------------------------------------ */
+
+.emplacements { display: grid; gap: 10px; }
+.emplacement { display: flex; gap: 8px; align-items: stretch; }
+.emplacement .emp-jouer { flex: 1; min-width: 0; padding: 12px 14px; }
+.emplacement.actif .emp-jouer { border-color: var(--or); box-shadow: 0 0 0 1px var(--or), 0 5px 0 rgba(0,0,0,.45), 0 0 22px rgba(232, 192, 96, .25); }
+.emp-portrait { flex: none; width: 40px; height: 40px; display: grid; place-items: center; }
+.emp-portrait .sprite { width: 40px; height: 40px; }
+.emp-jouer .bt i, .emp-vide .bt i { white-space: normal; }
+.emp-suppr {
+  flex: none; width: 46px; border-radius: var(--rayon); font-size: 18px;
+  background: rgba(224, 75, 72, .1); border: 1px solid rgba(224, 75, 72, .35);
+  box-shadow: 0 5px 0 rgba(0,0,0,.45);
+}
+.emp-suppr:active { translate: 0 3px; box-shadow: 0 2px 0 rgba(0,0,0,.45); }
+.emp-vide { border-style: dashed; background: rgba(255,255,255,.03); padding: 12px 14px; }
+.emp-vide .bi { color: var(--doux); }

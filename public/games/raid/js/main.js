@@ -34,9 +34,18 @@ import {
 } from '../../../shared/raid/talents.js';
 
 const $ = (id) => document.getElementById(id);
-const CLE = 'raid.aventure';
+/**
+ * Trois emplacements de sauvegarde. Chacun garde une aventure ; `emplacement`
+ * désigne celle qu'on joue. L'ancienne clé unique est reprise dans le premier.
+ */
+const NB_EMPLACEMENTS = 3;
+const CLE_ANCIENNE = 'raid.aventure';
+const CLE_ACTIF = 'raid.emplacement';
+const cleDe = (i) => `raid.aventure.${i + 1}`;
 
 let av = null;        // l'aventure en cours
+let emplacement = 0;  // l'emplacement qu'elle occupe
+let cible = 0;        // celui où ira la prochaine aventure créée
 /**
  * La progression : jusqu'où l'histoire a été lue, toutes aventures confondues.
  * C'est elle qui débloque les chapitres.
@@ -73,8 +82,8 @@ let derniereEcriture = null;   // ce qui a été écrit en dernier, pour ne date
 function sauver() {
   const texte = !av || av.termine ? '' : JSON.stringify(av);
   try {
-    if (!texte) localStorage.removeItem(CLE);
-    else localStorage.setItem(CLE, texte);
+    if (!texte) localStorage.removeItem(cleDe(emplacement));
+    else localStorage.setItem(cleDe(emplacement), texte);
   } catch { /* stockage plein ou interdit : on joue quand même */ }
   if (derniereEcriture !== null && texte !== derniereEcriture) {
     synchro.marquer();
@@ -90,8 +99,11 @@ function sauver() {
 let envoiPrevu = null;
 let etatSynchro = '';
 
-/** Ce que cet appareil a à déposer : la partie en cours (ou son absence) et la progression. */
-const chargeCourante = () => versCode(av && !av.termine ? av : { version: 2, vide: true, groupe: [{ id: 'aucun' }] }, progres);
+/** Ce que cet appareil a à déposer : ses trois emplacements et la progression. */
+const chargeCourante = () => versCode({
+  version: 2, lot: true, groupe: [{ id: 'lot' }], actif: emplacement,
+  emplacements: Array.from({ length: NB_EMPLACEMENTS }, (_, i) => (i === emplacement ? (av && !av.termine ? av : null) : lireBrut(i))),
+}, progres);
 
 function direSynchro(texte) {
   etatSynchro = texte;
@@ -108,12 +120,29 @@ async function adopter(charge, date) {
     progres.fini = progres.fini || !!r.progression.fini;
     try { localStorage.setItem(CLE_PROGRES, JSON.stringify(progres)); } catch { /* ignore */ }
   }
-  if (r.partie.vide) av = null;
-  else if (r.partie.groupe.every((p) => PAR_ID[p.id])) { av = r.partie; A.mettreAJour(av); }
+  // Un lot de trois emplacements — ou, venant d'une version plus ancienne du
+  // jeu, une seule partie, qui prend alors le premier.
+  const valide = (x) => !!x && x.version === 2 && Array.isArray(x.groupe) && x.groupe.length > 0 && x.groupe.every((p) => PAR_ID[p.id]);
+  let recus;
+  if (r.partie.lot && Array.isArray(r.partie.emplacements)) recus = r.partie.emplacements.slice(0, NB_EMPLACEMENTS);
+  else if (r.partie.vide) recus = [null];
+  else if (valide(r.partie)) recus = [r.partie];
   else return false;
+  if (recus.some((x) => x && !valide(x))) return false;
+  try {
+    recus.forEach((x, i) => {
+      if (!x) localStorage.removeItem(cleDe(i));
+      else { A.mettreAJour(x); localStorage.setItem(cleDe(i), JSON.stringify(x)); }
+    });
+  } catch { return false; }
+  // On reste sur son emplacement s'il est encore occupé ; sinon, sur le premier qui l'est.
+  if (!lireBrut(emplacement)) {
+    const autre = Array.from({ length: NB_EMPLACEMENTS }, (_, i) => i).find((i) => lireBrut(i));
+    if (autre !== undefined) choisirEmplacement(autre);
+  }
+  av = lireBrut(emplacement);
   finJouee = false;
-  derniereEcriture = null;       // cette écriture vient d'ailleurs : elle n'est pas à renvoyer
-  sauver();
+  derniereEcriture = av ? JSON.stringify(av) : '';   // cette écriture vient d'ailleurs : elle n'est pas à renvoyer
   synchro.marquer(date);
   return true;
 }
@@ -202,18 +231,82 @@ async function relierSynchro() {
   aller('menu');
 }
 
-function charger() {
+/** L'aventure rangée dans un emplacement, telle quelle (ou rien). */
+function lireBrut(i) {
   try {
-    localStorage.removeItem('raid.partie');   // l'ancien raid à six ne se reprend pas
-    const brut = localStorage.getItem(CLE);
+    const brut = localStorage.getItem(cleDe(i));
     if (!brut) return null;
     const x = JSON.parse(brut);
     if (x.version !== 2 || !Array.isArray(x.groupe) || !x.groupe.every((p) => PAR_ID[p.id])) return null;
-    // Une partie commencée avant une mise à jour du jeu reçoit les nouveautés.
-    nouveautes = A.mettreAJour(x);
-    if (nouveautes.length) localStorage.setItem(CLE, JSON.stringify(x));
     return x;
   } catch { return null; }
+}
+
+function choisirEmplacement(i) {
+  emplacement = i;
+  try { localStorage.setItem(CLE_ACTIF, String(i)); } catch { /* ignore */ }
+}
+
+/** Charge l'aventure d'un emplacement, en lui apportant les nouveautés du jeu. */
+function charger(i = emplacement) {
+  const x = lireBrut(i);
+  if (!x) return null;
+  // Une partie commencée avant une mise à jour du jeu reçoit les nouveautés.
+  nouveautes = A.mettreAJour(x);
+  if (nouveautes.length) { try { localStorage.setItem(cleDe(i), JSON.stringify(x)); } catch { /* ignore */ } }
+  return x;
+}
+
+/** Au lancement : reprend l'ancienne sauvegarde unique, puis l'emplacement joué en dernier. */
+function demarrerSauvegardes() {
+  try {
+    localStorage.removeItem('raid.partie');   // l'ancien raid à six ne se reprend pas
+    const ancienne = localStorage.getItem(CLE_ANCIENNE);
+    if (ancienne) {
+      if (!localStorage.getItem(cleDe(0))) localStorage.setItem(cleDe(0), ancienne);
+      localStorage.removeItem(CLE_ANCIENNE);
+    }
+    emplacement = Math.max(0, Math.min(NB_EMPLACEMENTS - 1, Number(localStorage.getItem(CLE_ACTIF)) || 0));
+  } catch { /* stockage interdit : on joue sans */ }
+  if (!lireBrut(emplacement)) {
+    const autre = Array.from({ length: NB_EMPLACEMENTS }, (_, i) => i).find((i) => lireBrut(i));
+    if (autre !== undefined) choisirEmplacement(autre);
+  }
+  av = charger();
+  derniereEcriture = !av || av.termine ? '' : JSON.stringify(av);
+}
+
+/** Passe sur un autre emplacement et reprend son aventure. */
+function jouerEmplacement(i) {
+  sauver();
+  choisirEmplacement(i);
+  av = charger();
+  derniereEcriture = !av || av.termine ? '' : JSON.stringify(av);
+  finJouee = false;
+}
+
+function supprimerEmplacement(i) {
+  const x = i === emplacement ? av : lireBrut(i);
+  if (!x) return;
+  const h = A.heros(x);
+  if (!confirm(`Supprimer l’aventure de ${h.nom} (niveau ${h.niveau}, chapitre ${x.acte}) ? Elle sera perdue.`)) return;
+  try { localStorage.removeItem(cleDe(i)); } catch { /* ignore */ }
+  if (i === emplacement) { av = null; derniereEcriture = ''; }
+  synchro.marquer();
+  planifierEnvoi();
+  rendreMenu();
+}
+
+/** Prépare la création d'une aventure dans un emplacement libre. Faux s'il n'y en a pas. */
+function preparerNouvelle(i = null) {
+  const occupe = (k) => (k === emplacement ? !!(av && !av.termine) : !!lireBrut(k));
+  const libre = i !== null ? i : Array.from({ length: NB_EMPLACEMENTS }, (_, k) => k).find((k) => !occupe(k));
+  if (libre === undefined || occupe(libre)) {
+    toast('Les trois emplacements sont pris : supprimez une aventure depuis le menu.');
+    return false;
+  }
+  cible = libre;
+  return true;
 }
 
 /* ------------------------------------------------------------------ */
@@ -277,15 +370,44 @@ function suite() {
 
 function rendreMenu() {
   const ok = av && !av.termine;
-  $('b-continuer').hidden = !ok;
-  if (ok) {
-    const h = A.heros(av);
-    $('continuer-note').textContent = `${A.difficulteDe(av).glyphe} ${A.difficulteDe(av).nom} · ${h.nom} · niveau ${h.niveau} · chapitre ${av.acte}/${ACTES.length}`
-      + (av.groupe.length > 1 ? ` · ${av.groupe.length} dans le groupe` : ' · seul');
+  $('emplacements').innerHTML = Array.from({ length: NB_EMPLACEMENTS }, (_, i) => {
+    const x = i === emplacement ? (ok ? av : null) : lireBrut(i);
+    if (!x) {
+      return `<button class="btn btn-big emp-vide" data-neuf="${i}">
+        <span class="bi">＋</span>
+        <span class="bt"><b>Emplacement ${i + 1} · Nouvelle aventure</b><i>Libre — choisissez un héros</i></span></button>`;
+    }
+    const h = A.heros(x);
+    const note = `${A.difficulteDe(x).glyphe} ${A.difficulteDe(x).nom} · ${h.nom} · niveau ${h.niveau} · chapitre ${x.acte}/${ACTES.length}`
+      + (x.groupe.length > 1 ? ` · ${x.groupe.length} dans le groupe` : ' · seul');
+    return `<div class="emplacement${i === emplacement ? ' actif' : ''}">
+      <button class="btn btn-big emp-jouer" data-emp="${i}">
+        <span class="emp-portrait">${spriteSvg(h)}</span>
+        <span class="bt"><b>Emplacement ${i + 1} · Continuer</b><i>${txt(note)}</i></span></button>
+      <button class="emp-suppr" data-suppr="${i}" aria-label="Supprimer l’aventure de l’emplacement ${i + 1}" title="Supprimer">🗑</button></div>`;
+  }).join('');
+  for (const el of $('emplacements').querySelectorAll('[data-emp]')) {
+    el.addEventListener('click', () => {
+      debloquer(); sfx.clic();
+      if (+el.dataset.emp !== emplacement) jouerEmplacement(+el.dataset.emp);
+      nouveautes = [];
+      suite();
+    });
+  }
+  for (const el of $('emplacements').querySelectorAll('[data-neuf]')) {
+    el.addEventListener('click', () => {
+      debloquer(); sfx.tap();
+      if (!preparerNouvelle(+el.dataset.neuf)) return;
+      chapitreDepart = 1;
+      aller('choix');
+    });
+  }
+  for (const el of $('emplacements').querySelectorAll('[data-suppr]')) {
+    el.addEventListener('click', () => { sfx.tap(); supprimerEmplacement(+el.dataset.suppr); });
   }
   $('transfert-note').textContent = synchro.relie()
     ? `Synchronisation active${etatSynchro ? ` · ${etatSynchro}` : ''}`
-    : 'Jouer la même partie sur téléphone et sur PC';
+    : 'Jouer les mêmes parties sur téléphone et sur PC';
   const maj = $('maj-partie');
   maj.hidden = !(ok && nouveautes.length);
   if (!maj.hidden) {
@@ -363,6 +485,7 @@ function rendreChoix() {
       rendreChoix();
     });
   }
+  $('choix-sous').textContent = `Emplacement ${cible + 1}. Il part seul : les compagnons viendront en chemin.`;
   $('diff-texte').textContent = A.texteDifficulte(difficulte);
   const dc = $('depart-chapitre');
   dc.hidden = chapitreDepart <= 1;
@@ -423,7 +546,7 @@ function rendreChapitres() {
     });
   }
   for (const el of zone.querySelectorAll('[data-chap-partir]')) {
-    el.addEventListener('click', () => { sfx.clic(); chapitreDepart = +el.dataset.chapPartir; aller('choix'); });
+    el.addEventListener('click', () => { sfx.clic(); if (!preparerNouvelle()) return; chapitreDepart = +el.dataset.chapPartir; aller('choix'); });
   }
   for (const el of zone.querySelectorAll('[data-chap-continuer]')) {
     el.addEventListener('click', () => { sfx.clic(); suite(); });
@@ -705,7 +828,7 @@ function rendreEtape() {
       break;
     case 'defaite':
       clic('#b-reprendre', () => { A.reprendre(av); suite(); });
-      clic('#b-fin-hardcore', () => { av = null; sauver(); aller('choix'); });
+      clic('#b-fin-hardcore', () => { av = null; sauver(); cible = emplacement; chapitreDepart = 1; aller('choix'); });
       break;
     case 'depart':
       clic('[data-depart]', (el) => { A.choisirDepart(av, el.dataset.depart); suite(); });
@@ -730,7 +853,7 @@ function rendreEtape() {
       clic('#b-suite', () => { A.terminerEtape(av); suite(); });
       break;
     case 'victoire':
-      clic('#b-nouvelle', () => { av = null; sauver(); aller('choix'); });
+      clic('#b-nouvelle', () => { av = null; sauver(); cible = emplacement; chapitreDepart = 1; aller('choix'); });
       clic('#b-menu', () => { av = null; sauver(); aller('menu'); });
       break;
     default: break;
@@ -1050,12 +1173,13 @@ function brancher() {
       aller(but);
     });
   }
-  $('b-continuer').addEventListener('click', () => { debloquer(); sfx.clic(); nouveautes = []; suite(); });
   $('b-quetes').addEventListener('click', () => { debloquer(); sfx.clic(); if (av && A.ouvrirQuetes(av).ok) suite(); });
   $('b-roder').addEventListener('click', () => { debloquer(); sfx.clic(); if (av && A.roder(av).ok) suite(); });
   $('b-partir').addEventListener('click', () => {
     debloquer();
-    if (av && !av.termine && !confirm('Une aventure est en cours. L’abandonner pour en commencer une nouvelle ?')) return;
+    // L'aventure en cours reste dans son emplacement ; la nouvelle prend le sien.
+    if (cible !== emplacement) { sauver(); choisirEmplacement(cible); derniereEcriture = ''; }
+    else if (av && !av.termine) { if (!preparerNouvelle()) return; sauver(); choisirEmplacement(cible); derniereEcriture = ''; }
     av = A.creerAventure({ heros: depart, difficulte, chapitre: chapitreDepart });
     finJouee = false;
     sfx.victoire();
@@ -1077,8 +1201,7 @@ function brancher() {
   $('b-auto').addEventListener('click', () => { sfx.tap(); basculerAuto(); });
 }
 
-av = charger();
-derniereEcriture = !av || av.termine ? '' : JSON.stringify(av);
+demarrerSauvegardes();
 brancher();
 // Un appareil relié prend la partie la plus récente dès l'ouverture, puis à
 // chaque retour dessus ; en le quittant, il dépose ce qui reste à envoyer.

@@ -38,14 +38,7 @@
 
     <nav class="menu-nav">
       <div class="maj-partie" id="maj-partie" hidden></div>
-      <button class="btn btn-big" id="b-continuer" hidden>
-        <span class="bi">⏵</span>
-        <span class="bt"><b>Continuer l’aventure</b><i id="continuer-note">—</i></span>
-      </button>
-      <button class="btn btn-big" data-go="choix">
-        <span class="bi">⚔</span>
-        <span class="bt"><b>Nouvelle aventure</b><i>Choisissez votre héros</i></span>
-      </button>
+      <div class="emplacements" id="emplacements" aria-label="Emplacements de sauvegarde"></div>
       <button class="btn btn-big" data-go="chapitres">
         <span class="bi">📖</span>
         <span class="bt"><b>Chapitres</b><i id="chapitres-note">L’histoire, en dix chapitres</i></span>
@@ -70,7 +63,7 @@
       <button class="retour" data-go="menu" aria-label="Retour">‹</button>
       <div>
         <h2 class="page-titre">Votre héros</h2>
-        <p class="page-sous">Il part seul. Les compagnons viendront en chemin.</p>
+        <p class="page-sous" id="choix-sous">Il part seul. Les compagnons viendront en chemin.</p>
       </div>
     </header>
     <div class="departs" id="departs"></div>

@@ -137,6 +137,7 @@ export function rendreRegles() {
     de l’expérience gagnée depuis reste acquise ; l’or et le butin sont perdus.</p>
     <p>Un boss qui vous a battus garde ses blessures : il perd 10 % de sa vie à chaque défaite, jusqu’à 40 %.
     On ne bute jamais sans fin sur le même mur.</p>
+    <p>Le menu a <b>trois emplacements de sauvegarde</b> : trois aventures en parallèle, chacune avec son héros et sa difficulté. On passe de l’une à l’autre depuis le menu, et la corbeille 🗑 en supprime une. Les chapitres débloqués sont communs aux trois.</p>
     <p>Quand le jeu est mis à jour, une partie en cours reçoit les nouveautés toute seule : inutile de recommencer.</p>
     <p>La partie est enregistrée à chaque étape, <b>sur cet appareil</b> : vous pouvez fermer le jeu et reprendre plus tard.</p>
     <p>Pour jouer la même partie sur plusieurs appareils, ouvrez <b>📱 Mes appareils</b> dans le menu et activez la <b>synchronisation automatique</b> : un code de synchro, à taper une seule fois sur chaque appareil, et la partie suit toute seule. La plus récente gagne.</p>`);
