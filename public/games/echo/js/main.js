@@ -12,6 +12,7 @@ import * as regles from './regles.js';
 import * as local from './offline.js';
 import * as net from './online.js';
 import { bonhomme, prendrePhoto, photoValide, COULEURS } from './avatars.js';
+import { installerMusique } from '../../../shared/musique.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -399,3 +400,19 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => { /* tant pis */ });
   });
 }
+
+/* La musique : ÉCHO écoute le micro, elle ne joue donc que dans les menus —
+   jamais pendant une partie, ni quand une fenêtre (sons, règles) est ouverte. */
+let musique = true;
+try { musique = localStorage.getItem('echo.musique') !== 'off'; } catch { /* ignore */ }
+const majMusique = () => { $('b-musique').innerHTML = `<span class="bi">${musique ? '🎵' : '🔇'}</span> Musique`; };
+majMusique();
+$('b-musique').addEventListener('click', () => {
+  musique = !musique;
+  try { localStorage.setItem('echo.musique', musique ? 'on' : 'off'); } catch { /* ignore */ }
+  majMusique();
+});
+installerMusique('echo', {
+  actif: () => musique,
+  permis: () => !$('s-jeu').classList.contains('is-active') && !document.querySelector('.ov:not([hidden])'),
+});

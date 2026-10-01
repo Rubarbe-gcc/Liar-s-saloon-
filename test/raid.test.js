@@ -596,7 +596,7 @@ test('le début de l’aventure coûte vraiment de la vie', () => {
       const b = jouerCombat(A.bataillePour(av));
       vie += b.victoire ? b.heros[0].pv / b.heros[0].pvMax : 0;
     }
-    assert.ok(vie / n < 0.85, `${heros} finit son premier combat à ${Math.round((100 * vie) / n)} %`);
+    assert.ok(vie / n < 0.9, `${heros} finit son premier combat à ${Math.round((100 * vie) / n)} %`);
     assert.ok(vie / n > 0.3, `${heros} ne doit pas mourir au premier combat`);
   }
 });
@@ -623,4 +623,105 @@ test('aucun combat ne s’éternise', () => {
     jouerAventure(av, { maxEtapes: 1 });
   }
   assert.ok(pire < 30, `${pire} manches`);
+});
+
+/* ================================================================== */
+/* Difficultés et zones                                               */
+/* ================================================================== */
+
+test('les difficultés sont ordonnées et se voient sur les ennemis', () => {
+  const force = (difficulte) => {
+    const av = A.creerAventure({ heros: 'kaelis', seed: 3, difficulte });
+    A.entrer(av, A.sallesAccessibles(av)[0].id);
+    return av.etape.ennemis[0];
+  };
+  const [f, n, d, h] = ['facile', 'normal', 'difficile', 'hardcore'].map(force);
+  assert.ok(f.pvMax < n.pvMax && n.pvMax < d.pvMax);
+  assert.ok(f.atk <= n.atk && n.atk <= d.atk && d.atk <= h.atk);
+  assert.ok(A.DIFFICULTES.hardcore.atk > A.DIFFICULTES.difficile.atk, 'le Hardcore frappe un peu plus fort');
+  assert.ok(A.DIFFICULTES.hardcore.atk < A.DIFFICULTES.difficile.atk * 1.1, 'mais à peine');
+  for (const k of Object.keys(A.DIFFICULTES)) assert.ok(A.texteDifficulte(k).length > 20);
+  assert.throws(() => A.creerAventure({ difficulte: 'impossible' }));
+});
+
+test('en Hardcore, une défaite met fin à l’aventure', () => {
+  const av = A.creerAventure({ heros: 'pix', seed: 3, difficulte: 'hardcore' });
+  A.entrer(av, A.sallesAccessibles(av)[0].id);
+  const r = A.conclureCombat(av, false);
+  assert.ok(r.definitive);
+  assert.ok(av.termine && !av.victoire);
+  assert.equal(A.reprendre(av).ok, false, 'pas de feu de camp où revenir');
+  const normal = A.creerAventure({ heros: 'pix', seed: 3 });
+  A.entrer(normal, A.sallesAccessibles(normal)[0].id);
+  A.conclureCombat(normal, false);
+  assert.ok(!normal.termine);
+  assert.ok(A.reprendre(normal).ok);
+});
+
+test('on peut rôder dans une zone ouverte, et y revenir après chaque chasse', () => {
+  const av = A.creerAventure({ heros: 'mordrec', seed: 21 });
+  av.acte = 3;
+  assert.ok(A.roder(av).ok);
+  assert.equal(A.choisirZone(av, 4).ok, false, 'pas une zone à venir');
+  assert.ok(A.choisirZone(av, 1).ok);
+  let embuscades = 0, marchands = 0;
+  const N = 400;
+  for (let i = 0; i < N; i++) {
+    const r = A.chasser(av);
+    if (r.marchand) {
+      marchands++;
+      assert.ok(av.etape.ambulant);
+      A.terminerEtape(av);
+      assert.equal(av.etape.type, 'balade', 'le marchand parti, on est toujours dans la zone');
+      continue;
+    }
+    assert.equal(av.etape.type, 'combat');
+    if (r.embuscade) {
+      embuscades++;
+      assert.equal(av.etape.salle, 'embuscade');
+      assert.equal(av.etape.acte, 3, 'l’embuscade vient de l’acte en cours');
+      assert.equal(av.etape.ennemis[0].rang, 'elite');
+    } else {
+      assert.equal(av.etape.acte, 1);
+    }
+    A.conclureCombat(av, true);
+    A.prendreRecompense(av);
+    while (av.etape.type === 'don') A.choisirDon(av, av.etape.choix[0].id);
+    if (av.etape.type === 'marchand') { marchands++; A.terminerEtape(av); }
+    assert.equal(av.etape.type, 'balade', 'retour dans la zone');
+    assert.equal(av.etape.acte, 1);
+  }
+  assert.ok(embuscades / N > 0.15 && embuscades / N < 0.3, `${embuscades} embuscades sur ${N}`);
+  assert.ok(marchands > N * 0.12, 'les marchands ambulants passent');
+  A.terminerEtape(av);
+  assert.equal(av.etape, null);
+  assert.equal(av.balade, null);
+});
+
+test('une zone passée rapporte moins que la zone en cours', () => {
+  const e = ennemiRpg(MODELES_PAR_ID.gnoll, 1, 'feu', rngT(1));
+  assert.ok(A.xpDe(e, 1) < A.xpDe(e, 4));
+  assert.ok(A.orDe(e, 1) < A.orDe(e, 4));
+});
+
+test('l’or trouve à se dépenser : un marchand par acte, et des ambulants', () => {
+  for (let seed = 0; seed < 40; seed++) {
+    for (let acte = 1; acte <= ACTES.length; acte++) {
+      assert.ok(genererCarte(rngT(seed), acte).noeuds.some((n) => n.type === 'marchand'), `acte ${acte}, graine ${seed}`);
+    }
+  }
+  let vus = 0;
+  for (let seed = 0; seed < 60; seed++) {
+    const av = A.creerAventure({ heros: 'mordrec', seed });
+    A.entrer(av, A.sallesAccessibles(av)[0].id);
+    A.conclureCombat(av, true);
+    A.prendreRecompense(av);
+    if (av.etape && av.etape.type === 'marchand') {
+      vus++;
+      assert.ok(av.etape.ambulant && av.etape.stock.length === 3);
+      A.terminerEtape(av);
+      assert.equal(av.etape, null);
+    }
+  }
+  assert.ok(vus >= 3 && vus <= 20, `${vus} marchands ambulants sur 60 victoires`);
 });

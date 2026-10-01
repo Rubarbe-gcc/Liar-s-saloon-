@@ -166,7 +166,8 @@ export function jouerEtape(av) {
     case 'repos': faireRepos(av, vieMoyenne(av) < 0.8 ? 'repos' : 'entrainement'); break;
     case 'tresor': prendreTresor(av); break;
     case 'compagnon': recruter(av, e.offres[0]); break;
-    case 'resultat': terminerEtape(av); break;
+    case 'resultat':
+    case 'balade': terminerEtape(av); break;
     default: return false;
   }
   return true;

@@ -12,6 +12,7 @@ import * as regles from './regles.js';
 import * as solo from './offline.js';
 import * as net from './online.js';
 import { sfx, toggle as toggleSound, isEnabled as soundOn, unlock } from './sfx.js';
+import { installerMusique } from '../../../shared/musique.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -410,3 +411,5 @@ if (invite) {
   openOnline();
   ui.toast('Entrez votre nom, puis rejoignez l\'arène.', 3200);
 }
+
+installerMusique('zenith', { actif: soundOn });

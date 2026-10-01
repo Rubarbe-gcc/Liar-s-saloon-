@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v19';
+const VERSION = 'v22';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -58,6 +58,7 @@ const SHELL = [
   '/games/raid/js/sfx.js',
   '/games/raid/icons/icon-192.png',
   '/shared/hasard.js',
+  '/shared/musique.js',
   '/shared/raid/ecoles.js',
   '/shared/raid/heros.js',
   '/shared/raid/ennemis.js',

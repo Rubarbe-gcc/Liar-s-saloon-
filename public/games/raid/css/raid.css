@@ -577,3 +577,27 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .ennemis .unite { background: linear-gradient(180deg, rgba(70, 26, 20, .8), var(--carte)); }
 .unite.actif { box-shadow: 0 0 0 2px var(--or), 0 5px 0 rgba(0,0,0,.45), 0 14px 28px rgba(232, 192, 96, .3); }
 .unite.ciblable { box-shadow: 0 0 16px rgba(255, 220, 130, .55), 0 5px 0 rgba(0,0,0,.45); }
+
+/* ------------------------------------------------------------------ */
+/* Difficulté et zones                                                 */
+/* ------------------------------------------------------------------ */
+
+.difficultes { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+.diff {
+  --d: var(--or);
+  display: grid; justify-items: center; gap: 2px;
+  padding: 9px 4px; border-radius: 12px; font-size: 12px; font-weight: 700;
+  background: var(--carte); border: 1px solid var(--bord);
+  box-shadow: 0 4px 0 rgba(0,0,0,.45);
+}
+.diff span { font-size: 20px; }
+.diff.choisi { border-color: var(--d); color: var(--d); box-shadow: 0 0 0 1px var(--d), 0 4px 0 rgba(0,0,0,.45), 0 0 18px color-mix(in srgb, var(--d) 40%, transparent); }
+.diff[data-d="facile"] { --d: #7fc95c; }
+.diff[data-d="difficile"] { --d: #ff8a3d; }
+.diff[data-d="hardcore"] { --d: #e04b48; }
+.diff-texte { font-size: 13px; color: var(--doux); margin: 10px 0 16px; min-height: 36px; text-align: center; }
+.badge-diff { color: var(--d, var(--doux)); font-weight: 700; }
+.carte-actions { display: grid; grid-template-columns: 1.4fr 1fr; gap: 9px; }
+.zones { display: grid; gap: 8px; margin-bottom: 14px; }
+.zone.choisi { border-color: var(--or); box-shadow: 0 0 0 1px var(--or), 0 5px 0 rgba(0,0,0,.45); }
+.alerte-embuscade { text-align: center; color: #ffb35c; font-size: 13px; margin: 0 0 14px; }

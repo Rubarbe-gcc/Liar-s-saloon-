@@ -56,10 +56,48 @@ function melanger(av, l) {
 /* Création                                                            */
 /* ------------------------------------------------------------------ */
 
-export function creerAventure({ heros = DEPARTS[0], seed = null } = {}) {
+/**
+ * Les difficultés. `pv` et `atk` multiplient la vie et l'attaque de tous les
+ * ennemis ; en Hardcore, ils frappent un rien plus fort qu'en Difficile, et
+ * surtout une défaite met fin à l'aventure : on repart de zéro.
+ */
+export const DIFFICULTES = {
+  facile: { nom: 'Facile', glyphe: '🌱', pv: 0.8, atk: 0.8, potions: 4 },
+  normal: { nom: 'Normal', glyphe: '⚔', pv: 1, atk: 1, potions: 2 },
+  difficile: { nom: 'Difficile', glyphe: '🔥', pv: 1.2, atk: 1.2, potions: 2 },
+  hardcore: { nom: 'Hardcore', glyphe: '💀', pv: 1.2, atk: 1.26, potions: 2, mortDefinitive: true },
+};
+export const difficulteDe = (av) => DIFFICULTES[av.difficulte] || DIFFICULTES.normal;
+
+/** Ce qu'une difficulté change, en clair. */
+export function texteDifficulte(cle) {
+  const d = DIFFICULTES[cle];
+  const p = (v) => `${v > 1 ? '+' : '−'}${Math.round(Math.abs(v - 1) * 100)} %`;
+  const out = [];
+  if (d.pv === 1 && d.atk === 1) out.push('Ennemis au réglage de référence');
+  else out.push(`Ennemis : ${p(d.pv)} de vie, ${p(d.atk)} d’attaque`);
+  out.push(`${d.potions} potions au départ`);
+  out.push(d.mortDefinitive
+    ? 'une seule vie : à la première défaite, l’aventure est perdue et repart de zéro'
+    : 'une défaite ramène au dernier feu de camp');
+  return `${out.join(' · ')}.`;
+}
+
+/** Chance de tomber dans une embuscade en rôdant dans une zone. */
+export const CHANCE_EMBUSCADE = 0.22;
+/**
+ * Le marchand ambulant : il peut surgir après une victoire, ou se laisser
+ * croiser quand on rôde. L'or trouve ainsi toujours à se dépenser.
+ */
+export const CHANCE_COLPORTEUR = 0.15;
+export const CHANCE_COLPORTEUR_ZONE = 0.12;
+
+export function creerAventure({ heros = DEPARTS[0], seed = null, difficulte = 'normal' } = {}) {
   if (!PAR_ID[heros]) throw new Error(`héros inconnu : ${heros}`);
+  if (!DIFFICULTES[difficulte]) throw new Error(`difficulté inconnue : ${difficulte}`);
   const av = {
     version: 2,
+    difficulte,
     alea: (seed ?? Math.floor(Math.random() * 2 ** 31)) >>> 0,
     acte: 1,
     carte: null,
@@ -67,7 +105,7 @@ export function creerAventure({ heros = DEPARTS[0], seed = null } = {}) {
     visites: [],
     groupe: [creerPersonnage(heros, 1)],
     or: 35,
-    inventaire: { potion: 2, elixir: 1, phenix: 0 },
+    inventaire: { potion: DIFFICULTES[difficulte].potions, elixir: 1, phenix: 0 },
     sac: [],
     chance: CHANCE_DEPART,
     dons: [],
@@ -79,6 +117,7 @@ export function creerAventure({ heros = DEPARTS[0], seed = null } = {}) {
     bossVaincu: false,
     recrueOfferte: false,
     blessures: 0,
+    balade: null,
     reprise: null,
     termine: false,
     victoire: false,
@@ -168,7 +207,18 @@ export function entrer(av, id) {
   return { ok: true, etape: av.etape };
 }
 
-const piece = (av, o = {}) => pieceAuHasard(rng(av), av.acte, { chance: av.chance, ...o });
+const piece = (av, { acte = av.acte, ...o } = {}) => pieceAuHasard(rng(av), acte, { chance: av.chance, ...o });
+
+/** La difficulté pèse sur chaque ennemi, quel qu'il soit. */
+function durcir(av, ennemis) {
+  const d = difficulteDe(av);
+  for (const e of ennemis) {
+    e.pvMax = Math.max(1, Math.round(e.pvMax * d.pv));
+    e.pv = e.pvMax;
+    e.atk = Math.max(1, Math.round(e.atk * d.atk));
+  }
+  return ennemis;
+}
 
 function rencontre(av, type) {
   const ennemis = composer(rng(av), av.acte, type, { taille: av.groupe.length });
@@ -180,7 +230,59 @@ function rencontre(av, type) {
     b.atk = Math.round(b.atk * (1 + m.atk));
     for (let k = 0; k < m.retire; k++) retirerTrait(b);
   }
-  return ennemis;
+  return durcir(av, ennemis);
+}
+
+/* ------------------------------------------------------------------ */
+/* Rôder : retourner dans une zone pour s'aguerrir                     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Depuis la carte, on peut retourner rôder dans une zone déjà ouverte (l'acte
+ * en cours ou un acte passé) pour y chasser : de l'expérience et de l'or au
+ * tarif de la zone. Mais chaque chasse a une chance de tourner à l'embuscade
+ * — des monstres de l'acte en cours, menés par une élite, qui frappent les
+ * premiers. Le combat s'engage alors d'office.
+ */
+export function roder(av) {
+  if (av.etape || av.termine) return { ok: false };
+  av.balade = av.acte;
+  av.etape = { type: 'balade', acte: av.acte };
+  return { ok: true };
+}
+
+export function choisirZone(av, acte) {
+  if (!av.etape || av.etape.type !== 'balade') return { ok: false };
+  if (!(acte >= 1 && acte <= av.acte)) return { ok: false, raison: 'zone fermée' };
+  av.etape.acte = acte;
+  av.balade = acte;
+  return { ok: true };
+}
+
+/** Cherche des monstres dans la zone choisie. Renvoie `embuscade` si le sort en décide. */
+export function chasser(av) {
+  if (!av.etape || av.etape.type !== 'balade') return { ok: false };
+  const zone = av.etape.acte;
+  const taille = av.groupe.length;
+  const sort = rng(av)();
+  const embuscade = sort < CHANCE_EMBUSCADE;
+  if (!embuscade && sort < CHANCE_EMBUSCADE + CHANCE_COLPORTEUR_ZONE) {
+    av.etape = { type: 'marchand', ambulant: true, stock: stockMarchand(av, 3) };
+    return { ok: true, marchand: true };
+  }
+  let ennemis;
+  if (embuscade) {
+    ennemis = composer(rng(av), av.acte, 'elite', { taille });
+    if (taille >= 2) ennemis.push(...composer(rng(av), av.acte, 'combat', { taille }).slice(0, 1));
+    for (const e of ennemis) e.vit += 6;      // ils frappent les premiers
+  } else {
+    ennemis = composer(rng(av), zone, 'combat', { taille });
+  }
+  av.etape = {
+    type: 'combat', salle: embuscade ? 'embuscade' : 'chasse',
+    acte: embuscade ? av.acte : zone, ennemis: durcir(av, ennemis),
+  };
+  return { ok: true, embuscade };
 }
 
 /* ------------------------------------------------------------------ */
@@ -200,12 +302,16 @@ export const orDe = (e, acte) =>
 export function conclureCombat(av, victoire) {
   if (!av.etape || av.etape.type !== 'combat') return { ok: false };
   const { ennemis, salle } = av.etape;
+  const acte = av.etape.acte || av.acte;
   av.stats.combats++;
   if (!victoire) {
     av.stats.morts++;
     if (salle === 'boss') av.blessures++;
-    av.etape = { type: 'defaite' };
-    return { ok: true, defaite: true };
+    // Hardcore : une seule vie. L'aventure s'arrête ici.
+    const definitive = !!difficulteDe(av).mortDefinitive;
+    if (definitive) av.termine = true;
+    av.etape = { type: 'defaite', definitive };
+    return { ok: true, defaite: true, definitive };
   }
 
   const bonus = bonusDe(av);
@@ -215,8 +321,8 @@ export function conclureCombat(av, victoire) {
     if (bonus.recup) p.pv = Math.min(s.pvMax, p.pv + Math.round(s.pvMax * bonus.recup));
   }
 
-  const gainXp = ennemis.reduce((s, e) => s + xpDe(e, av.acte), 0);
-  const or = ennemis.reduce((s, e) => s + orDe(e, av.acte), 0) + entier(av, 6);
+  const gainXp = ennemis.reduce((s, e) => s + xpDe(e, acte), 0);
+  const or = ennemis.reduce((s, e) => s + orDe(e, acte), 0) + entier(av, 6);
   av.or += or;
   av.stats.ors += or;
 
@@ -228,7 +334,8 @@ export function conclureCombat(av, victoire) {
   let pieces = [];
   if (salle === 'boss') pieces = [0, 1, 2].map(() => piece(av, { plancher: 'rare' }));
   else if (salle === 'elite') pieces = [0, 1].map(() => piece(av, { plancher: 'rare' }));
-  else if (rng(av)() < 0.35) pieces = [piece(av)];
+  else if (salle === 'embuscade') pieces = [piece(av, { plancher: 'rare' })];
+  else if (rng(av)() < 0.35) pieces = [piece(av, { acte })];
 
   av.etape = { type: 'recompense', salle, xp, or, pieces };
   return { ok: true, etape: av.etape };
@@ -240,6 +347,7 @@ export function prendreRecompense(av, uid = null) {
   const p = uid && av.etape.pieces.find((x) => x.uid === uid);
   if (p) av.sac.push(p);
   if (av.etape.salle === 'boss') av.bossVaincu = true;
+  else if (rng(av)() < CHANCE_COLPORTEUR) av.colporteur = true;
   av.etape = null;
   suite(av);
   return { ok: true, piece: p || null };
@@ -253,6 +361,17 @@ export function prendreRecompense(av, uid = null) {
 function suite(av) {
   if (av.donsEnAttente > 0) {
     av.etape = { type: 'don', choix: proposerDons(av) };
+    return;
+  }
+  // Un marchand ambulant passait par là.
+  if (av.colporteur) {
+    av.colporteur = false;
+    av.etape = { type: 'marchand', ambulant: true, stock: stockMarchand(av, 3) };
+    return;
+  }
+  // On rôdait : retour à la zone, pour décider de continuer ou de repartir.
+  if (av.balade) {
+    av.etape = { type: 'balade', acte: av.balade };
     return;
   }
   if (!av.bossVaincu) return;
@@ -308,7 +427,7 @@ export function sauvegarder(av) {
  * apprend aussi en tombant, et on ne bute pas sans fin sur le même mur.
  */
 export function reprendre(av) {
-  if (!av.reprise) return { ok: false };
+  if (!av.reprise || av.termine) return { ok: false };
   const xp = Object.fromEntries(av.groupe.map((p) => [p.id, p.xp]));
   const { morts, combats } = av.stats;
   const { blessures } = av;
@@ -604,7 +723,8 @@ export function choisirEvenement(av, choixId) {
 
 /** Referme une étape sans décision (résultat lu, marchand quitté, rencontre déclinée). */
 export function terminerEtape(av) {
-  if (!av.etape || !['resultat', 'marchand', 'compagnon'].includes(av.etape.type)) return { ok: false };
+  if (!av.etape || !['resultat', 'marchand', 'compagnon', 'balade'].includes(av.etape.type)) return { ok: false };
+  if (av.etape.type === 'balade') av.balade = null;
   av.etape = null;
   suite(av);
   return { ok: true };
@@ -643,8 +763,8 @@ function retirerTrait(e) {
 
 export const PRIX_OBJETS = (acte) => ({ potion: 18 + 5 * acte, elixir: 16 + 4 * acte, phenix: 50 + 10 * acte });
 
-function stockMarchand(av) {
-  return [0, 1, 2, 3].map(() => piece(av));
+function stockMarchand(av, combien = 4) {
+  return Array.from({ length: combien }, () => piece(av));
 }
 
 /** Acheter : une pièce du stock (par uid) ou un objet (par son nom). */

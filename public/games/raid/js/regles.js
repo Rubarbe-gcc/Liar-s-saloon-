@@ -10,7 +10,10 @@ import { CYCLE, ECOLES, roueSvg, domine, AVANTAGE, DESAVANTAGE } from '../../../
 import { NIVEAU_MAX, NIVEAU_ULTIME, COUT } from '../../../shared/raid/personnages.js';
 import { ACTES, TYPES } from '../../../shared/raid/carte.js';
 import { OBJETS, MULT_CRIT } from '../../../shared/raid/bataille.js';
-import { TAILLE_GROUPE, NIVEAUX_DON, CHANCE_DEPART, SOLO } from '../../../shared/raid/aventure.js';
+import {
+  TAILLE_GROUPE, NIVEAUX_DON, CHANCE_DEPART, SOLO, DIFFICULTES, texteDifficulte, CHANCE_EMBUSCADE,
+  CHANCE_COLPORTEUR, CHANCE_COLPORTEUR_ZONE,
+} from '../../../shared/raid/aventure.js';
 import { TRAITS_RPG, pc } from './textes.js';
 
 const bloc = (titre, corps) => `<div class="regle-bloc"><h3>${titre}</h3>${corps}</div>`;
@@ -26,7 +29,7 @@ export function rendreRegles() {
     <p>Seul, un tank ou un soigneur frappe plus fort (<b>+${pc(SOLO.tank)}</b> et <b>+${pc(SOLO.soigneur)}</b>
     de dégâts) : sans cela, il userait les monstres bien après qu’ils l’ont usé.</p>`)
     + bloc('La carte', `
-    <p>Chaque acte est une carte à chemins. Vous choisissez la porte suivante parmi celles que votre chemin relie — mais <b>sans savoir ce qu’elle cache</b> : on ne le découvre qu’en entrant. Seul le boss, au sommet, se voit de loin. Derrière une porte :</p>
+    <p>Chaque acte est une carte à chemins. Vous choisissez la porte suivante parmi celles que votre chemin relie — mais <b>sans savoir ce qu’elle cache</b> : on ne le découvre qu’en entrant. Seuls le boss, au sommet, et les <b>marchands</b> se voient de loin — chaque acte en compte au moins un. Derrière une porte :</p>
     <ul>${Object.values(TYPES).map((t) => `<li>${t.glyphe} <b>${t.nom}</b> — ${t.texte}</li>`).join('')}</ul>
     <p>Le dernier palier avant le boss est toujours un feu de camp. Entre deux actes, le groupe récupère une
     bonne partie de sa vie, et tout son mana.</p>`)
@@ -64,6 +67,22 @@ export function rendreRegles() {
     <p>Les salles « ❓ » posent des questions. Certaines réponses rendent plus fort, d’autres coûtent de la
     vie, et certaines pèsent sur <b>les boss</b> : un boss affaibli par vos ruses, ou un Dragon renforcé par
     un pacte que vous avez accepté. Tout est écrit avant de choisir.</p>`)
+    + bloc('Difficulté', `
+    <p>Elle se choisit au départ, avec le héros, et ne change plus :</p>
+    <ul>${Object.entries(DIFFICULTES).map(([k, d]) => `<li>${d.glyphe} <b>${d.nom}</b> — ${texteDifficulte(k)}</li>`).join('')}</ul>`)
+    + bloc('Rôder', `
+    <p>Depuis la carte, le bouton <b>🧭 Rôder</b> permet de retourner chasser dans une zone déjà ouverte, autant
+    de fois que vous voulez : de l’expérience et de l’or, au tarif de la zone (une zone passée rapporte moins).</p>
+    <p>Mais à chaque chasse, il y a <b>${pc(CHANCE_EMBUSCADE)}</b> de risque d’<b>embuscade</b> : le combat s’engage
+    d’office contre une élite de l’acte en cours, qui frappe la première. Une défaite compte comme les autres.</p>`)
+    + bloc('L’or et les marchands', `
+    <p>L’or achète des potions, des élixirs, des plumes de phénix et de l’équipement ; le marchand rachète aussi
+    ce qui traîne dans votre sac.</p>
+    <ul>
+      <li>💰 les <b>boutiques</b> sont visibles sur la carte, au moins une par acte ;</li>
+      <li>🛒 un <b>marchand ambulant</b> surgit parfois après une victoire (${pc(CHANCE_COLPORTEUR)} de chances),
+      ou quand vous rôdez (${pc(CHANCE_COLPORTEUR_ZONE)} par chasse).</li>
+    </ul>`)
     + bloc('La défaite', `
     <p>Si tout le groupe tombe, vous revenez au <b>dernier feu de camp</b> (ou au début de l’acte). La moitié
     de l’expérience gagnée depuis reste acquise ; l’or et le butin sont perdus.</p>

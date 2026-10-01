@@ -12,6 +12,7 @@ import * as ui from './ui.js';
 import * as arene from './arene.js';
 import * as regles from './regles.js';
 import { sfx, basculer, estMuet } from './sfx.js';
+import { installerMusique } from '../../../shared/musique.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -296,3 +297,5 @@ if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => { /* le jeu marche sans */ });
   });
 }
+
+installerMusique('brasier', { actif: () => !estMuet() });

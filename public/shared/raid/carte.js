@@ -95,6 +95,13 @@ export function genererCarte(rng, acte = 1) {
     }
   }
 
+  // Chaque acte a au moins un marchand : l'or doit pouvoir se dépenser.
+  const milieu = [...noeuds.values()].filter((n) => n.rangee >= 2 && n.rangee <= RANGEES - 2);
+  if (!milieu.some((n) => n.type === 'marchand')) {
+    const libres = milieu.filter((n) => n.type !== 'compagnon');
+    if (libres.length) piocher(libres, rng).type = 'marchand';
+  }
+
   noeuds.set('boss', { id: 'boss', rangee: RANGEES, col: 1.5, type: 'boss', suivants: [] });
   return { acte, noeuds: [...noeuds.values()] };
 }

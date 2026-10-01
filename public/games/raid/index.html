@@ -65,6 +65,9 @@
     </header>
     <div class="departs" id="departs"></div>
     <div class="fiche-depart" id="fiche-depart"></div>
+    <h3 class="section">Difficulté</h3>
+    <div class="difficultes" id="difficultes" role="radiogroup" aria-label="Difficulté"></div>
+    <p class="diff-texte" id="diff-texte"></p>
     <button class="btn btn-go btn-wide" id="b-partir">Partir à l’aventure</button>
   </div>
 </section>
@@ -86,7 +89,10 @@
     </div>
     <p class="carte-aide" id="carte-aide">Touchez une salle qui brille pour y entrer.</p>
     <div class="legende" id="legende"></div>
-    <button class="btn btn-ghost btn-wide" data-go="groupe"><span class="bi">🎒</span> Groupe, équipement et sac</button>
+    <div class="carte-actions">
+      <button class="btn btn-ghost" data-go="groupe"><span class="bi">🎒</span> Groupe et sac</button>
+      <button class="btn btn-ghost" id="b-roder"><span class="bi">🧭</span> Rôder</button>
+    </div>
   </div>
 </section>
 

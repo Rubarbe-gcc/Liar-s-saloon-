@@ -19,6 +19,7 @@ import { spriteSvg } from '../../../shared/raid/sprites.js';
 import { lancerCombat, basculerAuto } from './combat.js';
 import { rendreRegles } from './regles.js';
 import { sfx, basculer as basculerSon, estActif as sonActif, debloquer } from './sfx.js';
+import { installerMusique } from '../../../shared/musique.js';
 import {
   txt, pc, teinte, nomEcole, nomRole, texteSort, cartePiece, couleurRarete,
 } from './textes.js';
@@ -28,6 +29,10 @@ const CLE = 'raid.aventure';
 
 let av = null;        // l'aventure en cours
 let depart = DEPARTS[0];
+let difficulte = 'normal';
+try { difficulte = localStorage.getItem('raid.difficulte') || 'normal'; } catch { /* ignore */ }
+if (!A.DIFFICULTES[difficulte]) difficulte = 'normal';
+const COULEUR_DIFF = { facile: '#7fc95c', normal: '#e8c060', difficile: '#ff8a3d', hardcore: '#e04b48' };
 
 /* ------------------------------------------------------------------ */
 /* Sauvegarde                                                          */
@@ -98,7 +103,7 @@ function rendreMenu() {
   $('b-continuer').hidden = !ok;
   if (ok) {
     const h = A.heros(av);
-    $('continuer-note').textContent = `${h.nom} · niveau ${h.niveau} · acte ${av.acte}/${ACTES.length}`
+    $('continuer-note').textContent = `${A.difficulteDe(av).glyphe} ${A.difficulteDe(av).nom} · ${h.nom} · niveau ${h.niveau} · acte ${av.acte}/${ACTES.length}`
       + (av.groupe.length > 1 ? ` · ${av.groupe.length} dans le groupe` : ' · seul');
   }
   $('b-son').querySelector('.bi').textContent = sonActif() ? '🔊' : '🔇';
@@ -157,6 +162,19 @@ function rendreChoix() {
   $('fiche-depart').style.setProperty('--aff', teinte(p.ecole));
   $('fiche-depart').innerHTML = `${tetePerso({ ...p, niveau: 0 })}${statsHtml(p)}${sortsHtml(p)}
     <p class="fp-note">${CONSEILS[p.role]}</p>`;
+
+  $('difficultes').innerHTML = Object.entries(A.DIFFICULTES).map(([k, d]) =>
+    `<button class="diff${k === difficulte ? ' choisi' : ''}" data-d="${k}" role="radio" aria-checked="${k === difficulte}">
+      <span>${d.glyphe}</span>${d.nom}</button>`).join('');
+  for (const el of $('difficultes').querySelectorAll('.diff')) {
+    el.addEventListener('click', () => {
+      sfx.tap();
+      difficulte = el.dataset.d;
+      try { localStorage.setItem('raid.difficulte', difficulte); } catch { /* ignore */ }
+      rendreChoix();
+    });
+  }
+  $('diff-texte').textContent = A.texteDifficulte(difficulte);
 }
 
 /* ------------------------------------------------------------------ */
@@ -188,7 +206,7 @@ function rendreCarte() {
   if (!av) return aller('menu');
   const acte = ACTES[av.acte - 1];
   $('acte-nom').textContent = acte.nom;
-  $('acte-num').textContent = `Acte ${av.acte} / ${ACTES.length}`;
+  $('acte-num').innerHTML = `Acte ${av.acte} / ${ACTES.length} · <span class="badge-diff" style="--d:${COULEUR_DIFF[av.difficulte] || COULEUR_DIFF.normal}">${A.difficulteDe(av).glyphe} ${A.difficulteDe(av).nom}</span>`;
   $('ressources').innerHTML = ressources();
   $('groupe-mini').innerHTML = groupeMini();
 
@@ -211,8 +229,9 @@ function rendreCarte() {
     }
   }
   // Brouillard : on ne sait ce qu'une salle cache qu'en y entrant. Seuls le
-  // boss, au sommet, et les salles déjà traversées se montrent.
-  const connue = (n) => n.type === 'boss' || vues.has(n.id);
+  // boss, au sommet, les marchands (leur enseigne se voit de loin) et les
+  // salles déjà traversées se montrent.
+  const connue = (n) => n.type === 'boss' || n.type === 'marchand' || vues.has(n.id);
   const salles = av.carte.noeuds.map((n) => {
     const p = pos(n);
     const etat = [n.type === 'boss' ? 'boss' : '', vues.has(n.id) ? 'vue' : '',
@@ -228,7 +247,7 @@ function rendreCarte() {
     el.addEventListener('click', () => entrerSalle(el.dataset.id));
   }
   $('carte-aide').textContent = av.position
-    ? 'Choisissez une porte qui brille. Vous ne saurez ce qu’elle cache qu’en la poussant.'
+    ? 'Choisissez une porte qui brille. Seuls les marchands 💰 se voient de loin.'
     : `${acte.texte} Choisissez une porte pour commencer.`;
   $('legende').innerHTML = '<span>🚪 Porte close</span>' + Object.values(TYPES).map((t) => `<span>${t.glyphe} ${t.nom}</span>`).join('');
 }
@@ -236,7 +255,7 @@ function rendreCarte() {
 function entrerSalle(id) {
   const n = av.carte.noeuds.find((x) => x.id === id);
   if (!A.sallesAccessibles(av).some((x) => x.id === id)) {
-    const connue = n && (n.type === 'boss' || av.visites.includes(n.id));
+    const connue = n && (n.type === 'boss' || n.type === 'marchand' || av.visites.includes(n.id));
     if (n) toast(connue ? `${TYPES[n.type].nom} — ${TYPES[n.type].texte}` : 'Porte close : il faut la pousser pour savoir.');
     return;
   }
@@ -256,7 +275,9 @@ function combattre() {
   const menaces = e.salle === 'boss' ? A.menacesDuBoss(av) : null;
   let intro = e.salle === 'boss' ? `👑 <b>${txt(e.ennemis[0].nom)}</b>, maître de l’acte, vous attend.`
     : e.salle === 'elite' ? `💀 Un adversaire redoutable : <b>${txt(e.ennemis[0].nom)}</b>.`
-      : 'Des monstres surgissent !';
+      : e.salle === 'embuscade' ? '⚠ <b>Embuscade !</b> Les monstres vous attendaient : ils frappent les premiers.'
+        : e.salle === 'chasse' ? `Vous débusquez des monstres dans ${txt(ACTES[(e.acte || av.acte) - 1].nom)}.`
+          : 'Des monstres surgissent !';
   if (menaces && menaces.sources.length) intro += ' Vos choix l’ont marqué.';
   if (e.salle === 'boss' && A.blessuresBoss(av)) intro += ` Il porte encore les blessures de votre dernier assaut (−${pc(A.blessuresBoss(av))} de vie).`;
   if (A.bonusSolo(av)) intro += ` Seul contre tous : +${pc(A.bonusSolo(av))} de dégâts.`;
@@ -311,6 +332,7 @@ function rendreEtape() {
     tresor: etapeTresor,
     compagnon: etapeCompagnon,
     defaite: etapeDefaite,
+    balade: etapeBalade,
     victoire: etapeVictoire,
   };
   zone.innerHTML = rendus[e.type] ? rendus[e.type](e) : '';
@@ -362,6 +384,17 @@ function rendreEtape() {
       break;
     case 'defaite':
       clic('#b-reprendre', () => { A.reprendre(av); suite(); });
+      clic('#b-fin-hardcore', () => { av = null; sauver(); aller('choix'); });
+      break;
+    case 'balade':
+      clic('[data-zone]', (el) => { A.choisirZone(av, +el.dataset.zone); sauver(); rendreEtape(); });
+      clic('#b-chasser', () => {
+        const r = A.chasser(av);
+        if (r.embuscade) { sfx.charge(); toast('⚠ Embuscade !'); }
+        if (r.marchand) { sfx.butin(); toast('🛒 Un marchand ambulant croise votre route.'); }
+        suite();
+      });
+      clic('#b-suite', () => { A.terminerEtape(av); suite(); });
       break;
     case 'victoire':
       clic('#b-nouvelle', () => { av = null; sauver(); aller('choix'); });
@@ -372,7 +405,8 @@ function rendreEtape() {
 }
 
 function etapeRecompense(e) {
-  const titre = e.salle === 'boss' ? 'Le maître de l’acte est tombé !' : e.salle === 'elite' ? 'L’élite est vaincue !' : 'Victoire !';
+  const titre = e.salle === 'boss' ? 'Le maître de l’acte est tombé !' : e.salle === 'elite' ? 'L’élite est vaincue !'
+    : e.salle === 'embuscade' ? 'Embuscade repoussée !' : 'Victoire !';
   const gains = e.xp.map((g) => {
     const p = av.groupe.find((x) => x.id === g.id);
     const monte = g.apres > g.avant
@@ -441,7 +475,9 @@ function etapeMarchand(e) {
   const sac = av.sac.map((it) => cartePiece(it, {
     actions: `${boutonsEquiper(it)}<button class="mini-btn" data-vendre="${it.uid}">Vendre · +${A.prixRevente(it)} or</button>`,
   })).join('') || '<p class="vide-note">Votre sac est vide.</p>';
-  return tete('💰', 'Le marchand', '« Tout se vend, tout s’achète. Surtout les potions, par ici. »')
+  return (e.ambulant
+    ? tete('🛒', 'Un marchand ambulant', 'Il traîne sa carriole entre deux salles. « Vous avez l’air d’avoir de l’or… et des ennuis. »')
+    : tete('💰', 'Le marchand', '« Tout se vend, tout s’achète. Surtout les potions, par ici. »'))
     + `<div class="or-dispo">Vous avez <b>${av.or} or</b></div>`
     + `<div class="et-liste">${objets}</div>`
     + `<h3 class="section">Équipement</h3><div class="et-liste">${stock}</div>`
@@ -479,7 +515,28 @@ function etapeCompagnon(e) {
     + '<button class="btn btn-ghost btn-wide" id="b-suite" style="margin-top:12px">Continuer sans eux</button>';
 }
 
-function etapeDefaite() {
+function etapeBalade(e) {
+  const zones = ACTES.slice(0, av.acte).map((a, i) => {
+    const n = i + 1;
+    const note = n === av.acte ? 'zone en cours : expérience et or au plein tarif' : 'zone passée : monstres plus faibles, gains plus maigres';
+    return `<button class="choix zone${n === e.acte ? ' choisi' : ''}" data-zone="${n}">
+      <b>Acte ${n} — ${txt(a.nom)}</b><i>${note}</i></button>`;
+  }).join('');
+  return tete('🧭', 'Rôder', 'Retournez dans une zone déjà ouverte pour y chasser : de l’expérience et de l’or, autant de fois que vous voulez.')
+    + `<p class="alerte-embuscade">⚠ À chaque chasse, ${pc(A.CHANCE_EMBUSCADE)} de risque d’<b>embuscade</b> : une élite de l’acte ${av.acte} vous tombe dessus et frappe la première.</p>`
+    + `<div class="groupe-mini">${groupeMini()}</div>`
+    + `<div class="zones">${zones}</div>`
+    + `<div class="et-liste">
+      <button class="btn btn-go btn-wide" id="b-chasser">Chasser dans cette zone</button>
+      <button class="btn btn-ghost btn-wide" id="b-suite">Revenir à la carte</button></div>`;
+}
+
+function etapeDefaite(e) {
+  if (e.definitive) {
+    const h = A.heros(av);
+    return tete('💀', 'Mort définitive', `Mode Hardcore : il n’y a pas de feu de camp où revenir. ${txt(h.nom)} tombe au niveau ${h.niveau}, à l’acte ${av.acte}, après ${av.stats.combats} combat${av.stats.combats > 1 ? "s" : ""}. L’aventure repart de zéro.`)
+      + '<button class="btn btn-go btn-wide" id="b-fin-hardcore">Recommencer une aventure</button>';
+  }
   const blesse = A.blessuresBoss(av);
   return tete('💀', 'Le groupe est tombé', 'Vous revenez au dernier feu de camp (ou au début de l’acte). '
     + 'La moitié de l’expérience gagnée depuis reste acquise, mais l’or et le butin sont perdus.'
@@ -577,10 +634,11 @@ function brancher() {
     });
   }
   $('b-continuer').addEventListener('click', () => { debloquer(); sfx.clic(); suite(); });
+  $('b-roder').addEventListener('click', () => { debloquer(); sfx.clic(); if (av && A.roder(av).ok) suite(); });
   $('b-partir').addEventListener('click', () => {
     debloquer();
     if (av && !av.termine && !confirm('Une aventure est en cours. L’abandonner pour en commencer une nouvelle ?')) return;
-    av = A.creerAventure({ heros: depart });
+    av = A.creerAventure({ heros: depart, difficulte });
     sfx.victoire();
     suite();
   });
@@ -590,6 +648,7 @@ function brancher() {
 
 av = charger();
 brancher();
+installerMusique('raid', { actif: sonActif });
 rendreMenu();
 
 /* Service worker : rend le jeu installable et jouable sans réseau.

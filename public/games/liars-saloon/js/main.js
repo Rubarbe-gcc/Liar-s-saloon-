@@ -7,6 +7,7 @@ import * as ui from './ui.js';
 import * as offline from './offline.js';
 import * as net from './online.js';
 import { sfx, toggle as toggleSound, isEnabled as soundOn, unlock } from './sfx.js';
+import { installerMusique } from '../../../shared/musique.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -390,3 +391,5 @@ if (invite) {
   openOnline();
   ui.flashToast('Entrez votre nom, puis rejoignez la table.', 3200);
 }
+
+installerMusique('saloon', { actif: soundOn });
