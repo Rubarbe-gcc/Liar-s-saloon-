@@ -1,635 +1,589 @@
 /**
- * RAID — navigation, composition d'équipe et conduite du donjon.
+ * RAID — les écrans de l'aventure.
  *
- * Ce module tient les écrans et la sauvegarde ; il ne connaît rien des règles,
- * qu'il délègue entièrement aux modules partagés, ni des animations, qui vivent
- * dans `scene.js`.
+ * Ce module tient la navigation, la carte, les étapes (butin, dons,
+ * événements, marchand, feu de camp…), la fiche du groupe et la sauvegarde.
+ * Il ne décide de rien : toutes les règles vivent dans `shared/raid/`, et le
+ * combat a son propre écran (`combat.js`).
  */
 
+import * as A from '../../../shared/raid/aventure.js';
+import { PAR_ID } from '../../../shared/raid/heros.js';
 import {
-  HEROS, PAR_ID, ROLES, PEUPLES, TALENTS, EFFETS, groupeAuHasard, groupeParDefaut,
-} from '../../../shared/raid/heros.js';
-import { ECOLES, CYCLE, roueSvg, domine, craint } from '../../../shared/raid/ecoles.js';
+  creerPersonnage, statsDe, progressionNiveau, SEUILS_XP, NIVEAU_MAX, NIVEAU_ULTIME, sortsDe, DEPARTS,
+} from '../../../shared/raid/personnages.js';
+import { valeurPiece, EMPLACEMENTS } from '../../../shared/raid/equipement.js';
+import { TYPES, ACTES, RANGEES, COLONNES } from '../../../shared/raid/carte.js';
+import { OBJETS } from '../../../shared/raid/bataille.js';
 import { spriteSvg } from '../../../shared/raid/sprites.js';
-import { creerCombat, vieMaximale, PHASE } from '../../../shared/raid/combat.js';
-import {
-  creerDonjon, composerRencontre, resoudre, choisirButin, etiquette, aileCourante,
-  AILES, RENCONTRES_PAR_AILE, DIFFICULTES, RARETES, BUTIN_PAR_ID,
-  butinCombat, prochaineEtape, choisirDon, evenementCourant, choisirEvenement, menacesDuBoss,
-} from '../../../shared/raid/donjon.js';
-import {
-  NIVEAU_MAX, DONS_PAR_ID, puissance, progressionNiveau, texteDon, critiqueDe,
-} from '../../../shared/raid/aventure.js';
-import { makeRng } from '../../../shared/hasard.js';
-import * as scene from './scene.js';
-import { rendrePage, PAGES } from './regles.js';
+import { lancerCombat, basculerAuto } from './combat.js';
+import { rendreRegles } from './regles.js';
 import { sfx, basculer as basculerSon, estActif as sonActif, debloquer } from './sfx.js';
+import {
+  txt, pc, teinte, nomEcole, nomRole, texteSort, cartePiece, couleurRarete,
+} from './textes.js';
 
 const $ = (id) => document.getElementById(id);
-const txt = (s) => String(s).replace(/[&<>"']/g, (c) =>
-  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const teinte = (a) => (ECOLES[a] || ECOLES.vermeil).teinte;
-const nb = (n) => Math.round(n).toLocaleString('fr-FR');
+const CLE = 'raid.aventure';
+
+let av = null;        // l'aventure en cours
+let depart = DEPARTS[0];
 
 /* ------------------------------------------------------------------ */
-/* Préférences et sauvegarde                                           */
+/* Sauvegarde                                                          */
 /* ------------------------------------------------------------------ */
 
-const prefs = { equipe: [], difficulte: 'heroique', filtre: 'tous', regle: 0 };
-let exp = null;            // donjon en cours
-let rencontre = null;      // rencontre composée, en attente d'engagement
-
-function chargerPrefs() {
+function sauver() {
   try {
-    const brut = localStorage.getItem('raid.prefs');
-    if (brut) Object.assign(prefs, JSON.parse(brut));
-  } catch { /* premier passage */ }
-  if (!DIFFICULTES[prefs.difficulte]) prefs.difficulte = 'heroique';
-  // Une préférence peut désigner un héros retiré depuis.
-  prefs.equipe = (prefs.equipe || []).filter((id) => PAR_ID[id]).slice(0, 6);
+    if (!av || av.termine) localStorage.removeItem(CLE);
+    else localStorage.setItem(CLE, JSON.stringify(av));
+  } catch { /* stockage plein ou interdit : on joue quand même */ }
 }
-const sauverPrefs = () => {
-  try { localStorage.setItem('raid.prefs', JSON.stringify(prefs)); } catch { /* ignore */ }
+
+function charger() {
+  try {
+    localStorage.removeItem('raid.partie');   // l'ancien raid à six ne se reprend pas
+    const brut = localStorage.getItem(CLE);
+    if (!brut) return null;
+    const x = JSON.parse(brut);
+    if (x.version !== 2 || !Array.isArray(x.groupe) || !x.groupe.every((p) => PAR_ID[p.id])) return null;
+    return x;
+  } catch { return null; }
+}
+
+/* ------------------------------------------------------------------ */
+/* Navigation                                                          */
+/* ------------------------------------------------------------------ */
+
+const RENDUS = {
+  menu: rendreMenu,
+  choix: rendreChoix,
+  carte: rendreCarte,
+  groupe: rendreGroupe,
+  regles: () => { $('regles').innerHTML = rendreRegles(); },
 };
 
-/** L'donjon tient dans une poignée de champs : on la range telle quelle. */
-function sauverPartie() {
-  if (!exp || exp.termine) { try { localStorage.removeItem('raid.partie'); } catch { /* ignore */ } return; }
-  const paquet = {
-    seed: exp.seed, difficulte: exp.difficulte,
-    equipe: exp.equipe.map((h) => h.id),
-    butin: exp.butin, acquis: exp.acquis, vus: exp.vus,
-    aile: exp.aile, rencontre: exp.rencontre,
-    objets: exp.objets, vie: exp.vie, vieMax: exp.vieMax,
-    // L'aventure : ce qui a été gagné, et ce qui attend encore une décision.
-    niveau: exp.niveau, xp: exp.xp, chance: exp.chance, dons: exp.dons,
-    menaces: exp.menaces, evenementsVus: exp.evenementsVus, file: exp.file,
-    choixDon: (exp.choixDon || []).map((d) => d.id), donsEnAttente: exp.donsEnAttente,
-    choixButin: (exp.choixButin || []).map((b) => b.id), evenement: exp.evenement,
+function aller(nom) {
+  for (const s of document.querySelectorAll('.screen')) s.classList.toggle('is-active', s.id === `s-${nom}`);
+  if (RENDUS[nom]) RENDUS[nom]();
+  scrollTo(0, 0);
+}
+
+let minuteToast = null;
+function toast(message) {
+  const t = $('toast');
+  t.textContent = message;
+  t.hidden = false;
+  clearTimeout(minuteToast);
+  minuteToast = setTimeout(() => { t.hidden = true; }, 3200);
+}
+
+/** Montre ce que l'aventure attend : la carte, un combat ou une étape. */
+function suite() {
+  sauver();
+  if (!av) return aller('menu');
+  const e = av.etape;
+  if (!e) return aller('carte');
+  if (e.type === 'combat') return combattre();
+  aller('etape');
+  rendreEtape();
+}
+
+/* ------------------------------------------------------------------ */
+/* Menu et choix du héros                                              */
+/* ------------------------------------------------------------------ */
+
+function rendreMenu() {
+  const ok = av && !av.termine;
+  $('b-continuer').hidden = !ok;
+  if (ok) {
+    const h = A.heros(av);
+    $('continuer-note').textContent = `${h.nom} · niveau ${h.niveau} · acte ${av.acte}/${ACTES.length}`
+      + (av.groupe.length > 1 ? ` · ${av.groupe.length} dans le groupe` : ' · seul');
+  }
+  $('b-son').querySelector('.bi').textContent = sonActif() ? '🔊' : '🔇';
+}
+
+function statsHtml(p, bonus = {}) {
+  const s = statsDe(p, bonus);
+  return `<div class="stats">
+    <div class="stat">PV <b>${Math.max(0, Math.round(p.pv))}/${s.pvMax}</b></div>
+    <div class="stat">PM <b>${Math.round(p.pm)}/${s.pmMax}</b></div>
+    <div class="stat">ATQ <b>${s.atk}</b></div>
+    <div class="stat">DEF <b>${s.def}</b></div>
+    <div class="stat">VIT <b>${s.vit}</b></div>
+    <div class="stat">CRIT <b>+${s.crit} %</b></div>
+  </div>`;
+}
+
+function sortsHtml(p) {
+  const s = sortsDe(PAR_ID[p.id]);
+  const ligne = (cle, sort) => {
+    const verrou = cle === 'ultime' && p.niveau < NIVEAU_ULTIME;
+    return `<div class="sort${verrou ? ' verrou' : ''}"><b>${cle === 'ultime' ? '★ ' : ''}${txt(sort.nom)}</b> · ${sort.cout} PM
+      <i>${verrou ? `🔒 S’apprend au niveau ${NIVEAU_ULTIME}. ` : ''}${txt(texteSort(sort))}</i></div>`;
   };
-  try { localStorage.setItem('raid.partie', JSON.stringify(paquet)); } catch { /* ignore */ }
+  return `<div class="sorts">${ligne('special', s.special)}${ligne('ultime', s.ultime)}</div>`;
 }
 
-function chargerPartie() {
-  try {
-    const brut = localStorage.getItem('raid.partie');
-    if (!brut) return null;
-    const p = JSON.parse(brut);
-    const groupe = (p.equipe || []).map((id) => PAR_ID[id]);
-    if (groupe.length !== 6 || groupe.some((h) => !h)) return null;
+function tetePerso(p, extra = '') {
+  return `<div class="fp-tete">
+    ${spriteSvg(p)}
+    <div>
+      <h3>${txt(p.nom)}${p.niveau ? ` <small class="tag">niv. ${p.niveau}</small>` : ''}</h3>
+      <p>${txt(p.titre)} · ${txt(p.classe)}</p>
+      <div class="fp-tags"><span class="tag">${nomRole(p.role)}</span>
+        <span class="tag ecole" style="--aff:${teinte(p.ecole)}">${nomEcole(p.ecole)}</span>${extra}</div>
+    </div>
+  </div>`;
+}
 
-    const reprise = creerDonjon({ groupe, difficulte: p.difficulte, seed: p.seed });
-    Object.assign(reprise, {
-      butin: { ...reprise.butin, ...p.butin },
-      acquis: p.acquis || [], vus: p.vus || [],
-      aile: p.aile || 0, rencontre: p.rencontre || 0,
-      objets: p.objets ?? 2,
-      // Une sauvegarde d'avant l'aventure reprend au niveau 1 : c'est le
-      // niveau qui, désormais, fait la force du raid.
-      niveau: p.niveau || 1, xp: p.xp || 0, chance: p.chance ?? reprise.chance,
-      dons: p.dons || [], menaces: p.menaces || [], evenementsVus: p.evenementsVus || [],
-      file: (p.file || []).filter((x) => ['don', 'butin', 'evenement'].includes(x)),
-      choixDon: (p.choixDon || []).map((id) => DONS_PAR_ID[id]).filter(Boolean),
-      donsEnAttente: p.donsEnAttente || 0,
-      choixButin: (p.choixButin || []).map((id) => BUTIN_PAR_ID[id]).filter(Boolean),
-      evenement: p.evenement || null,
-    });
-    reprise.vieMax = vieMaximale(groupe, butinCombat(reprise));
-    const part = p.vieMax ? Math.min(1, (p.vie ?? p.vieMax) / p.vieMax) : 1;
-    reprise.vie = Math.round(reprise.vieMax * part);
-    // Le tirage ne se sauvegarde pas : on le relance sur une graine dérivée,
-    // ce qui suffit à ne pas rejouer deux fois la même série de rencontres.
-    reprise.rng = makeRng((p.seed ^ (p.aile * 977 + p.rencontre * 31)) >>> 0);
-    return reprise;
-  } catch {
-    return null;
+const CONSEILS = {
+  tank: 'Solide mais lent à tuer : seul, il frappe plus fort. Un départ sûr.',
+  dps: 'Frappe fort et tôt, mais encaisse mal. Il faudra vite trouver un soigneur.',
+  soigneur: 'Se soigne seul et tient longtemps : seul, il frappe plus fort. Un départ patient.',
+};
+
+function rendreChoix() {
+  $('departs').innerHTML = DEPARTS.map((id) => {
+    const f = PAR_ID[id];
+    return `<button class="depart${id === depart ? ' choisi' : ''}" data-id="${id}" style="--aff:${teinte(f.ecole)}">
+      ${spriteSvg(f)}<b>${txt(f.nom)}</b><i>${nomRole(f.role)}</i></button>`;
+  }).join('');
+  for (const el of $('departs').querySelectorAll('.depart')) {
+    el.addEventListener('click', () => { sfx.tap(); depart = el.dataset.id; rendreChoix(); });
   }
+  const p = creerPersonnage(depart, 1);
+  $('fiche-depart').style.setProperty('--aff', teinte(p.ecole));
+  $('fiche-depart').innerHTML = `${tetePerso({ ...p, niveau: 0 })}${statsHtml(p)}${sortsHtml(p)}
+    <p class="fp-note">${CONSEILS[p.role]}</p>`;
 }
 
 /* ------------------------------------------------------------------ */
-/* Écrans                                                              */
+/* Carte                                                               */
 /* ------------------------------------------------------------------ */
 
-function montrer(id) {
-  document.querySelectorAll('.screen').forEach((s) => s.classList.toggle('is-active', s.id === `s-${id}`));
-  window.scrollTo(0, 0);
+function ressources() {
+  const i = av.inventaire;
+  return `<span title="Or">💰 ${av.or}</span><span title="Potions">🧪 ${i.potion}</span>`
+    + `<span title="Élixirs">🔷 ${i.elixir}</span><span title="Plumes de phénix">🪶 ${i.phenix}</span>`
+    + `<span title="Chance">🍀 ${av.chance}</span>`;
 }
 
-function allerMenu() {
-  sauverPartie();
-  majReprise();
-  montrer('menu');
-}
-
-function majReprise() {
-  const sauve = chargerPartie();
-  const b = $('b-reprendre');
-  b.hidden = !sauve;
-  if (sauve) {
-    $('reprendre-note').textContent =
-      `${etiquette(sauve)} · ${Math.round(sauve.vie / sauve.vieMax * 100)} % de vie`;
-  }
-}
-
-/* ------------------------------------------------------------------ */
-/* Composition d'équipe                                                */
-/* ------------------------------------------------------------------ */
-
-const FILTRES = [
-  { id: 'tous', nom: 'Tous' },
-  ...Object.entries(ROLES).map(([id, r]) => ({ id, nom: `${r.glyphe} ${r.nom}` })),
-  ...CYCLE.map((a) => ({ id: a, nom: `${ECOLES[a].glyphe} ${ECOLES[a].nom}` })),
-];
-
-function rendreEquipe() {
-  // Les deux lignes, montrées telles qu'elles monteront au front.
-  const groupes = [
-    { titre: 'Groupe 1 · tours impairs', de: 0 },
-    { titre: 'Groupe 2 · tours pairs', de: 3 },
-  ];
-  $('squad').innerHTML = groupes.map((g) => `
-    <div class="groupe">
-      <div class="groupe-titre">${g.titre}</div>
-      <div class="groupe-slots">${[0, 1, 2].map((k) => slotHtml(g.de + k)).join('')}</div>
-    </div>`).join('');
-
-  $('squad').querySelectorAll('.slot').forEach((el) => {
-    const n = +el.dataset.n;
-    el.onclick = (ev) => {
-      if (ev.target.closest('.slot-meneur')) { promouvoir(n); return; }
-      retirer(n);
-    };
+function groupeMini() {
+  const bonus = A.bonusDe(av);
+  const cases = av.groupe.map((p) => {
+    const s = statsDe(p, bonus);
+    const v = Math.max(0, p.pv) / s.pvMax;
+    return `<div class="mini${p.pv <= 0 ? ' tombe' : ''}" style="--aff:${teinte(p.ecole)}">${spriteSvg(p)}
+      <div class="mini-corps"><b>${txt(p.nom)} · ${p.niveau}</b>
+        <div class="jauge pv${v < 0.3 ? ' bas' : ''}" style="--v:${v.toFixed(3)}"><i></i></div>
+        <div class="jauge pm" style="--v:${(p.pm / s.pmMax).toFixed(3)}"><i></i></div></div></div>`;
   });
-
-  const chef = PAR_ID[prefs.equipe[0]];
-  $('meneur-note').innerHTML = chef
-    ? `<b>${txt(chef.nom)}</b> mène le raid — <u>${txt(chef.meneur.nom)}</u> : ${txt(chef.meneur.texte)}`
-    : 'Le premier choisi devient chef de raid : son buff vaut pour tout le monde.';
-
-  $('equipe-sub').textContent = prefs.equipe.length < 6
-    ? `Encore ${6 - prefs.equipe.length} personnage${prefs.equipe.length < 5 ? 's' : ''}. Touchez ★ pour changer de chef de raid.`
-    : 'Raid complet. Touchez un personnage pour le sortir, ★ pour lui donner le raid.';
-  $('b-partir').disabled = prefs.equipe.length !== 6;
-
-  rendreRoster();
+  while (cases.length < A.TAILLE_GROUPE) cases.push('<div class="mini vide">compagnon ?</div>');
+  return cases.join('');
 }
 
-function slotHtml(n) {
-  const h = PAR_ID[prefs.equipe[n]];
-  if (!h) {
-    return `<div class="slot" data-n="${n}"><span class="slot-num">${n + 1}</span>`
-      + `<span class="slot-vide">+</span></div>`;
-  }
-  return `<div class="slot is-plein${n === 0 ? ' is-meneur' : ''}" data-n="${n}"`
-    + ` style="--aff:${teinte(h.ecole)}" title="${txt(h.nom)}">`
-    + `<span class="slot-num">${n + 1}</span>`
-    + spriteSvg(h, 'repos')
-    + `<span class="slot-meneur">★</span></div>`;
-}
+function rendreCarte() {
+  if (!av) return aller('menu');
+  const acte = ACTES[av.acte - 1];
+  $('acte-nom').textContent = acte.nom;
+  $('acte-num').textContent = `Acte ${av.acte} / ${ACTES.length}`;
+  $('ressources').innerHTML = ressources();
+  $('groupe-mini').innerHTML = groupeMini();
 
-function rendreRoster() {
-  const liste = HEROS.filter((h) => prefs.filtre === 'tous'
-    || h.role === prefs.filtre || h.ecole === prefs.filtre);
-  $('roster').innerHTML = liste.map((h) => carteHeros(h, prefs.equipe.includes(h.id))).join('');
-  $('roster').querySelectorAll('.carte-heros').forEach((el) => {
-    const h = PAR_ID[el.dataset.id];
-    el.onclick = (ev) => {
-      if (ev.target.closest('.coin')) { ouvrirFiche(h); return; }
-      ajouter(h.id);
-    };
+  const ouvertes = new Set(A.sallesAccessibles(av).map((n) => n.id));
+  const vues = new Set(av.visites);
+  const pos = (n) => ({
+    x: n.type === 'boss' ? 50 : ((n.col + 0.5) / COLONNES) * 100,
+    y: 100 - ((n.rangee + 0.5) / (RANGEES + 1)) * 100,
   });
-}
-
-function carteHeros(h, pris = false) {
-  return `<button class="carte-heros${pris ? ' est-pris' : ''}" data-id="${h.id}"`
-    + ` style="--aff:${teinte(h.ecole)}">`
-    + `<span class="coin" title="Fiche">${ECOLES[h.ecole].glyphe}</span>`
-    + `<span class="role" title="${ROLES[h.role].nom}" style="--role:${ROLES[h.role].teinte}">`
-    + `${ROLES[h.role].glyphe}</span>`
-    + spriteSvg(h, 'repos')
-    + `<b>${txt(h.nom)}</b><i>${txt(h.titre)}</i></button>`;
-}
-
-function ajouter(id) {
-  if (prefs.equipe.includes(id)) { retirer(prefs.equipe.indexOf(id)); return; }
-  if (prefs.equipe.length >= 6) { sfx.tap(); return; }
-  prefs.equipe.push(id);
-  sfx.clic();
-  sauverPrefs();
-  rendreEquipe();
-}
-
-function retirer(n) {
-  if (!prefs.equipe[n]) return;
-  prefs.equipe.splice(n, 1);
-  sfx.tap();
-  sauverPrefs();
-  rendreEquipe();
-}
-
-function promouvoir(n) {
-  if (!prefs.equipe[n] || n === 0) return;
-  const [id] = prefs.equipe.splice(n, 1);
-  prefs.equipe.unshift(id);
-  sfx.clic();
-  sauverPrefs();
-  rendreEquipe();
-}
-
-/* ------------------------------------------------------------------ */
-/* Fiche d'un héros                                                    */
-/* ------------------------------------------------------------------ */
-
-function ouvrirFiche(h) {
-  const aff = ECOLES[h.ecole];
-  const sort = (c, quoi) => `<div class="ligne"><u>${quoi} · ${txt(c.nom)}</u> — ${c.mana} mana, ×${c.mult}`
-    + (c.effet ? ` · ${EFFETS[c.effet.type].nom.toLowerCase()} : ${EFFETS[c.effet.type].texte(c.effet.valeur)}` : '')
-    + `</div>`;
-
-  $('fiche-corps').innerHTML =
-    `<div class="tete">${spriteSvg(h, 'frappe')}<div>`
-    + `<h3>${txt(h.nom)}</h3><div class="titre">${txt(h.titre)}</div>`
-    + `<div class="etiquettes">`
-    + `<span class="trait" style="color:${aff.teinte}">${aff.glyphe} ${aff.nom}</span>`
-    + `<span class="trait">${ROLES[h.role].glyphe} ${ROLES[h.role].nom}</span>`
-    + `<span class="trait">${txt(PEUPLES[h.peuple].nom)} · ${txt(h.classe)}</span>`
-    + `</div></div></div>`
-    + `<div class="stats">`
-    + `<div class="stat"><b>${nb(h.pv)}</b><i>vie apportée</i></div>`
-    + `<div class="stat"><b>${nb(h.atk)}</b><i>attaque</i></div>`
-    + `<div class="stat"><b>${nb(h.def)}</b><i>armure</i></div>`
-    + `</div>`
-    + sort(h.special, 'Sort')
-    + sort(h.ultime, 'Sort ultime')
-    + `<div class="ligne"><u>Talent · ${TALENTS[h.talent.type].nom}</u> — ${TALENTS[h.talent.type].texte(h.talent.valeur)}</div>`
-    + `<div class="ligne meneur"><u>Chef de raid · ${txt(h.meneur.nom)}</u> — ${txt(h.meneur.texte)}</div>`
-    + `<div class="etiquettes">${h.liens.map((l) => `<span class="trait">⛓ ${txt(l)}</span>`).join('')}</div>`
-    + roueSvg({ moi: h.ecole, cible: domine(h.ecole), taille: 160 })
-    + `<div class="ligne" style="text-align:center;color:var(--doux)">`
-    + `Perce ${ECOLES[domine(h.ecole)].nom} · craint ${ECOLES[craint(h.ecole)].nom}</div>`;
-
-  const boite = $('fiche');
-  boite.style.setProperty('--aff', aff.teinte);
-  boite.hidden = false;
-}
-
-/* ------------------------------------------------------------------ */
-/* Donjon                                                              */
-/* ------------------------------------------------------------------ */
-
-function partir() {
-  const groupe = prefs.equipe.map((id) => PAR_ID[id]);
-  if (groupe.length !== 6) return;
-  exp = creerDonjon({ groupe, difficulte: prefs.difficulte });
-  sauverPartie();
-  allerCarte();
-}
-
-function reprendre() {
-  const sauve = chargerPartie();
-  if (!sauve) { majReprise(); return; }
-  exp = sauve;
-  suivre();
-}
-
-/** L'étape suivante du donjon : une décision en attente, ou la carte. */
-function suivre() {
-  sauverPartie();
-  switch (prochaineEtape(exp)) {
-    case 'don': return allerDon();
-    case 'butin': return allerButin(exp.choixButin);
-    case 'evenement': return allerEvenement();
-    case 'victoire': return allerFin(true);
-    case 'wipe': return allerFin(false);
-    default: return allerCarte();
-  }
-}
-
-/** La fiche du raid : niveau, expérience, chance et dons. */
-function ficheRaid() {
-  const dons = exp.dons.map((id) => DONS_PAR_ID[id]).filter(Boolean);
-  return `<span class="niv">Niveau ${exp.niveau}${exp.niveau >= NIVEAU_MAX ? ' · max' : ''}</span>`
-    + `<span class="xp" title="Expérience"><i style="width:${Math.round(progressionNiveau(exp.xp) * 100)}%"></i></span>`
-    + `<span class="chance" title="Chance : ${Math.round(critiqueDe(exp.chance) * 100)} % de coups critiques">🍀 ${exp.chance}</span>`
-    + `<span class="dons">${dons.length ? dons.map((d) => `${d.glyphe} ${txt(d.nom)}`).join(' · ') : 'Aucun don pour l’instant — le premier au niveau 3.'}</span>`;
-}
-
-/** Ce que les choix du raid ont fait au boss de cette aile (et au Dragon). */
-function rendreMenaces() {
-  const el = $('carte-menaces');
-  const finale = exp.aile === AILES.length - 1;
-  const m = menacesDuBoss(exp, finale);
-  const futures = exp.menaces.filter((x) => x.cible === 'final' && !finale);
-  const lignes = [...m.sources, ...futures].map((x) => {
-    const qui = x.cible === 'final' ? 'Dragon Cendré' : 'Boss de l’aile';
-    const parts = [];
-    if (x.pv) parts.push(`${x.pv > 0 ? '+' : '−'}${Math.round(Math.abs(x.pv) * 100)} % de vie`);
-    if (x.atk) parts.push(`${x.atk > 0 ? '+' : '−'}${Math.round(Math.abs(x.atk) * 100)} % d’attaque`);
-    if (x.retire) parts.push('une capacité en moins');
-    const bon = x.pv < 0 || x.atk < 0 || x.retire;
-    return `<li class="${bon ? 'bon' : ''}">${qui} : ${parts.join(', ')} <i>(${txt(x.source)})</i></li>`;
-  });
-  el.hidden = !lignes.length;
-  el.innerHTML = lignes.length ? `<b>Menaces et faveurs</b><ul>${lignes.join('')}</ul>` : '';
-}
-
-function allerCarte() {
-  rencontre = composerRencontre(exp);
-  const sect = aileCourante(exp);
-
-  $('carte-aile').textContent = etiquette(exp);
-  $('carte-titre').textContent = sect.nom;
-  $('carte-texte').textContent = sect.texte;
-
-  // La piste : un pas par rencontre, les boss en rond.
-  let piste = '';
-  for (let s = 0; s < AILES.length; s++) {
-    if (s) piste += '<i class="piste-sep"></i>';
-    for (let r = 0; r < RENCONTRES_PAR_AILE; r++) {
-      const fait = s < exp.aile || (s === exp.aile && r < exp.rencontre);
-      const ici = s === exp.aile && r === exp.rencontre;
-      const boss = r === RENCONTRES_PAR_AILE - 1;
-      piste += `<i class="piste-pas${fait ? ' est-fait' : ''}${ici ? ' est-ici' : ''}${boss ? ' est-boss' : ''}"></i>`;
+  let lignes = '';
+  for (const n of av.carte.noeuds) {
+    const a = pos(n);
+    for (const id of n.suivants) {
+      const m = av.carte.noeuds.find((x) => x.id === id);
+      const b = pos(m);
+      const i = av.visites.indexOf(n.id);
+      const fait = i >= 0 && av.visites[i + 1] === id;
+      const ouvert = n.id === av.position && ouvertes.has(id);
+      lignes += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" class="${fait ? 'fait' : ouvert ? 'ouvert' : ''}"/>`;
     }
   }
-  $('carte-piste').innerHTML = piste;
-
-  const part = exp.vie / exp.vieMax;
-  $('carte-vie-barre').style.width = `${Math.max(0, part) * 100}%`;
-  $('carte-vie-barre').parentElement.classList.toggle('est-bas', part <= 0.5);
-  $('carte-vie-barre').parentElement.classList.toggle('est-critique', part <= 0.22);
-  $('carte-vie-texte').textContent = `${nb(exp.vie)} / ${nb(exp.vieMax)}`;
-  $('carte-objets').textContent = `🧪 ×${exp.objets}`;
-  $('fiche-raid').innerHTML = ficheRaid();
-  rendreMenaces();
-
-  $('carte-ennemis').innerHTML = rencontre.ennemis.map((e) => {
-    const rang = e.rang === 'boss' ? '<span class="rang boss">boss</span>'
-      : e.rang === 'elite' ? '<span class="rang elite">élite</span>' : '<span class="rang">trash</span>';
-    return `<div class="fiche-ennemi" style="--aff:${teinte(e.ecole)}">`
-      + spriteSvg(e, 'repos')
-      + `<div><div class="nom">${txt(e.nom)} ${rang}</div>`
-      + `<div class="detail">${ECOLES[e.ecole].glyphe} ${ECOLES[e.ecole].nom}`
-      + ` · ${nb(e.pvMax)} vie · incante ${txt(e.charge.nom)} tous les ${e.charge.tours} tours</div>`
-      + `<div class="detail">${e.traits.map((t) => `· ${t}`).join(' ')}</div>`
-      + `</div></div>`;
+  const salles = av.carte.noeuds.map((n) => {
+    const p = pos(n);
+    const cls = ['salle', n.type === 'boss' ? 'boss' : '', vues.has(n.id) ? 'vue' : '',
+      n.id === av.position ? 'ici' : '', ouvertes.has(n.id) ? 'ouverte' : ''].join(' ');
+    return `<button class="${cls}" data-id="${n.id}" style="left:${p.x}%;top:${p.y}%"
+      title="${txt(TYPES[n.type].nom)}" aria-label="${txt(TYPES[n.type].nom)}">${TYPES[n.type].glyphe}</button>`;
   }).join('');
-
-  $('b-engager').textContent = rencontre.finale ? 'Affronter le Dragon Cendré'
-    : rencontre.boss ? 'Pull du boss' : 'Pull';
-  sauverPartie();
-  montrer('carte');
+  $('carte').innerHTML = `<svg class="liens" viewBox="0 0 100 100" preserveAspectRatio="none">${lignes}</svg>${salles}`;
+  for (const el of $('carte').querySelectorAll('.salle')) {
+    el.addEventListener('click', () => entrerSalle(el.dataset.id));
+  }
+  $('carte-aide').textContent = av.position
+    ? 'Touchez une salle qui brille pour continuer votre chemin.'
+    : `${acte.texte} Touchez une salle qui brille pour commencer.`;
+  $('legende').innerHTML = Object.values(TYPES).map((t) => `<span>${t.glyphe} ${t.nom}</span>`).join('');
 }
 
-async function engager() {
-  const combat = creerCombat({
-    equipe: exp.equipe,
-    ennemis: rencontre.ennemis,
-    butin: butinCombat(exp),
-    objets: exp.objets,
-  });
-  // La barre de vie suit le donjon, pas le combat : on la recale.
-  combat.vie.max = exp.vieMax;
-  combat.vie.actuel = Math.min(exp.vie, exp.vieMax);
-
-  montrer('combat');
-  debloquer();
-  await scene.lancer(combat, {
-    lieu: `${aileCourante(exp).nom} · ${exp.rencontre + 1}/${RENCONTRES_PAR_AILE}`,
-    onQuitter: () => { if (confirm('Quitter ? Le donjon est sauvegardé à la rencontre en cours.')) allerMenu(); },
-    onFini: (victoire) => terminerCombat(combat, victoire),
-  });
-}
-
-function terminerCombat(combat, victoire) {
-  const suite = resoudre(exp, {
-    victoire,
-    vie: combat.vie.actuel,
-    objets: combat.objets,
-  });
-  sauverPartie();
-
-  if (suite.suite === 'wipe' || suite.suite === 'victoire') {
-    setTimeout(() => allerFin(suite.suite === 'victoire'), 600);
+function entrerSalle(id) {
+  const n = av.carte.noeuds.find((x) => x.id === id);
+  if (!A.sallesAccessibles(av).some((x) => x.id === id)) {
+    if (n) toast(`${TYPES[n.type].nom} — ${TYPES[n.type].texte}`);
     return;
   }
-  setTimeout(() => allerProgres(suite.xp), 500);
+  debloquer();
+  sfx.clic();
+  A.entrer(av, id);
+  suite();
 }
 
-/** Après une victoire : l'expérience gagnée, et le niveau s'il monte. */
-function allerProgres(xp) {
-  const monte = xp.niveauApres > xp.niveauAvant;
-  $('progres-kicker').textContent = monte ? 'niveau supérieur !' : 'victoire';
-  $('progres-titre').textContent = `+${xp.gain} XP`;
-  $('progres-texte').textContent = monte
-    ? `Le raid passe au niveau ${xp.niveauApres} : toute l’équipe frappe, encaisse et tient à ${Math.round(puissance(xp.niveauApres) * 100)} % de sa fiche.`
-    : 'Le raid gagne en expérience.';
-  $('progres-niveau').innerHTML = `<div class="chiffre${monte ? ' monte' : ''}">${exp.niveau}</div>`
-    + `<div class="xp"><i style="width:0%"></i></div>`
-    + `<small>${exp.niveau >= NIVEAU_MAX ? 'Niveau maximal atteint' : `${Math.round(progressionNiveau(exp.xp) * 100)} % vers le niveau ${exp.niveau + 1}`}</small>`;
-  if (monte) sfx.butin(); else sfx.clic();
-  montrer('progres');
-  // La jauge se remplit sous les yeux : c'est la progression qu'on doit voir.
-  requestAnimationFrame(() => requestAnimationFrame(() => {
-    const barre = $('progres-niveau').querySelector('.xp i');
-    if (barre) barre.style.width = `${Math.round(progressionNiveau(exp.xp) * 100)}%`;
-  }));
-}
+/* ------------------------------------------------------------------ */
+/* Combat                                                              */
+/* ------------------------------------------------------------------ */
 
-function allerDon() {
-  sfx.butin();
-  $('don-kicker').textContent = `niveau ${exp.niveau} atteint`;
-  $('don-cartes').innerHTML = (exp.choixDon || []).map((d) =>
-    `<button class="eveil-carte" data-id="${d.id}" style="--aff:var(--or)">`
-    + `<span class="glyphe">${d.glyphe}</span>`
-    + `<span><b>${txt(d.nom)}</b><i>${txt(texteDon(d))}</i></span></button>`).join('');
-  $('don-cartes').querySelectorAll('.eveil-carte').forEach((el) => {
-    el.onclick = () => {
-      if (!choisirDon(exp, el.dataset.id).ok) return;
-      sfx.clic();
-      suivre();
-    };
+function combattre() {
+  aller('combat');
+  const e = av.etape;
+  const menaces = e.salle === 'boss' ? A.menacesDuBoss(av) : null;
+  let intro = e.salle === 'boss' ? `👑 <b>${txt(e.ennemis[0].nom)}</b>, maître de l’acte, vous attend.`
+    : e.salle === 'elite' ? `💀 Un adversaire redoutable : <b>${txt(e.ennemis[0].nom)}</b>.`
+      : 'Des monstres surgissent !';
+  if (menaces && menaces.sources.length) intro += ' Vos choix l’ont marqué.';
+  if (e.salle === 'boss' && A.blessuresBoss(av)) intro += ` Il porte encore les blessures de votre dernier assaut (−${pc(A.blessuresBoss(av))} de vie).`;
+  if (A.bonusSolo(av)) intro += ` Seul contre tous : +${pc(A.bonusSolo(av))} de dégâts.`;
+  lancerCombat(A.bataillePour(av), {
+    intro: `<span>${intro}</span>`,
+    sfx,
+    toast,
+    surFin: (victoire) => {
+      A.conclureCombat(av, victoire);
+      suite();
+    },
   });
-  montrer('don');
 }
 
-function allerEvenement() {
-  const ev = evenementCourant(exp);
-  if (!ev) { exp.file = exp.file.filter((x) => x !== 'evenement'); suivre(); return; }
-  $('evenement-glyphe').textContent = ev.glyphe;
-  $('evenement-titre').textContent = ev.titre;
-  $('evenement-texte').textContent = ev.texte;
-  $('evenement-chance').textContent = `🍀 Chance du raid : ${exp.chance} · ${Math.round(exp.vie / exp.vieMax * 100)} % de vie · 🧪 ×${exp.objets}`;
-  $('evenement-issue').hidden = true;
-  $('evenement-choix').hidden = false;
-  $('evenement-choix').innerHTML = ev.choix.map((c) =>
-    `<button class="eveil-carte" data-id="${c.id}" style="--aff:${c.chance !== null ? 'var(--vif)' : 'var(--or)'}" ${c.possible ? '' : 'disabled'}>`
-    + `<span><b>${txt(c.label)}${c.chance !== null ? `<em class="risque">${Math.round(c.chance * 100)} %</em>` : ''}</b>`
-    + `<i>${txt(c.possible ? c.annonce : 'Il vous faudrait une potion.')}</i></span></button>`).join('');
-  $('evenement-choix').querySelectorAll('.eveil-carte').forEach((el) => {
-    el.onclick = () => {
-      const r = choisirEvenement(exp, el.dataset.id);
-      if (!r.ok) return;
-      sauverPartie();
-      if (r.reussi === false) sfx.subi?.(); else sfx.clic();
-      $('evenement-choix').hidden = true;
-      const dit = $('issue-dit');
-      dit.textContent = r.dit;
-      dit.className = `issue-dit${r.reussi === true ? ' reussi' : r.reussi === false ? ' rate' : ''}`;
-      $('issue-effet').textContent = r.piece ? `${r.effet} : ${r.piece.glyphe} ${r.piece.nom}` : (r.effet === 'aucun effet' ? '' : r.effet);
-      $('evenement-issue').hidden = false;
-    };
-  });
-  montrer('evenement');
-}
+/* ------------------------------------------------------------------ */
+/* Étapes                                                              */
+/* ------------------------------------------------------------------ */
 
-function allerButin(choix) {
-  sfx.butin();
-  $('butin-cartes').innerHTML = choix.map((piece) => {
-    const r = RARETES[piece.rarete] || RARETES.commun;
-    return `<button class="eveil-carte" data-id="${piece.id}" style="--aff:${r.teinte}">`
-      + `<span class="glyphe">${piece.glyphe}</span>`
-      + `<span><b>${txt(piece.nom)}</b>`
-      + `<u class="rarete">${txt(r.nom)}</u>`
-      + `<i>${txt(piece.texte)}</i></span></button>`;
+const tete = (glyphe, titre, texte = '') =>
+  `<div class="et-tete"><div class="et-glyphe">${glyphe}</div><h2>${titre}</h2>${texte ? `<p>${texte}</p>` : ''}</div>`;
+
+/** Boutons « équiper sur … » pour une pièce du sac. */
+function boutonsEquiper(it) {
+  return av.groupe.map((p, idx) => {
+    const d = Math.round(valeurPiece(it) - valeurPiece(p.equip[it.emplacement]));
+    return `<button class="mini-btn ${d > 0 ? 'mieux' : 'moins'}" data-equiper="${it.uid}" data-idx="${idx}">
+      ${txt(p.nom)} ${d > 0 ? `▲${d}` : d < 0 ? `▼${-d}` : '='}</button>`;
   }).join('');
-  $('butin-cartes').querySelectorAll('.eveil-carte').forEach((el) => {
-    el.onclick = () => {
-      if (!choisirButin(exp, el.dataset.id).ok) return;
-      sfx.clic();
-      suivre();
-    };
-  });
-  montrer('butin');
 }
 
-function allerFin(victoire) {
-  $('fin-sceau').textContent = victoire ? '🐉' : '💀';
-  $('fin-titre').textContent = victoire ? 'Donjon bouclé' : 'Wipe.';
-  $('fin-texte').textContent = victoire
-    ? 'Le Dragon Cendré est tombé. Six héros, quinze pulls, une seule barre de vie.'
-    : `Le raid est tombé dans ${aileCourante(exp).nom}. Une autre composition ferait peut-être mieux.`;
-  $('fin-stats').innerHTML = [
-    ['Difficulté', DIFFICULTES[exp.difficulte].nom],
-    ['Ailes nettoyées', `${victoire ? AILES.length : exp.aile} / ${AILES.length}`],
-    ['Niveau atteint', exp.niveau],
-    ['Dons', exp.dons.length ? exp.dons.map((id) => DONS_PAR_ID[id]?.glyphe || '').join(' ') : '—'],
-    ['Chance', exp.chance],
-    ['Butin ramassé', exp.acquis.length],
-    ['Potions restantes', exp.objets],
-    ['Chef de raid', exp.equipe[0].nom],
-  ].map(([k, v]) => `<li><span>${txt(k)}</span><b>${txt(v)}</b></li>`).join('');
+function brancherEquiper(racine, apres) {
+  for (const el of racine.querySelectorAll('[data-equiper]')) {
+    el.addEventListener('click', () => {
+      const r = A.equiper(av, +el.dataset.idx, el.dataset.equiper);
+      if (r.ok) { sfx.garde(); toast(`${av.groupe[+el.dataset.idx].nom} s’équipe.`); }
+      sauver();
+      apres();
+    });
+  }
+}
 
-  try { localStorage.removeItem('raid.partie'); } catch { /* ignore */ }
-  exp.termine = true;
-  montrer('fin');
+function rendreEtape() {
+  const e = av.etape;
+  const zone = $('etape');
+  const rendus = {
+    recompense: etapeRecompense,
+    don: etapeDon,
+    evenement: etapeEvenement,
+    resultat: etapeResultat,
+    marchand: etapeMarchand,
+    repos: etapeRepos,
+    tresor: etapeTresor,
+    compagnon: etapeCompagnon,
+    defaite: etapeDefaite,
+    victoire: etapeVictoire,
+  };
+  zone.innerHTML = rendus[e.type] ? rendus[e.type](e) : '';
+  const clic = (sel, f) => { for (const el of zone.querySelectorAll(sel)) el.addEventListener('click', () => { sfx.clic(); f(el); }); };
+
+  switch (e.type) {
+    case 'recompense':
+      clic('[data-prendre]', (el) => {
+        const idx = el.dataset.idx;
+        const uid = el.dataset.prendre;
+        A.prendreRecompense(av, uid);
+        sfx.butin();
+        if (idx !== undefined && idx !== '') A.equiper(av, +idx, uid);
+        toast(idx ? `${av.groupe[+idx].nom} s’équipe.` : 'Rangé dans le sac.');
+        suite();
+      });
+      clic('#b-rien', () => { A.prendreRecompense(av, null); suite(); });
+      break;
+    case 'don':
+      clic('[data-don]', (el) => { A.choisirDon(av, el.dataset.don); sfx.butin(); suite(); });
+      break;
+    case 'evenement':
+      clic('[data-choix]', (el) => { A.choisirEvenement(av, el.dataset.choix); suite(); });
+      break;
+    case 'resultat':
+      brancherEquiper(zone, rendreEtape);
+      clic('#b-suite', () => { A.terminerEtape(av); suite(); });
+      break;
+    case 'marchand':
+      clic('[data-acheter]', (el) => {
+        const r = A.acheter(av, el.dataset.acheter);
+        if (r.ok) sfx.butin(); else toast('Pas assez d’or.');
+        sauver();
+        rendreEtape();
+      });
+      clic('[data-vendre]', (el) => { A.vendre(av, el.dataset.vendre); sfx.clic(); sauver(); rendreEtape(); });
+      brancherEquiper(zone, rendreEtape);
+      clic('#b-suite', () => { A.terminerEtape(av); suite(); });
+      break;
+    case 'repos':
+      clic('[data-repos]', (el) => { A.faireRepos(av, el.dataset.repos); sfx.soin(); suite(); });
+      break;
+    case 'tresor':
+      clic('#b-ouvrir', () => { A.prendreTresor(av); sfx.butin(); suite(); });
+      break;
+    case 'compagnon':
+      clic('[data-recruter]', (el) => { A.recruter(av, el.dataset.recruter); sfx.victoire(); suite(); });
+      clic('#b-suite', () => { A.terminerEtape(av); suite(); });
+      break;
+    case 'defaite':
+      clic('#b-reprendre', () => { A.reprendre(av); suite(); });
+      break;
+    case 'victoire':
+      clic('#b-nouvelle', () => { av = null; sauver(); aller('choix'); });
+      clic('#b-menu', () => { av = null; sauver(); aller('menu'); });
+      break;
+    default: break;
+  }
+}
+
+function etapeRecompense(e) {
+  const titre = e.salle === 'boss' ? 'Le maître de l’acte est tombé !' : e.salle === 'elite' ? 'L’élite est vaincue !' : 'Victoire !';
+  const gains = e.xp.map((g) => {
+    const p = av.groupe.find((x) => x.id === g.id);
+    const monte = g.apres > g.avant
+      ? `<span class="monte">Niveau ${g.apres} !${g.apprend ? ` Ultime appris : ${txt(sortsDe(PAR_ID[g.id]).ultime.nom)}` : ''}</span>` : '';
+    const prog = p.niveau >= NIVEAU_MAX ? 1 : progressionNiveau(p.xp);
+    return `<div class="gain" style="--aff:${teinte(p.ecole)}">${spriteSvg(p)}
+      <div><span><b>${txt(p.nom)}</b> +${g.gain} XP ${monte}</span>
+      <div class="jauge xp" style="--v:${prog.toFixed(3)}"><i></i></div></div></div>`;
+  }).join('');
+  const pieces = e.pieces.map((it) => {
+    const conseil = A.conseilEquipement(av, it);
+    const actions = av.groupe.map((p, idx) => {
+      const d = Math.round(valeurPiece(it) - valeurPiece(p.equip[it.emplacement]));
+      return `<button class="mini-btn ${d > 0 ? 'mieux' : 'moins'}" data-prendre="${it.uid}" data-idx="${idx}">
+        Équiper · ${txt(p.nom)} ${d > 0 ? `▲${d}` : d < 0 ? `▼${-d}` : '='}</button>`;
+    }).join('') + `<button class="mini-btn" data-prendre="${it.uid}" data-idx="">Au sac</button>`;
+    return cartePiece(it, { actions, note: conseil !== null ? `idéal pour ${av.groupe[conseil].nom}` : '' });
+  }).join('');
+  return tete(e.salle === 'boss' ? '👑' : '🏆', titre)
+    + `<div class="et-effet">+${e.or} pièces d’or</div>`
+    + `<div class="gains">${gains}</div>`
+    + (e.pieces.length ? `<h3 class="section">Butin — une pièce au choix</h3><div class="et-liste">${pieces}</div>` : '')
+    + `<button class="btn ${e.pieces.length ? 'btn-ghost' : 'btn-go'} btn-wide" id="b-rien">${e.pieces.length ? 'Ne rien prendre' : 'Continuer'}</button>`;
+}
+
+function etapeDon(e) {
+  return tete('✨', 'Un don', `${txt(A.heros(av).nom)} gagne en expérience : choisissez un don. Il vaut pour tout le groupe, jusqu’au bout de l’aventure.`)
+    + `<div class="et-liste">${e.choix.map((d) => `<button class="choix" data-don="${d.id}">
+      <b>${d.glyphe} ${txt(d.nom)}</b><i>${txt(A.texteDon(d))}</i></button>`).join('')}</div>`;
+}
+
+function etapeEvenement() {
+  const ev = A.evenementCourant(av);
+  const choix = ev.choix.map((c) => {
+    const exige = !c.possible && c.exige
+      ? ` — il faut ${c.exige.or ? `${c.exige.or} or` : `${c.exige.objets} potion`}` : '';
+    const chance = c.chance !== null ? ` <span class="pc">(${pc(c.chance)} de réussite)</span>` : '';
+    return `<button class="choix" data-choix="${c.id}" ${c.possible ? '' : 'disabled'}>
+      <b>${txt(c.label)}${chance}</b><i>${txt(c.annonce)}${txt(exige)}</i></button>`;
+  }).join('');
+  return tete(ev.glyphe, txt(ev.titre), txt(ev.texte))
+    + `<div class="et-liste">${choix}</div>`
+    + `<p class="carte-aide">🍀 Votre chance (${av.chance}) augmente les réussites.</p>`;
+}
+
+function etapeResultat(e) {
+  const titre = e.reussi === true ? `${txt(e.titre)} — réussite` : e.reussi === false ? `${txt(e.titre)} — échec` : txt(e.titre);
+  const it = e.piece && av.sac.find((x) => x.uid === e.piece.uid);
+  return tete(e.glyphe, titre, txt(e.dit))
+    + (e.effet && e.effet !== 'aucun effet' ? `<div class="et-effet">${txt(e.effet)}</div>` : '')
+    + (it ? `<div class="et-liste">${cartePiece(it, { actions: boutonsEquiper(it) })}</div>` : '')
+    + '<button class="btn btn-go btn-wide" id="b-suite">Continuer</button>';
+}
+
+function etapeMarchand(e) {
+  const prix = A.PRIX_OBJETS(av.acte);
+  const objets = Object.entries(OBJETS).map(([k, o]) => `<button class="choix" data-acheter="${k}" ${av.or < prix[k] ? 'disabled' : ''}>
+    <b>${o.glyphe} ${txt(o.nom)} — ${prix[k]} or</b><i>${txt(o.texte)} (vous en avez ${av.inventaire[k]})</i></button>`).join('');
+  const stock = e.stock.map((it) => {
+    const conseil = A.conseilEquipement(av, it);
+    return cartePiece(it, {
+      note: conseil !== null ? `idéal pour ${av.groupe[conseil].nom}` : 'personne n’y gagne',
+      actions: `<button class="mini-btn mieux" data-acheter="${it.uid}" ${av.or < it.prix ? 'disabled' : ''}>Acheter · ${it.prix} or</button>`,
+    });
+  }).join('') || '<p class="vide-note">Tout est vendu.</p>';
+  const sac = av.sac.map((it) => cartePiece(it, {
+    actions: `${boutonsEquiper(it)}<button class="mini-btn" data-vendre="${it.uid}">Vendre · +${A.prixRevente(it)} or</button>`,
+  })).join('') || '<p class="vide-note">Votre sac est vide.</p>';
+  return tete('💰', 'Le marchand', '« Tout se vend, tout s’achète. Surtout les potions, par ici. »')
+    + `<div class="or-dispo">Vous avez <b>${av.or} or</b></div>`
+    + `<div class="et-liste">${objets}</div>`
+    + `<h3 class="section">Équipement</h3><div class="et-liste">${stock}</div>`
+    + `<h3 class="section">Votre sac</h3><div class="et-liste">${sac}</div>`
+    + '<button class="btn btn-go btn-wide" id="b-suite">Quitter la boutique</button>';
+}
+
+function etapeRepos() {
+  const gain = 20 + 12 * av.acte;
+  return tete('🔥', 'Feu de camp', 'La partie est sauvegardée ici : en cas de défaite, vous reviendrez à ce feu.')
+    + `<div class="groupe-mini">${groupeMini()}</div>`
+    + `<div class="et-liste">
+      <button class="choix" data-repos="repos"><b>😴 Se reposer</b><i>+45 % de vie, mana au maximum pour tout le groupe.</i></button>
+      <button class="choix" data-repos="entrainement"><b>⚔ S’entraîner</b><i>+${gain} XP pour chacun. Vie et mana restent comme ils sont.</i></button>
+    </div>`;
+}
+
+function etapeTresor(e) {
+  return tete('📦', 'Un coffre', 'Il n’est pas piégé. Pour une fois.')
+    + `<button class="btn btn-go btn-wide" id="b-ouvrir">Ouvrir le coffre</button>`;
+}
+
+function etapeCompagnon(e) {
+  const niveau = A.niveauRecrue(av);
+  const offres = e.offres.map((id) => {
+    const p = creerPersonnage(id, niveau);
+    return `<div class="carte-perso" style="--aff:${teinte(p.ecole)}">${tetePerso(p)}${statsHtml(p)}${sortsHtml(p)}
+      <button class="btn btn-go btn-wide" data-recruter="${id}" style="margin-top:10px">Recruter ${txt(p.nom)}</button></div>`;
+  }).join('');
+  const texte = e.apresBoss
+    ? 'Votre victoire a fait du bruit. Des aventuriers proposent de se joindre à vous.'
+    : 'Au détour d’un couloir, deux aventuriers cherchent une troupe. Un seul vous suivra.';
+  return tete('🤝', 'Une rencontre', `${texte} (${av.groupe.length}/${A.TAILLE_GROUPE} dans le groupe)`)
+    + `<div class="membres">${offres}</div>`
+    + '<button class="btn btn-ghost btn-wide" id="b-suite" style="margin-top:12px">Continuer sans eux</button>';
+}
+
+function etapeDefaite() {
+  const blesse = A.blessuresBoss(av);
+  return tete('💀', 'Le groupe est tombé', 'Vous revenez au dernier feu de camp (ou au début de l’acte). '
+    + 'La moitié de l’expérience gagnée depuis reste acquise, mais l’or et le butin sont perdus.'
+    + (blesse ? ` Le boss, lui, garde ses blessures : −${pc(blesse)} de vie au prochain assaut.` : ''))
+    + '<button class="btn btn-go btn-wide" id="b-reprendre">Revenir au feu de camp</button>';
+}
+
+function etapeVictoire() {
+  const s = av.stats;
+  return tete('🐉', 'Le Dragon Cendré est tombé !', `Au départ, ${txt(A.heros(av).nom)} voyageait seul. Au sommet du Pic de l’Aube, le groupe compte ${av.groupe.length} héros.`)
+    + `<div class="gains">${av.groupe.map((p) => `<div class="gain">${spriteSvg(p)}<div><b>${txt(p.nom)}</b> niveau ${p.niveau}</div></div>`).join('')}</div>`
+    + `<div class="journal-voyage"><div>Combats : <b>${s.combats}</b> · Défaites : <b>${s.morts}</b> · Or amassé : <b>${s.ors}</b></div></div>`
+    + `<div class="et-liste" style="margin-top:14px">
+      <button class="btn btn-go btn-wide" id="b-nouvelle">Nouvelle aventure</button>
+      <button class="btn btn-ghost btn-wide" id="b-menu">Menu</button></div>`;
 }
 
 /* ------------------------------------------------------------------ */
-/* Guilde et règles                                                    */
+/* Groupe                                                              */
 /* ------------------------------------------------------------------ */
 
-function rendreGuilde() {
-  $('guilde').innerHTML = HEROS.map((h) => carteHeros(h)).join('');
-  $('guilde').querySelectorAll('.carte-heros').forEach((el) => {
-    el.onclick = () => ouvrirFiche(PAR_ID[el.dataset.id]);
-  });
+function rendreGroupe() {
+  if (!av) return aller('menu');
+  const bonus = A.bonusDe(av);
+  $('groupe-sous').textContent = `${av.groupe.length}/${A.TAILLE_GROUPE} personnages · 💰 ${av.or} · 🍀 ${av.chance}`;
+  $('membres').innerHTML = av.groupe.map((p, idx) => {
+    const s = statsDe(p, bonus);
+    const prochain = p.niveau >= NIVEAU_MAX ? 'niveau maximum' : `${p.xp - SEUILS_XP[p.niveau]} / ${SEUILS_XP[p.niveau + 1] - SEUILS_XP[p.niveau]} XP`;
+    const slots = Object.entries(EMPLACEMENTS).map(([k, e]) => {
+      const it = p.equip[k];
+      return it
+        ? `<button class="slot-equip plein" style="--r:${couleurRarete(it.rarete)}" data-retirer="${k}" data-idx="${idx}" title="Toucher pour retirer">
+            <b>${it.glyphe} ${txt(it.nom)}</b><i>${txt(texteBonusCourt(it))}</i></button>`
+        : `<div class="slot-equip"><i>${e.glyphe} ${e.nom}</i><i>vide</i></div>`;
+    }).join('');
+    const objets = [
+      p.pv > 0 && p.pv < s.pvMax && av.inventaire.potion > 0 ? `<button class="mini-btn" data-objet="potion" data-idx="${idx}">🧪 Potion</button>` : '',
+      p.pv > 0 && p.pm < s.pmMax && av.inventaire.elixir > 0 ? `<button class="mini-btn" data-objet="elixir" data-idx="${idx}">🔷 Élixir</button>` : '',
+      p.pv <= 0 && av.inventaire.phenix > 0 ? `<button class="mini-btn" data-objet="phenix" data-idx="${idx}">🪶 Relever</button>` : '',
+    ].join('');
+    return `<div class="carte-perso" style="--aff:${teinte(p.ecole)}">${tetePerso(p)}
+      <div class="cp-xp"><span>${prochain}</span><div class="jauge xp" style="--v:${(p.niveau >= NIVEAU_MAX ? 1 : progressionNiveau(p.xp)).toFixed(3)}"><i></i></div></div>
+      ${statsHtml(p, bonus)}${sortsHtml(p)}
+      <div class="equip">${slots}</div>
+      ${objets ? `<div class="cp-objets">${objets}</div>` : ''}</div>`;
+  }).join('');
+
+  $('sac').innerHTML = av.sac.map((it) => cartePiece(it, { actions: boutonsEquiper(it) })).join('')
+    || '<p class="sac-vide">Le sac est vide. Les pièces se trouvent sur les monstres, dans les coffres et chez le marchand.</p>';
+
+  const lignes = [];
+  if (A.bonusSolo(av)) lignes.push(`<div>⚔ <b>Seul contre tous</b> : +${pc(A.bonusSolo(av))} de dégâts tant que ${txt(A.heros(av).nom)} voyage seul.</div>`);
+  for (const id of av.dons) {
+    const d = A.DONS_PAR_ID[id];
+    lignes.push(`<div>${d.glyphe} <b>${txt(d.nom)}</b> — ${txt(A.texteDon(d))}</div>`);
+  }
+  const autres = A.texteEffet({ butin: av.benedictions });
+  if (autres !== 'aucun effet') lignes.push(`<div>✨ <b>Toutes vos bénédictions</b> — ${txt(autres)}</div>`);
+  for (const m of av.menaces) {
+    lignes.push(`<div>⚠ <b>${txt(m.source)}</b> — ${txt(A.texteEffet({ boss: m }))}</div>`);
+  }
+  $('voyage').innerHTML = lignes.join('') || '<div>Rien encore : l’aventure ne fait que commencer.</div>';
+
+  const racine = $('s-groupe');
+  for (const el of racine.querySelectorAll('[data-retirer]')) {
+    el.addEventListener('click', () => { A.desequiper(av, +el.dataset.idx, el.dataset.retirer); sfx.clic(); sauver(); rendreGroupe(); });
+  }
+  for (const el of racine.querySelectorAll('[data-objet]')) {
+    el.addEventListener('click', () => {
+      const r = A.utiliser(av, el.dataset.objet, +el.dataset.idx);
+      if (r.ok) sfx.soin();
+      sauver();
+      rendreGroupe();
+    });
+  }
+  brancherEquiper(racine, rendreGroupe);
 }
 
-function rendreRegles() {
-  const p = rendrePage(prefs.regle);
-  $('regles-titre').textContent = p.titre;
-  $('regles-sous').textContent = p.sous;
-  $('regles').innerHTML = p.html;
-  $('b-regle-prec').disabled = prefs.regle === 0;
-  $('b-regle-suiv').disabled = prefs.regle === PAGES.length - 1;
-}
+const SIGLES = { atk: 'ATQ', def: 'DEF', pv: 'PV', pm: 'PM', vit: 'VIT', crit: '% CRIT' };
+const texteBonusCourt = (it) => Object.keys(SIGLES)
+  .filter((k) => it[k]).map((k) => `${it[k] > 0 ? '+' : ''}${it[k]} ${SIGLES[k]}`).join(' ');
 
 /* ------------------------------------------------------------------ */
 /* Branchements                                                        */
 /* ------------------------------------------------------------------ */
 
 function brancher() {
-  document.querySelectorAll('[data-go]').forEach((el) => {
-    el.onclick = () => {
-      const cible = el.dataset.go;
-      sfx.tap();
+  for (const el of document.querySelectorAll('[data-go]')) {
+    el.addEventListener('click', () => {
       debloquer();
-      if (cible === 'menu') return allerMenu();
-      if (cible === 'nouvelle') { rendreEquipe(); return montrer('equipe'); }
-      if (cible === 'guilde') { rendreGuilde(); return montrer('guilde'); }
-      if (cible === 'regles') { rendreRegles(); return montrer('regles'); }
-      return montrer(cible);
-    };
+      sfx.tap();
+      const but = el.dataset.go;
+      if (but === 'carte' && av && av.etape) return suite();
+      aller(but);
+    });
+  }
+  $('b-continuer').addEventListener('click', () => { debloquer(); sfx.clic(); suite(); });
+  $('b-partir').addEventListener('click', () => {
+    debloquer();
+    if (av && !av.termine && !confirm('Une aventure est en cours. L’abandonner pour en commencer une nouvelle ?')) return;
+    av = A.creerAventure({ heros: depart });
+    sfx.victoire();
+    suite();
   });
-
-  $('b-reprendre').onclick = () => { debloquer(); reprendre(); };
-  $('b-partir').onclick = partir;
-  $('b-engager').onclick = engager;
-  $('b-progres').onclick = suivre;
-  $('b-issue').onclick = suivre;
-  $('b-abandonner').onclick = () => {
-    if (confirm('Quitter le donjon en cours ?')) { exp.termine = true; sauverPartie(); allerMenu(); }
-  };
-  $('b-rejouer').onclick = () => { rendreEquipe(); montrer('equipe'); };
-  $('b-hasard').onclick = () => {
-    prefs.equipe = groupeAuHasard(Math.random).map((h) => h.id);
-    sfx.clic();
-    sauverPrefs();
-    rendreEquipe();
-  };
-
-  $('b-son').onclick = () => {
-    const on = basculerSon();
-    $('b-son').innerHTML = `<span class="bi">${on ? '🔊' : '🔇'}</span> Son`;
-  };
-  $('b-son').innerHTML = `<span class="bi">${sonActif() ? '🔊' : '🔇'}</span> Son`;
-
-  $('b-regle-prec').onclick = () => { prefs.regle--; sauverPrefs(); rendreRegles(); };
-  $('b-regle-suiv').onclick = () => { prefs.regle++; sauverPrefs(); rendreRegles(); };
-
-  $('fiche-fermer').onclick = () => { $('fiche').hidden = true; };
-  $('fiche').onclick = (ev) => { if (ev.target === $('fiche')) $('fiche').hidden = true; };
-  addEventListener('keydown', (ev) => { if (ev.key === 'Escape') $('fiche').hidden = true; });
-
-  $('opt-diff').innerHTML = Object.entries(DIFFICULTES).map(([id, d]) =>
-    `<button class="chip${id === prefs.difficulte ? ' is-on' : ''}" data-val="${id}" role="radio"`
-    + ` aria-checked="${id === prefs.difficulte}" title="${txt(d.texte)}">${txt(d.nom)}</button>`).join('');
-  $('opt-diff').querySelectorAll('.chip').forEach((el) => {
-    el.onclick = () => {
-      prefs.difficulte = el.dataset.val;
-      sauverPrefs();
-      $('opt-diff').querySelectorAll('.chip').forEach((z) => {
-        z.classList.toggle('is-on', z === el);
-        z.setAttribute('aria-checked', String(z === el));
-      });
-    };
-  });
-
-  $('opt-filtre').innerHTML = FILTRES.map((f) =>
-    `<button class="chip${f.id === prefs.filtre ? ' is-on' : ''}" data-val="${f.id}" role="radio"`
-    + ` aria-checked="${f.id === prefs.filtre}">${txt(f.nom)}</button>`).join('');
-  $('opt-filtre').querySelectorAll('.chip').forEach((el) => {
-    el.onclick = () => {
-      prefs.filtre = el.dataset.val;
-      sauverPrefs();
-      $('opt-filtre').querySelectorAll('.chip').forEach((z) => {
-        z.classList.toggle('is-on', z === el);
-        z.setAttribute('aria-checked', String(z === el));
-      });
-      rendreRoster();
-    };
-  });
+  $('b-son').addEventListener('click', () => { basculerSon(); rendreMenu(); });
+  $('b-auto').addEventListener('click', () => { sfx.tap(); basculerAuto(); });
 }
 
-/* ------------------------------------------------------------------ */
-/* Démarrage                                                           */
-/* ------------------------------------------------------------------ */
-
-chargerPrefs();
-if (!prefs.equipe.length) prefs.equipe = groupeParDefaut().map((h) => h.id);
+av = charger();
 brancher();
-majReprise();
+rendreMenu();
 
 /* Service worker : rend le jeu installable et jouable sans réseau.
    Un échec ici ne doit jamais empêcher de jouer. */

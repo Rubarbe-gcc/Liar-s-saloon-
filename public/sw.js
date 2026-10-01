@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v17';
+const VERSION = 'v18';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -52,20 +52,22 @@ const SHELL = [
   '/games/raid/manifest.webmanifest',
   '/games/raid/css/raid.css',
   '/games/raid/js/main.js',
-  '/games/raid/js/scene.js',
+  '/games/raid/js/combat.js',
+  '/games/raid/js/textes.js',
   '/games/raid/js/regles.js',
   '/games/raid/js/sfx.js',
   '/games/raid/icons/icon-192.png',
   '/shared/hasard.js',
   '/shared/raid/ecoles.js',
-  '/shared/raid/globes.js',
   '/shared/raid/heros.js',
   '/shared/raid/ennemis.js',
-  '/shared/raid/combat.js',
-  '/shared/raid/donjon.js',
   '/shared/raid/sprites.js',
-  '/shared/raid/auto.js',
+  '/shared/raid/personnages.js',
+  '/shared/raid/equipement.js',
+  '/shared/raid/carte.js',
+  '/shared/raid/bataille.js',
   '/shared/raid/aventure.js',
+  '/shared/raid/ia.js',
   '/games/echo/',
   '/games/echo/manifest.webmanifest',
   '/games/echo/css/echo.css',

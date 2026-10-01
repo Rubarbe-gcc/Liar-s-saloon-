@@ -8,9 +8,9 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
 - **BRASIER** — huit champions dans une taverne-forge. On recrute des
   serviteurs, on les fusionne en dorés, les combats se jouent seuls ; le dernier
   debout l'emporte. En ligne uniquement : les chaises vides sont prises par des bots.
-- **RAID** — donjon solo au tour par tour. Un champ d'essence à parcourir
-  pour récolter le mana, un raid de six qui partage une seule barre de vie,
-  cinq ailes jusqu'au Dragon Cendré.
+- **RAID** — jeu de rôle solo au tour par tour. On part avec un seul héros,
+  on choisit son chemin sur la carte de chaque acte, on trouve des compagnons,
+  de l'équipement et des niveaux, jusqu'au Dragon Cendré.
 - **ÉCHO** — jeu de fête à la voix. On entend un son, on l'imite au micro en
   suivant sa ligne en direct, la roue distribue points et sabotages. Contre
   des bots, en soirée sur un seul téléphone, ou en ligne — jusqu'à huit, chacun
@@ -65,54 +65,37 @@ les étoiles de ses survivants, sous un plafond qui monte avec les tours.
 
 ## RAID — comment ça marche
 
-Un donjon solo au tour par tour, dans les codes des jeux de raid : la trinité
-tank / soigneur / DPS, des écoles de magie qui se percent, de l'aggro, des
-incantations de boss à interrompre par un bouclier bien posé, et du butin
-entre deux ailes.
+Un jeu de rôle solo. On choisit **un seul héros** parmi cinq ; il part niveau 1
+au pied du donjon et gravit **cinq actes** jusqu'au Dragon Cendré.
 
-La descente tient en quinze pulls répartis sur cinq ailes, et les six
-personnages partagent **une seule barre de vie** — celle du raid — qui ne se
-remplit pas entre deux combats.
+- **La carte** (`shared/raid/carte.js`) : chaque acte est une carte à chemins,
+  sept paliers et le boss au sommet. On choisit sa prochaine salle parmi
+  celles que son chemin relie : combat, élite, événement, marchand, feu de
+  camp, trésor, rencontre.
+- **Le groupe** (`personnages.js`) : des compagnons se présentent en route —
+  toujours après le boss des trois premiers actes — jusqu'à quatre
+  personnages. Chacun a ses points de vie et de mana, son niveau (jusqu'à 12),
+  ses deux sorts (l'ultime s'apprend au niveau 3) et trois pièces
+  d'**équipement** (`equipement.js`) : arme, armure, bijou.
+- **Le combat** (`bataille.js`) : chaque manche, tout le monde agit une fois,
+  du plus rapide au plus lent. À son tour, un personnage attaque, lance un
+  sort, se défend ou utilise un objet. Les ennemis annoncent leur attaque
+  chargée à l'avance ; cinq **écoles de magie** se percent en cycle
+  (×1.5 / ×0.7). Les rencontres se règlent sur la taille du groupe.
+- **L'aventure** (`aventure.js`) : expérience et or à chaque victoire, un
+  **don** à choisir aux niveaux 3, 5, 7 et 9, la **chance** qui pèse sur les
+  critiques, le butin et les choix risqués, et des **événements** dont les
+  réponses rendent plus fort, coûtent de la vie ou pèsent sur les **boss à
+  venir**.
+- **La défaite** ramène au dernier feu de camp ; la moitié de l'expérience
+  gagnée depuis reste acquise, et un boss qui a gagné garde ses blessures —
+  on ne bute jamais sans fin sur le même mur. La partie est sauvegardée à
+  chaque étape.
 
-Chaque tour suit toujours le même fil :
-
-1. Un **groupe de trois** monte au front ; les deux groupes alternent d'un
-   tour à l'autre.
-2. Le boss annonce **qui a l'aggro** et **après combien de personnages** il
-   frappera.
-3. Chacun, dans l'ordre choisi par le joueur, trace un chemin sur le **champ
-   d'essence** — huit directions, jamais deux fois le même globe, neuf globes
-   au plus — et récolte son mana : les globes de sa propre école et les globes
-   d'essence pure comptent double.
-4. À douze de mana le **sort** est disponible, à dix-huit le **sort ultime** ;
-   la barre se vide en fin de tour, garder son mana n'existe pas.
-
-L'ordre de passage est donc la vraie décision : qui joue avant le coup du boss
-peut poser un bouclier, qui joue après frappe une cible déjà affaiblie.
-
-Cinq **écoles de magie** forment un cycle fermé (vulnérable ×1.5, résistant
-×0.7), et trois **rôles** lisibles au glyphe sur chaque jeton. Le **chef de
-raid** applique son buff à tout le monde, et deux personnages d'un même groupe
-qui partagent une étiquette sont en **synergie**. Chaque boss d'aile lâche une
-pièce de **butin** à choisir parmi trois.
-
-La descente est aussi une **aventure** (`shared/raid/aventure.js`) :
-
-- le raid part **niveau 1**, aux trois quarts de ses fiches, gagne de
-  l'expérience à chaque victoire et monte jusqu'au niveau 10, où il les
-  dépasse ; aux niveaux 3, 5, 7 et 9, il choisit un **don** parmi trois ;
-- la **chance** donne des coups critiques, fait réussir les choix risqués et
-  attire les pièces épiques ;
-- entre deux combats, des **événements** — autel, prisonnier, fontaine, pacte
-  du Dragon, raccourci… — proposent des choix qui pèsent sur le raid et sur
-  les **boss à venir** : un atout en moins, de la vie en plus pour le Dragon.
-  La carte les récapitule sous « Menaces et faveurs ».
-
-L'équilibrage est mesuré, pas deviné : un conseiller joue des donjons entiers
-en tête de série fixe. Sur trente donjons, le mode *Normal* se boucle presque
-toujours, l'*Héroïque* une fois sur deux, le *Mythique* rarement — et, en
-Héroïque, on sort de la première aile avec environ 70 % de vie, là où l'on en
-gardait 97 % avant l'aventure.
+L'équilibrage est mesuré, pas deviné : un joueur automatique (`ia.js`, le
+même que le bouton « Auto » du combat) joue des aventures entières en tête de
+série fixe. Il sort du premier combat avec les deux tiers de sa vie, perd de
+temps en temps contre un boss, et arrive au Dragon avec un groupe de quatre.
 
 Les personnages et les créatures sont dessinés en **pixel art paramétrique** :
 des grilles de 16×16 décrites en données, colorées par l'école, teintées par
@@ -227,8 +210,8 @@ public/
     zenith/               ZÉNITH : roster, moteur, adversaires, sprites
     mimic/                ÉCHO : analyse du son, sons de référence, manches
     brasier/              BRASIER : serviteurs, héros, combat, partie, bots
-    raid/                 RAID : écoles, globes, héros, bestiaire, combat,
-                          donjon, sprites, conseiller
+    raid/                 RAID : écoles, héros, bestiaire, personnages,
+                          équipement, carte, bataille, aventure, sprites, ia
   games/liars-saloon/
     index.html
     manifest.webmanifest  identité « Liar's Saloon »
@@ -243,7 +226,7 @@ public/
     js/{karaoke,avatars}.js          courbe en direct, photos et bonhommes
     js/{ui,audio,regles}.js          rendu, micro et sabotages, règles
   games/raid/
-    js/{main,scene,regles,sfx}.js   navigation, combat animé, règles, sons
+    js/{main,combat,textes,regles,sfx}.js   écrans de l'aventure, combat, textes, règles, sons
 server/
   index.js                serveur autonome : statique + WebSocket
   wsproto.js              RFC 6455 minimal, sans dépendance

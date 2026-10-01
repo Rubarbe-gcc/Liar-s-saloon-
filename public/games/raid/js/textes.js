@@ -1,0 +1,59 @@
+/**
+ * RAID — les mots de l'écran.
+ *
+ * Les sorts, les traits des monstres et les pièces se racontent ici, depuis
+ * les constantes du moteur : un nombre affiché est un nombre appliqué.
+ */
+
+import { ECOLES } from '../../../shared/raid/ecoles.js';
+import { ROLES } from '../../../shared/raid/heros.js';
+import { RARETES, EMPLACEMENTS, texteBonus } from '../../../shared/raid/equipement.js';
+
+export const txt = (s) => String(s).replace(/[&<>"']/g, (c) =>
+  ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+export const pc = (v) => `${Math.round(v * 100)} %`;
+export const teinte = (e) => (ECOLES[e] || ECOLES.feu).teinte;
+export const nomEcole = (e) => (ECOLES[e] ? `${ECOLES[e].glyphe} ${ECOLES[e].nom}` : e);
+export const nomRole = (r) => (ROLES[r] ? `${ROLES[r].glyphe} ${ROLES[r].nom}` : r);
+
+/** Ce que fait un sort, en une phrase. */
+export function texteSort(s) {
+  const e = s.effet || {};
+  const v = e.valeur || 0;
+  const coup = `Dégâts ×${s.mult.toFixed(1)}`;
+  switch (e.type) {
+    case 'soin': return `Soigne tout le groupe de ${pc(v * 2)} de sa vie.`;
+    case 'garde': return `Bouclier sur le groupe : ${pc(Math.min(0.6, v * 1.1))} de dégâts en moins, 2 manches.`;
+    case 'elan': return `Le groupe frappe ${pc(v * 1.2)} plus fort, 2 manches.`;
+    case 'mana': return `Rend ${v * 2} PM à chaque allié.`;
+    case 'perce': return `${coup}, ignore ${pc(v)} de l’armure.`;
+    case 'double': return `Frappe deux fois (×${(s.mult * 0.6).toFixed(1)} chacune).`;
+    case 'brasier': return `${coup}, puis brûle la cible pendant 3 manches.`;
+    case 'entrave': return `${coup}, et la cible frappe ${pc(v)} moins fort pendant 2 manches.`;
+    case 'vol': return `${coup}, et soigne l’allié le plus blessé.`;
+    default: return `${coup}.`;
+  }
+}
+
+export const TRAITS_RPG = {
+  carapace: { glyphe: '🐢', texte: 'Carapace : les attaques simples font 30 % de dégâts en moins.' },
+  frenesie: { glyphe: '💢', texte: 'Frénésie : frappe parfois une seconde fois.' },
+  poison: { glyphe: '☠', texte: 'Poison : ses coups empoisonnent pendant 2 manches.' },
+  fureur: { glyphe: '🔺', texte: 'Fureur : plus il est blessé, plus il frappe fort.' },
+  epines: { glyphe: '🌵', texte: 'Épines : renvoie une part des coups qu’il reçoit.' },
+  drain: { glyphe: '🩸', texte: 'Drain : se soigne en frappant.' },
+  enrage: { glyphe: '😡', texte: 'Enrage : sous la moitié de sa vie, il entre en rage.' },
+};
+
+export const couleurRarete = (r) => (RARETES[r] || RARETES.commun).teinte;
+
+/** Une pièce d'équipement, en carte. `actions` est du HTML déjà prêt. */
+export function cartePiece(it, { actions = '', note = '' } = {}) {
+  const r = RARETES[it.rarete] || RARETES.commun;
+  return `<div class="piece" style="--r:${r.teinte}">
+    <b>${it.glyphe} ${txt(it.nom)}</b>
+    <i>${texteBonus(it)}</i>
+    <small>${EMPLACEMENTS[it.emplacement].nom} · ${r.nom}${note ? ` · ${note}` : ''}</small>
+    ${actions ? `<div class="piece-actions">${actions}</div>` : ''}
+  </div>`;
+}

@@ -1,5 +1,5 @@
 /**
- * RAID — le moteur, sous contrat.
+ * RAID — le jeu de rôle, sous contrat.
  *
  * Tout ce qui décide d'une partie vit dans `public/shared/raid/` et ne
  * touche ni au DOM ni à Node : ces tests peuvent donc l'exercer directement,
@@ -10,791 +10,562 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
-  CYCLE, ECOLES, domine, craint, multiplicateur, roueSvg, AVANTAGE, DESAVANTAGE, ESSENCE,
+  CYCLE, ECOLES, domine, craint, multiplicateur, roueSvg, AVANTAGE, DESAVANTAGE,
 } from '../public/shared/raid/ecoles.js';
+import { HEROS, PAR_ID, ROLES, EFFETS, parEcole } from '../public/shared/raid/heros.js';
+import { MODELES, MODELES_PAR_ID, TRAITS, SILHOUETTES, parRang, BOSS_FINAL } from '../public/shared/raid/ennemis.js';
 import {
-  COLONNES, LIGNES, CASES, LONGUEUR_MAX, creerPlateau, voisines, voisinage, cheminValide,
-  valeurGlobe, manaDuChemin, recolter, meilleurChemin, MANA_DOUBLE, MANA_SIMPLE,
-} from '../public/shared/raid/globes.js';
+  creerPersonnage, statsDe, statsBase, gagnerXp, niveauDe, SEUILS_XP, NIVEAU_MAX, NIVEAU_ULTIME,
+  sortsDe, DEPARTS, progressionNiveau,
+} from '../public/shared/raid/personnages.js';
+import { forger, MODELES as PIECES, pieceAuHasard, tirerRarete, texteBonus } from '../public/shared/raid/equipement.js';
 import {
-  HEROS, PAR_ID, ROLES, EFFETS, TALENTS, budgetOf, groupeParDefaut, groupeAuHasard, parEcole,
-} from '../public/shared/raid/heros.js';
+  genererCarte, accessibles, composer, ennemiRpg, ACTES, RANGEES, ECHELLE,
+} from '../public/shared/raid/carte.js';
 import {
-  MODELES, MODELES_PAR_ID, BOSS_FINAL, TRAITS, SILHOUETTES, instancier, attaqueDe, tirerModele, parRang,
-} from '../public/shared/raid/ennemis.js';
-import {
-  creerCombat, choisir, tracer, attaquer, modesDisponibles, estimerDegats, utiliserObjet,
-  vue, estFini, statsDe, synergies, vieMaximale, PHASE, SEUIL_SPECIAL, SEUIL_ULTIME, MANA_MAX,
-  rotationDe, multDe,
-} from '../public/shared/raid/combat.js';
-import {
-  creerDonjon, composerRencontre, resoudre, choisirButin, BUTIN, AILES,
-  RENCONTRES_PAR_AILE, DIFFICULTES, avancement,
-  butinCombat, choisirDon, choisirEvenement, conseilEvenement, evenementCourant, gagnerXp,
-  proposerEvenement, prochaineEtape, menacesDuBoss,
-} from '../public/shared/raid/donjon.js';
-import {
-  niveauDe, puissance, SEUILS_XP, NIVEAU_MAX, NIVEAUX_DON, DONS, EVENEMENTS, EVENEMENTS_PAR_ID,
-  reussiteDe, texteEffet, critiqueDe,
-} from '../public/shared/raid/aventure.js';
+  creerBataille, demarrer, actif, actionsDe, agir, estimer, vivants, critiqueDe,
+} from '../public/shared/raid/bataille.js';
+import * as A from '../public/shared/raid/aventure.js';
+import { jouerCombat, jouerAventure, choisirAction } from '../public/shared/raid/ia.js';
 import { spriteSvg, poses, palettePour, GRID } from '../public/shared/raid/sprites.js';
-import { jouerCombatAuto, conseilChemin, conseilCoup, conseilOrdre, pasAuto } from '../public/shared/raid/auto.js';
 import { makeRng } from '../public/shared/hasard.js';
 
-/* ------------------------------------------------------------------ */
-/* Outils de test                                                      */
-/* ------------------------------------------------------------------ */
-
 const rngT = (seed = 42) => makeRng(seed);
+const gnoll = (acte = 1, o = {}) => ennemiRpg(MODELES_PAR_ID.gnoll, acte, o.ecole || 'nature', rngT(3), o);
 
-/** Un combat contre un unique ennemi taillé sur mesure. */
-function combatTest(opts = {}) {
-  const ennemi = instancier(MODELES_PAR_ID.gnoll, 1, opts.ecole || 'jade', rngT(3));
-  Object.assign(ennemi, opts.ennemi || {});
-  return creerCombat({
-    equipe: opts.equipe || groupeParDefaut(),
-    ennemis: [ennemi],
-    seed: opts.seed ?? 77,
-    ...opts.combat,
+/** Une bataille sur mesure. */
+function batailleTest({ ids = ['brandel', 'kaelis'], niveau = 3, ennemis = [gnoll()], inventaire, seed = 7 } = {}) {
+  const groupe = ids.map((id) => creerPersonnage(id, niveau));
+  const b = creerBataille({
+    groupe, ennemis, inventaire: inventaire || { potion: 1, elixir: 1, phenix: 1 }, rng: rngT(seed),
   });
+  return { b, groupe };
 }
 
-/** Joue exactement un tour avec un automate sobre ; renvoie les événements. */
-function jouerUnTour(etat, { mode = 'normale' } = {}) {
-  const depart = etat.tour;
-  const ev = [];
-  while (etat.tour === depart && etat.phase === PHASE.CHOIX && etat.ordreRestant.length) {
-    const idx = etat.ordreRestant[0];
-    choisir(etat, idx);
-    const chemin = meilleurChemin(etat.plateau, etat.equipe[idx].ecole).chemin;
-    ev.push(...tracer(etat, chemin).evenements);
-    const dispo = modesDisponibles(etat).filter((m) => m.ouvert).map((m) => m.mode);
-    const choisi = dispo.includes(mode) ? mode : 'normale';
-    ev.push(...(attaquer(etat, { mode: choisi, cible: 0 }).evenements || []));
-    if (estFini(etat)) break;
+/** Avance l'aventure jusqu'à une étape du type voulu. */
+function jusqua(av, type, max = 500) {
+  for (let i = 0; i < max; i++) {
+    if (av.etape && av.etape.type === type) return true;
+    if (!av.etape) {
+      const n = A.sallesAccessibles(av).find((x) => x.type === type) || A.sallesAccessibles(av)[0];
+      A.entrer(av, n.id);
+      continue;
+    }
+    // On résout ce qui se présente sans se soucier du reste.
+    const e = av.etape;
+    if (e.type === 'combat') A.conclureCombat(av, true);
+    else if (e.type === 'recompense') A.prendreRecompense(av);
+    else if (e.type === 'don') A.choisirDon(av, e.choix[0].id);
+    else if (e.type === 'evenement') A.choisirEvenement(av, A.evenementCourant(av).choix.find((c) => c.possible).id);
+    else if (e.type === 'repos') A.faireRepos(av, 'repos');
+    else if (e.type === 'tresor') A.prendreTresor(av);
+    else A.terminerEtape(av);
   }
-  return ev;
+  return false;
 }
 
 /* ================================================================== */
-/* Écoles                                                          */
+/* Écoles, roster, bestiaire                                          */
 /* ================================================================== */
 
 test('le cycle des écoles est fermé et sans point faible', () => {
   assert.equal(CYCLE.length, 5);
   for (const a of CYCLE) {
-    assert.ok(ECOLES[a], `${a} doit avoir une fiche`);
-    assert.notEqual(domine(a), a);
-    assert.equal(craint(domine(a)), a, 'dominer, c\'est être craint');
+    assert.ok(ECOLES[a]);
+    assert.equal(craint(domine(a)), a);
   }
-  // Chaque école domine et est dominée exactement une fois.
-  const dominees = CYCLE.map(domine);
-  assert.equal(new Set(dominees).size, CYCLE.length);
-});
-
-test('les multiplicateurs suivent le cycle', () => {
+  assert.equal(new Set(CYCLE.map(domine)).size, CYCLE.length);
   const a = CYCLE[0];
   assert.equal(multiplicateur(a, domine(a)), AVANTAGE);
   assert.equal(multiplicateur(a, craint(a)), DESAVANTAGE);
   assert.equal(multiplicateur(a, a), 1);
-  assert.equal(multiplicateur(a, 'inconnu'), 1, 'un ennemi sans école ne casse rien');
+  assert.ok(roueSvg().includes('<svg'));
 });
 
-test('la roue se dessine et met le duel en avant', () => {
-  const svg = roueSvg();
-  for (const a of CYCLE) assert.ok(svg.includes(ECOLES[a].teinte), `${a} doit apparaître`);
-  const duel = roueSvg({ moi: CYCLE[0], cible: domine(CYCLE[0]) });
-  assert.ok(duel.includes('stroke-width="3"'), 'la flèche du duel est épaissie');
-});
-
-/* ================================================================== */
-/* Champ d'essence                                                      */
-/* ================================================================== */
-
-test('le plateau est plein et ne contient que des globes connues', () => {
-  const p = creerPlateau(rngT(1));
-  assert.equal(p.length, CASES);
-  assert.equal(CASES, COLONNES * LIGNES);
-  for (const o of p) assert.ok(CYCLE.includes(o) || o === ESSENCE, `globe inconnue : ${o}`);
-});
-
-test('un chemin ne passe que par des cases voisines, jamais deux fois', () => {
-  assert.ok(voisines(0, 1));
-  assert.ok(voisines(0, COLONNES + 1), 'les diagonales comptent');
-  assert.ok(!voisines(0, 2));
-  assert.ok(!voisines(COLONNES - 1, COLONNES), 'le bord droit ne touche pas le bord gauche');
-  assert.ok(!voisines(3, 3));
-
-  assert.ok(cheminValide([0, 1, 2]));
-  assert.ok(!cheminValide([0, 2]), 'il faut être voisin');
-  assert.ok(!cheminValide([0, 1, 0]), 'on ne repasse pas');
-  assert.ok(!cheminValide([]), 'un chemin vide ne vaut rien');
-  assert.ok(!cheminValide([0, -1]));
-  assert.ok(!cheminValide([CASES]));
-});
-
-test('le chemin est borné en longueur', () => {
-  // Un serpent qui balaie la grille : valide jusqu'à la borne, refusé au-delà.
-  const serpent = [];
-  for (let l = 0; l < LIGNES; l++) {
-    const ligne = [...Array(COLONNES).keys()].map((c) => l * COLONNES + c);
-    serpent.push(...(l % 2 ? ligne.reverse() : ligne));
-  }
-  assert.ok(cheminValide(serpent.slice(0, LONGUEUR_MAX)));
-  assert.ok(!cheminValide(serpent.slice(0, LONGUEUR_MAX + 1)));
-});
-
-test('les globes de son école comptent double, la prismatique aussi', () => {
-  assert.equal(valeurGlobe('azur', 'azur'), MANA_DOUBLE);
-  assert.equal(valeurGlobe('azur', 'jade'), MANA_SIMPLE);
-  assert.equal(valeurGlobe(ESSENCE, 'jade'), MANA_DOUBLE);
-
-  const plateau = new Array(CASES).fill('jade');
-  plateau[0] = 'azur'; plateau[1] = ESSENCE; plateau[2] = 'jade';
-  const d = manaDuChemin(plateau, [0, 1, 2], 'azur');
-  assert.deepEqual(
-    { total: d.total, doubles: d.doubles, simples: d.simples, essences: d.essences },
-    { total: 2 + 2 + 1, doubles: 1, simples: 1, essences: 1 },
-  );
-  assert.equal(manaDuChemin(plateau, [0, 2], 'azur').total, 0, 'un chemin invalide ne rapporte rien');
-});
-
-test('la récolte tasse les colonnes et complète par le haut', () => {
-  const rng = rngT(9);
-  const plateau = creerPlateau(rng);
-  const chemin = [0, 1, COLONNES + 1];           // deux cases en haut, une en dessous
-  const gardees = plateau.filter((_, i) => !chemin.includes(i));
-  const r = recolter(plateau, chemin, rng);
-
-  assert.equal(r.plateau.length, CASES);
-  assert.ok(r.plateau.every(Boolean), 'aucun trou ne subsiste');
-  assert.equal(r.neuves.length, chemin.length, 'autant de neuves que de ramassées');
-  // Les survivantes restent dans leur colonne, dans le même ordre.
-  for (let col = 0; col < COLONNES; col++) {
-    const avant = [];
-    for (let l = 0; l < LIGNES; l++) {
-      const i = l * COLONNES + col;
-      if (!chemin.includes(i)) avant.push(plateau[i]);
-    }
-    const apres = [];
-    for (let l = 0; l < LIGNES; l++) apres.push(r.plateau[l * COLONNES + col]);
-    assert.deepEqual(apres.slice(LIGNES - avant.length), avant, `colonne ${col}`);
-  }
-  assert.equal(gardees.length, CASES - chemin.length);
-});
-
-test('le meilleur chemin est un chemin jouable, et il est bon', () => {
-  const rng = rngT(5);
-  for (let i = 0; i < 12; i++) {
-    const plateau = creerPlateau(rng);
-    const m = meilleurChemin(plateau, 'azur');
-    assert.ok(cheminValide(m.chemin), 'le conseil doit être jouable');
-    assert.equal(manaDuChemin(plateau, m.chemin, 'azur').total, m.mana);
-    // Un chemin au hasard de même longueur ne doit pas faire mieux.
-    const hasard = [0, 1, 2, 3, 4, 5, COLONNES + 5, COLONNES + 4, COLONNES + 3].slice(0, m.chemin.length);
-    assert.ok(m.mana >= manaDuChemin(plateau, hasard, 'azur').total);
-  }
-});
-
-test('le voisinage ne déborde jamais de la grille', () => {
-  for (let i = 0; i < CASES; i++) {
-    for (const v of voisinage(i)) {
-      assert.ok(v >= 0 && v < CASES);
-      assert.ok(voisines(i, v));
-    }
-  }
-  assert.equal(voisinage(0).length, 3, 'un coin a trois voisins');
-});
-
-/* ================================================================== */
-/* Garnison                                                           */
-/* ================================================================== */
-
-test('le roster est complète et cohérente', () => {
+test('le roster est complet et cohérent', () => {
   assert.equal(HEROS.length, 15);
-  assert.equal(new Set(HEROS.map((x) => x.id)).size, 15, 'pas de doublon');
-  for (const a of CYCLE) assert.equal(parEcole(a).length, 3, `trois héros ${a}`);
+  for (const a of CYCLE) assert.equal(parEcole(a).length, 3);
   for (const x of HEROS) {
-    assert.ok(ROLES[x.role], `${x.id} : rôle inconnu`);
-    assert.ok(CYCLE.includes(x.ecole), `${x.id} : école inconnue`);
-    assert.ok(TALENTS[x.talent.type], `${x.id} : talent inconnu`);
-    assert.ok(x.liens.length >= 2, `${x.id} doit pouvoir résonner`);
-    assert.ok(x.ultime.mult > x.special.mult, `${x.id} : l'ultime doit dépasser la spéciale`);
-    for (const coup of [x.special, x.ultime]) {
-      if (coup.effet) assert.ok(EFFETS[coup.effet.type], `${x.id} : effet inconnu`);
-    }
-    assert.ok(x.meneur.texte, `${x.id} : le meneur doit s'expliquer`);
+    assert.ok(ROLES[x.role]);
+    for (const coup of [x.special, x.ultime]) if (coup.effet) assert.ok(EFFETS[coup.effet.type], x.id);
   }
+  for (const id of DEPARTS) assert.ok(PAR_ID[id], id);
+  assert.equal(new Set(DEPARTS.map((id) => PAR_ID[id].role)).size, 3, 'les trois rôles au départ');
 });
-
-test('les héros d’un même rôle valent le même prix', () => {
-  for (const role of Object.keys(ROLES)) {
-    const prix = HEROS.filter((x) => x.role === role).map(budgetOf);
-    const ecart = Math.max(...prix) - Math.min(...prix);
-    assert.ok(ecart <= 40, `${role} : écart de ${ecart}, trop large`);
-  }
-});
-
-test('chaque rôle tient sa promesse', () => {
-  const moyenne = (l, f) => l.reduce((s, x) => s + f(x), 0) / l.length;
-  const assaut = HEROS.filter((x) => x.role === 'dps');
-  const colosse = HEROS.filter((x) => x.role === 'tank');
-  const soutien = HEROS.filter((x) => x.role === 'soigneur');
-
-  assert.ok(moyenne(assaut, (x) => x.atk) > moyenne(colosse, (x) => x.atk) * 1.2, 'l’assaut frappe plus fort');
-  assert.ok(moyenne(colosse, (x) => x.pv) > moyenne(assaut, (x) => x.pv) * 1.4, 'le colosse porte l’équipe');
-  assert.ok(moyenne(colosse, (x) => x.def) > moyenne(assaut, (x) => x.def) * 1.4);
-  // Le soutien se paie en effets : ses multiplicateurs sont les plus bas.
-  assert.ok(moyenne(soutien, (x) => x.special.mult) < moyenne(assaut, (x) => x.special.mult));
-  for (const x of soutien) assert.ok(x.special.effet && x.ultime.effet, `${x.id} doit soutenir`);
-});
-
-test('une équipe au hasard est jouable', () => {
-  const rng = rngT(4);
-  for (let i = 0; i < 20; i++) {
-    const eq = groupeAuHasard(rng);
-    assert.equal(eq.length, 6);
-    assert.equal(new Set(eq.map((x) => x.id)).size, 6, 'jamais deux fois le même héros');
-  }
-  assert.equal(groupeParDefaut().length, 6);
-});
-
-/* ================================================================== */
-/* Bestiaire                                                          */
-/* ================================================================== */
 
 test('le bestiaire est cohérent', () => {
-  assert.equal(new Set(MODELES.map((m) => m.id)).size, MODELES.length);
   for (const m of MODELES) {
-    assert.ok(SILHOUETTES.includes(m.silhouette), `${m.id} : silhouette inconnue`);
-    for (const t of m.traits) assert.ok(TRAITS[t], `${m.id} : trait inconnu`);
-    assert.ok(m.charge.tours >= 2 && m.charge.mult > 1, `${m.id} : charge incohérente`);
+    assert.ok(SILHOUETTES.includes(m.silhouette), m.id);
+    for (const t of m.traits) assert.ok(TRAITS[t], `${m.id} : ${t}`);
   }
   for (const rang of ['trash', 'elite', 'boss']) assert.ok(parRang(rang).length >= 2, rang);
 });
 
-test('un ennemi grossit avec le palier', () => {
-  const rng = rngT(2);
-  const bas = instancier(MODELES_PAR_ID.gnoll, 1, 'jade', rng);
-  const haut = instancier(MODELES_PAR_ID.gnoll, 5, 'jade', rng);
-  assert.ok(haut.pvMax > bas.pvMax * 2, 'la vie doit vraiment monter');
-  assert.ok(haut.atk > bas.atk, 'l’attaque aussi');
-  assert.ok(haut.pvMax / bas.pvMax > haut.atk / bas.atk, 'mais moins vite que la vie');
-  assert.equal(bas.pv, bas.pvMax);
-});
-
-test('rage et entrave pèsent sur l’attaque ennemie', () => {
-  const e = instancier(MODELES_PAR_ID.vorgath, 1, 'jade', rngT(6));
-  const calme = attaqueDe(e);
-  e.enrage = true;
-  assert.ok(attaqueDe(e) > calme, 'la rage fait mal');
-  e.entrave = { valeur: 0.5, tours: 2 };
-  assert.ok(attaqueDe(e) < calme, 'une entrave forte passe devant la rage');
-});
-
-test('le tirage évite ce qu’on vient de voir', () => {
-  const rng = rngT(8);
-  const eviter = parRang('trash').slice(0, 3).map((m) => m.id);
-  for (let i = 0; i < 20; i++) assert.ok(!eviter.includes(tirerModele('trash', rng, eviter).id));
-});
-
 /* ================================================================== */
-/* Combat                                                             */
+/* Personnages                                                        */
 /* ================================================================== */
 
-test('un combat se monte avec six héros et au moins un adversaire', () => {
-  assert.throws(() => creerCombat({ equipe: HEROS.slice(0, 3), ennemis: [1] }), /six/);
-  assert.throws(() => creerCombat({ equipe: groupeParDefaut(), ennemis: [] }), /adversaire/);
-  const etat = combatTest();
-  assert.equal(etat.tour, 1);
-  assert.equal(etat.phase, PHASE.CHOIX);
-  assert.deepEqual(etat.rotation, rotationDe(etat, 0));
-});
-
-test('la barre de vie est celle des six, meneur compris', () => {
-  const equipe = groupeParDefaut();
-  const somme = equipe.reduce((s, x) => s + x.pv, 0);
-  const max = vieMaximale(equipe);
-  assert.ok(max > somme, 'le meneur doit gonfler la barre');
-  const sansMeneur = vieMaximale([{ ...equipe[0], meneur: null }, ...equipe.slice(1)]);
-  assert.ok(max > sansMeneur);
-});
-
-test('le mana ne franchit pas ses seuils sans être gagné', () => {
-  const etat = combatTest();
-  const idx = etat.ordreRestant[0];
-  choisir(etat, idx);
-  etat.mana[idx] = 0;
-  etat.phase = PHASE.ACTION;
-  assert.equal(attaquer(etat, { mode: 'special' }).ok, false);
-  assert.equal(attaquer(etat, { mode: 'ultime' }).ok, false);
-  etat.mana[idx] = SEUIL_SPECIAL;
-  assert.equal(modesDisponibles(etat, idx).find((m) => m.mode === 'special').ouvert, true);
-  assert.equal(modesDisponibles(etat, idx).find((m) => m.mode === 'ultime').ouvert, false);
-  etat.mana[idx] = SEUIL_ULTIME;
-  assert.equal(modesDisponibles(etat, idx).find((m) => m.mode === 'ultime').ouvert, true);
-});
-
-test('le mana au-delà du seuil renforce le sort, jusqu’au plafond', () => {
-  const x = PAR_ID.braz;
-  assert.equal(multDe(x, 'normale', 24), 1);
-  assert.ok(multDe(x, 'special', SEUIL_SPECIAL + 6) > multDe(x, 'special', SEUIL_SPECIAL));
-  assert.equal(multDe(x, 'special', MANA_MAX + 20), multDe(x, 'special', MANA_MAX), 'le plafond plafonne');
-});
-
-test('tracer un chemin verse le mana et renouvelle le plateau', () => {
-  const etat = combatTest();
-  const idx = etat.ordreRestant[0];
-  choisir(etat, idx);
-  const avant = [...etat.plateau];
-  const chemin = meilleurChemin(etat.plateau, etat.equipe[idx].ecole).chemin;
-  const r = tracer(etat, chemin);
-  assert.ok(r.ok);
-  assert.equal(etat.mana[idx], Math.min(MANA_MAX, r.detail.total + 0 + (etat.equipe[idx].talent.type === 'flux' ? etat.equipe[idx].talent.valeur : 0)));
-  assert.notDeepEqual(etat.plateau, avant, 'le plateau doit bouger');
-  assert.equal(etat.phase, PHASE.ACTION);
-  assert.equal(tracer(etat, chemin).ok, false, 'on ne trace pas deux fois');
-});
-
-test('l’avantage d’école fait vraiment plus mal', () => {
-  const equipe = groupeParDefaut();
-  const idx = 1;                                   // Ignar, vermeil
-  const fort = combatTest({ ecole: domine(equipe[idx].ecole) });
-  const faible = combatTest({ ecole: craint(equipe[idx].ecole) });
-  const a = estimerDegats(fort, idx, 'special', fort.ennemis[0]).degats;
-  const b = estimerDegats(faible, idx, 'special', faible.ennemis[0]).degats;
-  assert.ok(a > b * 1.8, `avantage ${a} contre désavantage ${b}`);
-});
-
-test('les synergies récompensent une rotation cohérente', () => {
-  const liens = ['fureur', 'assaut'];
-  const clone = (id, extra = {}) => ({ ...PAR_ID.braz, id, liens, ...extra });
-  const soudee = creerCombat({
-    equipe: [clone('a'), clone('b'), clone('c'), clone('d'), clone('e'), clone('f')],
-    ennemis: [instancier(MODELES_PAR_ID.gnoll, 1, 'jade', rngT(1))], seed: 5,
-  });
-  const eparse = creerCombat({
-    equipe: [clone('a', { liens: ['x1', 'y1'] }), clone('b', { liens: ['x2', 'y2'] }),
-             clone('c', { liens: ['x3', 'y3'] }), clone('d'), clone('e'), clone('f')],
-    ennemis: [instancier(MODELES_PAR_ID.gnoll, 1, 'jade', rngT(1))], seed: 5,
-  });
-  assert.equal(synergies(soudee, 0).length, 2);
-  assert.equal(synergies(eparse, 0).length, 0);
-  assert.ok(statsDe(soudee, 0).atk > statsDe(eparse, 0).atk, 'les liens doivent payer');
-});
-
-test('la fenêtre ennemie s’ouvre au moment annoncé', () => {
-  for (const seed of [3, 12, 44, 98, 501]) {
-    const etat = combatTest({ seed, ennemi: { pvMax: 9e6, pv: 9e6 } });
-    const attendu = etat.fenetre;
-    let coups = 0, agis = 0;
-    while (etat.phase === PHASE.CHOIX && agis < attendu) {
-      const idx = etat.ordreRestant[0];
-      choisir(etat, idx);
-      tracer(etat, meilleurChemin(etat.plateau, etat.equipe[idx].ecole).chemin);
-      const ev = attaquer(etat, { mode: 'normale', cible: 0 }).evenements;
-      agis++;
-      coups += ev.filter((e) => e.type === 'coupEnnemi').length;
-      if (agis < attendu) assert.equal(coups, 0, `seed ${seed} : l’ennemi a frappé trop tôt`);
-    }
-    assert.ok(coups >= 1, `seed ${seed} : l’ennemi devait frapper au ${attendu}ᵉ`);
-  }
-});
-
-test('une garde posée avant la fenêtre amortit le coup', () => {
-  const mesurer = (garde) => {
-    const etat = combatTest({ seed: 21, ennemi: { pvMax: 9e6, pv: 9e6 } });
-    etat.fenetre = 1;
-    etat.vise = etat.rotation[0];
-    etat.garde = garde;
-    const ev = [];
-    choisir(etat, etat.rotation[0]);
-    tracer(etat, meilleurChemin(etat.plateau, etat.equipe[etat.rotation[0]].ecole).chemin);
-    ev.push(...attaquer(etat, { mode: 'normale', cible: 0 }).evenements);
-    return ev.filter((e) => e.type === 'coupEnnemi').reduce((s, e) => s + e.degats, 0);
-  };
-  const nu = mesurer(0);
-  const garde = mesurer(0.4);
-  assert.ok(garde < nu * 0.7, `garde ${garde} contre ${nu}`);
-});
-
-test('les effets des spéciales font ce qu’ils annoncent', () => {
-  // Soin : la barre remonte, sans dépasser le plafond.
-  const etat = combatTest({ ennemi: { pvMax: 9e6, pv: 9e6 } });
-  etat.vie.actuel = Math.round(etat.vie.max * 0.4);
-  const idx = etat.rotation.find((i) => etat.equipe[i].special.effet?.type === 'soin')
-    ?? etat.rotation[0];
-  etat.equipe[idx] = { ...etat.equipe[idx], special: { nom: 'Test', mult: 2, effet: { type: 'soin', valeur: 0.2 } } };
-  choisir(etat, idx);
-  tracer(etat, meilleurChemin(etat.plateau, etat.equipe[idx].ecole).chemin);
-  etat.mana[idx] = SEUIL_SPECIAL;
-  const ev = attaquer(etat, { mode: 'special', cible: 0 }).evenements;
-  const soin = ev.find((e) => e.type === 'soin');
-  assert.ok(soin && soin.montant > 0);
-  assert.ok(etat.vie.actuel <= etat.vie.max);
-
-  // Brasier : l'ennemi perd de la vie au début des deux tours suivants.
-  const b = combatTest({ ennemi: { pvMax: 9e6, pv: 9e6 } });
-  const j = b.rotation[0];
-  b.equipe[j] = { ...b.equipe[j], ultime: { nom: 'Test', mult: 3, effet: { type: 'brasier', valeur: 0.5 } } };
-  choisir(b, j);
-  tracer(b, meilleurChemin(b.plateau, b.equipe[j].ecole).chemin);
-  b.mana[j] = SEUIL_ULTIME;
-  attaquer(b, { mode: 'ultime', cible: 0 });
-  assert.ok(b.ennemis[0].brasier.tours > 0, 'le brasier doit être posé');
-  const avant = b.ennemis[0].pv;
-  while (b.tour < 3 && !estFini(b)) jouerUnTour(b);
-  assert.ok(b.ennemis[0].pv < avant, 'le brasier doit mordre');
-});
-
-test('l’ultime consomme le mana, la frappe normale le garde', () => {
-  const etat = combatTest({ ennemi: { pvMax: 9e6, pv: 9e6 } });
-  const idx = etat.rotation[0];
-  choisir(etat, idx);
-  tracer(etat, meilleurChemin(etat.plateau, etat.equipe[idx].ecole).chemin);
-  const mana = etat.mana[idx];
-  attaquer(etat, { mode: 'normale', cible: 0 });
-  assert.equal(etat.mana[idx], mana, 'une frappe normale ne coûte rien');
-
-  const b = combatTest({ ennemi: { pvMax: 9e6, pv: 9e6 } });
-  const j = b.rotation[0];
-  choisir(b, j);
-  tracer(b, meilleurChemin(b.plateau, b.equipe[j].ecole).chemin);
-  b.mana[j] = SEUIL_ULTIME;
-  attaquer(b, { mode: 'ultime', cible: 0 });
-  assert.equal(b.mana[j], 0, 'l’ultime vide la jauge');
-});
-
-test('la rotation alterne et le mana repart de zéro à chaque tour', () => {
-  const etat = combatTest({ ennemi: { pvMax: 9e6, pv: 9e6 } });
-  assert.deepEqual(etat.rotation, [0, 1, 2]);
-  jouerUnTour(etat);
-  assert.deepEqual(etat.rotation, [3, 4, 5], 'les trois autres entrent en scène');
-  for (const i of [0, 1, 2]) assert.equal(etat.mana[i], 0, 'le mana ne se met pas en réserve');
-  jouerUnTour(etat);
-  assert.deepEqual(etat.rotation, [0, 1, 2]);
-});
-
-test('la victoire et la défaite s’arrêtent net', () => {
-  const gagne = combatTest({ ennemi: { pv: 1, pvMax: 1 } });
-  const idx = gagne.rotation[0];
-  choisir(gagne, idx);
-  tracer(gagne, meilleurChemin(gagne.plateau, gagne.equipe[idx].ecole).chemin);
-  const ev = attaquer(gagne, { mode: 'normale', cible: 0 }).evenements;
-  assert.equal(gagne.phase, PHASE.VICTOIRE);
-  assert.ok(ev.some((e) => e.type === 'victoire'));
-  assert.equal(choisir(gagne, gagne.rotation[1]).ok, false, 'plus rien après la fin');
-
-  const perdu = combatTest();
-  perdu.vie.actuel = 1;
-  perdu.fenetre = 1;
-  perdu.ennemis[0].atk = 9e6;
-  perdu.ennemis[0].pvMax = 9e6; perdu.ennemis[0].pv = 9e6;
-  const k = perdu.rotation[0];
-  choisir(perdu, k);
-  tracer(perdu, meilleurChemin(perdu.plateau, perdu.equipe[k].ecole).chemin);
-  attaquer(perdu, { mode: 'normale', cible: 0 });
-  assert.equal(perdu.phase, PHASE.DEFAITE);
-});
-
-test('la potion soigne, et ne se dépense pas deux fois', () => {
-  const etat = combatTest({ combat: { objets: 1 } });
-  etat.vie.actuel = 10;
-  assert.equal(utiliserObjet(etat).ok, true);
-  assert.ok(etat.vie.actuel > 10);
-  assert.equal(etat.objets, 0);
-  assert.equal(utiliserObjet(etat).ok, false);
-});
-
-test('la vue dit tout ce qu’il faut et rien de plus', () => {
-  const etat = combatTest();
-  const v = vue(etat);
-  assert.equal(JSON.stringify(v).includes('function'), false);
-  assert.ok(!('rng' in v) && !('seed' in v));
-  assert.equal(v.equipe.length, 6);
-  assert.equal(v.ennemis[0].pvMax, etat.ennemis[0].pvMax);
-  assert.ok(v.rotation.includes(v.vise), 'la cible annoncée est en scène');
-  v.rotation.push(99);
-  assert.equal(etat.rotation.length, 3, 'la vue est une copie');
-});
-
-/* ================================================================== */
-/* Donjon                                                         */
-/* ================================================================== */
-
-/** Règle toutes les décisions en attente, comme le ferait un joueur appliqué. */
-function deciderTout(exp) {
-  for (let g = 0; exp.file.length && g < 12; g++) {
-    const e = exp.file[0];
-    if (e === 'don') choisirDon(exp, exp.choixDon[0].id);
-    else if (e === 'butin') choisirButin(exp, exp.choixButin[0].id);
-    else if (e === 'evenement') choisirEvenement(exp, conseilEvenement(exp));
-  }
-}
-
-test('un donjon enchaîne ses rencontres et finit sur le Dragon Cendré', () => {
-  const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 12 });
-  let n = 0, derniere = null;
-  for (;;) {
-    derniere = composerRencontre(exp);
-    n++;
-    const r = resoudre(exp, { victoire: true, vie: exp.vie, objets: exp.objets });
-    if (r.suite === 'victoire') break;
-    deciderTout(exp);
-    assert.ok(n < 50, 'le donjon doit se terminer');
-  }
-  // Un raccourci peut épargner une meute par aile, jamais un boss.
-  assert.ok(n <= AILES.length * RENCONTRES_PAR_AILE && n >= AILES.length * 2, `${n} rencontres`);
-  assert.equal(derniere.ennemis[0].nom, MODELES_PAR_ID[BOSS_FINAL].nom);
-  assert.ok(derniere.finale);
-  assert.ok(exp.victoire && exp.termine);
-});
-
-test('un wipe arrête le donjon sur place', () => {
-  const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 3 });
-  composerRencontre(exp);
-  const r = resoudre(exp, { victoire: false, vie: 0, objets: 0 });
-  assert.equal(r.suite, 'wipe');
-  assert.equal(exp.termine, true);
-  assert.equal(exp.victoire, false);
-});
-
-test('le butin s’applique sans soigner par accident', () => {
-  const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 4 });
-  exp.vie = Math.round(exp.vieMax * 0.5);
-  exp.choixButin = [BUTIN.find((x) => x.id === 'heaume')];
-  assert.equal(choisirButin(exp, 'heaume').ok, true);
-  assert.equal(exp.butin.atk, 0.12);
-  assert.equal(choisirButin(exp, 'heaume').ok, false, 'une pièce déjà attribuée ne revient pas');
-
-  // « +12 % de vie » conserve la part manquante, et rend ce qu'il promet.
-  const b = creerDonjon({ groupe: groupeParDefaut(), seed: 4 });
-  b.vie = Math.round(b.vieMax * 0.5);
-  b.choixButin = [BUTIN.find((x) => x.id === 'talisman')];
-  const maxAvant = b.vieMax;
-  choisirButin(b, 'talisman');
-  assert.ok(b.vieMax > maxAvant);
-  assert.ok(b.vie / b.vieMax > 0.5, 'le rendu doit se voir');
-  assert.ok(b.vie <= b.vieMax);
-});
-
-test('les trois difficultés sont bien ordonnées', () => {
-  const parts = Object.values(DIFFICULTES).map((d) => d.part);
-  assert.deepEqual(parts, [...parts].sort((a, b) => a - b), 'normal, héroïque, mythique');
-  assert.ok(DIFFICULTES.normal.objets > DIFFICULTES.mythique.objets);
-
-  const dur = creerDonjon({ groupe: groupeParDefaut(), difficulte: 'mythique', seed: 7 });
-  const doux = creerDonjon({ groupe: groupeParDefaut(), difficulte: 'normal', seed: 7 });
-  assert.ok(composerRencontre(dur).ennemis[0].pvMax > composerRencontre(doux).ennemis[0].pvMax);
-});
-
-/* ------------------------------------------------------------------ */
-/* L'aventure                                                          */
-/* ------------------------------------------------------------------ */
-
-test('les niveaux montent avec l’expérience, et la puissance avec eux', () => {
+test('les niveaux suivent l’expérience', () => {
   assert.equal(niveauDe(0), 1);
-  for (let n = 2; n <= NIVEAU_MAX; n++) {
-    assert.equal(niveauDe(SEUILS_XP[n]), n);
-    assert.equal(niveauDe(SEUILS_XP[n] - 1), n - 1);
-    assert.ok(puissance(n) > puissance(n - 1));
+  assert.equal(niveauDe(SEUILS_XP[2]), 2);
+  assert.equal(niveauDe(SEUILS_XP[2] - 1), 1);
+  assert.equal(niveauDe(1e9), NIVEAU_MAX);
+  assert.equal(progressionNiveau(1e9), 1);
+  for (let n = 2; n <= NIVEAU_MAX; n++) assert.ok(SEUILS_XP[n] > SEUILS_XP[n - 1]);
+});
+
+test('un personnage commence modeste et grandit vraiment', () => {
+  for (const id of DEPARTS) {
+    const bas = statsBase(creerPersonnage(id, 1));
+    const haut = statsBase(creerPersonnage(id, NIVEAU_MAX));
+    assert.ok(haut.pvMax > bas.pvMax * 2.2, `${id} : vie`);
+    assert.ok(haut.atk > bas.atk * 2.5, `${id} : attaque`);
   }
-  assert.ok(puissance(1) < 0.8, 'le raid part nettement sous ses fiches');
-  assert.ok(puissance(NIVEAU_MAX) > 1, 'et les dépasse au bout');
-  assert.equal(puissance(null), 1, 'sans niveau, les fiches telles quelles');
+  const tank = statsBase(creerPersonnage('brandel'));
+  const dps = statsBase(creerPersonnage('kaelis'));
+  assert.ok(tank.pvMax > dps.pvMax && tank.def > dps.def && dps.atk > tank.atk && dps.vit > tank.vit);
 });
 
-test('monter de niveau garde la part de vie, et ouvre un don aux paliers', () => {
-  const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 21 });
-  exp.vie = Math.round(exp.vieMax / 2);
-  const max1 = exp.vieMax;
-  const r = gagnerXp(exp, SEUILS_XP[3]);
-  assert.equal(r.niveauApres, 3);
-  assert.ok(exp.vieMax > max1, 'la vie maximale suit le niveau');
-  assert.ok(Math.abs(exp.vie / exp.vieMax - 0.5) < 0.01, 'sans soigner par accident');
-  assert.equal(prochaineEtape(exp), 'don');
-  assert.equal(exp.choixDon.length, 3);
-
-  const don = exp.choixDon[0];
-  assert.equal(choisirDon(exp, don.id).ok, true);
-  assert.ok(exp.dons.includes(don.id));
-  assert.equal(prochaineEtape(exp), 'combat');
-  assert.equal(choisirDon(exp, don.id).ok, false, 'un don ne se prend qu’une fois');
+test('monter de niveau rend la vie gagnée, pas plus', () => {
+  const p = creerPersonnage('kaelis', 1);
+  p.pv = 10;
+  const r = gagnerXp(p, SEUILS_XP[3]);
+  assert.equal(r.apres, 3);
+  assert.ok(r.apprend, 'l’ultime s’apprend au niveau 3');
+  assert.ok(p.pv > 10 && p.pv < statsDe(p).pvMax);
+  const tombe = creerPersonnage('mei', 1);
+  tombe.pv = 0;
+  gagnerXp(tombe, 500);
+  assert.equal(tombe.pv, 0, 'un tombé ne se relève pas en montant de niveau');
 });
 
-test('deux paliers franchis d’un coup ouvrent deux dons, l’un après l’autre', () => {
-  const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 22 });
-  gagnerXp(exp, SEUILS_XP[5]);
-  choisirDon(exp, exp.choixDon[0].id);
-  assert.equal(prochaineEtape(exp), 'don', 'le second don attend son tour');
-  choisirDon(exp, exp.choixDon[0].id);
-  assert.equal(exp.dons.length, 2);
-  assert.equal(prochaineEtape(exp), 'combat');
+test('l’équipement et les bénédictions s’ajoutent aux statistiques', () => {
+  const p = creerPersonnage('mordrec', 2);
+  const nu = statsDe(p);
+  p.equip.arme = forger(PIECES.find((m) => m.base === 'Épée'), 1, 'rare', rngT());
+  const arme = statsDe(p);
+  assert.equal(arme.atk, nu.atk + p.equip.arme.atk);
+  assert.ok(statsDe(p, { atk: 0.2 }).atk > arme.atk);
+  assert.ok(statsDe(p, { pm: 5 }).pmMax === arme.pmMax + 5);
+});
+
+test('les sorts se paient et les soutiens visent le groupe', () => {
+  for (const x of HEROS) {
+    const s = sortsDe(x);
+    assert.ok(s.ultime.cout > s.special.cout, x.id);
+    assert.ok(s.ultime.mult > s.special.mult, x.id);
+  }
+  assert.ok(sortsDe(PAR_ID.mei).special.soutien);
+  assert.ok(!sortsDe(PAR_ID.mordrec).special.soutien);
+});
+
+/* ================================================================== */
+/* Équipement                                                         */
+/* ================================================================== */
+
+test('les pièces suivent l’acte et la rareté', () => {
+  const m = PIECES.find((x) => x.base === 'Épée');
+  const a1 = forger(m, 1, 'commun', rngT());
+  const a5 = forger(m, 5, 'commun', rngT());
+  const ep = forger(m, 1, 'epique', rngT());
+  assert.ok(a5.atk > a1.atk && ep.atk > a1.atk);
+  assert.ok(a5.prix > a1.prix && ep.prix > a1.prix);
+  const dague = forger(PIECES.find((x) => x.base === 'Dague'), 5, 'epique', rngT());
+  assert.equal(dague.vit, 1, 'la vitesse ne grandit pas');
+  assert.ok(texteBonus(dague).includes('VIT'));
+  assert.equal(tirerRarete(() => 0.99, 0, 'rare'), 'rare', 'le plancher tient');
+  assert.equal(pieceAuHasard(rngT(), 2, { emplacement: 'bijou' }).emplacement, 'bijou');
+});
+
+test('la chance fait pencher la rareté', () => {
+  const compte = (chance) => {
+    const r = rngT(5);
+    let n = 0;
+    for (let i = 0; i < 2000; i++) if (tirerRarete(r, chance) !== 'commun') n++;
+    return n;
+  };
+  assert.ok(compte(30) > compte(0) * 1.4);
+});
+
+/* ================================================================== */
+/* Carte                                                              */
+/* ================================================================== */
+
+test('chaque carte mène du pied au boss par des chemins continus', () => {
+  for (let s = 0; s < 30; s++) {
+    for (let acte = 1; acte <= ACTES.length; acte++) {
+      const c = genererCarte(rngT(s), acte);
+      assert.ok(accessibles(c, null).length >= 1);
+      assert.ok(c.noeuds.filter((n) => n.rangee === 0).every((n) => n.type === 'combat'));
+      assert.ok(c.noeuds.filter((n) => n.rangee === RANGEES - 1).every((n) => n.type === 'repos'));
+      for (const n of c.noeuds) {
+        if (n.type === 'boss') continue;
+        assert.ok(n.suivants.length >= 1, 'pas de cul-de-sac');
+        for (const id of n.suivants) {
+          const v = c.noeuds.find((x) => x.id === id);
+          assert.equal(v.rangee, n.rangee + 1);
+          if (v.type !== 'boss') assert.ok(Math.abs(v.col - n.col) <= 1);
+        }
+      }
+      if (acte === 1) assert.ok(c.noeuds.some((n) => n.type === 'compagnon' && n.rangee <= 2));
+    }
+  }
+});
+
+test('les ennemis se règlent sur l’acte et sur la taille du groupe', () => {
+  const bas = gnoll(1);
+  const haut = gnoll(5);
+  assert.ok(haut.pvMax > bas.pvMax * 3 && haut.atk > bas.atk * 2);
+  const seul = gnoll(2, { echelle: ECHELLE[1] });
+  const quatre = gnoll(2, { echelle: ECHELLE[4] });
+  assert.ok(seul.pvMax < quatre.pvMax && seul.atk < quatre.atk);
+  for (let s = 0; s < 20; s++) {
+    assert.equal(composer(rngT(s), 1, 'combat', { taille: 1 }).length, 1, 'seul, un monstre à la fois');
+    assert.equal(composer(rngT(s), 1, 'boss', { taille: 1 }).length, 1);
+    const b = composer(rngT(s), 3, 'boss');
+    assert.notEqual(b[0].modeleId, BOSS_FINAL, 'le Dragon attend l’acte 5');
+    assert.equal(composer(rngT(s), 5, 'boss')[0].modeleId, BOSS_FINAL);
+  }
+});
+
+/* ================================================================== */
+/* Bataille                                                           */
+/* ================================================================== */
+
+test('le plus rapide joue d’abord, et les ennemis jouent seuls', () => {
+  const { b } = batailleTest({ ids: ['brandel', 'kaelis'] });
+  demarrer(b);
+  const h = actif(b);
+  assert.ok(h, 'un héros a la main');
+  assert.equal(b.manche, 1);
+  assert.equal(h.id, 'kaelis', 'la vitesse décide');
+});
+
+test('l’ultime reste verrouillé avant le niveau 3', () => {
+  const { b } = batailleTest({ ids: ['kaelis'], niveau: 1 });
+  demarrer(b);
+  const u = actionsDe(b).find((a) => a.type === 'ultime');
+  assert.equal(u.possible, false);
+  assert.ok(u.verrou);
+  assert.equal(agir(b, { type: 'ultime', cible: 0 }).ok, false);
+});
+
+test('attaquer remplit le mana, le sort le dépense', () => {
+  const { b } = batailleTest({ ids: ['kaelis'], ennemis: [gnoll(1, { echelle: { pv: 20, atk: 0.01 } })] });
+  demarrer(b);
+  const h = actif(b);
+  h.pm = 10;
+  agir(b, { type: 'attaque', cible: 0 });
+  assert.equal(h.pm, 12);
+  while (actif(b) !== h) agir(b, { type: 'defendre' });
+  agir(b, { type: 'special', cible: 0 });
+  assert.equal(h.pm, 4);
+});
+
+test('l’école, l’armure et la défense pèsent sur les dégâts', () => {
+  const { b } = batailleTest({ ids: ['pix'] });
+  const h = b.heros[0];
+  const e = b.ennemis[0];
+  e.ecole = domine(h.ecole);
+  const fort = estimer(b, h, e, 1).degats;
+  e.ecole = craint(h.ecole);
+  const faible = estimer(b, h, e, 1).degats;
+  assert.ok(fort > faible * 1.8);
+  e.ecole = h.ecole;
+  const nu = estimer(b, e, h, 1).degats;
+  h.defense = true;
+  assert.ok(estimer(b, e, h, 1).degats < nu * 0.6, 'se défendre divise les coups');
+});
+
+test('un soin ne dépasse pas la vie maximale, un bouclier protège tout le groupe', () => {
+  const { b } = batailleTest({ ids: ['mei', 'brandel'], niveau: 3 });
+  demarrer(b);
+  while (actif(b).id !== 'mei') agir(b, { type: 'defendre' });
+  const mei = actif(b);
+  for (const h of b.heros) h.pv = Math.round(h.pvMax * 0.5);
+  mei.pm = 30;
+  agir(b, { type: 'special' });
+  for (const h of b.heros) assert.ok(h.pv > h.pvMax * 0.5 && h.pv <= h.pvMax);
+  const { b: b2 } = batailleTest({ ids: ['brandel'] });
+  demarrer(b2);
+  actif(b2).pm = 30;
+  const e = b2.ennemis[0];
+  const avant = estimer(b2, e, b2.heros[0], 1).degats;
+  agir(b2, { type: 'special' });
+  assert.ok(b2.bouclier || b2.fini);
+  if (b2.bouclier) assert.ok(estimer(b2, e, b2.heros[0], 1).degats < avant);
+});
+
+test('les objets se consomment, et la plume ne relève que les tombés', () => {
+  const inventaire = { potion: 1, elixir: 0, phenix: 1 };
+  const { b } = batailleTest({ ids: ['brandel', 'kaelis'], inventaire });
+  demarrer(b);
+  const autre = b.heros.find((x) => x !== actif(b));
+  assert.equal(agir(b, { type: 'phenix', cible: autre.idx }).ok, false, 'personne n’est tombé');
+  autre.pv = 0;
+  const h = actif(b);
+  assert.ok(agir(b, { type: 'phenix', cible: autre.idx }).ok);
+  assert.ok(autre.pv > 0);
+  assert.equal(inventaire.phenix, 0, 'l’inventaire est partagé avec l’aventure');
+  assert.ok(h);
+});
+
+test('une bataille se termine et rend vie et mana aux personnages', () => {
+  const { b, groupe } = batailleTest({ ids: ['kaelis', 'brandel'], niveau: 4 });
+  jouerCombat(b);
+  assert.ok(b.fini);
+  assert.ok(b.victoire);
+  for (let i = 0; i < groupe.length; i++) assert.equal(groupe[i].pv, Math.round(b.heros[i].pv));
+  assert.equal(actif(b), null);
+});
+
+test('la charge annoncée frappe tout le groupe quand elle vient d’une élite', () => {
+  const e = ennemiRpg(MODELES_PAR_ID.hurlefer, 2, 'feu', rngT(1));
+  e.charge.reste = 1;
+  const { b } = batailleTest({ ids: ['brandel', 'kaelis', 'mei'], ennemis: [e] });
+  for (const h of b.heros) h.vit = 0;
+  const ev = demarrer(b);
+  const touches = ev.filter((x) => x.t === 'degats' && x.camp === 'h').map((x) => x.idx);
+  assert.equal(new Set(touches).size, 3);
+});
+
+test('les coups critiques dépendent de la chance', () => {
+  const { b } = batailleTest();
+  const h = b.heros[0];
+  const sans = critiqueDe(b, h);
+  b.chance = 30;
+  assert.ok(critiqueDe(b, h) > sans);
+  b.chance = 1000;
+  assert.ok(critiqueDe(b, h) <= 0.5);
+});
+
+test('le joueur automatique propose toujours une action valide', () => {
+  for (let s = 0; s < 15; s++) {
+    const { b } = batailleTest({ ids: ['mei', 'brandel', 'pix'], seed: s, ennemis: [gnoll(2), gnoll(2)] });
+    demarrer(b);
+    for (let i = 0; i < 300 && !b.fini; i++) assert.ok(agir(b, choisirAction(b)).ok);
+    assert.ok(b.fini);
+  }
+});
+
+/* ================================================================== */
+/* Aventure                                                           */
+/* ================================================================== */
+
+test('l’aventure commence seul, au pied du premier acte', () => {
+  const av = A.creerAventure({ heros: 'pix', seed: 1 });
+  assert.equal(av.groupe.length, 1);
+  assert.equal(av.groupe[0].niveau, 1);
+  assert.equal(av.acte, 1);
+  assert.ok(A.sallesAccessibles(av).length >= 1);
+  assert.ok(av.reprise, 'le départ est un point de sauvegarde');
+  assert.throws(() => A.creerAventure({ heros: 'personne' }));
+});
+
+test('l’aventure se sauvegarde telle quelle et rejoue le même hasard', () => {
+  const av = A.creerAventure({ heros: 'kaelis', seed: 9 });
+  const copie = JSON.parse(JSON.stringify(av));
+  jusqua(av, 'recompense');
+  jusqua(copie, 'recompense');
+  assert.deepEqual(copie.etape, av.etape);
+});
+
+test('on ne va que dans une salle reliée', () => {
+  const av = A.creerAventure({ seed: 3 });
+  assert.equal(A.entrer(av, 'boss').ok, false);
+  const n = A.sallesAccessibles(av)[0];
+  assert.ok(A.entrer(av, n.id).ok);
+  assert.equal(av.etape.type, 'combat');
+  assert.equal(A.entrer(av, n.id).ok, false, 'une étape à la fois');
+});
+
+test('une victoire rapporte expérience, or, et parfois une pièce', () => {
+  const av = A.creerAventure({ heros: 'mordrec', seed: 4 });
+  A.entrer(av, A.sallesAccessibles(av)[0].id);
+  const or = av.or;
+  const b = jouerCombat(A.bataillePour(av));
+  assert.ok(b.victoire);
+  A.conclureCombat(av, true);
+  assert.equal(av.etape.type, 'recompense');
+  assert.ok(av.or > or);
+  assert.ok(av.groupe[0].xp > 0);
+  const piece = av.etape.pieces[0];
+  A.prendreRecompense(av, piece ? piece.uid : null);
+  assert.equal(av.sac.length, piece ? 1 : 0);
+  assert.equal(av.etape, null);
+});
+
+test('une défaite ramène au dernier point de sauvegarde, avec la moitié de l’expérience', () => {
+  const av = A.creerAventure({ heros: 'brandel', seed: 5 });
+  assert.ok(jusqua(av, 'repos'));
+  const xp = av.groupe[0].xp;
+  const or = av.or;
+  A.faireRepos(av, 'repos');
+  A.terminerEtape(av);
+  A.appliquer(av, { xp: 40, or: 100 });
+  av.etape = { type: 'combat', salle: 'boss', ennemis: [] };
+  A.conclureCombat(av, false);
+  assert.equal(av.etape.type, 'defaite');
+  A.reprendre(av);
+  assert.equal(av.etape.type, 'repos', 'retour au feu de camp');
+  assert.equal(av.or, or, 'l’or gagné depuis est perdu');
+  assert.equal(av.groupe[0].xp, xp + 20, 'la moitié de l’expérience reste');
+  assert.equal(av.stats.morts, 1);
+  assert.equal(A.blessuresBoss(av), 0.1, 'le boss garde la trace du combat');
+});
+
+test('les paliers de niveau ouvrent des dons, choisis un par un', () => {
+  const av = A.creerAventure({ heros: 'kaelis', seed: 6 });
+  A.appliquer(av, { xp: SEUILS_XP[5] });
+  assert.equal(av.donsEnAttente, 2);
+  A.entrer(av, A.sallesAccessibles(av)[0].id);
+  A.conclureCombat(av, true);
+  A.prendreRecompense(av);
+  assert.equal(av.etape.type, 'don');
+  const d = av.etape.choix[0];
+  const chance = av.chance;
+  A.choisirDon(av, d.id);
+  assert.ok(av.dons.includes(d.id));
+  assert.equal(av.etape.type, 'don', 'le second don suit');
+  assert.ok(!av.etape.choix.some((x) => x.id === d.id), 'pas deux fois le même');
+  A.choisirDon(av, av.etape.choix[0].id);
+  assert.equal(av.etape, null);
+  assert.ok(av.chance >= chance);
 });
 
 test('chaque événement propose de vrais choix, écrits depuis leurs effets', () => {
-  for (const ev of EVENEMENTS) {
-    assert.ok(ev.titre && ev.texte && ev.glyphe, `${ev.id} : fiche incomplète`);
-    assert.ok(ev.choix.length >= 2, `${ev.id} : un seul choix n’en est pas un`);
-    for (const c of ev.choix) {
-      assert.ok(c.effet || c.risque, `${ev.id}/${c.id} : ni effet ni risque`);
-      if (c.risque) {
-        assert.ok(c.risque.base > 0 && c.risque.base < 1);
-        assert.ok(c.risque.ditSucces && c.risque.ditEchec);
-      }
+  const av = A.creerAventure({ seed: 2 });
+  for (const ev of A.EVENEMENTS) {
+    assert.ok(ev.choix.length >= 2, ev.id);
+    av.etape = { type: 'evenement', id: ev.id };
+    const vue = A.evenementCourant(av);
+    for (const c of vue.choix) {
+      assert.ok(c.annonce, `${ev.id}/${c.id}`);
+      if (c.risque) assert.ok(c.chance > 0 && c.chance < 1);
     }
   }
-  assert.equal(texteEffet({ vie: 0.2, chance: 3 }), '+20 % de vie · +3 chance');
 });
 
 test('un choix qu’on ne peut pas payer est refusé', () => {
-  const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 23 });
-  exp.objets = 0;
-  exp.evenement = 'marchand'; exp.file.push('evenement');
-  const ev = evenementCourant(exp);
-  assert.equal(ev.choix.find((c) => c.id === 'potion').possible, false);
-  assert.equal(choisirEvenement(exp, 'potion').ok, false);
-  assert.equal(choisirEvenement(exp, 'refuser').ok, true);
-  assert.equal(prochaineEtape(exp), 'combat');
+  const av = A.creerAventure({ seed: 2 });
+  av.or = 0;
+  av.etape = { type: 'evenement', id: 'mentor' };
+  assert.equal(A.choisirEvenement(av, 'lecon').ok, false);
+  av.or = 100;
+  assert.ok(A.choisirEvenement(av, 'lecon').ok);
+  assert.equal(av.or, 60);
+  assert.equal(av.etape.type, 'resultat');
 });
 
-test('la chance fait réussir les choix risqués', () => {
-  const taux = (chance) => {
-    let ok = 0;
-    for (let s = 0; s < 200; s++) {
-      const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 1000 + s });
-      exp.chance = chance;
-      exp.evenement = 'fontaine'; exp.file.push('evenement');
-      if (choisirEvenement(exp, 'boire').reussi) ok++;
+test('les choix pèsent sur les boss', () => {
+  const av = A.creerAventure({ seed: 2 });
+  av.etape = { type: 'evenement', id: 'prisonnier' };
+  A.choisirEvenement(av, 'liberer');
+  assert.equal(A.menacesDuBoss(av).retire, 1);
+  A.appliquer(av, { boss: { cible: 'final', atk: 0.2 } });
+  assert.equal(A.menacesDuBoss(av).atk, 0, 'le Dragon est loin');
+  av.acte = 5;
+  assert.equal(A.menacesDuBoss(av).atk, 0.2);
+});
+
+test('les pertes de vie des événements ne tuent jamais', () => {
+  const av = A.creerAventure({ seed: 2 });
+  av.groupe[0].pv = 3;
+  A.appliquer(av, { vie: -0.5 });
+  assert.equal(av.groupe[0].pv, 1);
+});
+
+test('le marchand vend et rachète', () => {
+  const av = A.creerAventure({ seed: 8 });
+  av.or = 500;
+  av.etape = { type: 'marchand', stock: [pieceAuHasard(rngT(), 1)] };
+  const it = av.etape.stock[0];
+  assert.ok(A.acheter(av, it.uid).ok);
+  assert.equal(av.or, 500 - it.prix);
+  assert.ok(A.acheter(av, 'potion').ok);
+  assert.equal(av.inventaire.potion, 3);
+  assert.ok(A.vendre(av, it.uid).ok);
+  assert.equal(av.or, 500 - it.prix - A.PRIX_OBJETS(1).potion + A.prixRevente(it));
+  av.or = 0;
+  assert.equal(A.acheter(av, 'phenix').ok, false);
+});
+
+test('équiper échange la pièce avec celle qu’on portait', () => {
+  const av = A.creerAventure({ heros: 'brandel', seed: 8 });
+  const a = pieceAuHasard(rngT(1), 1, { emplacement: 'arme' });
+  const b = pieceAuHasard(rngT(2), 1, { emplacement: 'arme' });
+  av.sac.push(a, b);
+  A.equiper(av, 0, a.uid);
+  A.equiper(av, 0, b.uid);
+  assert.equal(av.groupe[0].equip.arme, b);
+  assert.deepEqual(av.sac, [a]);
+  A.desequiper(av, 0, 'arme');
+  assert.equal(av.sac.length, 2);
+});
+
+test('un compagnon rejoint le groupe, sans dépasser quatre', () => {
+  const av = A.creerAventure({ heros: 'mordrec', seed: 10 });
+  assert.ok(jusqua(av, 'compagnon'));
+  const id = av.etape.offres[0];
+  assert.notEqual(PAR_ID[id].role, 'dps', 'on propose d’abord ce qui manque');
+  A.recruter(av, id);
+  assert.equal(av.groupe.length, 2);
+  for (const x of ['brandel', 'mei', 'pix']) av.groupe.push(creerPersonnage(x));
+  av.etape = { type: 'compagnon', offres: ['kaelis'] };
+  assert.equal(A.recruter(av, 'kaelis').ok, false);
+});
+
+test('après le boss, un compagnon se propose, puis l’acte suivant commence', () => {
+  const av = A.creerAventure({ heros: 'pix', seed: 12 });
+  for (let i = 0; i < 400 && av.acte === 1; i++) {
+    if (av.etape && av.etape.type === 'compagnon') { A.terminerEtape(av); continue; }
+    jusqua(av, 'boss', 1);
+    if (av.etape && av.etape.type === 'combat' && av.etape.salle === 'boss') {
+      A.conclureCombat(av, true);
+      A.prendreRecompense(av);
+      while (av.etape && av.etape.type === 'don') A.choisirDon(av, av.etape.choix[0].id);
+      assert.equal(av.etape.type, 'compagnon');
+      assert.ok(av.etape.apresBoss);
+      A.recruter(av, av.etape.offres[0]);
+      A.terminerEtape(av);
     }
-    return ok / 200;
-  };
-  const sans = taux(0), avec = taux(40);
-  assert.ok(Math.abs(sans - reussiteDe(0.5, 0)) < 0.1, `${sans} sans chance`);
-  assert.ok(avec > sans + 0.25, `${avec} avec 40 de chance contre ${sans}`);
-});
-
-test('les choix pèsent sur les boss : un atout en moins, un Dragon plus fort', () => {
-  // Le prisonnier libéré : le boss de l'aile perd un trait.
-  const a = creerDonjon({ groupe: groupeParDefaut(), seed: 31 });
-  a.aile = 2; a.rencontre = 2;
-  const avant = composerRencontre(a).ennemis[0].traits.length;
-  const b = creerDonjon({ groupe: groupeParDefaut(), seed: 31 });
-  b.aile = 2; b.rencontre = 2;
-  b.evenement = 'prisonnier'; b.file.push('evenement');
-  choisirEvenement(b, 'liberer');
-  assert.equal(composerRencontre(b).ennemis[0].traits.length, avant - 1);
-
-  // L'autel profané : le Dragon gagne de la vie, pas le boss de l'aile.
-  const c = creerDonjon({ groupe: groupeParDefaut(), seed: 32 });
-  c.evenement = 'autel'; c.file.push('evenement');
-  choisirEvenement(c, 'profaner');
-  assert.equal(menacesDuBoss(c, false).pv, 0);
-  assert.ok(Math.abs(menacesDuBoss(c, true).pv - 0.1) < 1e-9);
-  assert.ok(c.butin.degats > 0, 'et le raid gagne ce qu’on lui a promis');
-});
-
-test('les menaces d’une aile disparaissent avec son boss, celles du Dragon restent', () => {
-  const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 33 });
-  exp.menaces.push({ cible: 'aile', aile: 0, pv: 0.1, atk: 0, retire: 0, source: 'test' });
-  exp.menaces.push({ cible: 'final', aile: 0, pv: 0.1, atk: 0, retire: 0, source: 'test' });
-  exp.rencontre = RENCONTRES_PAR_AILE - 1;
-  composerRencontre(exp);
-  resoudre(exp, { victoire: true, vie: exp.vie, objets: exp.objets });
-  assert.deepEqual(exp.menaces.map((m) => m.cible), ['final']);
-});
-
-test('le raccourci épargne une meute, mais le boss attendait', () => {
-  const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 34 });
-  exp.rencontre = 1;
-  exp.evenement = 'raccourci'; exp.file.push('evenement');
-  choisirEvenement(exp, 'raccourci');
-  assert.equal(exp.rencontre, RENCONTRES_PAR_AILE - 1, 'la prochaine rencontre est le boss');
-  assert.ok(menacesDuBoss(exp).atk > 0);
-});
-
-test('les coups critiques ne tombent qu’avec de la chance', () => {
-  const critiques = (chance) => {
-    let n = 0;
-    for (let s = 0; s < 6; s++) {
-      const etat = combatTest({ seed: 500 + s, combat: { butin: { chance } } });
-      for (let t = 0; t < 3 && !estFini(etat); t++) {
-        for (const e of jouerUnTour(etat)) if (e.type === 'frappe' && e.critique) n++;
-      }
-    }
-    return n;
-  };
-  assert.equal(critiques(0), 0);
-  assert.ok(critiques(40) > 0);
-  assert.ok(critiqueDe(40) > critiqueDe(5));
-});
-
-test('le conseiller d’événement choisit toujours un choix possible', () => {
-  for (const ev of EVENEMENTS) {
-    const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 40 });
-    exp.objets = 0;
-    exp.evenement = ev.id; exp.file.push('evenement');
-    const id = conseilEvenement(exp);
-    assert.ok(evenementCourant(exp).choix.find((c) => c.id === id).possible, `${ev.id} : ${id}`);
   }
+  assert.equal(av.acte, 2);
+  assert.equal(av.position, null);
+  assert.ok(av.groupe.length >= 2);
 });
 
-test('l’avancement progresse de zéro à un', () => {
-  const exp = creerDonjon({ groupe: groupeParDefaut(), seed: 2 });
-  assert.equal(avancement(exp), 0);
-  exp.aile = AILES.length - 1; exp.rencontre = RENCONTRES_PAR_AILE - 1;
-  assert.ok(avancement(exp) > 0.9 && avancement(exp) <= 1);
+test('les objets s’utilisent aussi sur la carte', () => {
+  const av = A.creerAventure({ heros: 'brandel', seed: 1 });
+  const p = av.groupe[0];
+  assert.equal(A.utiliser(av, 'potion', 0).ok, false, 'déjà en pleine forme');
+  p.pv = 5;
+  assert.ok(A.utiliser(av, 'potion', 0).ok);
+  assert.ok(p.pv > 5);
+  p.pv = 0;
+  assert.equal(A.utiliser(av, 'potion', 0).ok, false);
+  av.inventaire.phenix = 1;
+  assert.ok(A.utiliser(av, 'phenix', 0).ok);
+  assert.ok(p.pv > 0);
 });
 
 /* ================================================================== */
 /* Pixel art                                                          */
 /* ================================================================== */
 
-test('chaque héros et chaque silhouette se dessinent', () => {
-  for (const x of HEROS) {
-    for (const [nom, svg] of Object.entries(poses(x))) {
-      assert.ok(svg.startsWith('<svg') && svg.includes('<rect'), `${x.id}/${nom}`);
-    }
-  }
-  const rng = rngT(11);
-  for (const m of MODELES) {
-    const e = instancier(m, 1, 'azur', rng);
-    assert.ok(spriteSvg(e, 'frappe').includes('<rect'), m.id);
-  }
-});
-
-test('deux héros de la même école ne sont pas jumeaux', () => {
-  const [a, b] = parEcole('feu');
-  assert.notEqual(spriteSvg(a), spriteSvg(b));
-  const pa = palettePour({ id: a.id, ecole: 'feu' });
-  const pb = palettePour({ id: b.id, ecole: 'feu' });
-  assert.notDeepEqual(pa, pb);
-  assert.notDeepEqual(
-    palettePour({ id: a.id, ecole: 'feu' }),
-    palettePour({ id: a.id, ecole: 'givre' }),
-    'l’école doit se voir',
-  );
-  assert.deepEqual(pa, palettePour({ id: a.id, ecole: 'feu' }), 'et rester stable');
-});
-
-test('un ennemi se distingue d’un héros de même école', () => {
-  const heros = palettePour({ id: 'braz', ecole: 'feu' });
-  const bete = palettePour({ id: 'braz', ecole: 'feu', ennemi: true });
-  assert.notEqual(heros[5], bete[5]);
-  assert.notEqual(heros[7], bete[7], 'l’œil de la bête doit luire');
-});
-
-test('les grilles font seize sur seize', () => {
-  const sujets = [...HEROS, ...MODELES.map((m) => instancier(m, 1, 'jade', rngT(1)))];
+test('chaque héros et chaque ennemi se dessinent sur seize sur seize', () => {
+  const sujets = [...HEROS, ...MODELES.map((m) => ennemiRpg(m, 1, 'feu', rngT(1)))];
   for (const s of sujets) {
     for (const pose of ['repos', 'frappe']) {
       const svg = spriteSvg(s, pose);
+      assert.ok(svg.startsWith('<svg') && svg.includes('<rect'));
       const ys = [...svg.matchAll(/y="(\d+)"/g)].map((m) => +m[1]);
-      const xs = [...svg.matchAll(/x="(\d+)" y/g)].map((m) => +m[1]);
-      assert.ok(Math.max(...ys) < GRID, `${s.id || s.nom}/${pose} : déborde en bas`);
-      assert.ok(Math.max(...xs) < GRID, `${s.id || s.nom}/${pose} : déborde à droite`);
+      assert.ok(Math.max(...ys) < GRID);
     }
   }
+  for (const x of HEROS) assert.ok(Object.keys(poses(x)).length >= 2);
+  const [a, b] = parEcole('feu');
+  assert.notDeepEqual(palettePour({ id: a.id, ecole: 'feu' }), palettePour({ id: b.id, ecole: 'feu' }));
 });
 
 /* ================================================================== */
@@ -802,81 +573,54 @@ test('les grilles font seize sur seize', () => {
 /* ================================================================== */
 
 /**
- * Ces trois tests-là ne vérifient pas une règle mais un réglage : une
- * donjon doit être gagnable sans être acquise. Ils font jouer le
- * conseiller — un joueur appliqué, pas un joueur parfait — d'un bout à
- * l'autre, et n'admettent que des bornes larges : un réglage qui glisse d'un
- * point ne doit pas faire rougir la suite, un réglage qui casse le jeu, si.
+ * Ces tests-là ne vérifient pas une règle mais un réglage : l'aventure doit
+ * être gagnable sans être acquise. Le joueur automatique — appliqué, pas
+ * génial — la joue d'un bout à l'autre ; les bornes sont larges exprès.
  */
-
-/** Un donjon complète, menée par le conseiller. */
-function donjonAuto(difficulte, seed) {
-  const exp = creerDonjon({ groupe: groupeParDefaut(), difficulte, seed });
-  let combats = 0, tours = 0;
-  const vieFinAile = [];
-  const niveaux = [];
-  for (;;) {
-    const aile = exp.aile;
-    const r = composerRencontre(exp);
-    const etat = creerCombat({
-      equipe: exp.equipe, ennemis: r.ennemis, butin: butinCombat(exp),
-      vie: exp.vie, objets: exp.objets, seed: (seed * 31 + combats * 7) | 0,
-    });
-    etat.vie.max = exp.vieMax;
-    etat.vie.actuel = Math.min(exp.vie, exp.vieMax);
-    jouerCombatAuto(etat);
-    combats++;
-    tours += etat.tour;
-    niveaux.push(exp.niveau);
-    const suite = resoudre(exp, {
-      victoire: etat.phase === PHASE.VICTOIRE, vie: etat.vie.actuel, objets: etat.objets,
-    });
-    if (exp.aile !== aile || suite.suite === 'victoire') vieFinAile.push(etat.vie.actuel / etat.vie.max);
-    const bilan = { combats, tours, aile: exp.aile, niveau: exp.niveau, niveaux, vieFinAile };
-    if (suite.suite === 'wipe') return { victoire: false, ...bilan };
-    if (suite.suite === 'victoire') return { victoire: true, ...bilan };
-    deciderTout(exp);
-  }
-}
-
-test('un donjon en Normal se termine', () => {
-  const runs = [11, 202, 3003].map((s) => donjonAuto('normal', s));
-  assert.ok(runs.every((r) => r.victoire), 'le premier palier ne doit pas être un mur');
-  assert.ok(runs.every((r) => r.combats >= AILES.length * 2 && r.combats <= AILES.length * RENCONTRES_PAR_AILE));
-});
-
-test('le raid grandit : faible au départ, fort à l’arrivée', () => {
-  const runs = [11, 202, 3003].map((s) => donjonAuto('heroique', s));
-  for (const r of runs) {
-    assert.equal(r.niveaux[0], 1, 'on part du niveau 1');
-    assert.ok(r.niveaux[r.niveaux.length - 1] >= 6, `niveau ${r.niveaux[r.niveaux.length - 1]} au dernier combat`);
+test('l’aventure se termine, pour chaque héros de départ', () => {
+  for (const heros of DEPARTS) {
+    const av = jouerAventure(A.creerAventure({ heros, seed: 101 }));
+    assert.ok(av.victoire, `${heros} : ${av.acte}e acte, ${av.stats.morts} défaites`);
+    assert.ok(av.groupe.length >= 3, `${heros} : le groupe s’est construit`);
+    assert.ok(av.groupe[0].niveau >= 9, `${heros} : le héros a grandi`);
   }
 });
 
-test('la première aile coûte vraiment de la vie', () => {
-  // Avant l'aventure, on sortait de la première aile avec 97 % de vie en
-  // Héroïque : rien n'y résistait. Elle doit désormais entamer la barre.
-  const runs = [11, 202, 3003, 44, 555].map((s) => donjonAuto('heroique', s));
-  const moyenne = runs.reduce((s, r) => s + r.vieFinAile[0], 0) / runs.length;
-  assert.ok(moyenne < 0.88, `${Math.round(moyenne * 100)} % de vie en sortant de la première aile`);
-  assert.ok(runs.every((r) => r.aile >= 1 || r.victoire), 'mais elle ne doit pas être un mur');
+test('le début de l’aventure coûte vraiment de la vie', () => {
+  for (const heros of DEPARTS) {
+    let vie = 0;
+    const n = 8;
+    for (let s = 0; s < n; s++) {
+      const av = A.creerAventure({ heros, seed: s });
+      A.entrer(av, A.sallesAccessibles(av)[0].id);
+      const b = jouerCombat(A.bataillePour(av));
+      vie += b.victoire ? b.heros[0].pv / b.heros[0].pvMax : 0;
+    }
+    assert.ok(vie / n < 0.85, `${heros} finit son premier combat à ${Math.round((100 * vie) / n)} %`);
+    assert.ok(vie / n > 0.3, `${heros} ne doit pas mourir au premier combat`);
+  }
+});
+
+test('seul, un tank ou un soigneur frappe plus fort', () => {
+  const av = A.creerAventure({ heros: 'mei', seed: 1 });
+  assert.ok(A.bonusCombat(av).degats > 0);
+  av.groupe.push(creerPersonnage('kaelis'));
+  assert.ok(!A.bonusCombat(av).degats);
+  assert.equal(A.bonusSolo(A.creerAventure({ heros: 'kaelis' })), 0);
 });
 
 test('aucun combat ne s’éternise', () => {
-  const runs = [11, 202, 3003].map((s) => donjonAuto('normal', s));
-  for (const r of runs) {
-    const parCombat = r.tours / r.combats;
-    assert.ok(parCombat >= 1.5, `${parCombat.toFixed(1)} tours par combat : trop expéditif`);
-    assert.ok(parCombat <= 9, `${parCombat.toFixed(1)} tours par combat : trop long`);
+  const av = A.creerAventure({ heros: 'mei', seed: 77 });
+  let pire = 0;
+  for (let i = 0; i < 3000 && !av.termine; i++) {
+    if (av.etape && av.etape.type === 'combat') {
+      const b = jouerCombat(A.bataillePour(av));
+      pire = Math.max(pire, b.manche);
+      A.conclureCombat(av, b.victoire);
+      continue;
+    }
+    if (av.etape && av.etape.type === 'defaite') { A.reprendre(av); continue; }
+    jouerAventure(av, { maxEtapes: 1 });
   }
-});
-
-test('le mode Mythique reste une épreuve', () => {
-  const doux = [5, 55].map((s) => donjonAuto('normal', s));
-  const dur = [5, 55].map((s) => donjonAuto('mythique', s));
-  const avance = (r) => r.aile + (r.victoire ? 1 : 0);
-  assert.ok(
-    dur.reduce((s, r) => s + avance(r), 0) < doux.reduce((s, r) => s + avance(r), 0),
-    'le palier le plus dur doit arrêter plus tôt',
-  );
+  assert.ok(pire < 30, `${pire} manches`);
 });

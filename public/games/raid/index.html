@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0c0a07">
-<meta name="description" content="RAID — donjon solo au tour par tour. Ramassez le mana sur le champ d'essence, enchaînez les sorts et menez un raid de six héros jusqu'au Dragon Cendré.">
+<meta name="description" content="RAID — jeu de rôle solo au tour par tour. Partez seul, trouvez des compagnons, choisissez votre chemin sur la carte et montez jusqu'au Dragon Cendré.">
 <title>RAID</title>
 <link rel="icon" href="/games/raid/icons/icon-192.png">
 <link rel="manifest" href="/games/raid/manifest.webmanifest">
@@ -29,23 +29,22 @@
 <section class="screen is-active" id="s-menu">
   <div class="menu">
     <header class="logo">
-      <div class="logo-kicker">donjon solo · cinq ailes · quinze pulls</div>
-      <h1 class="logo-title" id="logo-title">RAID</h1>
-      <div class="logo-rule"><i></i><span id="logo-glyphes">✧ ☾ ❦ ❄ ✹</span><i></i></div>
-      <p class="logo-tag">Six héros. Une seule barre de vie. Un dragon au sommet.</p>
+      <div class="logo-kicker">jeu de rôle solo · cinq actes</div>
+      <h1 class="logo-title">RAID</h1>
+      <div class="logo-rule"><i></i><span>✧ ☾ ❦ ❄ ✹</span><i></i></div>
+      <p class="logo-tag">On part seul. On revient à quatre — ou on ne revient pas.</p>
     </header>
 
     <nav class="menu-nav">
-      <button class="btn btn-big" data-go="nouvelle">
-        <span class="bi">⚔</span>
-        <span class="bt"><b>Monter un raid</b><i>Six personnages, cinq ailes</i></span>
-      </button>
-      <button class="btn btn-big" id="b-reprendre" hidden>
+      <button class="btn btn-big" id="b-continuer" hidden>
         <span class="bi">⏵</span>
-        <span class="bt"><b>Reprendre</b><i id="reprendre-note">—</i></span>
+        <span class="bt"><b>Continuer l’aventure</b><i id="continuer-note">—</i></span>
+      </button>
+      <button class="btn btn-big" data-go="choix">
+        <span class="bi">⚔</span>
+        <span class="bt"><b>Nouvelle aventure</b><i>Choisissez votre héros</i></span>
       </button>
       <div class="menu-row">
-        <button class="btn btn-thin" data-go="guilde"><span class="bi">📖</span> La guilde</button>
         <button class="btn btn-thin" data-go="regles"><span class="bi">❓</span> Règles</button>
         <button class="btn btn-thin" id="b-son"><span class="bi">🔊</span> Son</button>
       </div>
@@ -54,238 +53,96 @@
   </div>
 </section>
 
-<!-- ============================== RAID ============================== -->
-<section class="screen" id="s-equipe">
-  <div class="pick">
-    <header class="pick-head">
-      <button class="pick-back" data-go="menu" aria-label="Retour">‹</button>
+<!-- ============================== CHOIX ============================= -->
+<section class="screen" id="s-choix">
+  <div class="page">
+    <header class="page-head">
+      <button class="retour" data-go="menu" aria-label="Retour">‹</button>
       <div>
-        <h2 class="pick-title">Votre raid</h2>
-        <p class="pick-sub" id="equipe-sub">Choisissez six personnages. Le premier est chef de raid.</p>
+        <h2 class="page-titre">Votre héros</h2>
+        <p class="page-sous">Il part seul. Les compagnons viendront en chemin.</p>
       </div>
     </header>
-
-    <div class="squad" id="squad"></div>
-
-    <div class="meneur-note" id="meneur-note">—</div>
-
-    <div class="pick-tools">
-      <div class="chip-row" id="opt-diff" role="radiogroup" aria-label="Difficulté"></div>
-      <button class="btn btn-ghost btn-sm" id="b-hasard">🎲 Au hasard</button>
-    </div>
-
-    <div class="chip-row chip-filtres" id="opt-filtre" role="radiogroup" aria-label="Filtrer"></div>
-
-    <div class="roster" id="roster"></div>
-
-    <div class="pick-actions">
-      <button class="btn btn-go" id="b-partir" disabled>Entrer dans le donjon</button>
-    </div>
+    <div class="departs" id="departs"></div>
+    <div class="fiche-depart" id="fiche-depart"></div>
+    <button class="btn btn-go btn-wide" id="b-partir">Partir à l’aventure</button>
   </div>
 </section>
 
-<!-- ============================== AILE ============================== -->
+<!-- ============================== CARTE ============================= -->
 <section class="screen" id="s-carte">
-  <div class="carte">
-    <header class="carte-head">
-      <div class="carte-aile" id="carte-aile">—</div>
-      <h2 class="carte-titre" id="carte-titre">—</h2>
-      <p class="carte-texte" id="carte-texte">—</p>
+  <div class="page">
+    <header class="barre">
+      <button class="retour" data-go="menu" aria-label="Menu">‹</button>
+      <div class="barre-acte">
+        <b id="acte-nom">—</b>
+        <i id="acte-num">—</i>
+      </div>
+      <div class="barre-res" id="ressources"></div>
     </header>
-
-    <div class="carte-piste" id="carte-piste" aria-hidden="true"></div>
-
-    <div class="carte-vie">
-      <div class="jauge jauge-vie">
-        <i class="jauge-fond"></i>
-        <i class="jauge-remplie" id="carte-vie-barre"></i>
-        <b id="carte-vie-texte">—</b>
-      </div>
-      <div class="carte-objets" id="carte-objets">🧪 ×0</div>
+    <div class="groupe-mini" id="groupe-mini"></div>
+    <div class="carte-wrap">
+      <div class="carte" id="carte"></div>
     </div>
-
-    <div class="fiche-raid" id="fiche-raid"></div>
-
-    <div class="carte-ennemis" id="carte-ennemis"></div>
-    <div class="menaces" id="carte-menaces" hidden></div>
-
-    <div class="pick-actions two">
-      <button class="btn btn-ghost" id="b-abandonner">Quitter le donjon</button>
-      <button class="btn btn-go" id="b-engager">Pull</button>
-    </div>
+    <p class="carte-aide" id="carte-aide">Touchez une salle qui brille pour y entrer.</p>
+    <div class="legende" id="legende"></div>
+    <button class="btn btn-ghost btn-wide" data-go="groupe"><span class="bi">🎒</span> Groupe, équipement et sac</button>
   </div>
 </section>
 
-<!-- ============================= COMBAT ============================= -->
-<section class="screen screen-combat" id="s-combat">
-  <div class="arene" id="arene">
-
-    <div class="hud-haut">
-      <button class="hud-btn" id="b-quitter" aria-label="Quitter le combat">‹</button>
-      <div class="hud-info">
-        <b id="hud-lieu">—</b>
-        <i id="hud-tour">Tour 1</i>
-      </div>
-      <button class="hud-btn hud-potion" id="b-potion" aria-label="Boire une potion de soins">🧪<em id="potion-n">0</em></button>
+<!-- ============================== COMBAT ============================ -->
+<section class="screen" id="s-combat">
+  <div class="arene">
+    <div class="arene-haut">
+      <div class="manche" id="manche">Manche 1</div>
+      <div class="ordre" id="ordre" aria-label="Ordre des tours"></div>
+      <button class="auto" id="b-auto" aria-pressed="false">Auto</button>
     </div>
-
-    <div class="scene" id="scene">
-      <div class="ennemis" id="ennemis"></div>
-      <div class="heros-scene" id="heros-scene"></div>
-      <div class="effets" id="effets" aria-hidden="true"></div>
-    </div>
-
-    <div class="barre-equipe">
-      <div class="jauge jauge-vie grande">
-        <i class="jauge-fond"></i>
-        <i class="jauge-fantome" id="vie-fantome"></i>
-        <i class="jauge-remplie" id="vie-barre"></i>
-        <b id="vie-texte">—</b>
-      </div>
-      <div class="etats" id="etats"></div>
-    </div>
-
-    <div class="rotation" id="rotation"></div>
-
-    <div class="zone-basse">
-      <div class="consigne" id="consigne">—</div>
-
-      <div class="plateau-enveloppe">
-        <div class="plateau" id="plateau"></div>
-        <svg class="trace" id="trace" viewBox="0 0 600 500" preserveAspectRatio="none" aria-hidden="true"></svg>
-        <div class="mana-flottant" id="mana-flottant" hidden><b>0</b> mana</div>
-      </div>
-
-      <div class="valider" id="valider" hidden>
-        <button class="btn-plat" id="b-effacer">Effacer</button>
-        <button class="btn-plat est-vif" id="b-valider">Ramasser <b id="valider-n">0</b></button>
-      </div>
-
-      <div class="actions" id="actions" hidden></div>
-    </div>
-
-  </div>
-
-  <div class="cutin" id="cutin" hidden aria-hidden="true">
-    <div class="cutin-rayons"></div>
-    <div class="cutin-portrait" id="cutin-portrait"></div>
-    <div class="cutin-nom"><b id="cutin-nom">—</b><i id="cutin-sous">—</i></div>
-  </div>
-
-  <div class="banniere" id="banniere" hidden aria-hidden="true"><b>—</b></div>
-  <div class="flash" id="flash" aria-hidden="true"></div>
-</section>
-
-<!-- ============================== BUTIN ============================= -->
-<section class="screen" id="s-butin">
-  <div class="eveil">
-    <header class="eveil-head">
-      <div class="eveil-kicker">boss tombé · aile nettoyée</div>
-      <h2 class="eveil-titre">Le butin</h2>
-      <p class="pick-sub">Une seule pièce. Elle vous suit jusqu'au bout du donjon.</p>
-    </header>
-    <div class="eveil-cartes" id="butin-cartes"></div>
+    <div class="ennemis" id="ennemis"></div>
+    <div class="journal" id="journal" aria-live="polite"></div>
+    <div class="heros" id="heros"></div>
+    <div class="commandes" id="commandes"></div>
   </div>
 </section>
 
-<!-- =============================== FIN ============================== -->
-<section class="screen" id="s-progres">
-  <div class="eveil">
-    <header class="eveil-head">
-      <div class="eveil-kicker" id="progres-kicker">victoire</div>
-      <h2 class="eveil-titre" id="progres-titre">+30 XP</h2>
-      <p class="pick-sub" id="progres-texte"></p>
-    </header>
-    <div class="niveau-grand" id="progres-niveau"></div>
-    <div class="pick-actions">
-      <button class="btn btn-go" id="b-progres">Continuer</button>
-    </div>
-  </div>
+<!-- ============================== ÉTAPE ============================= -->
+<section class="screen" id="s-etape">
+  <div class="page etape" id="etape"></div>
 </section>
 
-<section class="screen" id="s-don">
-  <div class="eveil">
-    <header class="eveil-head">
-      <div class="eveil-kicker" id="don-kicker">niveau atteint</div>
-      <h2 class="eveil-titre">Un don pour le raid</h2>
-      <p class="pick-sub">Un seul. Il vous suit jusqu'au bout du donjon.</p>
-    </header>
-    <div class="eveil-cartes" id="don-cartes"></div>
-  </div>
-</section>
-
-<section class="screen" id="s-evenement">
-  <div class="eveil">
-    <header class="eveil-head">
-      <div class="eveil-kicker">sur le chemin</div>
-      <div class="evenement-glyphe" id="evenement-glyphe">🕯</div>
-      <h2 class="eveil-titre" id="evenement-titre">—</h2>
-      <p class="evenement-texte" id="evenement-texte">—</p>
-      <p class="pick-sub" id="evenement-chance"></p>
-    </header>
-    <div class="eveil-cartes" id="evenement-choix"></div>
-    <div class="evenement-issue" id="evenement-issue" hidden>
-      <p class="issue-dit" id="issue-dit"></p>
-      <p class="issue-effet" id="issue-effet"></p>
-      <div class="pick-actions">
-        <button class="btn btn-go" id="b-issue">Continuer</button>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="screen" id="s-fin">
-  <div class="fin">
-    <div class="fin-sceau" id="fin-sceau">✧</div>
-    <h2 class="fin-titre" id="fin-titre">—</h2>
-    <p class="fin-texte" id="fin-texte">—</p>
-    <ul class="fin-stats" id="fin-stats"></ul>
-    <div class="pick-actions two">
-      <button class="btn btn-ghost" data-go="menu">Menu</button>
-      <button class="btn btn-go" id="b-rejouer">Remonter un raid</button>
-    </div>
-  </div>
-</section>
-
-<!-- ============================== GUILDE ============================ -->
-<section class="screen" id="s-guilde">
-  <div class="pick">
-    <header class="pick-head">
-      <button class="pick-back" data-go="menu" aria-label="Retour">‹</button>
+<!-- ============================== GROUPE ============================ -->
+<section class="screen" id="s-groupe">
+  <div class="page">
+    <header class="page-head">
+      <button class="retour" data-go="carte" aria-label="Retour">‹</button>
       <div>
-        <h2 class="pick-title">La guilde</h2>
-        <p class="pick-sub">Quinze personnages, trois par école de magie.</p>
+        <h2 class="page-titre">Le groupe</h2>
+        <p class="page-sous" id="groupe-sous">—</p>
       </div>
     </header>
-    <div class="roster roster-large" id="guilde"></div>
+    <div class="membres" id="membres"></div>
+    <h3 class="section">Le sac</h3>
+    <div class="sac" id="sac"></div>
+    <h3 class="section">Le voyage</h3>
+    <div class="journal-voyage" id="voyage"></div>
   </div>
 </section>
 
 <!-- ============================== RÈGLES ============================ -->
 <section class="screen" id="s-regles">
-  <div class="pick">
-    <header class="pick-head">
-      <button class="pick-back" data-go="menu" aria-label="Retour">‹</button>
+  <div class="page">
+    <header class="page-head">
+      <button class="retour" data-go="menu" aria-label="Retour">‹</button>
       <div>
-        <h2 class="pick-title" id="regles-titre">Règles</h2>
-        <p class="pick-sub" id="regles-sous">—</p>
+        <h2 class="page-titre">Règles</h2>
+        <p class="page-sous">Tout ce qu’il faut savoir pour monter jusqu’au Dragon.</p>
       </div>
     </header>
     <div class="regles" id="regles"></div>
-    <div class="pick-actions two">
-      <button class="btn btn-ghost" id="b-regle-prec">‹ Précédent</button>
-      <button class="btn btn-ghost" id="b-regle-suiv">Suivant ›</button>
-    </div>
   </div>
 </section>
 
-<!-- ============================== FICHE ============================= -->
-<div class="fiche" id="fiche" hidden>
-  <div class="fiche-boite" role="dialog" aria-modal="true" aria-labelledby="fiche-nom">
-    <button class="fiche-fermer" id="fiche-fermer" aria-label="Fermer">×</button>
-    <div class="fiche-corps" id="fiche-corps"></div>
-  </div>
-</div>
+<div class="toast" id="toast" hidden></div>
 
 <script type="module" src="/games/raid/js/main.js"></script>
 </body>
