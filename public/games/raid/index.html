@@ -201,40 +201,6 @@
       <p class="fp-note" id="sy-message"></p>
     </div>
 
-    <h3 class="section">Copier une fois, sans synchroniser</h3>
-
-    <div class="regle-bloc">
-      <h3>📤 J’ai ma partie sur cet appareil</h3>
-      <p id="tr-etat">—</p>
-      <button class="btn btn-go btn-wide" id="tr-envoyer">Obtenir un code</button>
-      <div class="tr-court" id="tr-court" hidden>
-        <div class="tr-gros" id="tr-gros" aria-live="polite">— — — — —</div>
-        <p class="fp-note" id="tr-court-note">Tapez ce code sur l’autre appareil. Gardez cet écran ouvert.</p>
-      </div>
-    </div>
-
-    <div class="regle-bloc">
-      <h3>📥 Je veux la récupérer ici</h3>
-      <p>Tapez le code affiché sur l’autre appareil.</p>
-      <input class="tr-saisie" id="tr-saisie" maxlength="5" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text" placeholder="ABCDE" aria-label="Code à 5 caractères">
-      <button class="btn btn-go btn-wide" id="tr-recevoir">Récupérer la partie</button>
-      <p class="fp-note" id="tr-message"></p>
-    </div>
-
-    <details class="regle-bloc tr-secours">
-      <summary>Ça ne marche pas ? La méthode sans serveur</summary>
-      <p>Un code long, à copier d’un appareil et à coller sur l’autre (par message ou par mail). Il marche même si le code court échoue.</p>
-      <div class="tr-actions">
-        <button class="btn btn-ghost" id="tr-partager">Envoyer le code long</button>
-        <button class="btn btn-ghost" id="tr-copier">Le copier</button>
-      </div>
-      <textarea class="tr-code" id="tr-sortie" readonly rows="3" aria-label="Code long de la partie" hidden></textarea>
-      <textarea class="tr-code" id="tr-entree" rows="3" placeholder="Sur l’autre appareil : collez ici le code long (RAID1…)" aria-label="Code long à charger"></textarea>
-      <div class="tr-actions">
-        <button class="btn btn-ghost" id="tr-coller">Coller</button>
-        <button class="btn btn-ghost" id="tr-charger">Charger</button>
-      </div>
-    </details>
   </div>
 </section>
 

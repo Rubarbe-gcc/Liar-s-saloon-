@@ -19,7 +19,6 @@ import { spriteSvg } from '../../../shared/raid/sprites.js';
 import { lancerCombat, basculerAuto } from './combat.js';
 import { jouerCinematique } from './cinematique.js';
 import { versCode, depuisCode } from './transfert.js';
-import { deposer, retirer } from './relais.js';
 import * as synchro from './synchro.js';
 import { scenesIntro, scenesBoss, scenesFin, scenesChapitre, CHAPITRES, artBoss } from './histoire.js';
 import { MODELES_PAR_ID } from '../../../shared/raid/ennemis.js';
@@ -176,7 +175,7 @@ async function activerSynchro() {
   const r = await synchro.pousser(await chargeCourante(), synchro.dateLocale());
   if (!r.ok) {
     synchro.oublier();
-    msg.textContent = `⚠ ${r.indisponible ? 'La synchronisation n’est pas encore activée sur le site. En attendant, utilisez la copie ci-dessous.' : r.msg}`;
+    msg.textContent = `⚠ ${r.indisponible ? 'La synchronisation n’est pas encore activée sur le site.' : r.msg}`;
     return;
   }
   sfx.victoire();
@@ -232,7 +231,6 @@ const RENDUS = {
 };
 
 function aller(nom) {
-  if (nom !== 'transfert') { annulerDepot(); annulerDepot = () => {}; clearInterval(compteARebours); }
   for (const s of document.querySelectorAll('.screen')) s.classList.toggle('is-active', s.id === `s-${nom}`);
   if (RENDUS[nom]) RENDUS[nom]();
   scrollTo(0, 0);
@@ -379,110 +377,7 @@ function rendreChoix() {
 /* Changer d'appareil                                                  */
 /* ------------------------------------------------------------------ */
 
-function rendreTransfert() {
-  const ok = av && !av.termine;
-  const h = ok ? A.heros(av) : null;
-  $('tr-etat').innerHTML = ok
-    ? `Partie en cours : <b>${txt(h.nom)}</b>, niveau ${h.niveau}, chapitre ${av.acte}/${ACTES.length}, ${av.groupe.length} dans le groupe.`
-    : `Pas de partie en cours sur cet appareil. Le code emportera seulement vos chapitres débloqués (${progres.max}/${ACTES.length}).`;
-  $('tr-sortie').hidden = true;
-  $('tr-message').textContent = '';
-  rendreSynchro();
-  annulerDepot();
-  $('tr-court').hidden = true;
-  $('tr-envoyer').hidden = false;
-  $('tr-saisie').value = '';
-}
-
-/* Le code court : la partie passe par le relais du site. */
-let annulerDepot = () => {};
-let compteARebours = null;
-
-async function envoyerParRelais() {
-  annulerDepot();
-  clearInterval(compteARebours);
-  $('tr-envoyer').hidden = true;
-  $('tr-court').hidden = false;
-  $('tr-gros').textContent = '· · · · ·';
-  $('tr-court-note').textContent = 'Connexion au serveur…';
-  const partie = av && !av.termine ? av : { version: 2, vide: true, groupe: [{ id: 'aucun' }] };
-  const charge = await versCode(partie, progres);
-  annulerDepot = await deposer(charge, {
-    surCode: (code, duree) => {
-      $('tr-gros').textContent = code.split('').join(' ');
-      const fin = Date.now() + duree;
-      const dire = () => {
-        const reste = Math.max(0, Math.ceil((fin - Date.now()) / 60000));
-        $('tr-court-note').textContent = reste > 0
-          ? `Tapez ce code sur l’autre appareil. Gardez cet écran ouvert. Valable encore ${reste} min.`
-          : 'Code expiré. Demandez-en un nouveau.';
-        if (reste <= 0) { clearInterval(compteARebours); $('tr-envoyer').hidden = false; }
-      };
-      dire();
-      compteARebours = setInterval(dire, 15000);
-      sfx.butin();
-    },
-    surPris: () => {
-      clearInterval(compteARebours);
-      $('tr-gros').textContent = '✅';
-      $('tr-court-note').textContent = 'Partie récupérée sur l’autre appareil. Elle reste aussi sur celui-ci.';
-      $('tr-envoyer').hidden = false;
-      sfx.victoire();
-    },
-    surErreur: (message) => {
-      clearInterval(compteARebours);
-      $('tr-gros').textContent = '⚠';
-      $('tr-court-note').textContent = `${message} Vous pouvez réessayer, ou utiliser la méthode sans serveur plus bas.`;
-      $('tr-envoyer').hidden = false;
-    },
-  });
-}
-
-async function recevoirParRelais() {
-  const msg = $('tr-message');
-  const code = $('tr-saisie').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-  if (code.length !== 5) { msg.textContent = '⚠ Le code fait 5 caractères.'; return; }
-  msg.textContent = 'Recherche de la partie…';
-  try {
-    await chargerCode(await retirer(code));
-  } catch (e) {
-    msg.textContent = `⚠ ${e.message}`;
-  }
-}
-
-/** Le code de ce qui est enregistré ici : la partie en cours et la progression. */
-async function codeCourant() {
-  const partie = av && !av.termine ? av : { version: 2, vide: true, groupe: [{ id: 'aucun' }] };
-  const code = await versCode(partie, progres);
-  $('tr-sortie').value = code;
-  $('tr-sortie').hidden = false;
-  return code;
-}
-
-async function chargerCode(texte = null) {
-  const msg = $('tr-message');
-  const r = await depuisCode(texte === null ? $('tr-entree').value : texte);
-  if (!r.ok) { msg.textContent = `⚠ ${r.raison}`; return; }
-  const vide = !!r.partie.vide;
-  if (!vide && !r.partie.groupe.every((p) => PAR_ID[p.id])) { msg.textContent = '⚠ Ce code vient d’une version du jeu que cet appareil ne connaît pas : rechargez la page, puis réessayez.'; return; }
-  if (!vide && av && !av.termine
-      && !confirm('Une partie est déjà en cours sur cet appareil. La remplacer par celle du code ?')) return;
-  if (r.progression) {
-    progres.max = Math.max(progres.max, Math.min(ACTES.length, r.progression.max | 0));
-    progres.fini = progres.fini || !!r.progression.fini;
-    try { localStorage.setItem(CLE_PROGRES, JSON.stringify(progres)); } catch { /* ignore */ }
-  }
-  if (!vide) {
-    av = r.partie;
-    A.mettreAJour(av);
-    finJouee = false;
-    sauver();
-  }
-  sfx.victoire();
-  $('tr-entree').value = '';
-  toast(vide ? 'Chapitres débloqués récupérés.' : 'Partie chargée : vous pouvez continuer.');
-  aller('menu');
-}
+function rendreTransfert() { rendreSynchro(); }
 
 /* ------------------------------------------------------------------ */
 /* Chapitres                                                           */
@@ -1175,27 +1070,6 @@ function brancher() {
     jouerCinematique(scenesIntro(A.heros(av), ACTES[0].nom), { sfx }).then(suite);
   });
   $('b-son').addEventListener('click', () => { basculerSon(); rendreMenu(); });
-  $('tr-copier').addEventListener('click', async () => {
-    const code = await codeCourant();
-    try { await navigator.clipboard.writeText(code); toast('Code copié.'); } catch {
-      $('tr-sortie').select();
-      toast('Sélectionné : copiez-le à la main.');
-    }
-  });
-  $('tr-partager').addEventListener('click', async () => {
-    const code = await codeCourant();
-    if (navigator.share) {
-      try { await navigator.share({ title: 'Ma partie RAID', text: code }); return; } catch { /* annulé : on copie */ }
-    }
-    try { await navigator.clipboard.writeText(code); toast('Code copié : collez-le dans un message à vous-même.'); } catch {
-      $('tr-sortie').select();
-      toast('Sélectionné : copiez-le à la main.');
-    }
-  });
-  $('tr-coller').addEventListener('click', async () => {
-    try { $('tr-entree').value = await navigator.clipboard.readText(); } catch { toast('Collez le code à la main dans la case.'); }
-  });
-  $('tr-charger').addEventListener('click', () => chargerCode());
   $('sy-activer').addEventListener('click', () => { debloquer(); sfx.clic(); activerSynchro(); });
   $('sy-relier').addEventListener('click', () => { debloquer(); sfx.clic(); relierSynchro(); });
   $('sy-saisie').addEventListener('keydown', (e) => { if (e.key === 'Enter') relierSynchro(); });
@@ -1205,9 +1079,6 @@ function brancher() {
     synchro.oublier();
     rendreSynchro();
   });
-  $('tr-envoyer').addEventListener('click', () => { debloquer(); sfx.clic(); envoyerParRelais(); });
-  $('tr-recevoir').addEventListener('click', () => { debloquer(); sfx.clic(); recevoirParRelais(); });
-  $('tr-saisie').addEventListener('keydown', (e) => { if (e.key === 'Enter') recevoirParRelais(); });
   $('b-auto').addEventListener('click', () => { sfx.tap(); basculerAuto(); });
 }
 

@@ -1,10 +1,9 @@
 /**
- * RAID — passer sa partie d'un appareil à l'autre.
+ * RAID — emballer une partie pour l'envoyer.
  *
- * La partie vit dans le navigateur de l'appareil : il n'y a ni compte ni
- * serveur qui la garde. Pour la reprendre ailleurs, on la transforme en un
- * « code de partie » — du texte, compressé — qu'on s'envoie à soi-même
- * (message, mail, note) et qu'on colle sur l'autre appareil.
+ * La synchronisation entre appareils (`synchro.js`) dépose la partie en
+ * ligne sous forme de texte compressé : c'est ce module qui l'emballe et la
+ * déballe.
  *
  * Format : `RAID1.` suivi de la partie en JSON, compressée (gzip) puis écrite
  * en base64 sans caractères gênants. `RAID0.` : la même chose sans

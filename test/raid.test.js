@@ -34,7 +34,6 @@ import { spriteSvg, poses, palettePour, GRID } from '../public/shared/raid/sprit
 import { makeRng } from '../public/shared/hasard.js';
 import * as T from '../public/shared/raid/talents.js';
 import { versCode, depuisCode } from '../public/games/raid/js/transfert.js';
-import * as relais from '../server/relais.js';
 import * as sauvegarde from '../server/sauvegarde.js';
 import { EVEILS, texteEveil, eveilDe, COUT_EVEIL } from '../public/shared/raid/eveils.js';
 import { RELIQUES, bonusReliques, QUETES } from '../public/shared/raid/reliques.js';
@@ -1206,40 +1205,6 @@ test('une partie voyage d’un appareil à l’autre par un code', async () => {
   assert.equal((await depuisCode('bonjour')).ok, false);
   assert.equal((await depuisCode(code.slice(0, code.length - 30))).ok, false, 'un code tronqué est refusé');
   assert.equal((await depuisCode('RAID0.e30')).ok, false, 'un code sans partie est refusé');
-});
-
-test('le relais échange une partie contre un code de cinq caractères, une seule fois', () => {
-  relais.vider();
-  const boite = (id) => { const recu = []; return { id, recu, send: (m) => { recu.push(m); return true; } }; };
-  const pc = boite('pc'), tel = boite('tel'), curieux = boite('curieux');
-  for (const c of [pc, tel, curieux]) relais.handleOpen(c);
-
-  relais.handleMessage(pc, { t: 'r:deposer', charge: 'RAID1.abc' });
-  const { code, t } = pc.recu[0];
-  assert.equal(t, 'r:code');
-  assert.match(code, /^[A-HJ-NP-Z2-9]{5}$/, 'cinq caractères, sans I, O, 0 ni 1');
-
-  relais.handleMessage(curieux, { t: 'r:retirer', code: 'ZZZZZ' });
-  assert.equal(curieux.recu[0].t, 'r:erreur');
-
-  // Le téléphone tape le code comme il vient : minuscules, espaces.
-  relais.handleMessage(tel, { t: 'r:retirer', code: ` ${code.toLowerCase().slice(0, 2)} ${code.toLowerCase().slice(2)} ` });
-  assert.deepEqual(tel.recu[0], { t: 'r:charge', charge: 'RAID1.abc' });
-  assert.equal(pc.recu[1].t, 'r:pris', 'le premier appareil est prévenu');
-
-  relais.handleMessage(curieux, { t: 'r:retirer', code });
-  assert.equal(curieux.recu[1].t, 'r:erreur', 'un code ne sert qu’une fois');
-  assert.equal(relais.stats().relais, 0);
-
-  relais.handleMessage(pc, { t: 'r:deposer', charge: 'x'.repeat(relais.CHARGE_MAX + 1) });
-  assert.equal(pc.recu[2].t, 'r:erreur', 'une charge trop lourde est refusée');
-
-  // Le dépôt survit à la fermeture de l'onglet qui l'a fait.
-  relais.handleMessage(pc, { t: 'r:deposer', charge: 'RAID1.def' });
-  const second = pc.recu[3].code;
-  relais.handleClose(pc);
-  relais.handleMessage(tel, { t: 'r:retirer', code: second });
-  assert.equal(tel.recu[1].charge, 'RAID1.def');
 });
 
 test('les trois sorts d’un légendaire font trois choses différentes', () => {
