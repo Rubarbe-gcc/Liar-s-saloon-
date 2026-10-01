@@ -1028,3 +1028,34 @@ test('un compagnon parti sans rien peut ne jamais revenir, et le retenir coûte 
   assert.equal(reste.chance, chance - 2);
   for (const h of A.HISTOIRES) assert.ok(h.texte('X') && h.retour('X') && h.adieu('X'), h.id);
 });
+
+test('le Dragon est un cran au-dessus, et ne lâche rien : sa mort finit l’aventure', () => {
+  const dragon = (acteFinal) => {
+    const av = A.creerAventure({ heros: 'kaelis', seed: 9 });
+    for (const id of ['brandel', 'mei', 'pix']) av.groupe.push(creerPersonnage(id, 10));
+    av.acte = 5;
+    av.carte = genererCarte(rngT(2), 5);
+    const chemin = [];
+    let n = av.carte.noeuds.find((x) => x.rangee === 0);
+    while (n) { chemin.push(n.id); n = av.carte.noeuds.find((x) => x.id === n.suivants[0]); }
+    av.visites = chemin.slice(0, -1);
+    av.position = chemin[chemin.length - 2];
+    if (!acteFinal) av.acte = 4;
+    A.entrer(av, 'boss');
+    return av;
+  };
+  const av = dragon(true);
+  assert.equal(av.etape.salle, 'boss');
+  const b = av.etape.ennemis[0];
+  assert.equal(b.modeleId, 'sarkhavel');
+  const nu = composer(A.rng({ alea: 1 }), 5, 'boss', { taille: 4 })[0];
+  assert.ok(b.pvMax > nu.pvMax * 1.05, 'plus de vie que sa fiche');
+  const or = av.or, xp = av.groupe[0].xp;
+  const r = A.conclureCombat(av, true);
+  assert.ok(r.fin);
+  assert.equal(av.etape.type, 'victoire', 'pas d’écran de butin');
+  assert.ok(av.termine && av.victoire);
+  assert.equal(av.or, or);
+  assert.equal(av.groupe[0].xp, xp);
+  assert.equal(av.reliques.length, 0);
+});

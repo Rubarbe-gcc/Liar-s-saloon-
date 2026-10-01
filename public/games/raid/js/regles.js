@@ -99,7 +99,7 @@ export function rendreRegles() {
     pour ce qui l’aide, <span style="color:#ef6a4a">rouge</span> pour ce qui lui nuit. <b>Touchez un combattant</b>
     — héros ou ennemi — pour lire le détail : durée restante, valeur, capacités du monstre et attaque chargée.</p>`)
     + bloc('Reliques', `
-    <p>Une relique vaut pour tout le groupe jusqu’à la fin de l’aventure. Chaque boss en lâche une, certaines
+    <p>Une relique vaut pour tout le groupe jusqu’à la fin de l’aventure. Chaque boss en lâche une (sauf le Dragon : après lui, l’aventure est finie), certaines
     quêtes aussi, et les boutiques en vendent parfois. Il en existe ${RELIQUES.length} :</p>
     <ul>${RELIQUES.map((r) => `<li>${r.glyphe} <b>${r.nom}</b> — ${r.texte}</li>`).join('')}</ul>`)
     + bloc('Quêtes', `

@@ -314,6 +314,7 @@ function combattre() {
   if (A.bonusSolo(av)) intro += ` Seul contre tous : +${pc(A.bonusSolo(av))} de dégâts.`;
   lancerCombat(A.bataillePour(av), {
     intro: `<span>${intro}</span>`,
+    dernier: e.salle === 'boss' && av.acte === ACTES.length,
     sfx,
     toast,
     surFin: (victoire) => {

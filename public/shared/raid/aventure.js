@@ -99,6 +99,8 @@ export const CHANCE_COLPORTEUR_ZONE = 0.12;
  * d'en amener un. Un groupe complet peut l'accueillir à la place d'un
  * compagnon.
  */
+/** Le Dragon Cendré est le dernier combat : il est un cran au-dessus de sa fiche. */
+export const DRAGON = { pv: 1.18, atk: 1.08 };
 export const ACTE_LEGENDES = 3;
 export const CHANCE_LEGENDE = 0.4;
 
@@ -250,9 +252,10 @@ function rencontre(av, type) {
   if (type === 'boss') {
     const m = menacesDuBoss(av);
     const b = ennemis[0];
-    b.pvMax = Math.round(b.pvMax * (1 + m.pv) * (1 - blessuresBoss(av)));
+    const dernier = av.acte === ACTES.length;
+    b.pvMax = Math.round(b.pvMax * (1 + m.pv) * (1 - blessuresBoss(av)) * (dernier ? DRAGON.pv : 1));
     b.pv = b.pvMax;
-    b.atk = Math.round(b.atk * (1 + m.atk));
+    b.atk = Math.round(b.atk * (1 + m.atk) * (dernier ? DRAGON.atk : 1));
     for (let k = 0; k < m.retire; k++) retirerTrait(b);
   }
   return durcir(av, ennemis);
@@ -337,6 +340,14 @@ export function conclureCombat(av, victoire) {
     if (definitive) av.termine = true;
     av.etape = { type: 'defaite', definitive };
     return { ok: true, defaite: true, definitive };
+  }
+
+  // Le dernier boss ne lâche rien : il n'y a plus rien à préparer. On passe
+  // droit à la fin de l'aventure.
+  if (salle === 'boss' && av.acte === ACTES.length) {
+    av.etape = null;
+    passerActe(av);
+    return { ok: true, etape: av.etape, fin: true };
   }
 
   const bonus = bonusDe(av);

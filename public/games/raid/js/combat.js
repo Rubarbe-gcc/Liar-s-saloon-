@@ -457,7 +457,7 @@ function fin() {
   $('journal').innerHTML = v ? '<span>Le dernier ennemi tombe.</span>' : '<span>Le groupe s’effondre…</span>';
   $('commandes').innerHTML = `<div class="fin-combat ${v ? 'gagne' : 'perdu'}">
     <h3>${v ? 'Victoire !' : 'Défaite…'}</h3>
-    <button class="btn btn-go btn-wide" id="b-fin">${v ? 'Récupérer le butin' : 'Continuer'}</button>
+    <button class="btn btn-go btn-wide" id="b-fin">${v ? (o.dernier ? 'Voir la fin' : 'Récupérer le butin') : 'Continuer'}</button>
   </div>`;
   $('b-fin').addEventListener('click', () => {
     const enCours = b;
