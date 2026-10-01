@@ -394,6 +394,6 @@ function fin() {
   $('b-fin').addEventListener('click', () => {
     const enCours = b;
     b = null;
-    o.surFin(bataille.victoire);
+    o.surFin(enCours.victoire);
   });
 }
