@@ -601,3 +601,80 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .zones { display: grid; gap: 8px; margin-bottom: 14px; }
 .zone.choisi { border-color: var(--or); box-shadow: 0 0 0 1px var(--or), 0 5px 0 rgba(0,0,0,.45); }
 .alerte-embuscade { text-align: center; color: #ffb35c; font-size: 13px; margin: 0 0 14px; }
+
+/* ------------------------------------------------------------------ */
+/* Boss et élites                                                      */
+/* ------------------------------------------------------------------ */
+
+.portrait { display: block; width: 100%; height: 100%; color: var(--aff); overflow: visible; }
+.portrait :where([class^="b-"]) { transform-box: fill-box; transform-origin: 50% 60%; }
+.cadre-portrait { position: relative; filter: drop-shadow(0 10px 14px rgba(0,0,0,.7)); }
+
+.unite.elite { width: min(48%, 200px); border-color: color-mix(in srgb, var(--aff) 55%, transparent); }
+.unite.elite .cadre-portrait { height: 120px; }
+.unite.boss {
+  width: 100%; max-width: 420px;
+  padding: 10px 12px 12px;
+  border: 2px solid color-mix(in srgb, var(--aff) 70%, #000);
+  background:
+    radial-gradient(80% 70% at 50% 35%, color-mix(in srgb, var(--aff) 26%, transparent), transparent 75%),
+    linear-gradient(180deg, #2a0f0c, #120a08);
+  box-shadow: 0 0 0 1px #000, 0 0 34px color-mix(in srgb, var(--aff) 35%, transparent), 0 6px 0 rgba(0,0,0,.5);
+}
+.unite.boss .cadre-portrait { height: clamp(150px, 26svh, 230px); }
+.unite.boss .nom { font-size: 17px; letter-spacing: .04em; white-space: normal; }
+.unite.boss .jauge { height: 12px; border-radius: 6px; border: 1px solid rgba(0,0,0,.6); }
+.unite.boss .chiffres { font-size: 12px; }
+.unite.boss .alerte { font-size: 12px; }
+.rang-boss {
+  position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+  font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+  padding: 2px 10px; border-radius: 999px;
+  background: rgba(0,0,0,.55); color: var(--or); border: 1px solid rgba(232, 192, 96, .4);
+}
+.unite.enrage .cadre-portrait { filter: drop-shadow(0 0 14px var(--rouge)) saturate(1.5) hue-rotate(-12deg); animation: tremble .5s linear infinite; }
+.unite.boss.ko .cadre-portrait, .unite.elite.ko .cadre-portrait { animation: none; transform: translateY(14px) rotate(-4deg); transition: transform .6s ease; }
+.unite.ko .portrait * { animation-play-state: paused; }
+
+.b-souffle { animation: b-souffle 3.2s ease-in-out infinite; transform-origin: 50% 100%; }
+.b-flotte { animation: b-flotte 3.6s ease-in-out infinite; }
+.b-aile { animation: b-aile 2.6s ease-in-out infinite; transform-origin: 50% 50%; }
+.b-bras { animation: b-bras 2.8s ease-in-out infinite; transform-origin: 20% 90%; }
+.b-oeil { animation: b-oeil 1.8s ease-in-out infinite; }
+.b-flamme { animation: b-flamme .5s ease-in-out infinite alternate; }
+.b-pouls { animation: b-pouls 2.6s ease-in-out infinite; }
+.b-braise { animation: b-braise 3.4s linear infinite; }
+.b-onde { animation: b-onde 1.5s ease-out infinite; transform-origin: 50% 50%; }
+.b-cri { animation: b-cri 1.5s ease-in-out infinite; }
+@keyframes b-souffle { 50% { transform: scale(1.025, 1.04); } }
+@keyframes b-flotte { 50% { transform: translateY(-7px); } }
+@keyframes b-aile { 50% { transform: scaleX(1.06) translateY(-4px); } }
+@keyframes b-bras { 50% { transform: rotate(-9deg); } }
+@keyframes b-oeil { 50% { opacity: .45; filter: brightness(1.8); } }
+@keyframes b-flamme { from { transform: scale(.9, .92); opacity: .75; } to { transform: scale(1.08, 1.12); opacity: 1; } }
+@keyframes b-pouls { 50% { opacity: .15; transform: scale(1.08); } }
+@keyframes b-braise { from { transform: translateY(10px); opacity: 0; } 20% { opacity: 1; } to { transform: translateY(-34px); opacity: 0; } }
+@keyframes b-onde { from { transform: scale(.7); opacity: .6; } to { transform: scale(1.35); opacity: 0; } }
+@keyframes b-cri { 50% { transform: scale(1.15, 1.3); } }
+@keyframes tremble { 25% { translate: -1.5px 0; } 75% { translate: 1.5px 0; } }
+
+/* Le nom du boss barre l'écran avant le premier coup. */
+.banniere-boss {
+  position: fixed; inset: 0; z-index: 40;
+  display: grid; align-content: center; justify-items: center; gap: 6px;
+  text-align: center; padding: 20px;
+  background: linear-gradient(180deg, transparent, rgba(0,0,0,.92) 35%, rgba(0,0,0,.92) 65%, transparent);
+  animation: ban-fond 1.9s ease both;
+  pointer-events: none;
+}
+.banniere-boss i { font-style: normal; font-size: 12px; letter-spacing: .4em; text-transform: uppercase; color: var(--doux); animation: ban-texte 1.9s ease both; }
+.banniere-boss b {
+  font-size: clamp(34px, 11vw, 62px); font-weight: 900; letter-spacing: .06em; line-height: 1;
+  color: #fff3d6; text-shadow: 0 0 26px var(--aff), 0 0 60px var(--aff), 0 4px 0 #000;
+  animation: ban-nom 1.9s cubic-bezier(.2, .9, .3, 1) both;
+}
+.banniere-boss span { font-size: 17px; color: var(--aff); letter-spacing: .12em; text-transform: uppercase; animation: ban-texte 1.9s ease both; }
+@keyframes ban-fond { 0% { opacity: 0; } 12%, 82% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes ban-nom { 0% { transform: scale(2.4); opacity: 0; letter-spacing: .5em; } 22% { transform: scale(1); opacity: 1; letter-spacing: .06em; } 100% { transform: scale(1.04); } }
+@keyframes ban-texte { 0%, 25% { opacity: 0; transform: translateY(8px); } 45%, 100% { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .portrait *, .banniere-boss, .banniere-boss * { animation: none !important; } }

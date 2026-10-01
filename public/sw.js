@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v22';
+const VERSION = 'v23';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -54,6 +54,7 @@ const SHELL = [
   '/games/raid/js/main.js',
   '/games/raid/js/combat.js',
   '/games/raid/js/textes.js',
+  '/games/raid/js/boss.js',
   '/games/raid/js/regles.js',
   '/games/raid/js/sfx.js',
   '/games/raid/icons/icon-192.png',

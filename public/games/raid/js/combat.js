@@ -13,6 +13,7 @@ import { multiplicateur } from '../../../shared/raid/ecoles.js';
 import { spriteSvg } from '../../../shared/raid/sprites.js';
 import { choisirAction } from '../../../shared/raid/ia.js';
 import { txt, teinte, texteSort, TRAITS_RPG } from './textes.js';
+import { aUnPortrait, portraitSvg } from './boss.js';
 
 const $ = (id) => document.getElementById(id);
 const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -42,7 +43,23 @@ export function lancerCombat(bataille, options) {
   $('b-auto').setAttribute('aria-pressed', String(auto));
   $('journal').innerHTML = o.intro || 'Le combat commence.';
   construire();
-  jouer(demarrer(b));
+  $('commandes').innerHTML = '';
+  const boss = b.ennemis.find((e) => e.rang === 'boss');
+  if (!boss) { jouer(demarrer(b)); return; }
+  // Un boss se présente : son nom barre l'écran avant le premier coup.
+  const enCours = b;
+  anime = true;
+  const ban = document.createElement('div');
+  ban.className = 'banniere-boss';
+  ban.style.setProperty('--aff', teinte(boss.ecole));
+  const [nom, ...titre] = boss.nom.split(/, | (?=l[ea] )/);
+  ban.innerHTML = `<i>Boss de l’acte</i><b>${txt(nom)}</b>${titre.length ? `<span>${txt(titre.join(' '))}</span>` : ''}`;
+  $('s-combat').appendChild(ban);
+  o.sfx.rage();
+  setTimeout(() => {
+    ban.remove();
+    if (b === enCours) jouer(demarrer(b));
+  }, 1900);
 }
 
 export function basculerAuto() {
@@ -58,10 +75,13 @@ export function basculerAuto() {
 function carteUnite(u) {
   const ennemi = u.camp === 'e';
   const traits = ennemi ? u.traits.map((t) => (TRAITS_RPG[t] || {}).glyphe || '').join('') : '';
-  return `<div class="unite" data-u="${cle(u.camp, u.idx)}" style="--aff:${teinte(u.ecole)}">
+  const portrait = ennemi && aUnPortrait(u);
+  const classe = `unite${portrait ? (u.rang === 'boss' ? ' boss' : ' elite') : ''}`;
+  return `<div class="${classe}" data-u="${cle(u.camp, u.idx)}" style="--aff:${teinte(u.ecole)}">
     <span class="ecole-pt"></span>
     <span class="etats"></span>
-    <div class="pied">${spriteSvg(u)}</div>
+    ${portrait ? `<div class="cadre-portrait">${portraitSvg(u)}</div>` : `<div class="pied">${spriteSvg(u)}</div>`}`
+    + `${portrait && u.rang === 'boss' ? '<div class="rang-boss">👑 Boss</div>' : ''}` + `
     <div class="nom">${txt(u.nom)}${ennemi ? '' : ` <i>niv. ${u.niveau}</i>`}</div>
     <div class="jauge ${ennemi ? 'ennemi' : 'pv'}"><i></i></div>
     ${ennemi ? '' : '<div class="jauge pm"><i></i></div>'}
@@ -99,6 +119,7 @@ function majUnite(u) {
     if (b.elan) etats.push('✨');
   } else {
     if (u.enrage) etats.push('😡');
+    el.classList.toggle('enrage', !!u.enrage);
     if (u.brasier && u.brasier.tours > 0) etats.push('🔥');
     if (u.entrave) etats.push('⛓');
     const al = el.querySelector('.alerte');
@@ -371,7 +392,7 @@ function fin() {
     <button class="btn btn-go btn-wide" id="b-fin">${v ? 'Récupérer le butin' : 'Continuer'}</button>
   </div>`;
   $('b-fin').addEventListener('click', () => {
-    const bataille = b;
+    const enCours = b;
     b = null;
     o.surFin(bataille.victoire);
   });
