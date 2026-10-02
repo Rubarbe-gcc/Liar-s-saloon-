@@ -13,7 +13,7 @@ import { multiplicateur } from '../../../shared/raid/ecoles.js';
 import { spriteSvg } from '../../../shared/raid/sprites.js';
 import { choisirAction } from '../../../shared/raid/ia.js';
 import { txt, teinte, texteSort, TRAITS_RPG } from './textes.js';
-import { aUnPortrait, portraitSvg } from './boss.js';
+import { aUnPortrait, portraitSvg, criDePhase } from './boss.js';
 import { texteEveil } from '../../../shared/raid/eveils.js';
 import { RAGE } from '../../../shared/raid/bataille.js';
 
@@ -313,6 +313,37 @@ async function jouerUn(ev) {
       majUnite(uniteDe(ev.camp, ev.idx));
       majEffetsGroupe();
       await attendre(ev.relique ? 600 : 250);
+      break;
+    }
+    case 'phase': {
+      // Le boss se relève sous une autre forme : nouveau portrait, nouvelle barre.
+      const u = uniteDe(ev.camp, ev.idx);
+      const el = noeud(ev.camp, ev.idx);
+      vue.get(cle(ev.camp, ev.idx)).pv = 0;
+      majUnite({ ...u, pvMax: u.pvMax });
+      s.ko();
+      await attendre(500);
+      const ban = document.createElement('div');
+      ban.className = 'banniere-boss';
+      ban.style.setProperty('--aff', teinte(u.ecole));
+      const [nom, ...titre] = ev.nom.split(/, | (?=l[ea] )/);
+      ban.innerHTML = `<i>Phase ${ev.n} sur ${ev.sur}</i><b>${txt(nom)}</b>${titre.length ? `<span>${txt(titre.join(' '))}</span>` : ''}`;
+      $('s-combat').appendChild(ban);
+      s.rage();
+      // La carte est refaite derrière la bannière.
+      if (el) {
+        const neuf = document.createElement('div');
+        neuf.innerHTML = carteUnite(u);
+        const carte = neuf.firstElementChild;
+        carte.addEventListener('click', () => toucherUnite(carte.dataset.u[0], +carte.dataset.u.slice(1)));
+        el.replaceWith(carte);
+      }
+      vue.get(cle(ev.camp, ev.idx)).pv = ev.pv;
+      majUnite(u);
+      const cri = criDePhase(u);
+      $('journal').innerHTML = `<span>⚠ <b>${txt(ev.nom)}</b>${cri ? ` — ${txt(cri)}` : ''}</span>`;
+      await attendre(1900);
+      ban.remove();
       break;
     }
     case 'ko': {

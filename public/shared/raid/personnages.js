@@ -81,6 +81,30 @@ export function sortsDe(fiche) {
   return { special: conv(fiche.special, COUT.special), ultime: conv(fiche.ultime, COUT.ultime) };
 }
 
+/**
+ * Les sorts d'un personnage tel qu'il est : ceux de sa fiche, renforcés par
+ * sa branche de Maîtrise (puissance du sort, de l'ultime, coût en PM).
+ */
+export function sortsPour(p) {
+  const sorts = sortsDe(PAR_ID[p.id]);
+  const tal = effetsTalents(p);
+  for (const cle of ['special', 'ultime']) {
+    const s = sorts[cle];
+    const plus = tal[cle] || 0;
+    if (plus) {
+      s.mult = +(s.mult * (1 + plus)).toFixed(2);
+      // Un sort de soutien se renforce par son effet ; la provocation, qui
+      // compte en manches, par ce qu'elle fait encaisser en moins.
+      if (s.soutien && s.effet && typeof s.effet.valeur === 'number') {
+        if (s.effet.type === 'provoc') s.renfort = plus;
+        else s.effet.valeur = s.effet.type === 'mana' ? Math.round(s.effet.valeur * (1 + plus)) : +(s.effet.valeur * (1 + plus)).toFixed(3);
+      }
+    }
+    s.cout = Math.max(2, s.cout - (tal.cout || 0));
+  }
+  return sorts;
+}
+
 /** Un nouveau personnage, prêt à partir. */
 export function creerPersonnage(id, niveau = 1) {
   const f = PAR_ID[id];

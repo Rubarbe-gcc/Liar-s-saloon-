@@ -16,14 +16,14 @@ import { HEROS, PAR_ID, ROLES, EFFETS, parEcole, LEGENDES } from '../public/shar
 import { MODELES, MODELES_PAR_ID, TRAITS, SILHOUETTES, parRang, BOSS_FINAL } from '../public/shared/raid/ennemis.js';
 import {
   creerPersonnage, statsDe, statsBase, gagnerXp, niveauDe, SEUILS_XP, NIVEAU_MAX, NIVEAU_ULTIME,
-  sortsDe, DEPARTS, progressionNiveau,
+  sortsDe, DEPARTS, progressionNiveau, sortsPour,
 } from '../public/shared/raid/personnages.js';
 import {
   forger, MODELES as PIECES, pieceAuHasard, tirerRarete, texteBonus, RARETES, ORDRE_RARETES, TROPHEES,
   forgerTrophee, valeurPiece,
 } from '../public/shared/raid/equipement.js';
 import {
-  genererCarte, accessibles, composer, ennemiRpg, ACTES, RANGEES, ECHELLE,
+  genererCarte, accessibles, composer, ennemiRpg, ACTES, RANGEES, ECHELLE, TYPES,
 } from '../public/shared/raid/carte.js';
 import {
   creerBataille, demarrer, actif, actionsDe, agir, estimer, vivants, critiqueDe, provocateur,
@@ -755,7 +755,10 @@ test('un point de talent par niveau, et des paliers qui se méritent', () => {
   assert.equal(T.apprendre(p, 'oeil').ok, false, 'plus de point');
   for (const role of Object.keys(T.ARBRES)) {
     assert.equal(T.ARBRES[role].length, 2);
-    for (const b of T.ARBRES[role]) for (const tal of b.talents) assert.ok(T.texteTalent(tal).length > 5, tal.id);
+    for (const b of T.ARBRES[role]) {
+      assert.equal(b.talents.length, 4, 'quatre paliers par branche de rôle');
+      for (const tal of b.talents) assert.ok(T.texteTalent(tal).length > 5, tal.id);
+    }
   }
 });
 
@@ -1080,8 +1083,10 @@ test('dix chapitres, dix maîtres différents, et des niveaux jusqu’à vingt',
   let fort = 0;
   for (let c = 1; c <= 10; c++) {
     const b = composer(rngT(1), c, 'boss')[0];
-    assert.ok(b.pvMax > fort, `le boss du chapitre ${c} est plus solide que le précédent`);
-    fort = b.pvMax * 0.8;
+    // Un boss à plusieurs phases se juge sur toute sa vie, pas sur sa première forme.
+    const vie = b.phases ? b.pvMax * b.phases.reduce((t, p) => t + p.pv, 0) / b.phases[0].pv : b.pvMax;
+    assert.ok(vie > fort, `le boss du chapitre ${c} est plus solide que le précédent`);
+    fort = vie * 0.8;
   }
 });
 
@@ -1090,7 +1095,7 @@ test('on peut reprendre l’histoire à un chapitre avancé, avec de quoi le ten
   const av = A.creerAventure({ heros: 'pix', seed: 7, chapitre: 6 });
   assert.equal(av.acte, 6);
   assert.equal(av.groupe[0].niveau, A.niveauDuChapitre(6));
-  assert.ok(av.sac.length >= 6 && av.reliques.length === 2 && av.or > 300);
+  assert.ok(av.sac.length >= 6 && av.reliques.length === 2 && av.or > 200);
   // Les dons que le niveau a déjà ouverts, puis trois compagnons à choisir.
   let dons = 0, recrues = 0;
   for (let i = 0; i < 30 && av.etape; i++) {
@@ -1443,17 +1448,17 @@ test('aucun personnage n’a deux sorts qui font la même chose', () => {
 
 test('payer la route coûte un montant fixe, qui suit le chapitre', () => {
   const prix = [2, 5, 10].map((acte) => A.prixViatique({ acte }));
-  assert.deepEqual(prix, [80, 170, 320]);
+  assert.deepEqual(prix, [55, 115, 215]);
   const av = A.creerAventure({ heros: 'kaelis', seed: 3 });
   av.acte = 5;
   av.groupe.push(creerPersonnage('brandel', 9));
   av.etape = { type: 'depart', idx: 1, histoire: 'dette' };
-  av.or = 169;
+  av.or = 114;
   assert.equal(A.departCourant(av).choix.find((c) => c.id === 'viatique').possible, false, 'il manque une pièce');
   assert.equal(A.choisirDepart(av, 'viatique').ok, false);
   av.or = 2000;
   assert.ok(A.choisirDepart(av, 'viatique').ok);
-  assert.equal(av.or, 2000 - 170, 'le prix ne dépend pas de la bourse');
+  assert.equal(av.or, 2000 - 115, 'le prix ne dépend pas de la bourse');
   assert.equal(av.absents[0].adieu, false, 'retour garanti');
 });
 
@@ -1483,4 +1488,148 @@ test('un compagnon déjà éveillé ne repart pas en voyage', () => {
     A.entrer(av, av.carte.noeuds.find((n) => n.rangee === 0).id);
     assert.notEqual(av.etape.type, 'depart');
   }
+});
+
+/* ================================================================== */
+/* Maîtrise, phases de boss, centre de recrutement                    */
+/* ================================================================== */
+
+test('chaque personnage a une branche de Maîtrise, au nom de ses propres sorts', () => {
+  for (const h of [...HEROS, ...LEGENDES]) {
+    const p = creerPersonnage(h.id, 20);
+    const arbre = T.arbreDe(p);
+    assert.equal(arbre.length, 3, h.id);
+    const m = arbre[2];
+    assert.ok(m.perso);
+    assert.ok(m.talents[0].nom.includes(h.special.nom), `${h.id} : le premier talent porte le nom du sort`);
+    assert.ok(m.talents[1].nom.includes(h.ultime.nom), `${h.id} : le second, celui de l’ultime`);
+    // Trente-trois rangs pour dix-neuf points : on ne peut pas tout prendre.
+    const rangs = arbre.reduce((n, b) => n + b.talents.length * T.RANG_MAX, 0);
+    assert.equal(rangs, 33);
+    assert.ok(rangs > T.pointsLibres(p));
+    assert.equal(T.repartir(p), 19, 'tous les points trouvent preneur');
+  }
+});
+
+test('la Maîtrise renforce les sorts du personnage, et en baisse le coût', () => {
+  const nu = creerPersonnage('kaelis', 12);
+  const p = creerPersonnage('kaelis', 12);
+  p.talents = { 'm-special': 3, 'm-ultime': 2, 'm-cout': 2 };
+  const avant = sortsPour(nu), apres = sortsPour(p);
+  assert.ok(apres.special.mult > avant.special.mult * 1.3);
+  assert.ok(apres.ultime.mult > avant.ultime.mult * 1.2);
+  assert.equal(apres.special.cout, avant.special.cout - 2);
+  // Un soigneur : c'est le soin qui grossit.
+  const mei = creerPersonnage('mei', 12);
+  mei.talents = { 'm-special': 3 };
+  assert.ok(sortsPour(mei).special.effet.valeur > sortsPour(creerPersonnage('mei', 12)).special.effet.valeur * 1.3);
+  // La provocation dure toujours trois manches, mais protège mieux.
+  const aldric = creerPersonnage('aldric', 12);
+  aldric.talents = { 'm-special': 3 };
+  assert.equal(sortsPour(aldric).special.effet.valeur, 3);
+  assert.ok(sortsPour(aldric).special.renfort > 0.3);
+
+  // Et le combat s'en sert : même sort, plus de dégâts.
+  const degats = (perso) => {
+    const e = gnoll(3); e.pvMax = e.pv = 9999; e.vit = -5; e.def = 0;
+    const b = creerBataille({ groupe: [perso], ennemis: [e], inventaire: {}, rng: rngT(3) });
+    demarrer(b);
+    actif(b).pm = 40;
+    const ev = agir(b, { type: 'special', cible: 0 }).evenements;
+    return ev.find((x) => x.t === 'degats' && x.camp === 'e' && !x.crit)?.n || 0;
+  };
+  const a = degats(nu), c = degats(p);
+  if (a && c) assert.ok(c > a * 1.2, `${c} contre ${a}`);
+});
+
+test('les boss des chapitres 8 et 9 ont deux phases, le dernier en a trois', () => {
+  const formes = (c) => composer(rngT(1), c, 'boss')[0].phases?.length || 1;
+  assert.deepEqual([7, 8, 9, 10].map(formes), [1, 2, 2, 3]);
+  for (const id of ['seraphiel', 'ozrath', 'azhar']) {
+    const ph = MODELES_PAR_ID[id].phases;
+    for (let i = 1; i < ph.length; i++) {
+      assert.ok(ph[i].pv > ph[i - 1].pv && ph[i].atk > ph[i - 1].atk && ph[i].def > ph[i - 1].def,
+        `${id} : la phase ${i + 1} a plus de vie, frappe plus fort et résiste mieux`);
+      assert.ok(ph[i].nom && ph[i].nom !== MODELES_PAR_ID[id].nom, 'elle a son propre nom');
+    }
+  }
+});
+
+test('un boss tué en première phase se relève, plus fort — et ne meurt qu’à la dernière', () => {
+  const boss = composer(rngT(2), 10, 'boss', { taille: 4 })[0];
+  boss.vit = -5;
+  const depart = { pv: boss.pvMax, atk: boss.atk, def: boss.def, nom: boss.nom };
+  const groupe = ['kaelis', 'mordrec'].map((id) => creerPersonnage(id, 20));
+  const b = creerBataille({ groupe, ennemis: [boss], inventaire: {}, rng: rngT(4) });
+  const e = b.ennemis[0];
+  demarrer(b);
+  const evs = [];
+  const tuer = () => {
+    e.brasier = { degats: 5, tours: 3 };
+    e.pv = 1;
+    const r = agir(b, { type: 'attaque', cible: 0 }).evenements;
+    evs.push(...r);
+    return r;
+  };
+  let ev = tuer();
+  const p2 = ev.find((x) => x.t === 'phase');
+  assert.ok(p2 && p2.n === 2 && p2.sur === 3, 'la deuxième phase est annoncée');
+  assert.ok(!ev.some((x) => x.t === 'ko' && x.camp === 'e'), 'il n’est pas mort');
+  assert.ok(!b.fini);
+  assert.equal(e.pv, e.pvMax);
+  assert.ok(e.pvMax > depart.pv && e.atk > depart.atk && e.def > depart.def);
+  assert.notEqual(e.nom, depart.nom);
+  assert.equal(e.brasier, null, 'ce qui pesait sur lui s’efface');
+  const deux = { pv: e.pvMax, atk: e.atk };
+
+  ev = tuer();
+  assert.equal(ev.find((x) => x.t === 'phase').n, 3);
+  assert.ok(e.pvMax > deux.pv && e.atk > deux.atk);
+  assert.ok(!b.fini);
+
+  ev = tuer();
+  assert.ok(ev.some((x) => x.t === 'ko' && x.camp === 'e'), 'à la troisième, il tombe pour de bon');
+  assert.ok(b.fini && b.victoire);
+  assert.equal(evs.filter((x) => x.t === 'phase').length, 2);
+});
+
+test('le centre de recrutement propose trois compagnons, à recruter ou à échanger', () => {
+  assert.ok(TYPES.recrutement);
+  let centres = 0;
+  for (let seed = 0; seed < 40; seed++) centres += genererCarte(rngT(seed), 3).noeuds.filter((n) => n.type === 'recrutement').length;
+  assert.ok(centres > 10, 'on en croise au fil des cartes');
+
+  const ouvrir = (taille) => {
+    const av = A.creerAventure({ heros: 'kaelis', seed: 9 });
+    for (const id of ['brandel', 'mei', 'pix'].slice(0, taille - 1)) av.groupe.push(creerPersonnage(id, 3));
+    av.carte.noeuds.find((n) => n.rangee === 0).type = 'recrutement';
+    A.entrer(av, av.carte.noeuds.find((n) => n.rangee === 0).id);
+    return av;
+  };
+  const av = ouvrir(2);
+  assert.equal(av.etape.type, 'compagnon');
+  assert.ok(av.etape.centre);
+  assert.equal(av.etape.offres.length, 3);
+  assert.equal(new Set(av.etape.offres.map((id) => PAR_ID[id].role)).size, 3, 'un de chaque rôle');
+  assert.ok(av.etape.offres.every((id) => !av.groupe.some((p) => p.id === id)));
+  assert.ok(A.recruter(av, av.etape.offres[0]).ok, 'il reste de la place : on recrute');
+  assert.equal(av.groupe.length, 3);
+
+  const plein = ouvrir(4);
+  assert.equal(plein.etape.offres.length, 3, 'même groupe complet');
+  const nouveau = plein.etape.offres[0];
+  assert.equal(A.recruter(plein, nouveau).ok, false);
+  assert.ok(A.recruter(plein, nouveau, 3).ok, 'groupe complet : on échange');
+  assert.equal(plein.groupe.length, 4);
+  assert.equal(plein.groupe[3].id, nouveau);
+
+  const sansRien = ouvrir(4);
+  A.terminerEtape(sansRien);
+  assert.equal(sansRien.groupe.length, 4, 'on peut repartir sans rien changer');
+});
+
+test('les combats rapportent moins d’or qu’avant', () => {
+  const e = gnoll(1);
+  assert.ok(A.orDe(e, 1) <= 6);
+  assert.ok(A.orDe({ rang: 'boss' }, 5) < 80);
 });

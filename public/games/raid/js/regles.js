@@ -58,6 +58,11 @@ export function rendreRegles() {
     <p>Touchez un ennemi pour lire ses capacités : ${Object.values(TRAITS_RPG).map((t) => t.glyphe).join(' ')}.</p>
     <p>Un coup critique fait ×${MULT_CRIT} ; la chance et certains bijoux les rendent plus fréquents.
     Le bouton <b>Auto</b> laisse le groupe se battre seul.</p>`)
+    + bloc('Les boss à plusieurs phases', `
+    <p>Les maîtres des chapitres 8 et 9 ont <b>deux phases</b>, celui du dernier chapitre en a <b>trois</b>. Quand
+    sa barre de vie tombe à zéro, le boss ne meurt pas : il change de forme, avec plus de vie, plus d’attaque et
+    plus d’armure que la précédente. Ce qui pesait sur lui (brûlure, affaiblissement) s’efface. Gardez du mana et
+    des potions pour la suite.</p>`)
     + bloc('Les écoles', `
     <p>Chaque héros et chaque monstre appartient à une école. Frapper l’école qu’on domine fait
     ×${AVANTAGE} (▲), frapper celle qui vous domine ×${DESAVANTAGE} (▼).</p>
@@ -102,8 +107,10 @@ export function rendreRegles() {
     <p>L’éveil débloque aussi une <b>compétence d’éveil</b> (${COUT_EVEIL} PM) : un troisième sort, puissant, <b>propre à chaque personnage</b>. Elle est annoncée avant de choisir, et se lit ensuite sur sa fiche.</p>`)
     + bloc('Talents', `
     <p>Chaque niveau gagné donne <b>un point de talent</b> au personnage. Il se dépense dans l’écran du groupe :
-    deux branches par rôle, trois talents par branche, <b>${RANG_MAX} rangs</b> chacun. Un palier s’ouvre quand le
-    précédent a reçu ${SEUIL_PALIER} points — on ne peut pas tout prendre, il faut choisir.</p>`)
+    <b>trois branches</b> — deux de son rôle (quatre talents chacune) et une de <b>Maîtrise</b>, propre au
+    personnage, qui porte le nom de ses sorts et les renforce. Chaque talent a <b>${RANG_MAX} rangs</b>, et un
+    palier s’ouvre quand le précédent a reçu ${SEUIL_PALIER} points. Il y a 33 rangs pour 19 points : on ne peut
+    pas tout prendre, il faut choisir.</p>`)
     + bloc('Effets en combat', `
     <p>Les effets en cours s’affichent en pastilles sur chaque combattant : <span style="color:#8ee06a">vert</span>
     pour ce qui l’aide, <span style="color:#ef6a4a">rouge</span> pour ce qui lui nuit. <b>Touchez un combattant</b>

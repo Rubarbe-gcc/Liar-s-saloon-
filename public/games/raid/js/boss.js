@@ -390,9 +390,81 @@ const ART = {
 /** Vrai si ce monstre a son portrait (les boss et les élites). */
 export const aUnPortrait = (u) => !!ART[u.modeleId] && (u.rang === 'boss' || u.rang === 'elite');
 
-/** Le portrait d'un boss ou d'une élite. */
+/**
+ * Les formes suivantes d'un boss à plusieurs phases. Chacune reprend le
+ * portrait de base et le transforme : un calque derrière, un filtre sur le
+ * corps, un calque devant. Index = numéro de phase (0 : la première forme,
+ * sans rien).
+ */
+const rayons = (cx, cy, r1, r2, n, extra = '') => Array.from({ length: n }, (_, i) => {
+  const a = (i * 2 * Math.PI) / n;
+  return `<path d="M${(cx + Math.cos(a) * r1).toFixed(1)} ${(cy + Math.sin(a) * r1).toFixed(1)} L${(cx + Math.cos(a) * r2).toFixed(1)} ${(cy + Math.sin(a) * r2).toFixed(1)}" ${extra}/>`;
+}).join('');
+
+const FORMES = {
+  /* L'Ange Déchaîné : les épées de lumière, les larmes de sang. */
+  seraphiel: [null, {
+    filtre: 'drop-shadow(0 0 5px #ff3b3b) contrast(1.15) saturate(1.3)',
+    dessous: `<circle cx="100" cy="74" r="78" fill="#ff3b3b" opacity=".16" class="b-pouls"/>
+      <g class="b-aile" stroke="#ffe9a8" stroke-width="5" stroke-linecap="round" opacity=".9">${rayons(100, 70, 50, 86, 6)}</g>
+      <g stroke="#fff" stroke-width="1.5" opacity=".8">${rayons(100, 70, 50, 86, 6)}</g>`,
+    dessus: `<path class="b-oeil" d="M64 14 l10 6 M132 12 l-8 7 M100 4 v8" stroke="#ff3b3b" stroke-width="4" stroke-linecap="round"/>
+      <circle class="b-oeil" cx="93" cy="40" r="4" fill="#ff3b3b"/><circle class="b-oeil" cx="107" cy="40" r="4" fill="#ff3b3b"/>
+      <path d="M93 44 v16 M107 44 v18" stroke="#b3151b" stroke-width="2.2" stroke-linecap="round"/>`,
+  }],
+  /* L'Œil Grand Ouvert : la pupille se fend en trois, et d'autres yeux s'ouvrent. */
+  ozrath: [null, {
+    filtre: 'saturate(1.6) brightness(1.12)',
+    dessous: `<circle cx="100" cy="80" r="80" fill="#05030a" opacity=".7"/>
+      ${Array.from({ length: 8 }, (_, i) => {
+    const a = (i * Math.PI) / 4 + 0.39;
+    const x = (100 + Math.cos(a) * 72).toFixed(1), y = (80 + Math.sin(a) * 66).toFixed(1);
+    return `<ellipse cx="${x}" cy="${y}" rx="9" ry="6" fill="#f1eaf7" stroke="#05030a" stroke-width="1.2"/><circle class="b-oeil" style="animation-delay:-${(i * 0.23).toFixed(2)}s" cx="${x}" cy="${y}" r="3.4" fill="currentColor"/>`;
+  }).join('')}`,
+    dessus: `<g class="b-cri" fill="#05030a">
+        <path d="M100 60 Q107 80 100 100 Q93 80 100 60 Z"/>
+        <path d="M100 60 Q107 80 100 100 Q93 80 100 60 Z" transform="rotate(60 100 80)"/>
+        <path d="M100 60 Q107 80 100 100 Q93 80 100 60 Z" transform="rotate(120 100 80)"/></g>
+      <g class="b-oeil" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round">
+        <path d="M58 46 L44 30 L48 18 M142 46 L156 32 L152 18 M56 114 L42 128 M144 114 L158 130"/></g>`,
+  }],
+  /* Le Roi Éveillé se lève ; l'Éclipse Incarnée n'est plus qu'une ombre fendue de lumière. */
+  azhar: [null, {
+    filtre: 'brightness(1.12) contrast(1.1)',
+    dessous: `<circle cx="100" cy="46" r="56" fill="none" stroke="currentColor" stroke-width="4" class="b-pouls"/>
+      <g class="b-aile" stroke="currentColor" stroke-width="4" stroke-linecap="round" opacity=".85">${rayons(100, 46, 60, 84, 16)}</g>`,
+    dessus: `<path class="b-flamme" d="M96 100 L104 100 L103 30 L100 22 L97 30 Z" fill="currentColor" opacity=".55"/>
+      <circle class="b-oeil" cx="92" cy="40" r="3.6" fill="currentColor"/><circle class="b-oeil" cx="108" cy="40" r="3.6" fill="currentColor"/>`,
+  }, {
+    filtre: 'brightness(.5) contrast(1.5)',
+    dessous: `<circle cx="100" cy="60" r="78" fill="#000"/>
+      <circle cx="100" cy="60" r="78" fill="none" stroke="currentColor" stroke-width="5" class="b-pouls"/>
+      <g class="b-aile" stroke="currentColor" stroke-width="3" stroke-linecap="round" opacity=".9">${rayons(100, 60, 82, 100, 24)}</g>
+      ${miroir(`<path class="b-aile" d="M70 70 L10 30 L22 66 L2 82 L30 96 L12 124 L58 108 Z" fill="#0a0507" stroke="currentColor" stroke-width="1.5"/>`)}`,
+    dessus: `<g class="b-oeil" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M100 60 L94 84 L106 100 L96 124 L104 150"/>
+        <path d="M66 96 L78 112 L70 136 M134 96 L122 114 L130 138"/>
+        <path d="M94 84 L78 112 M106 100 L122 114"/></g>
+      <path class="b-flamme" d="M82 26 Q78 8 86 -2 Q88 10 94 14 Q94 0 100 -8 Q106 0 106 14 Q112 10 114 -2 Q122 8 118 26 Z" fill="currentColor"/>
+      <circle class="b-oeil" cx="92" cy="40" r="4.5" fill="#fff"/><circle class="b-oeil" cx="108" cy="40" r="4.5" fill="#fff"/>`,
+  }],
+};
+
+/** Ce que le boss dit en changeant de forme. */
+const CRIS = {
+  seraphiel: [null, '« Alors c’est cela, la colère. Je l’avais oubliée. »'],
+  ozrath: [null, 'L’œil s’ouvre plus grand qu’il n’aurait dû pouvoir. Il y en a d’autres derrière.'],
+  azhar: [null, '« Assez dormi. » Le roi se lève de son trône.', '« Vous vouliez le jour ? Regardez-le mourir. »'],
+};
+export const criDePhase = (u) => (CRIS[u.modeleId] && CRIS[u.modeleId][u.phase || 0]) || '';
+
+/** Le portrait d'un boss ou d'une élite, dans sa forme du moment. */
 export function portraitSvg(u) {
   const dessin = ART[u.modeleId];
   if (!dessin) return '';
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" class="portrait" aria-hidden="true">${dessin()}</svg>`;
+  const forme = FORMES[u.modeleId] && FORMES[u.modeleId][u.phase || 0];
+  const corps = forme
+    ? `${forme.dessous}<g style="filter:${forme.filtre}">${dessin()}</g>${forme.dessus}`
+    : dessin();
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 160" class="portrait" aria-hidden="true">${corps}</svg>`;
 }

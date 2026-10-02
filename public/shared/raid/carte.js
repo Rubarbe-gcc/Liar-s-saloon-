@@ -43,6 +43,7 @@ export const TYPES = {
   repos: { nom: 'Feu de camp', glyphe: '🔥', texte: 'Souffler, s’entraîner. La partie y est sauvegardée.' },
   tresor: { nom: 'Trésor', glyphe: '📦', texte: 'Un coffre, et ce qu’il contient.' },
   compagnon: { nom: 'Rencontre', glyphe: '🤝', texte: 'Un aventurier qui pourrait se joindre à vous.' },
+  recrutement: { nom: 'Centre de recrutement', glyphe: '🏕', texte: 'Trois aventuriers cherchent un groupe. On peut y échanger un compagnon.' },
   boss: { nom: 'Boss', glyphe: '👑', texte: 'Le maître du chapitre.' },
 };
 
@@ -62,6 +63,7 @@ function tirerType(rng, rangee, acte) {
     tresor: rangee >= 1 ? 7 : 0,
     compagnon: acte <= 3 ? 9 : 6,
     repos: rangee >= 3 ? 5 : 0,
+    recrutement: rangee >= 2 ? 6 : 0,
   };
   let x = rng() * Object.values(poids).reduce((s, p) => s + p, 0);
   for (const [t, p] of Object.entries(poids)) { x -= p; if (x < 0) return t; }
@@ -146,16 +148,20 @@ export function ennemiRpg(modele, acte, ecole, rng, { rang = modele.rang, boss =
   const grain = 0.94 + rng() * 0.12;
   const renfort = boss && modele.rang !== 'boss' ? (acte === 1 ? 1.35 : 1.7) : 1;
   const pv = Math.round((modele.pv / 640) * k(CROISSANCE.pv) * grain * renfort * echelle.pv);
+  const phases = modele.phases ? modele.phases.map((p) => ({ ...p })) : null;
+  const forme = phases ? phases[0] : { pv: 1, atk: 1, def: 1 };
+  const pvForme = Math.max(1, Math.round(pv * forme.pv));
   return {
+    ...(phases ? { phases, phase: 0 } : {}),
     modeleId: modele.id,
     nom: modele.nom,
     silhouette: modele.silhouette,
     rang: boss ? 'boss' : rang,
     ecole,
-    pvMax: pv,
-    pv,
-    atk: Math.round((modele.atk / 320) * k(CROISSANCE.atk) * grain * (boss ? 1.15 : 1) * echelle.atk),
-    def: Math.round((modele.def / 400) * k(CROISSANCE.def) * grain),
+    pvMax: pvForme,
+    pv: pvForme,
+    atk: Math.round((modele.atk / 320) * k(CROISSANCE.atk) * grain * (boss ? 1.15 : 1) * echelle.atk * forme.atk),
+    def: Math.round((modele.def / 400) * k(CROISSANCE.def) * grain * forme.def),
     vit: 4 + entier(rng, 3),
     traits: [...modele.traits],
     charge: {

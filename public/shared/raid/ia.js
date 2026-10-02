@@ -180,6 +180,8 @@ export function jouerEtape(av) {
     case 'repos': faireRepos(av, vieMoyenne(av) < 0.8 ? 'repos' : 'entrainement'); break;
     case 'tresor': prendreTresor(av); break;
     case 'compagnon':
+      // Au centre de recrutement, un groupe complet ne change personne — sauf pour un légendaire.
+      if (e.centre && av.groupe.length >= 4 && !e.offres.some((id) => PAR_ID[id].legendaire)) { terminerEtape(av); break; }
       // Groupe complet : le légendaire prend la place du dernier arrivé.
       if (!recruter(av, e.offres.find((id) => PAR_ID[id].legendaire) || e.offres[0], av.groupe.length >= 4 ? av.groupe.length - 1 : null).ok) terminerEtape(av);
       break;

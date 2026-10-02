@@ -10,7 +10,7 @@
 import * as A from '../../../shared/raid/aventure.js';
 import { PAR_ID } from '../../../shared/raid/heros.js';
 import {
-  creerPersonnage, statsDe, progressionNiveau, SEUILS_XP, NIVEAU_MAX, NIVEAU_ULTIME, sortsDe, DEPARTS,
+  creerPersonnage, statsDe, progressionNiveau, SEUILS_XP, NIVEAU_MAX, NIVEAU_ULTIME, sortsDe, sortsPour, DEPARTS,
 } from '../../../shared/raid/personnages.js';
 import { valeurPiece, EMPLACEMENTS } from '../../../shared/raid/equipement.js';
 import { TYPES, ACTES, RANGEES, COLONNES } from '../../../shared/raid/carte.js';
@@ -30,7 +30,7 @@ import {
   txt, pc, teinte, nomEcole, nomRole, texteSort, cartePiece, couleurRarete, carteRelique, ligneEveil,
 } from './textes.js';
 import {
-  ARBRES, RANG_MAX, rangDe, pointsLibres, peutApprendre, apprendre, texteTalent,
+  arbreDe, RANG_MAX, rangDe, pointsLibres, peutApprendre, apprendre, texteTalent,
 } from '../../../shared/raid/talents.js';
 
 const $ = (id) => document.getElementById(id);
@@ -432,7 +432,7 @@ function statsHtml(p, bonus = {}) {
 }
 
 function sortsHtml(p) {
-  const s = sortsDe(PAR_ID[p.id]);
+  const s = sortsPour(p);
   const ligne = (cle, sort) => {
     const verrou = cle === 'ultime' && p.niveau < NIVEAU_ULTIME;
     return `<div class="sort${verrou ? ' verrou' : ''}"><b>${cle === 'ultime' ? '★ ' : ''}${txt(sort.nom)}</b> · ${sort.cout} PM
@@ -975,16 +975,18 @@ function etapeCompagnon(e) {
     return `<div class="carte-perso${legende ? ' legendaire' : ''}" style="--aff:${teinte(p.ecole)}">${tetePerso(p)}${statsHtml(p)}${sortsHtml(p)}${boutons}</div>`;
   }).join('');
   const legendaire = e.offres.some((id) => PAR_ID[id].legendaire);
-  const texte = e.depart
+  const texte = e.centre
+    ? `Un camp d’aventuriers sans emploi. ${complet ? 'Votre groupe est complet : vous pouvez échanger un compagnon contre l’un d’eux, ou repartir comme vous êtes venus.' : 'Recrutez celui qu’il vous faut.'}`
+    : e.depart
     ? 'Avant de reprendre l’histoire, des compagnons de route se présentent. Choisissez qui vous suit.'
     : legendaire
     ? 'Une silhouette que les chansons décrivent se tient devant vous. Un héros légendaire propose de marcher à vos côtés.'
     : e.apresBoss
       ? 'Votre victoire a fait du bruit. Des aventuriers proposent de se joindre à vous.'
       : 'Au détour d’un couloir, deux aventuriers cherchent une troupe. Un seul vous suivra.';
-  return tete(legendaire ? '🌟' : '🤝', legendaire ? 'Une rencontre légendaire' : 'Une rencontre', `${texte} (${av.groupe.length}/${A.TAILLE_GROUPE} dans le groupe)`)
+  return tete(e.centre ? '🏕' : legendaire ? '🌟' : '🤝', e.centre ? 'Centre de recrutement' : legendaire ? 'Une rencontre légendaire' : 'Une rencontre', `${texte} (${av.groupe.length}/${A.TAILLE_GROUPE} dans le groupe)`)
     + `<div class="membres">${offres}</div>`
-    + '<button class="btn btn-ghost btn-wide" id="b-suite" style="margin-top:12px">Continuer sans eux</button>';
+    + `<button class="btn btn-ghost btn-wide" id="b-suite" style="margin-top:12px">${e.centre ? 'Repartir sans rien changer' : 'Continuer sans eux'}</button>`;
 }
 
 function etapeBalade(e) {
@@ -1136,7 +1138,7 @@ function rendreGroupe() {
 /** L'arbre de talents d'un personnage : deux branches, trois paliers, trois rangs. */
 function talentsHtml(p, idx) {
   const libres = pointsLibres(p);
-  const branches = (ARBRES[p.role] || []).map((br) => {
+  const branches = arbreDe(p).map((br) => {
     const talents = br.talents.map((tal) => {
       const rang = rangDe(p, tal.id);
       const peut = peutApprendre(p, tal.id);
@@ -1148,7 +1150,7 @@ function talentsHtml(p, idx) {
         <b>${tal.glyphe} ${txt(tal.nom)} <span class="pips">${pips}</span></b>
         <i>${txt(texte)}</i><small>${txt(note)}</small></button>`;
     }).join('');
-    return `<div class="branche"><div class="br-nom">${br.glyphe} ${txt(br.nom)}</div>${talents}</div>`;
+    return `<div class="branche${br.perso ? ' maitrise' : ''}"><div class="br-nom">${br.glyphe} ${txt(br.nom)}${br.perso ? ` de ${txt(p.nom)}` : ''}</div>${br.perso ? `<div class="br-rang">${talents}</div>` : talents}</div>`;
   }).join('');
   return `<div class="talents">
     <div class="tal-tete">Talents ${libres ? `<b class="pastille">${libres} point${libres > 1 ? 's' : ''} à dépenser</b>` : '<span>aucun point à dépenser</span>'}</div>

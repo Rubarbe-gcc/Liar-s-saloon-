@@ -917,3 +917,11 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .emp-suppr:active { translate: 0 3px; box-shadow: 0 2px 0 rgba(0,0,0,.45); }
 .emp-vide { border-style: dashed; background: rgba(255,255,255,.03); padding: 12px 14px; }
 .emp-vide .bi { color: var(--doux); }
+
+/* La branche de Maîtrise prend toute la largeur, ses trois talents côte à côte. */
+.branche.maitrise { grid-column: 1 / -1; padding-top: 8px; border-top: 1px dashed var(--bord); }
+.branche.maitrise .br-nom { color: #bfeeff; }
+.br-rang { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.branche.maitrise .talent { border-color: rgba(127, 216, 255, .25); }
+.branche.maitrise .talent.dispo { border-color: #bfeeff; box-shadow: 0 3px 0 rgba(0,0,0,.4), 0 0 12px rgba(127, 216, 255, .35); }
+@media (max-width: 420px) { .br-rang { grid-template-columns: 1fr; } }

@@ -14,7 +14,7 @@
  */
 
 import { multiplicateur } from './ecoles.js';
-import { statsDe, sortsDe, NIVEAU_ULTIME } from './personnages.js';
+import { statsDe, sortsPour, NIVEAU_ULTIME } from './personnages.js';
 import { effetsTalents } from './talents.js';
 import { eveilDe, eveilCible, COUT_EVEIL, SEUIL_EXECUTION } from './eveils.js';
 import { PAR_ID } from './heros.js';
@@ -68,7 +68,7 @@ export function creerBataille({ groupe, ennemis, bonus = {}, inventaire, chance 
       pv: Math.max(0, Math.min(p.pv, s.pvMax)), pvMax: s.pvMax,
       pm: Math.min(p.pm, s.pmMax), pmMax: s.pmMax,
       atk: s.atk, def: s.def, vit: s.vit, crit: s.crit,
-      sorts: sortsDe(PAR_ID[p.id]),
+      sorts: sortsPour(p),
       tal: effetsTalents(p),
       eveil: eveilDe(p),   // sa compétence d'éveil, s'il est revenu de voyage
       defense: false, poison: null,
@@ -177,6 +177,11 @@ export function avancer(etat) {
     if (u.camp === 'e') { jouerEnnemi(etat, u, ev); continue; }
     u.defense = false;
     if (u.tal.pmTour) u.pm = Math.min(u.pmMax, u.pm + u.tal.pmTour);
+    if (u.tal.soinTour && u.pv < u.pvMax) soigner(u, u.pvMax * u.tal.soinTour, ev);
+    if (u.tal.aura) {
+      const blesse = vivants(etat.heros).filter((x) => x.pv < x.pvMax).sort((a, b) => a.pv / a.pvMax - b.pv / b.pvMax)[0];
+      if (blesse) soigner(blesse, blesse.pvMax * u.tal.aura, ev);
+    }
     etat.actif = r;
     ev.push({ t: 'tour', ...r });
     return ev;
@@ -217,7 +222,8 @@ export function estimer(etat, src, cible, mult, { perce = 0, basique = false, al
   if (src.camp === 'h') {
     if (etat.elan) atk *= 1 + etat.elan.valeur;
     atk *= 1 + (etat.bonus.degats || 0);
-    if (cible.rang === 'boss') atk *= 1 + (etat.bonus.boss || 0);
+    if (cible.rang === 'boss') atk *= 1 + (etat.bonus.boss || 0) + ((src.tal && src.tal.boss) || 0);
+    if (src.tal && src.tal.achever && cible.pv / cible.pvMax < 0.5) atk *= 1 + src.tal.achever;
   }
   const elem = multiplicateur(src.ecole, cible.ecole);
   let d = atk * mult * elem * alea * reduction(cible.def * (1 - perce));
@@ -226,9 +232,9 @@ export function estimer(etat, src, cible, mult, { perce = 0, basique = false, al
     if (cible.defense) d *= 0.5;
     if (etat.bouclier) d *= 1 - etat.bouclier.valeur;
     if (cible.tal && cible.tal.reduc) d *= 1 - cible.tal.reduc;
-    if (etat.provoc && etat.provoc.idx === cible.idx) d *= 1 - PROVOC_REDUC;
+    if (etat.provoc && etat.provoc.idx === cible.idx) d *= 1 - (etat.provoc.reduc ?? PROVOC_REDUC);
   }
-  if (crit) d *= MULT_CRIT + (etat.bonus.critique || 0);
+  if (crit) d *= MULT_CRIT + (etat.bonus.critique || 0) + ((src.tal && src.tal.critDegats) || 0);
   return { degats: Math.max(1, Math.round(d)), elem };
 }
 
@@ -243,6 +249,8 @@ function subir(etat, cible, n, ev, extra = {}) {
     etat.coeur = false;
     cible.pv = Math.round(cible.pvMax * VIE_COEUR);
     ev.push({ t: 'releve', ...ref(cible), pv: cible.pv, relique: 'coeur' });
+  } else if (cible.pv <= 0 && avant > 0 && cible.camp === 'e' && cible.phases && cible.phase < cible.phases.length - 1) {
+    changerPhase(cible, ev);
   } else if (cible.pv <= 0 && avant > 0) {
     ev.push({ t: 'ko', ...ref(cible) });
     if (cible.camp === 'h') {
@@ -255,6 +263,31 @@ function subir(etat, cible, n, ev, extra = {}) {
     cible.enrage = true;
     ev.push({ t: 'effet', quoi: 'rage', ...ref(cible) });
   }
+}
+
+/**
+ * Un boss à plusieurs phases ne tombe pas : il se relève sous une forme plus
+ * forte, plus dure, avec plus de vie. Ce qui pesait sur lui (brûlure,
+ * affaiblissement, étourdissement) s'efface, et sa charge repart de zéro.
+ * Les nouvelles valeurs se déduisent des anciennes : tout ce qui avait déjà
+ * modifié le boss (difficulté, ruses, blessures) reste en proportion.
+ */
+function changerPhase(e, ev) {
+  const avant = e.phases[e.phase];
+  const apres = e.phases[e.phase + 1];
+  e.phase++;
+  e.pvMax = Math.max(1, Math.round(e.pvMax * (apres.pv / avant.pv)));
+  e.pv = e.pvMax;
+  e.atk = Math.max(1, Math.round(e.atk * (apres.atk / avant.atk)));
+  e.def = Math.round(e.def * (apres.def / avant.def));
+  if (apres.traits) e.traits = [...apres.traits];
+  if (apres.nom) e.nom = apres.nom;
+  e.enrage = false;
+  e.brasier = null;
+  e.entrave = null;
+  e.etourdi = false;
+  e.charge.reste = e.charge.tours;
+  ev.push({ t: 'phase', ...ref(e), n: e.phase + 1, sur: e.phases.length, nom: e.nom, pv: e.pv, pvMax: e.pvMax });
 }
 
 function soigner(cible, n, ev) {
@@ -432,7 +465,7 @@ function lancerSoutien(etat, h, cle, ev) {
       }
       break;
     case 'provoc':
-      etat.provoc = { idx: h.idx, tours: eff.valeur };
+      etat.provoc = { idx: h.idx, tours: eff.valeur, reduc: Math.min(0.6, PROVOC_REDUC * (1 + (s.renfort || 0))) };
       ev.push({ t: 'effet', quoi: 'provoc', ...ref(h) });
       break;
     case 'bastion':

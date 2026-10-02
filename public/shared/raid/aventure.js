@@ -138,7 +138,7 @@ export function creerAventure({ heros = DEPARTS[0], seed = null, difficulte = 'n
     position: null,
     visites: [],
     groupe: [creerPersonnage(heros, niveauDuChapitre(chapitre))],
-    or: 35 + 70 * (chapitre - 1),
+    or: 35 + 45 * (chapitre - 1),
     inventaire: { potion: DIFFICULTES[difficulte].potions, elixir: 1, phenix: 0 },
     sac: [],
     chance: CHANCE_DEPART,
@@ -258,7 +258,10 @@ export function entrer(av, id) {
       sauvegarder(av);
       break;
     case 'tresor':
-      av.etape = { type: 'tresor', or: 18 + 12 * av.acte + entier(av, 12), piece: piece(av, { plancher: 'rare' }) };
+      av.etape = { type: 'tresor', or: 12 + 8 * av.acte + entier(av, 8), piece: piece(av, { plancher: 'rare' }) };
+      break;
+    case 'recrutement':
+      av.etape = { type: 'compagnon', offres: offresCentre(av), centre: true };
       break;
     case 'compagnon': {
       const offres = offresCompagnons(av);
@@ -360,7 +363,7 @@ export function chasser(av) {
 export const xpDe = (e, acte) =>
   Math.round((e.rang === 'boss' ? 50 : e.rang === 'elite' ? 26 : 10) * (1 + 0.35 * (acte - 1)));
 export const orDe = (e, acte) =>
-  Math.round((e.rang === 'boss' ? 60 : e.rang === 'elite' ? 26 : 9) * (1 + 0.3 * (acte - 1)));
+  Math.round((e.rang === 'boss' ? 40 : e.rang === 'elite' ? 16 : 6) * (1 + 0.22 * (acte - 1)));
 
 /**
  * Le combat est fini. Une victoire rapporte de l'expérience à tout le groupe
@@ -1095,6 +1098,26 @@ function offresCompagnons(av) {
   return offres;
 }
 
+/**
+ * Le centre de recrutement : trois aventuriers au choix, de rôles variés. On
+ * y recrute s'il reste de la place, ou on y échange un compagnon contre un
+ * autre. Passé le troisième chapitre, un héros légendaire s'y trouve parfois.
+ */
+function offresCentre(av) {
+  const dedans = [...av.groupe, ...(av.absents || []).map((a) => a.perso)].map((p) => p.id);
+  const libres = melanger(av, HEROS.filter((h) => !dedans.includes(h.id)));
+  const offres = [];
+  for (const r of ['dps', 'soigneur', 'tank']) {
+    const h = libres.find((x) => x.role === r);
+    if (h) offres.push(h.id);
+  }
+  const legendes = LEGENDES.filter((h) => !dedans.includes(h.id));
+  if (av.acte >= ACTE_LEGENDES && legendes.length && rng(av)() < CHANCE_LEGENDE) {
+    offres[entier(av, Math.max(1, offres.length))] = piocher(av, legendes).id;
+  }
+  return offres;
+}
+
 /** Niveau d'arrivée d'un compagnon : un de moins que le héros. */
 export const niveauRecrue = (av) => Math.max(1, heros(av).niveau - 1);
 
@@ -1198,7 +1221,7 @@ export const RISQUE_ADIEU = 0.25;
  * montant fixe, qui suit le chapitre — de quoi faire hésiter sans ruiner :
  * à peu près la moitié de ce qu'un chapitre rapporte.
  */
-export const prixViatique = (av) => 20 + 30 * av.acte;
+export const prixViatique = (av) => 15 + 20 * av.acte;
 
 /** Le groupe, absents compris : leur place reste la leur. */
 export const effectif = (av) => av.groupe.length + (av.absents || []).length;
