@@ -143,7 +143,8 @@ class Arena {
   armTurn() {
     this.stopClock();
     if (!this.battle || this.battle.phase !== PHASE.CHOOSE) return;
-    this.timer = setTimeout(() => this.timeout(), TURN_MS);
+    // Un combattant parti : son camp frappe d'office, sans faire attendre l'autre.
+    this.timer = setTimeout(() => this.timeout(), this.seats.some((s) => s.absent) ? 3000 : TURN_MS);
   }
 
   /** Personne n'a répondu à temps : les camps muets frappent. */
@@ -251,6 +252,48 @@ function leave(c, id) {
   if (!a) return;
   a.drop(id);
   if (a.seats.length === 0) { a.stopClock(); arenas.delete(a.code); }
+}
+
+/* ------------------------------------------------------------------ */
+/* Coupures et retours (voir server/hub.js)                            */
+/* ------------------------------------------------------------------ */
+
+const areneDe = (conn) => {
+  const c = clients.get(conn.id);
+  return (c && c.code && arenas.get(c.code)) || null;
+};
+
+export function enPartie(conn) {
+  const a = areneDe(conn);
+  return !!(a && a.battle && a.battle.phase !== PHASE.OVER);
+}
+
+export function handleAway(conn) {
+  const a = areneDe(conn);
+  const seat = a && a.seatOf(conn.id);
+  if (!seat) return;
+  seat.absent = true;
+  a.broadcast({ t: 'z:notice', msg: `📡 ${seat.name} a perdu la connexion. Sa place l’attend 5 minutes.` });
+  a.armTurn();
+}
+
+export function handleResume(conn) {
+  const c = clients.get(conn.id);
+  if (!c) return;
+  conn.send({ t: 'z:welcome', id: conn.id });
+  const a = areneDe(conn);
+  if (!a) return;
+  const seat = a.seatOf(conn.id);
+  if (seat && seat.absent) {
+    seat.absent = false;
+    a.broadcast({ t: 'z:notice', msg: `✅ ${seat.name} est de retour.` });
+    a.armTurn();
+  }
+  conn.send(a.lobby());
+  if (a.battle) {
+    conn.send({ t: 'z:begin' });
+    conn.send({ t: 'z:tick', view: viewFor(a.battle, conn.id), effects: [] });
+  }
 }
 
 export function handleMessage(conn, msg) {

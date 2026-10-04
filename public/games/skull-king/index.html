@@ -40,13 +40,13 @@
     </header>
 
     <nav class="menu-nav">
-      <button class="btn btn-reprendre" id="b-reprendre" hidden>
-        <span class="bi">⏳</span>
-        <span class="bt"><b>Reprendre la partie</b><i id="reprendre-info"></i></span>
-      </button>
       <button class="btn btn-grand" data-va="s-reglage">
         <span class="bi">⚓</span>
         <span class="bt"><b>Jouer contre l’équipage</b><i>Vous contre 1 à 6 pirates de l’ordinateur</i></span>
+      </button>
+      <button class="btn btn-grand btn-mer" id="b-en-ligne">
+        <span class="bi">🌐</span>
+        <span class="bt"><b>Jouer en ligne</b><i>Une table entre amis, avec un code à partager</i></span>
       </button>
       <button class="btn btn-grand btn-parchemin" data-va="s-score">
         <span class="bi">📜</span>
@@ -76,6 +76,48 @@
   </div>
 </section>
 
+<!-- =========================== EN LIGNE ========================= -->
+<section class="ecran" id="s-enligne">
+  <div class="panneau">
+    <button class="retour" id="en-retour" aria-label="Retour">‹</button>
+    <h2 class="titre-panneau">Une table entre amis</h2>
+    <p class="note" id="en-statut">Connexion au port…</p>
+
+    <div id="en-porte">
+      <label class="etiquette" for="en-nom">Votre nom de pirate</label>
+      <input id="en-nom" class="champ" type="text" maxlength="14" placeholder="Capitaine" autocomplete="off">
+      <button class="btn btn-go" id="en-creer">⚓ Ouvrir une table</button>
+      <div class="ou"><i></i><span>ou</span><i></i></div>
+      <label class="etiquette" for="en-code">Code de la table</label>
+      <div class="rejoindre">
+        <input id="en-code" class="champ code" type="text" maxlength="4" placeholder="ABCD" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <button class="btn btn-fin" id="en-rejoindre">Monter à bord</button>
+      </div>
+    </div>
+
+    <div id="en-salon" hidden>
+      <div class="code-zone">
+        <span>Code de la table</span>
+        <button class="code-table" id="en-code-table" title="Partager l’invitation">····</button>
+        <i>Touchez le code pour envoyer l’invitation</i>
+      </div>
+      <ul class="en-joueurs" id="en-joueurs"></ul>
+      <div class="en-bots" id="en-bots" hidden>
+        <span>Pirates de l’ordinateur</span>
+        <button class="rond" id="en-moins" aria-label="Retirer un bot">−</button>
+        <b id="en-nb-bots">0</b>
+        <button class="rond" id="en-plus" aria-label="Ajouter un bot">+</button>
+      </div>
+      <p class="note" id="en-note"></p>
+      <div class="deux">
+        <button class="btn btn-fin" id="en-quitter">Quitter</button>
+        <button class="btn btn-go" id="en-lancer">Lancer la partie</button>
+      </div>
+      <p class="note petite">Si votre connexion tombe en pleine partie, votre place vous attend 5 minutes.</p>
+    </div>
+  </div>
+</section>
+
 <!-- ============================ TABLE =========================== -->
 <section class="ecran ecran-table" id="s-table">
   <header class="barre">
@@ -95,7 +137,7 @@
 
   <div class="moi">
     <div class="siege moi-siege" id="moi-siege"></div>
-    <div class="consigne" id="consigne"></div>
+    <div class="consigne"><span id="consigne"></span> <b class="chrono" id="chrono" hidden></b></div>
     <div class="main" id="main"></div>
   </div>
 
@@ -184,7 +226,7 @@
 <div class="voile" id="ov-quitter" hidden>
   <div class="feuille feuille-petite">
     <h2>Quitter la table ?</h2>
-    <p class="note">La partie reste sauvegardée : vous pourrez la reprendre depuis le menu.</p>
+    <p class="note" id="quitter-note"></p>
     <div class="deux">
       <button class="btn btn-fin" data-ferme="ov-quitter">Rester</button>
       <button class="btn btn-go" id="b-quitter-ok">Quitter</button>

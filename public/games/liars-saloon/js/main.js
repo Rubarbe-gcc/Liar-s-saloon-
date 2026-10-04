@@ -8,6 +8,7 @@ import * as offline from './offline.js';
 import * as net from './online.js';
 import { sfx, toggle as toggleSound, isEnabled as soundOn, unlock } from './sfx.js';
 import { installerMusique } from '../../../shared/musique.js';
+import { bandeau } from '../../../shared/reprise.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -393,3 +394,6 @@ if (invite) {
 }
 
 installerMusique('saloon', { actif: soundOn });
+
+// Une partie en ligne interrompue (application fermée, réseau perdu) : on peut la rejoindre.
+bandeau('saloon', { visible: () => current === 'menu', rejoindre: openOnline });

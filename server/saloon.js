@@ -163,7 +163,10 @@ class Room {
       return;
     }
     if (this.state.phase === PHASE.PLAYING) {
-      const delay = Math.max(500, this.state.turnDeadline - Date.now() + 250);
+      let delay = Math.max(500, this.state.turnDeadline - Date.now() + 250);
+      // Un joueur parti : on joue sa carte sans faire attendre toute la table.
+      const cur = currentPlayer(this.state);
+      if (cur && this.seatOf(cur.id)?.absent) delay = Math.min(delay, 2500);
       this.timer = setTimeout(() => this.onTimeout(), delay);
     }
   }
@@ -257,6 +260,50 @@ export function handleClose(conn) {
     }
   }
   clients.delete(conn.id);
+}
+
+/* ------------------------------------------------------------------ */
+/* Coupures et retours (voir server/hub.js)                            */
+/* ------------------------------------------------------------------ */
+
+const salonDe = (conn) => {
+  const c = clients.get(conn.id);
+  return (c && c.roomCode && rooms.get(c.roomCode)) || null;
+};
+
+/** Une place ne vaut la peine d'être gardée qu'en pleine partie. */
+export function enPartie(conn) {
+  const room = salonDe(conn);
+  return !!(room && room.phase === 'playing' && room.state && room.state.phase !== PHASE.GAME_OVER);
+}
+
+export function handleAway(conn) {
+  const room = salonDe(conn);
+  const seat = room && room.seatOf(conn.id);
+  if (!seat) return;
+  seat.absent = true;
+  room.broadcast({ t: 'notice', msg: `📡 ${seat.name} a perdu la connexion. Sa place l’attend 5 minutes.` });
+  room.schedule();
+}
+
+/** Le joueur est revenu : il retrouve sa place, sa main et la table. */
+export function handleResume(conn) {
+  const c = clients.get(conn.id);
+  if (!c) return;
+  conn.send({ t: 'welcome', id: conn.id });
+  conn.send({ t: 'hello', name: c.name, avatar: c.avatar });
+  const room = salonDe(conn);
+  if (!room) return;
+  const seat = room.seatOf(conn.id);
+  if (seat && seat.absent) {
+    seat.absent = false;
+    room.broadcast({ t: 'notice', msg: `✅ ${seat.name} est de retour.` });
+  }
+  conn.send(room.lobbyPayload());
+  if (room.state) {
+    conn.send({ t: 'begin' });
+    conn.send({ t: 'state', view: viewFor(room.state, conn.id), events: [] });
+  }
 }
 
 export function handleMessage(conn, msg) {

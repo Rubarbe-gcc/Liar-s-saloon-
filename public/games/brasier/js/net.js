@@ -6,6 +6,9 @@
  * simule rien, il n'y a donc rien qui puisse diverger d'un écran à l'autre.
  */
 
+import * as reprise from '../../../shared/reprise.js';
+
+const JEU = 'brasier';
 const RECONNEXION_MAX = 15000;
 const ABANDON_APRES = 4;
 
@@ -17,6 +20,9 @@ let delai = 800;
 let echecs = 0;
 let minuteur = null;
 let battement = null;
+/** En pleine partie : une coupure doit pouvoir se rattraper. */
+let enJeu = false;
+let code = null;
 
 const on = {
   statut: () => {}, salon: () => {}, debut: () => {}, etat: () => {},
@@ -28,19 +34,13 @@ const on = {
  * suivante. L'hébergement coupe les connexions au bout de quelques minutes ;
  * sans jeton, chaque reconnexion faisait de vous un inconnu, et la table vous
  * remplaçait par un bot. Il vit le temps de l'onglet : deux onglets, deux
- * joueurs — et recharger la page rend sa place.
+ * joueurs — et recharger la page rend sa place. Si l'application a été
+ * fermée en pleine partie, on la rouvre et on reprend le même jeton, tant
+ * que la place attend encore (cinq minutes) : voir shared/reprise.js.
  */
-function jeton() {
-  const neuf = () => (crypto.randomUUID ? crypto.randomUUID()
-    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`);
-  try {
-    let j = sessionStorage.getItem('brasier.jeton');
-    if (!j) { j = neuf(); sessionStorage.setItem('brasier.jeton', j); }
-    return j;
-  } catch {
-    return (jeton.memoire = jeton.memoire || neuf());
-  }
-}
+const jeton = () => reprise.session(JEU);
+reprise.adopter(JEU);
+reprise.surveiller(JEU);
 export function ecouter(evt, fn) { on[evt] = fn; }
 export const moi = () => monId;
 
@@ -59,7 +59,7 @@ export function connecter(qui) {
     on.statut('connecte');
     envoyer({ t: 'hello', name: nom, jeton: jeton() });
     clearInterval(battement);
-    battement = setInterval(() => envoyer({ t: 'ping' }), 25000);
+    battement = setInterval(() => { envoyer({ t: 'ping' }); if (enJeu) reprise.enPartie(JEU, { code }); }, 20000);
   });
   ws.addEventListener('message', (e) => {
     let m; try { m = JSON.parse(e.data); } catch { return; }
@@ -69,6 +69,7 @@ export function connecter(qui) {
     clearInterval(battement);
     ws = null;
     if (!voulu) return;
+    if (enJeu) reprise.interrompue(JEU);
     echecs += 1;
     on.statut(echecs >= ABANDON_APRES ? 'injoignable' : 'perdu');
     relancer();
@@ -101,13 +102,19 @@ function traiter(m) {
     case 'b:hello':
       nom = m.name;
       if (m.id) monId = m.id;
+      if (!m.repris && enJeu) { enJeu = false; reprise.oublier(JEU); }
       return on.hello(!!m.repris);
-    case 'b:salon': return on.salon(m);
-    case 'b:debut': return on.debut(!!m.reprise);
-    case 'b:etat': return on.etat(m.vue, m.reste);
+    case 'b:salon': code = m.code; return on.salon(m);
+    case 'b:debut':
+      enJeu = true;
+      reprise.enPartie(JEU, { code });
+      return on.debut(!!m.reprise);
+    case 'b:etat':
+      if (m.vue && m.vue.phase === 'fin') { enJeu = false; reprise.oublier(JEU); }
+      return on.etat(m.vue, m.reste);
     case 'b:refus': return on.refus(m.raison);
     case 'b:erreur': return on.erreur(m.msg || 'Erreur inconnue.');
-    case 'b:parti': return on.parti();
+    case 'b:parti': enJeu = false; reprise.oublier(JEU); return on.parti();
     default: return undefined;
   }
 }
@@ -116,7 +123,7 @@ function traiter(m) {
 export const creer = (name) => { nom = name || nom; envoyer({ t: 'create', name: nom }); };
 export const rejoindre = (code, name) => { nom = name || nom; envoyer({ t: 'join', code, name: nom }); };
 export const lancer = () => envoyer({ t: 'start' });
-export const quitter = () => envoyer({ t: 'leave' });
+export const quitter = () => { enJeu = false; reprise.oublier(JEU); return envoyer({ t: 'leave' }); };
 export const heros = (id) => envoyer({ t: 'heros', id });
 export const agir = (a) => envoyer({ t: 'action', a });
 export const renommer = (name) => { nom = name || nom; envoyer({ t: 'hello', name: nom, jeton: jeton() }); };

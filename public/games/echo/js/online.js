@@ -15,6 +15,14 @@ import { analyserPrise, noter } from '../../../shared/mimic/analyse.js';
 import * as audio from './audio.js';
 import * as karaoke from './karaoke.js';
 import * as ui from './ui.js';
+import * as reprise from '../../../shared/reprise.js';
+
+const JEU = 'echo';
+/** En pleine partie : une coupure doit pouvoir se rattraper. */
+let enJeu = false;
+/** On revient d'une partie interrompue : le serveur dira s'il l'a gardée. */
+let attendReprise = false;
+let battement = null;
 
 const URL_WS = () =>
   `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/ws`;
@@ -36,6 +44,7 @@ export const moi = () => monId;
 /* ------------------------------------------------------------------ */
 
 export function connecter({ name, photo } = {}) {
+  if (!voulu && !salon) attendReprise = reprise.adopter(JEU);
   voulu = true;
   identite = { name: name || 'Voix', photo: photo || null };
   if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
@@ -46,16 +55,22 @@ export function connecter({ name, photo } = {}) {
   ws.addEventListener('open', () => {
     reconnexions = 0;
     dire('statut', 'connecte');
+    // La clé de session d'abord : si une place nous attend, le serveur nous la rend.
+    envoyer({ t: 'session', sid: reprise.session(JEU) });
     envoyer({ t: 'hello', name: identite.name, photo: identite.photo });
+    clearInterval(battement);
+    battement = setInterval(() => { envoyer({ t: 'ping' }); if (enJeu) reprise.enPartie(JEU, { code: salon?.code }); }, 20000);
   });
   ws.addEventListener('message', (e) => {
     let m; try { m = JSON.parse(e.data); } catch { return; }
     traiter(m);
   });
   ws.addEventListener('close', () => {
+    clearInterval(battement);
     if (!voulu) return;
+    if (enJeu) { reprise.interrompue(JEU); ui.toast('Connexion perdue — votre place vous attend, on se reconnecte…', 3200); }
     dire('statut', reconnexions > 4 ? 'injoignable' : 'perdu');
-    if (reconnexions > 4) return;
+    if (reconnexions > 4 && !enJeu) return;
     const attente = Math.min(8000, 700 * 2 ** reconnexions);
     reconnexions += 1;
     setTimeout(() => { if (voulu) connecter(identite); }, attente);
@@ -65,6 +80,9 @@ export function connecter({ name, photo } = {}) {
 
 export function deconnecter() {
   voulu = false;
+  enJeu = false;
+  reprise.oublier(JEU);
+  clearInterval(battement);
   try { ws && ws.close(); } catch { /* déjà fermée */ }
   ws = null;
 }
@@ -78,7 +96,7 @@ function envoyer(o) {
 export const creer = (name, photo, reglages) => envoyer({ t: 'create', name, photo, reglages });
 export const rejoindre = (code, name, photo) => envoyer({ t: 'join', code, name, photo });
 export const lancer = () => envoyer({ t: 'start' });
-export const quitterSalon = () => envoyer({ t: 'leave' });
+export const quitterSalon = () => { enJeu = false; reprise.oublier(JEU); return envoyer({ t: 'leave' }); };
 export const reglages = (r) => envoyer({ t: 'reglages', ...r });
 export function changerPhoto(photo) {
   identite.photo = photo;
@@ -89,6 +107,26 @@ export function changerPhoto(photo) {
 
 function traiter(m) {
   switch (m.t) {
+    case 'session':
+      if (m.repris) { attendReprise = false; ui.toast('✅ Vous revoilà dans la partie.', 2400); return; }
+      if (attendReprise) {
+        attendReprise = false;
+        reprise.oublier(JEU);
+        ui.toast('Cette partie n’existe plus : elle est finie, ou l’attente a dépassé 5 minutes.', 3600);
+      }
+      if (enJeu) {
+        enJeu = false;
+        reprise.oublier(JEU);
+        salon = null;
+        dire('parti');
+        ui.montrer('online');
+        ui.toast('La partie a continué sans vous.', 3200);
+      } else if (salon) {
+        // Au vestiaire, une coupure libère la place : on la reprend.
+        envoyer({ t: 'join', code: salon.code, name: identite.name, photo: identite.photo });
+      }
+      return;
+    case 'e:notice': ui.toast(m.msg, 3200); return;
     case 'e:bonjour': monId = m.id; return;
     case 'e:hello': return;
     case 'e:salon':
@@ -96,6 +134,8 @@ function traiter(m) {
       ui.definirVisages(m.joueurs);
       return dire('salon', m);
     case 'e:debut':
+      enJeu = true;
+      reprise.enPartie(JEU, { code: salon?.code });
       mancheEnregistree = 0;
       mancheEcoutee = 0;
       ui.fermerFin();
@@ -106,9 +146,11 @@ function traiter(m) {
     case 'e:etat': return majEtat(m);
     case 'e:roue': return surRoue(m);
     case 'e:abandon':
+      enJeu = false;
+      reprise.oublier(JEU);
       ui.toast('Il ne reste plus assez de monde.', 3000);
       return;
-    case 'e:parti': salon = null; return dire('parti');
+    case 'e:parti': salon = null; enJeu = false; reprise.oublier(JEU); return dire('parti');
     case 'e:erreur': return dire('erreur', m.msg || 'Erreur inconnue.');
     default: return undefined;
   }
@@ -119,6 +161,9 @@ function traiter(m) {
 async function majEtat(m) {
   const v = m.vue;
   vueCourante = v;
+  if (v.phase === PHASE.FIN) { enJeu = false; reprise.oublier(JEU); }
+  // De retour en pleine manche : le son de référence n'a peut-être pas été entendu ici.
+  if (!sonManche || mancheEcoutee !== v.manche) { const s = getSon(m.sonId || v.sonId); if (s) sonManche = s; }
 
   // Une restitution arrive avec sa prise : on la joue, puis on se tait.
   if (m.restitution) return restituer(v, m.restitution);
@@ -159,6 +204,8 @@ let mancheEnregistree = 0;
 async function enregistrement(v) {
   const chacun = v.tourPar === TOUR.CHACUN;
   const aMoi = !chacun || v.enregistreur === v.viewer;
+  // Déjà déposée avant une coupure : on ne réenregistre pas.
+  if (v.joueurs[v.viewer]?.aDepose) mancheEnregistree = v.manche;
 
   if (!aMoi) {
     // Quelqu'un d'autre est en scène : on se tait et on le regarde.
@@ -279,3 +326,5 @@ function fin(v) {
     onAgain: () => { ui.fermerFin(); ui.montrer('online'); },
   });
 }
+
+reprise.surveiller(JEU);

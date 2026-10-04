@@ -13,6 +13,7 @@ import * as solo from './offline.js';
 import * as net from './online.js';
 import { sfx, toggle as toggleSound, isEnabled as soundOn, unlock } from './sfx.js';
 import { installerMusique } from '../../../shared/musique.js';
+import { bandeau } from '../../../shared/reprise.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -413,3 +414,6 @@ if (invite) {
 }
 
 installerMusique('zenith', { actif: soundOn });
+
+// Un combat en ligne interrompu (application fermée, réseau perdu) : on peut le rejoindre.
+bandeau('zenith', { visible: () => current === 'menu', rejoindre: openOnline });

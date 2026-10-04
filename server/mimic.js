@@ -321,6 +321,46 @@ export function handleClose(conn) {
   clients.delete(conn.id);
 }
 
+/* ------------------------------------------------------------------ */
+/* Coupures et retours (voir server/hub.js)                            */
+/* ------------------------------------------------------------------ */
+
+const salonDe = (conn) => {
+  const c = clients.get(conn.id);
+  return (c && c.code && salons.get(c.code)) || null;
+};
+
+export function enPartie(conn) {
+  const s = salonDe(conn);
+  return !!(s && s.partie && s.partie.phase !== PHASE.FIN);
+}
+
+export function handleAway(conn) {
+  const s = salonDe(conn);
+  const p = s && s.places.find((x) => x.id === conn.id);
+  if (!p) return;
+  p.absent = true;
+  s.diffuser({ t: 'e:notice', msg: `📡 ${p.name} a perdu la connexion. Sa place l’attend 5 minutes.` });
+}
+
+export function handleResume(conn) {
+  const c = clients.get(conn.id);
+  if (!c) return;
+  conn.send({ t: 'e:bonjour', id: conn.id });
+  const s = salonDe(conn);
+  if (!s) return;
+  const p = s.places.find((x) => x.id === conn.id);
+  if (p && p.absent) {
+    p.absent = false;
+    s.diffuser({ t: 'e:notice', msg: `✅ ${p.name} est de retour.` });
+  }
+  conn.send(s.vestiaire());
+  if (s.partie) {
+    conn.send({ t: 'e:debut', reprise: true });
+    conn.send({ t: 'e:etat', vue: viewFor(s.partie, conn.id), sonId: sonDeLaManche(s.partie).id });
+  }
+}
+
 function quitter(c, id) {
   if (!c.code) return;
   const s = salons.get(c.code);

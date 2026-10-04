@@ -7,6 +7,13 @@
  */
 
 import * as ui from './ui.js';
+import * as reprise from '../../../shared/reprise.js';
+
+const JEU = 'zenith';
+/** En plein combat : une coupure doit pouvoir se rattraper. */
+let enJeu = false;
+/** On revient d'un combat interrompu : le serveur dira s'il l'a gardé. */
+let attendReprise = false;
 
 const RECONNECT_MAX = 15000;
 const GIVE_UP_AFTER = 4;
@@ -30,6 +37,7 @@ function endpoint() {
 
 export function connect(who) {
   if (who && who.name) name = who.name;
+  if (!want && !room) attendReprise = reprise.adopter(JEU);
   want = true;
   if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
 
@@ -39,9 +47,11 @@ export function connect(who) {
   ws.addEventListener('open', () => {
     delay = 800; fails = 0;
     on.status('online');
+    // La clé de session d'abord : si une place nous attend, le serveur nous la rend.
+    send({ t: 'session', sid: reprise.session(JEU) });
     send({ t: 'hello', name });
     clearInterval(beat);
-    beat = setInterval(() => send({ t: 'ping' }), 25000);
+    beat = setInterval(() => { send({ t: 'ping' }); if (enJeu) reprise.enPartie(JEU, { code: room?.code }); }, 20000);
   });
 
   ws.addEventListener('message', (e) => {
@@ -53,6 +63,7 @@ export function connect(who) {
     clearInterval(beat);
     ws = null;
     if (!want) return;
+    if (enJeu) { reprise.interrompue(JEU); ui.toast('Connexion perdue — votre place vous attend, on se reconnecte…', 3200); }
     fails += 1;
     on.status(fails >= GIVE_UP_AFTER ? 'unreachable' : 'offline');
     retry();
@@ -63,6 +74,8 @@ export function connect(who) {
 
 export function disconnect() {
   want = false; fails = 0;
+  enJeu = false;
+  reprise.oublier(JEU);
   clearTimeout(timer); clearInterval(beat);
   if (ws) { try { ws.close(); } catch { /* déjà fermée */ } }
   ws = null; room = null;
@@ -83,12 +96,35 @@ function send(obj) {
 
 function handle(m) {
   switch (m.t) {
+    case 'session':
+      if (m.repris) { attendReprise = false; ui.toast('✅ Vous revoilà dans l’arène.', 2400); return; }
+      if (attendReprise) {
+        attendReprise = false;
+        reprise.oublier(JEU);
+        ui.toast('Ce combat n’existe plus : il est fini, ou l’attente a dépassé 5 minutes.', 3600);
+      }
+      if (enJeu) {
+        enJeu = false;
+        reprise.oublier(JEU);
+        room = null;
+        on.left();
+        ui.toast('Le combat s’est terminé sans vous.', 3200);
+      } else if (room) {
+        // Au vestiaire, une coupure libère la place : on la reprend.
+        send({ t: 'join', code: room.code, name });
+      }
+      return;
+    case 'z:notice': ui.toast(m.msg, 3200); return;
     case 'z:welcome': myId = m.id; return;
     case 'z:hello': name = m.name; return;
     case 'z:room': room = m; return on.room(m);
-    case 'z:begin': ui.resetFight(); ui.bindCommands(envoyer); return on.begin();
+    case 'z:begin':
+      enJeu = true;
+      reprise.enPartie(JEU, { code: room?.code });
+      ui.resetFight(); ui.bindCommands(envoyer); return on.begin();
 
     case 'z:tick': {
+      if (m.view && m.view.phase === 'over') { enJeu = false; reprise.oublier(JEU); }
       // Le serveur envoie l'état après chaque choix, et les effets du tour
       // lorsqu'il vient de se résoudre.
       if (m.effects && m.effects.length) {
@@ -103,6 +139,8 @@ function handle(m) {
     }
 
     case 'z:forfeit':
+      enJeu = false;
+      reprise.oublier(JEU);
       ui.toast('Votre adversaire a quitté l\'arène.', 2600);
       return on.over(m.view);
 
@@ -111,7 +149,7 @@ function handle(m) {
       else if (m.reason === 'recharge') ui.toast('Changement en recharge.');
       return;
 
-    case 'z:left': room = null; return on.left();
+    case 'z:left': room = null; enJeu = false; reprise.oublier(JEU); return on.left();
     case 'z:error': return on.error(m.msg || 'Erreur inconnue.');
     default: return;
   }
@@ -123,6 +161,8 @@ export function joinRoom(code, who) { if (who && who.name) name = who.name; send
 export function setTeam(team) { send({ t: 'team', team }); }
 export function startMatch() { send({ t: 'start' }); }
 export function backToLobby() { send({ t: 'lobby' }); }
-export function leaveRoom() { send({ t: 'leave' }); room = null; }
+export function leaveRoom() { send({ t: 'leave' }); room = null; enJeu = false; reprise.oublier(JEU); }
 
 function envoyer(cmd) { send({ t: 'act', action: cmd }); }
+
+reprise.surveiller(JEU);

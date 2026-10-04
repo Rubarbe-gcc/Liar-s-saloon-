@@ -6,8 +6,13 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
 **Les jeux**
 
 - **SKULL KING** — le jeu de plis des pirates : on annonce ses plis, on tient
-  parole. Solo contre un équipage de bots, plus une feuille de score pour
-  compter les points d'une vraie partie autour d'une table.
+  parole. Solo contre un équipage de bots, en ligne entre amis (bots en
+  renfort), et une feuille de score pour compter les points d'une vraie partie.
+
+Dans tous les jeux en ligne, une connexion qui tombe en pleine partie n'est
+pas un départ : la place attend son joueur cinq minutes (un bot joue pour lui
+quand c'est son tour), et il la reprend en revenant — même après avoir fermé
+l'application. Voir `server/hub.js` et `public/shared/reprise.js`.
 - **BRASIER** — huit champions dans une taverne-forge. On recrute des
   serviteurs, on les fusionne en dorés, les combats se jouent seuls ; le dernier
   debout l'emporte. En ligne uniquement : les chaises vides sont prises par des bots.
@@ -248,7 +253,8 @@ public/
   games/raid/
     js/{main,combat,textes,regles,sfx}.js   écrans de l'aventure, combat, textes, règles, sons
   games/skull-king/
-    js/{main,cartes,score,regles,sfx}.js    table de jeu, dessin des cartes, feuille de score
+    js/{main,table,enligne}.js              solo, dessin de la table, partie en ligne
+    js/{cartes,score,regles,sfx}.js         dessin des cartes, feuille de score, règles, sons
 server/
   index.js                serveur autonome : statique + WebSocket
   wsproto.js              RFC 6455 minimal, sans dépendance
@@ -257,6 +263,7 @@ server/
   zenith.js               arènes de ZÉNITH
   mimic.js                salons d'ÉCHO
   brasier.js              tables de BRASIER, bots compris
+  skullking.js            tables de SKULL KING, bots compris
 api/
   ws.js                   même logique, exposée comme Function Vercel
 test/
@@ -265,6 +272,7 @@ test/
   echo.test.js            ÉCHO
   raid.test.js            RAID
   skullking.test.js       SKULL KING
+  enligne.test.js         sessions et reprises en ligne, tables de SKULL KING
 ```
 
 RAID n'a pas de module serveur : c'est un jeu solo, tout tient dans
