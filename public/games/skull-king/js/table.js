@@ -208,13 +208,8 @@ export function montrerPari(G) {
   const p = $('pari');
   $('pari-choix').innerHTML = Array.from({ length: G.manche + 1 }, (_, i) => `<button data-pari="${i}">${i}</button>`).join('');
   p.hidden = false;
-  placerPari();
 }
 export function cacherPari() { $('pari').hidden = true; }
-export function placerPari() {
-  const moi = document.querySelector('.moi');
-  $('pari').style.bottom = `${moi.offsetHeight + 6}px`;
-}
 
 /** Remplit la feuille de bilan de la dernière manche. */
 export function remplirBilan(G) {

@@ -279,14 +279,15 @@ body[data-ecran="s-score"] .lune { display: none; }
 /* Une carte qui vole d'un siège à la table. */
 .vol { position: fixed; z-index: 40; pointer-events: none; transition: transform .45s var(--ease), opacity .45s; }
 
-.pari-panneau { position: absolute; left: 50%; bottom: calc(var(--cw-main, 120px) + 40px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%);
-  width: min(520px, calc(100% - 20px)); padding: 14px; border-radius: 20px; z-index: 5;
+/* Le pari se décide au milieu de la table : la main reste visible en dessous. */
+.pari-panneau { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(440px, 92%); max-height: 96%; overflow-y: auto; padding: 12px; border-radius: 20px; z-index: 5;
   background: linear-gradient(180deg, rgba(241, 227, 194, .97), rgba(226, 204, 152, .97)); color: var(--encre);
   border: 2px solid var(--or-sombre); box-shadow: 0 16px 40px rgba(0, 0, 0, .6); animation: monte .35s var(--ease); }
-@keyframes monte { from { transform: translate(-50%, 20px); opacity: 0; } }
-.pari-titre { text-align: center; font-family: var(--titre); font-weight: 800; font-size: 1.08rem; margin-bottom: 10px; }
-.pari-choix { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
-.pari-choix button { width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--or-sombre); font-family: var(--titre); font-weight: 900; font-size: 1.25rem;
+@keyframes monte { from { transform: translate(-50%, -40%) scale(.95); opacity: 0; } }
+.pari-titre { text-align: center; font-family: var(--titre); font-weight: 800; font-size: 1rem; margin-bottom: 8px; }
+.pari-choix { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
+.pari-choix button { width: 44px; height: 44px; border-radius: 50%; border: 2px solid var(--or-sombre); font-family: var(--titre); font-weight: 900; font-size: 1.25rem;
   background: radial-gradient(circle at 40% 35%, #fff6d6, var(--or-2) 55%, var(--or)); color: #3a2206; box-shadow: 0 3px 0 #6e4a10; }
 .pari-choix button:hover { filter: brightness(1.08); transform: translateY(-2px); }
 

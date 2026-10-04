@@ -289,7 +289,7 @@ $('b-tableau').addEventListener('click', () => {
   ouvrir('ov-tableau');
 });
 
-addEventListener('resize', () => { if (!$('pari').hidden) T.placerPari(); T.ajusterMain(); });
+addEventListener('resize', () => T.ajusterMain());
 
 /* ================================================================== */
 /* Démarrage                                                          */
