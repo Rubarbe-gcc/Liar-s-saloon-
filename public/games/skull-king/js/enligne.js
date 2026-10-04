@@ -197,7 +197,7 @@ function rendreSalon() {
   porte(false);
   const hote = salon.hostId === monId;
   $('en-code-table').textContent = salon.code;
-  $('en-joueurs').innerHTML = salon.joueurs.map((j) => `<li class="${j.id === monId ? 'moi' : ''}">
+  $('en-joueurs').innerHTML = salon.joueurs.map((j) => `<li class="${j.id === monId ? 'est-moi' : ''}">
     <span class="avatar">${j.av}</span><b>${txt(j.name)}</b>
     ${j.id === salon.hostId ? '<i class="etiq">capitaine</i>' : ''}${j.bot ? '<i class="etiq bot">bot</i>' : ''}${j.id === monId ? '<i class="etiq vous">vous</i>' : ''}</li>`).join('');
   const n = salon.joueurs.length;
@@ -206,6 +206,15 @@ function rendreSalon() {
   $('en-nb-bots').textContent = bots;
   $('en-moins').disabled = bots === 0;
   $('en-plus').disabled = n >= salon.max;
+  // Le mode custom : le capitaine choisit, les autres voient ce qui les attend.
+  const extras = salon.extras || [];
+  $('en-custom').innerHTML = hote
+    ? `<label class="interrupteur-sombre"><input type="checkbox" id="en-custom-on" ${extras.length ? 'checked' : ''}>
+        <span><b>✦ Mode custom</b><i>Des cartes en plus, inventées pour la maison</i></span></label>
+       ${extras.length ? `<div class="puces-custom">${o.pucesCustom(extras, true)}</div>` : ''}`
+    : (extras.length
+      ? `<div class="etiquette">✦ Mode custom — cartes en plus</div><div class="puces-custom">${o.pucesCustom(extras, false)}</div>`
+      : '<p class="aucune">Partie classique, sans cartes custom.</p>');
   $('en-lancer').hidden = !hote;
   $('en-lancer').disabled = n < 2;
   $('en-note').textContent = hote
@@ -223,7 +232,10 @@ function versLocal(v) {
   const moi = Math.max(0, v.moi);
   const rot = (a) => (a ? a.map((_, i) => a[(i + moi) % n]) : a);
   const ici = (p) => (p == null ? p : (p - moi + n) % n);
-  const res = (r) => (r ? { ...r, gagnant: ici(r.gagnant), meneur: ici(r.meneur) } : null);
+  const res = (r) => (r ? {
+    ...r, gagnant: ici(r.gagnant), meneur: ici(r.meneur),
+    extras: (r.extras || []).map((x) => ({ ...x, p: ici(x.p) })),
+  } : null);
   return {
     n, manche: v.manche, manches: v.manches, phase: v.phase,
     noms: rot(v.noms), avatars: rot(v.avatars), bots: rot(v.bots), absents: rot(v.absents),
@@ -236,6 +248,7 @@ function versLocal(v) {
     dernier: v.dernier ? { ...res(v.dernier), pli: v.dernier.pli.map((j) => ({ ...j, p: ici(j.p) })) } : null,
     historique: v.historique.map(rot),
     reste: v.reste,
+    extras: v.extras || [],
   };
 }
 
@@ -483,6 +496,20 @@ export function installer(outils) {
   $('en-plus').addEventListener('click', () => { sfx.clic(); envoyer({ t: 'bot', delta: 1 }); });
   $('en-moins').addEventListener('click', () => { sfx.clic(); envoyer({ t: 'bot', delta: -1 }); });
   $('en-lancer').addEventListener('click', () => { sfx.clic(); envoyer({ t: 'start' }); });
+  $('en-custom').addEventListener('change', (e) => {
+    if (e.target.id !== 'en-custom-on') return;
+    envoyer({ t: 'options', extras: e.target.checked ? S.TOUTES_CUSTOM : [] });
+  });
+  $('en-custom').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-custom]');
+    if (!b || b.disabled || !salon) return;
+    const t = b.dataset.custom;
+    const extras = salon.extras || [];
+    const suite = extras.includes(t) ? extras.filter((x) => x !== t) : [...extras, t];
+    sfx.clic();
+    // On garde au moins une carte : pour tout retirer, on décoche le mode custom.
+    if (suite.length) envoyer({ t: 'options', extras: suite });
+  });
   $('en-quitter').addEventListener('click', () => { sfx.clic(); quitter(); });
   $('en-code-table').addEventListener('click', async () => {
     if (!salon) return;

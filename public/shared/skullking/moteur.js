@@ -36,12 +36,35 @@ export const SPECIALES = {
   wha: { nom: 'Baleine blanche', glyphe: '🐋' },
 };
 
+/**
+ * LE MODE CUSTOM : des cartes en plus, inventées pour la maison. On choisit
+ * celles qu'on met dans le paquet ; chacune a une règle courte et nette.
+ */
+export const CUSTOM = {
+  rhum: { nom: 'Bouteille de rhum', glyphe: '🍾', nb: 2,
+    regle: 'Une fuite : elle ne prend jamais rien. Mais son joueur gagne +10 de bonus s’il réussit son pari.' },
+  maudit: { nom: 'Trésor maudit', glyphe: '💀', nb: 1,
+    regle: 'Une fuite empoisonnée : celui qui remporte le pli où elle tombe prend −20, pari réussi ou pas.' },
+  cors: { nom: 'Corsaire', glyphe: '🦎', nb: 2,
+    regle: 'Vaut un 15 de la couleur demandée : il bat toute cette couleur, mais perd contre l’atout noir et les personnages. Il se joue toujours, et ne fixe pas la couleur.' },
+  canon: { nom: 'Canon', glyphe: '💣', nb: 1,
+    regle: 'Joué en tout dernier dans le pli, il bat tout — Skull King compris. Joué avant, c’est une fuite.' },
+  holl: { nom: 'Hollandais volant', glyphe: '👻', nb: 1,
+    regle: 'Si aucun personnage n’est joué dans le pli, c’est la plus PETITE carte numérotée qui gagne, toutes couleurs confondues. Sinon, c’est une fuite.' },
+  ancre: { nom: 'Ancre', glyphe: '⚓', nb: 1,
+    regle: 'Une fuite qui retient le navire : son joueur ouvre le pli suivant, quel que soit le gagnant.' },
+};
+export const TOUTES_CUSTOM = Object.keys(CUSTOM);
+/** Les cartes qui ne prennent jamais rien d'elles-mêmes (elles ne fixent pas la couleur non plus). */
+const DISCRETES = ['esc', 'kra', 'wha', 'rhum', 'maudit', 'cors', 'canon', 'holl', 'ancre'];
+const PERSONNAGES = ['sk', 'pir', 'sir'];
+
 /** Les cinq pirates ont chacun leur nom (et leur portrait). */
 export const PIRATES = ['Barbe-Grise', 'Rosa la Rouge', 'Jack Tortue', 'Bahia la Borgne', 'Harald le Grand'];
 export const SIRENES = ['Ondine', 'Coralie'];
 
-/** Les 72 cartes du jeu. */
-export function paquet() {
+/** Les 72 cartes du jeu, plus les cartes custom demandées. */
+export function paquet(extras = []) {
   const d = [];
   for (const s of Object.keys(COULEURS)) for (let n = 1; n <= 14; n++) d.push({ id: `${s}${n}`, t: 'n', s, n });
   for (let i = 1; i <= 5; i++) {
@@ -50,13 +73,21 @@ export function paquet() {
   }
   d.push({ id: 'sir1', t: 'sir', nom: SIRENES[0] }, { id: 'sir2', t: 'sir', nom: SIRENES[1] });
   d.push({ id: 'sk', t: 'sk' }, { id: 'tig', t: 'tig' }, { id: 'kra', t: 'kra' }, { id: 'wha', t: 'wha' });
+  for (const t of extras) {
+    const c = CUSTOM[t];
+    if (!c) continue;
+    for (let i = 1; i <= c.nb; i++) d.push({ id: c.nb > 1 ? `${t}${i}` : t, t, nom: c.nom });
+  }
   return d;
 }
+
+/** Ne garde qu'une liste propre de cartes custom connues. */
+export const nettoyerExtras = (l) => (Array.isArray(l) ? TOUTES_CUSTOM.filter((t) => l.includes(t)) : []);
 
 export const nomCarte = (c, as = null) => {
   if (c.t === 'n') return `${c.n} ${COULEURS[c.s].nom}`;
   if (c.t === 'tig') return as ? `Tigresse (${as === 'pir' ? 'pirate' : 'fuite'})` : 'Tigresse';
-  return c.nom || SPECIALES[c.t].nom;
+  return c.nom || (SPECIALES[c.t] || CUSTOM[c.t]).nom;
 };
 
 /* ================================================================== */
@@ -76,7 +107,7 @@ export function couleurDemandee(pli) {
   for (const j of pli) {
     const e = effet(j);
     if (e === 'n') return j.c.s;
-    if (e === 'esc' || e === 'kra' || e === 'wha') continue;
+    if (DISCRETES.includes(e)) continue;
     return null;
   }
   return null;
@@ -89,19 +120,29 @@ export function legales(main, pli) {
   return main.filter((c) => c.t !== 'n' || c.s === cd);
 }
 
-/** L'index de la carte qui l'emporte, hors Kraken et Baleine. */
-function meilleure(pli) {
+/** La valeur et la couleur d'une carte numérotée — le Corsaire vaut 15 dans la couleur demandée. */
+function chiffre(pli, j) {
+  if (j.c.t === 'n') return { s: j.c.s, n: j.c.n };
+  if (j.c.t === 'cors') return { s: couleurDemandee(pli), n: 15 };
+  return null;
+}
+
+/** L'index de la carte qui l'emporte, hors monstres (Kraken, Baleine, Hollandais). */
+function meilleure(pli, n = pli.length) {
   const E = pli.map(effet);
   const premier = (t) => E.indexOf(t);
+  // Le Canon, posé en tout dernier, emporte tout.
+  if (pli.length && pli.length === n && E[n - 1] === 'canon') return n - 1;
   // La sirène est la seule à séduire le Skull King.
   if (premier('sk') >= 0 && premier('sir') >= 0) return premier('sir');
-  for (const t of ['sk', 'pir', 'sir']) if (premier(t) >= 0) return premier(t);
-  const nums = pli.map((j, i) => i).filter((i) => E[i] === 'n');
+  for (const t of PERSONNAGES) if (premier(t) >= 0) return premier(t);
+  const nums = pli.map((j, i) => i).filter((i) => chiffre(pli, pli[i]));
   if (!nums.length) return pli.length ? 0 : -1; // que des fuites : la première l'emporte
-  const atouts = nums.filter((i) => pli[i].c.s === 'B');
-  const couleur = pli[nums[0]].c.s;
-  const pool = atouts.length ? atouts : nums.filter((i) => pli[i].c.s === couleur);
-  return pool.reduce((a, i) => (pli[i].c.n > pli[a].c.n ? i : a));
+  const v = (i) => chiffre(pli, pli[i]);
+  const atouts = nums.filter((i) => v(i).s === 'B');
+  const couleur = couleurDemandee(pli) || v(nums[0]).s;
+  const pool = atouts.length ? atouts : nums.filter((i) => v(i).s === couleur);
+  return (pool.length ? pool : nums).reduce((a, i) => (v(i).n > v(a).n ? i : a));
 }
 
 /** Les 14 rapportent à celui qui les ramasse : 10, ou 20 pour le noir. */
@@ -114,39 +155,68 @@ function bonusQuatorze(pli) {
 }
 
 /**
- * Qui remporte le pli, et ce qu'il gagne en bonus.
+ * Qui remporte le pli, et ce qu'il gagne en bonus. `n` : le nombre de cartes
+ * d'un pli complet (le Canon a besoin de savoir s'il est le dernier).
  * Renvoie { gagnant (joueur ou null), meneur (qui ouvre le pli suivant),
- *           carte (index de la carte gagnante, ou -1), bonus, details, effet }.
+ *           carte (index de la carte gagnante, ou -1), bonus, details, effet,
+ *           extras: [{ p, pts, txt }] — ce que gagnent ou perdent d'autres
+ *           joueurs que le gagnant (rhum, trésor maudit) }.
  */
-export function resoudre(pli) {
-  const ki = pli.findIndex((j) => j.c.t === 'kra');
-  const wi = pli.findIndex((j) => j.c.t === 'wha');
-  // Le Kraken et la Baleine dans le même pli : le dernier joué l'emporte.
-  const monstre = ki >= 0 && wi >= 0 ? (ki > wi ? 'kra' : 'wha') : ki >= 0 ? 'kra' : wi >= 0 ? 'wha' : null;
+export function resoudre(pli, n = pli.length) {
+  const E = pli.map(effet);
+  const personnage = E.some((e) => PERSONNAGES.includes(e));
+  // Les monstres : Kraken, Baleine, et le Hollandais s'il n'y a pas de personnage.
+  // S'il y en a plusieurs, le dernier joué décide.
+  let mi = -1;
+  pli.forEach((j, i) => {
+    if (j.c.t === 'kra' || j.c.t === 'wha' || (j.c.t === 'holl' && !personnage)) mi = i;
+  });
+  const monstre = mi >= 0 ? pli[mi].c.t : null;
+  const r = monstre ? resoudreMonstre(pli, mi, monstre, n) : resoudreNormal(pli, n);
 
+  // Les cartes custom qui touchent d'autres joueurs que le gagnant.
+  r.extras = [];
+  for (const j of pli) {
+    if (j.c.t === 'rhum') r.extras.push({ p: j.p, pts: 10, txt: 'Bouteille de rhum' });
+    if (j.c.t === 'maudit' && r.gagnant !== null) r.extras.push({ p: r.gagnant, pts: -20, txt: 'Trésor maudit' });
+    if (j.c.t === 'ancre') r.meneur = j.p;
+  }
+  return r;
+}
+
+function resoudreMonstre(pli, mi, monstre, n) {
   if (monstre === 'kra') {
     // Le pli est englouti ; celui qui l'aurait gagné ouvre le suivant.
-    const reste = pli.filter((j) => j.c.t !== 'kra' && j.c.t !== 'wha');
-    const m = meilleure(reste);
-    return { gagnant: null, meneur: m >= 0 ? reste[m].p : pli[ki].p, carte: -1, bonus: 0, details: [], effet: 'kraken' };
+    const reste = pli.filter((j) => !['kra', 'wha', 'holl'].includes(j.c.t));
+    const m = meilleure(reste, reste.length + 1);
+    return { gagnant: null, meneur: m >= 0 ? reste[m].p : pli[mi].p, carte: -1, bonus: 0, details: [], effet: 'kraken' };
   }
-  if (monstre === 'wha') {
-    // Les personnages perdent leurs pouvoirs : le plus gros chiffre gagne, couleur ou pas.
-    let best = -1;
-    pli.forEach((j, i) => { if (j.c.t === 'n' && (best < 0 || j.c.n > pli[best].c.n)) best = i; });
-    if (best < 0) return { gagnant: null, meneur: pli[wi].p, carte: -1, bonus: 0, details: [], effet: 'baleine' };
-    const details = bonusQuatorze(pli);
-    return { gagnant: pli[best].p, meneur: pli[best].p, carte: best, bonus: details.reduce((s, d) => s + d.pts, 0), details, effet: 'baleine' };
-  }
+  // La Baleine : le plus gros chiffre gagne ; le Hollandais : le plus petit.
+  // Les personnages perdent leurs pouvoirs, la couleur ne compte plus.
+  const plusGrand = monstre === 'wha';
+  let best = -1;
+  pli.forEach((j, i) => {
+    const v = chiffre(pli, j);
+    if (!v) return;
+    const b = best >= 0 ? chiffre(pli, pli[best]).n : null;
+    if (best < 0 || (plusGrand ? v.n > b : v.n < b)) best = i;
+  });
+  const effet = plusGrand ? 'baleine' : 'hollandais';
+  if (best < 0) return { gagnant: null, meneur: pli[mi].p, carte: -1, bonus: 0, details: [], effet };
+  const details = bonusQuatorze(pli);
+  return { gagnant: pli[best].p, meneur: pli[best].p, carte: best, bonus: details.reduce((s, d) => s + d.pts, 0), details, effet };
+}
 
-  const w = meilleure(pli);
+function resoudreNormal(pli, n) {
+  const w = meilleure(pli, n);
   const E = pli.map(effet);
   const compte = (t) => E.filter((x) => x === t).length;
   const details = bonusQuatorze(pli);
   if (E[w] === 'sk' && compte('pir')) details.push({ pts: 30 * compte('pir'), txt: `Skull King prend ${compte('pir')} pirate${compte('pir') > 1 ? 's' : ''}` });
   if (E[w] === 'pir' && compte('sir')) details.push({ pts: 20 * compte('sir'), txt: `Pirate prend ${compte('sir')} sirène${compte('sir') > 1 ? 's' : ''}` });
   if (E[w] === 'sir' && compte('sk')) details.push({ pts: 40, txt: 'Sirène capture le Skull King' });
-  return { gagnant: pli[w].p, meneur: pli[w].p, carte: w, bonus: details.reduce((s, d) => s + d.pts, 0), details, effet: null };
+  if (E[w] === 'canon') details.push({ pts: 0, txt: 'Coup de canon' });
+  return { gagnant: pli[w].p, meneur: pli[w].p, carte: w, bonus: details.reduce((s, d) => s + d.pts, 0), details, effet: E[w] === 'canon' ? 'canon' : null };
 }
 
 /* ================================================================== */
@@ -174,7 +244,7 @@ export const MANCHES = 10;
 export const MAX_JOUEURS = 7; // 7 × 10 cartes = 70 : le paquet en a 72
 
 /** Une nouvelle partie. `bots[i]` dit si le joueur i est tenu par l'ordinateur. */
-export function creerPartie({ noms, bots, manches = MANCHES }) {
+export function creerPartie({ noms, bots, manches = MANCHES, extras = [] }) {
   const n = noms.length;
   if (n < 2 || n > MAX_JOUEURS) throw new Error('de 2 à 7 joueurs');
   return {
@@ -182,6 +252,7 @@ export function creerPartie({ noms, bots, manches = MANCHES }) {
     manches, manche: 0, donneur: n - 1, meneur: 0, tour: 0,
     mains: [], paris: [], plis: [], bonus: [], pli: [], dernier: null,
     scores: Array(n).fill(0), historique: [], phase: 'pari',
+    extras: nettoyerExtras(extras), malus: [],
   };
 }
 
@@ -189,7 +260,7 @@ export function creerPartie({ noms, bots, manches = MANCHES }) {
 export function nouvelleManche(G, rng) {
   G.manche++;
   if (G.manche > G.manches) { G.phase = 'fin'; return G; }
-  const d = melanger(paquet(), rng);
+  const d = melanger(paquet(G.extras || []), rng);
   G.mains = [];
   for (let p = 0; p < G.n; p++) G.mains.push(d.splice(0, G.manche));
   G.donneur = (G.donneur + 1) % G.n;
@@ -197,6 +268,7 @@ export function nouvelleManche(G, rng) {
   G.paris = Array(G.n).fill(null);
   G.plis = Array(G.n).fill(0);
   G.bonus = Array(G.n).fill(0);
+  G.malus = Array(G.n).fill(0);
   G.pli = [];
   G.dernier = null;
   G.phase = 'pari';
@@ -230,17 +302,23 @@ export function jouer(G, p, id, as = null) {
 /** Ramasse le pli complet. En fin de manche, compte les points. */
 export function ramasser(G) {
   if (G.phase !== 'pli') return null;
-  const r = resoudre(G.pli);
+  const r = resoudre(G.pli, G.n);
   if (r.gagnant !== null) { G.plis[r.gagnant]++; G.bonus[r.gagnant] += r.bonus; }
+  if (!G.malus) G.malus = Array(G.n).fill(0);
+  // Un bonus ne compte que si le pari est réussi ; un malus compte toujours.
+  for (const x of r.extras) {
+    if (x.pts > 0) G.bonus[x.p] += x.pts; else G.malus[x.p] += -x.pts;
+  }
   G.dernier = { pli: G.pli, ...r };
   G.pli = [];
   G.meneur = G.tour = r.meneur;
   if (G.mains.every((m) => m.length === 0)) {
     const bilan = [];
     for (let p = 0; p < G.n; p++) {
-      const pts = points(G.manche, G.paris[p], G.plis[p], G.bonus[p]);
+      const malus = G.malus[p] || 0;
+      const pts = points(G.manche, G.paris[p], G.plis[p], G.bonus[p]) - malus;
       G.scores[p] += pts;
-      bilan.push({ pari: G.paris[p], plis: G.plis[p], bonus: G.bonus[p], points: pts, total: G.scores[p] });
+      bilan.push({ pari: G.paris[p], plis: G.plis[p], bonus: G.bonus[p], malus, points: pts, total: G.scores[p] });
     }
     G.historique.push(bilan);
     G.phase = 'bilan';
@@ -263,7 +341,7 @@ export function classement(G) {
 export function force(c, as = null) {
   const e = c.t === 'tig' ? as || 'pir' : c.t;
   if (e === 'n') return c.s === 'B' ? 20 + c.n : c.n;
-  return { esc: 0, kra: 0.5, wha: 15, sir: 40, pir: 50, sk: 60 }[e];
+  return { esc: 0, kra: 0.5, wha: 15, sir: 40, pir: 50, sk: 60, rhum: 0.2, maudit: 0.1, ancre: 0.3, cors: 16, holl: 12, canon: 30 }[e] ?? 0;
 }
 
 /** Les chances qu'une carte ramène un pli, à vue de nez de vieux loup de mer. */
@@ -283,7 +361,10 @@ function brute(c, taille) {
     case 'tig': return 0.55;           // souple : on décidera au moment de la jouer
     case 'sir': return 0.42;
     case 'wha': return 0.15;
-    case 'kra': case 'esc': return 0;
+    case 'kra': case 'esc': case 'rhum': case 'maudit': case 'ancre': return 0;
+    case 'cors': return 0.45;
+    case 'canon': return 0.3;
+    case 'holl': return 0.12;
     default: {
       const v = c.n;
       const base = c.s === 'B'
@@ -313,8 +394,10 @@ export function coupBot(G, p) {
   const veut = besoin > 0;
   const restants = G.n - G.pli.length - 1;     // joueurs qui jouent après lui
   const evalue = options.map((o) => {
-    const r = resoudre([...G.pli, { p, c: o.c, as: o.as }]);
-    return { o, gagne: r.gagnant === p, f: force(o.c, o.as) };
+    const r = resoudre([...G.pli, { p, c: o.c, as: o.as }], G.n);
+    // Un pli qui porte le Trésor maudit ne vaut rien : on évite de le gagner.
+    const maudit = r.extras.some((x) => x.p === p && x.pts < 0);
+    return { o, gagne: r.gagnant === p, maudit, f: force(o.c, o.as) };
   });
   const faible = (a, b) => (b.f < a.f ? b : a);
   const fort = (a, b) => (b.f > a.f ? b : a);
@@ -327,7 +410,7 @@ export function coupBot(G, p) {
     else if (veut) choix = evalue.filter((x) => x.f > 0.5).reduce(fort, evalue[0]);
     else choix = evalue.filter((x) => x.o.c.t !== 'kra').reduce(faible, evalue[0]);
   } else if (veut) {
-    const gagnantes = evalue.filter((x) => x.gagne);
+    const gagnantes = evalue.filter((x) => x.gagne && !x.maudit);
     // Dernier à jouer : la plus petite carte qui suffit. Sinon, une qui tiendra.
     const solides = restants === 0 ? gagnantes : gagnantes.filter((x) => x.f >= (restants > 1 ? 33 : 26));
     if (solides.length) choix = solides.reduce(faible);

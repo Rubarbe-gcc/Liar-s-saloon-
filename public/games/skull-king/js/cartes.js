@@ -137,11 +137,73 @@ const ART = {
     <path d="M22 94h16" stroke="#7a5230" stroke-width="4" stroke-linecap="round"/>`,
 };
 
+/* Les cartes du mode custom. */
+Object.assign(ART, {
+  /* Une bouteille de rhum, bouchon et étiquette. */
+  rhum: () => `
+    <path d="M42 8h16v8H42z" fill="#8a5a2c"/><path d="M44 16h12v14c0 4 12 10 12 24v36c0 4-3 6-6 6H38c-3 0-6-2-6-6V54c0-14 12-20 12-24z" fill="#3a7a3c"/>
+    <path d="M44 16h12v14c0 4 12 10 12 24v36c0 4-3 6-6 6H38c-3 0-6-2-6-6V54c0-14 12-20 12-24z" fill="#fff" opacity=".08"/>
+    <path d="M38 34c-4 6-4 14-4 20" stroke="#bff0c0" stroke-width="3" fill="none" stroke-linecap="round" opacity=".7"/>
+    <rect x="34" y="56" width="32" height="24" rx="3" fill="#f1e3c2"/>
+    <path d="M40 64h20M40 70h14" stroke="#8a5a2c" stroke-width="2.4" stroke-linecap="round"/>
+    <text x="50" y="62.5" font-size="6.5" font-weight="900" text-anchor="middle" fill="#b3261e" font-family="Georgia,serif">RHUM</text>`,
+  /* Un coffre noirci d'où s'échappe une fumée verte. */
+  maudit: () => `
+    <path d="M30 30c-6-8 2-14-2-22M50 26c-4-8 4-12 0-20M70 30c-6-8 2-14-2-22" stroke="#7dff9a" stroke-width="3" fill="none" stroke-linecap="round" opacity=".7"/>
+    <path d="M16 50c0-11 10-18 34-18s34 7 34 18z" fill="#2a2030"/>
+    <rect x="16" y="50" width="68" height="34" rx="4" fill="#2a2030"/>
+    <path d="M16 50h68v6H16z" fill="#7dff9a" opacity=".35"/>
+    <g transform="translate(29 50) scale(.42)" fill="#cfe8d0"><path d="M50 20C33 20 24 32 24 45c0 8 4 14 11 17v9c0 2 2 4 4 4h22c2 0 4-2 4-4v-9c7-3 11-9 11-17 0-13-9-25-26-25z"/></g>
+    <circle cx="44" cy="69" r="3" fill="#1b1720"/><circle cx="56" cy="69" r="3" fill="#1b1720"/>
+    <circle cx="44" cy="69" r="1.2" fill="#7dff9a"/><circle cx="56" cy="69" r="1.2" fill="#7dff9a"/>`,
+  /* Un corsaire au bicorne, longue-vue à la main. */
+  cors: () => `
+    <path d="M24 100c2-16 12-24 26-24s24 8 26 24z" fill="#1d4a6e"/><path d="M44 76h12v24H44z" fill="#e8b54a" opacity=".5"/>
+    <ellipse cx="50" cy="52" rx="19" ry="22" fill="#e9b48a"/>
+    <path d="M34 60c4 10 10 14 16 14s12-4 16-14c-6 4-10 4-16 4s-10 0-16-4z" fill="#5a3a20"/>
+    <circle cx="42" cy="50" r="2.8" fill="#1b1720"/><circle cx="58" cy="50" r="2.8" fill="#1b1720"/>
+    <path d="M10 36c16-14 64-14 80 0-10 2-20-2-40-2s-30 4-40 2z" fill="#1b2a3a"/>
+    <path d="M26 32c6-16 42-16 48 0z" fill="#1b2a3a"/><circle cx="50" cy="24" r="3" fill="#e8b54a"/>
+    <rect x="66" y="66" width="28" height="7" rx="3" transform="rotate(-30 66 66)" fill="#c9a24a"/>
+    <text x="50" y="96" font-size="11" font-weight="900" text-anchor="middle" fill="#f6d36b" font-family="Georgia,serif">15</text>`,
+  /* Un canon qui fait feu. */
+  canon: () => `
+    <circle cx="80" cy="30" r="10" fill="#ffb347" opacity=".85"/><circle cx="86" cy="22" r="6" fill="#ffe08a"/>
+    <circle cx="74" cy="20" r="5" fill="#d0d0d0" opacity=".7"/><circle cx="90" cy="36" r="5" fill="#d0d0d0" opacity=".6"/>
+    <path d="M16 70L66 34l8 10-48 38z" fill="#3a3a44"/><path d="M62 30l12 16 6-4-12-16z" fill="#2a2a32"/>
+    <path d="M20 66l40-28" stroke="#6a6a78" stroke-width="2" opacity=".7"/>
+    <circle cx="34" cy="78" r="13" fill="#7a4c2a"/><circle cx="34" cy="78" r="5" fill="#3b2416"/>
+    <path d="M34 65v26M21 78h26" stroke="#3b2416" stroke-width="2.4"/>
+    <circle cx="14" cy="90" r="5" fill="#26232b"/><circle cx="24" cy="92" r="5" fill="#26232b"/><circle cx="19" cy="84" r="5" fill="#26232b"/>`,
+  /* Un navire fantôme sous la lune. */
+  holl: () => `
+    <circle cx="70" cy="22" r="10" fill="#e6fff4" opacity=".8"/>
+    <path d="M50 14v56" stroke="#bfe8dc" stroke-width="3"/><path d="M30 26v44" stroke="#bfe8dc" stroke-width="2.5"/>
+    <path d="M52 18c14 4 20 14 18 28-6-4-12-4-18-2z" fill="#d9fff1" opacity=".75"/>
+    <path d="M52 48c12 2 16 8 16 16H52z" fill="#d9fff1" opacity=".6"/>
+    <path d="M32 30c10 2 14 10 14 20-4-2-10-2-14 0z" fill="#d9fff1" opacity=".65"/>
+    <path d="M12 70h76l-10 16H24z" fill="#bfe8dc" opacity=".85"/>
+    <path d="M20 76h60" stroke="#7fbfae" stroke-width="2" stroke-dasharray="4 4"/>
+    <path d="M6 94c10-4 16 4 26 0s16 4 26 0 16 4 26 0 10 2 12 2" stroke="#9ff0d8" stroke-width="3" fill="none" stroke-linecap="round" opacity=".7"/>`,
+  /* Une ancre et sa chaîne. */
+  ancre: () => `
+    <circle cx="50" cy="16" r="7" fill="none" stroke="#c9d6e0" stroke-width="4"/>
+    <path d="M50 23v62" stroke="#c9d6e0" stroke-width="7" stroke-linecap="round"/>
+    <path d="M36 34h28" stroke="#c9d6e0" stroke-width="6" stroke-linecap="round"/>
+    <path d="M18 62c2 18 16 26 32 26s30-8 32-26" stroke="#c9d6e0" stroke-width="7" fill="none" stroke-linecap="round"/>
+    <path d="M12 66l6-12 8 10zM88 66l-6-12-8 10z" fill="#c9d6e0"/>
+    <path d="M57 16c10 0 14 6 20 4s10-8 16-6" stroke="#8a9aa6" stroke-width="3" fill="none" stroke-dasharray="3 3"/>`,
+});
+
 /* ------------------------------------------------------------------ */
 /* La carte entière                                                   */
 /* ------------------------------------------------------------------ */
 
-const TITRES = { pir: 'Pirate', esc: 'Fuite', sir: 'Sirène', sk: 'Skull King', tig: 'Tigresse', kra: 'Kraken', wha: 'Baleine' };
+const TITRES = {
+  pir: 'Pirate', esc: 'Fuite', sir: 'Sirène', sk: 'Skull King', tig: 'Tigresse', kra: 'Kraken', wha: 'Baleine',
+  rhum: 'Rhum', maudit: 'Trésor maudit', cors: 'Corsaire', canon: 'Canon', holl: 'Hollandais', ancre: 'Ancre',
+};
+const CUSTOM = ['rhum', 'maudit', 'cors', 'canon', 'holl', 'ancre'];
 
 /** Le HTML d'une carte. `as` : ce que la Tigresse est devenue. */
 export function carteHtml(c, { as = null, attrs = '', cls = '' } = {}) {
@@ -155,9 +217,9 @@ export function carteHtml(c, { as = null, attrs = '', cls = '' } = {}) {
     </div>`;
   }
   const num = c.t === 'pir' ? +c.id.slice(3) : 0;
-  const nom = c.nom || TITRES[c.t];
+  const nom = CUSTOM.includes(c.t) ? TITRES[c.t] : c.nom || TITRES[c.t];
   const devenu = c.t === 'tig' && as ? `<span class="devenu">${as === 'pir' ? '🏴‍☠️ Pirate' : '🏳️ Fuite'}</span>` : '';
-  return `<div class="carte sp t-${c.t} ${cls}" ${attrs} aria-label="${nom}">
+  return `<div class="carte sp t-${c.t}${CUSTOM.includes(c.t) ? ' custom' : ''} ${cls}" ${attrs} aria-label="${nom}">
     ${svg(c.t === 'pir' ? pirate(num) : ART[c.t]())}
     <span class="titre">${c.t === 'pir' || c.t === 'sir' ? `<small>${TITRES[c.t]}</small>` : ''}${nom}</span>
     ${devenu}

@@ -71,6 +71,11 @@
     <div class="etiquette">Pirates de l’ordinateur</div>
     <div class="puces" id="choix-bots"></div>
     <div class="equipage" id="apercu-equipage"></div>
+    <label class="interrupteur-sombre">
+      <input type="checkbox" id="in-custom">
+      <span><b>✦ Mode custom</b><i>Des cartes en plus, inventées pour la maison</i></span>
+    </label>
+    <div class="puces-custom" id="choix-custom" hidden></div>
     <p class="note">Dix manches. À la manche 1, une carte chacun ; à la manche 10, dix.</p>
     <button class="btn btn-go" id="b-lancer">Hissez les voiles !</button>
   </div>
@@ -108,6 +113,7 @@
         <b id="en-nb-bots">0</b>
         <button class="rond" id="en-plus" aria-label="Ajouter un bot">+</button>
       </div>
+      <div class="en-custom" id="en-custom"></div>
       <p class="note" id="en-note"></p>
       <div class="deux">
         <button class="btn btn-fin" id="en-quitter">Quitter</button>
@@ -123,7 +129,10 @@
   <header class="barre">
     <button class="barre-btn" id="b-quitter" aria-label="Quitter la partie">✕</button>
     <div class="barre-manche"><span>Manche</span> <b id="no-manche">1</b><i>/10</i></div>
-    <button class="barre-btn" id="b-tableau" aria-label="Voir les scores">🏆</button>
+    <div class="barre-droite">
+      <button class="barre-btn" id="b-aide" aria-label="Aide-mémoire : qui bat qui">📖</button>
+      <button class="barre-btn" id="b-tableau" aria-label="Voir les scores">🏆</button>
+    </div>
   </header>
 
   <div class="adversaires" id="adversaires"></div>
@@ -267,6 +276,14 @@
       <span><b>Bonus comptés même si le pari est raté</b><i>Décoché : règle officielle, les bonus ne comptent que si le pari est réussi.</i></span>
     </label>
     <button class="btn btn-danger btn-large" id="sc-nouvelle">Nouvelle partie</button>
+  </div>
+</div>
+
+<div class="voile" id="ov-aide" hidden>
+  <div class="feuille">
+    <button class="fermer" data-ferme="ov-aide" aria-label="Fermer">✕</button>
+    <h2>📖 Aide-mémoire</h2>
+    <div id="aide"></div>
   </div>
 </div>
 

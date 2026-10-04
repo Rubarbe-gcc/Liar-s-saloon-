@@ -8,6 +8,8 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
 - **SKULL KING** — le jeu de plis des pirates : on annonce ses plis, on tient
   parole. Solo contre un équipage de bots, en ligne entre amis (bots en
   renfort), et une feuille de score pour compter les points d'une vraie partie.
+  Un mode custom ajoute six cartes maison (rhum, trésor maudit, corsaire,
+  canon, Hollandais volant, ancre), et un aide-mémoire 📖 se consulte à table.
 
 Dans tous les jeux en ligne, une connexion qui tombe en pleine partie n'est
 pas un départ : la place attend son joueur cinq minutes (un bot joue pour lui

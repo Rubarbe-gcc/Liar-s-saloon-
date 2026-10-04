@@ -13,7 +13,7 @@ import { portraitSkSvg } from './cartes.js';
 import { sfx, sonActif, basculer, deverrouiller } from './sfx.js';
 import { installerMusique } from '../../../shared/musique.js';
 import { installerScore, afficherScore } from './score.js';
-import { reglesHtml } from './regles.js';
+import { reglesHtml, aideHtml } from './regles.js';
 import * as T from './table.js';
 import * as enLigne from './enligne.js';
 import { bandeau } from '../../../shared/reprise.js';
@@ -38,7 +38,8 @@ const ecrire = (cle, v) => { try { localStorage.setItem(cle, JSON.stringify(v));
 // L'ancienne sauvegarde de partie solo n'a plus cours.
 try { localStorage.removeItem('skullking.partie'); } catch { /* ignore */ }
 
-const prefs = { nom: '', bots: 3, ...lire(CLE_PREFS, {}) };
+const prefs = { nom: '', bots: 3, custom: false, extras: S.TOUTES_CUSTOM.slice(), ...lire(CLE_PREFS, {}) };
+prefs.extras = S.nettoyerExtras(prefs.extras);
 export const nomPrefere = () => prefs.nom;
 export function retenirNom(nom) { prefs.nom = nom; ecrire(CLE_PREFS, prefs); }
 
@@ -78,6 +79,28 @@ function majReglage() {
     `<button class="puce${n === prefs.bots ? ' is-on' : ''}" data-bots="${n}">${n}</button>`).join('');
   $('apercu-equipage').innerHTML = EQUIPAGE.slice(0, prefs.bots).map((x) => `<span>${x.av} ${txt(x.nom)}</span>`).join('');
 }
+/** Les cartes custom, en petites puces qu'on allume ou éteint. */
+export function pucesCustom(extras, modifiable) {
+  return S.TOUTES_CUSTOM.map((t) => `<button class="puce-custom${extras.includes(t) ? ' is-on' : ''}" data-custom="${t}"
+    ${modifiable ? '' : 'disabled'} title="${S.CUSTOM[t].regle}"><span>${S.CUSTOM[t].glyphe}</span>${S.CUSTOM[t].nom}</button>`).join('');
+}
+function majCustom() {
+  $('in-custom').checked = prefs.custom;
+  $('choix-custom').hidden = !prefs.custom;
+  $('choix-custom').innerHTML = pucesCustom(prefs.extras, true);
+}
+$('in-custom').addEventListener('change', (e) => { prefs.custom = e.target.checked; ecrire(CLE_PREFS, prefs); majCustom(); });
+$('choix-custom').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-custom]');
+  if (!b) return;
+  const t = b.dataset.custom;
+  prefs.extras = prefs.extras.includes(t) ? prefs.extras.filter((x) => x !== t) : S.nettoyerExtras([...prefs.extras, t]);
+  ecrire(CLE_PREFS, prefs);
+  sfx.clic();
+  majCustom();
+});
+majCustom();
+
 $('choix-bots').addEventListener('click', (e) => {
   const b = e.target.closest('[data-bots]');
   if (!b) return;
@@ -114,6 +137,7 @@ function nouvellePartie() {
   G = S.creerPartie({
     noms: [prefs.nom || 'Capitaine', ...equipage.map((x) => x.nom)],
     bots: [false, ...equipage.map(() => true)],
+    extras: prefs.custom ? prefs.extras : [],
   });
   G.avatars = ['🧭', ...equipage.map((x) => x.av)];
   jeton++;
@@ -282,6 +306,20 @@ $('b-quitter-ok').addEventListener('click', () => {
   if (enLigne.actif()) { enLigne.quitter(); return; }
   jeton++; occupe = false; G = null; aller('s-menu');
 });
+/* L'aide-mémoire : qui bat qui, en pleine partie. */
+let ongletAide = 'qui';
+function rendreAide() {
+  const etat = enLigne.actif() ? enLigne.etat() : G;
+  $('aide').innerHTML = aideHtml(ongletAide, etat?.extras || []);
+}
+$('b-aide').addEventListener('click', () => { sfx.clic(); rendreAide(); ouvrir('ov-aide'); });
+$('aide').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-aide]');
+  if (!b) return;
+  ongletAide = b.dataset.aide;
+  rendreAide();
+});
+
 $('b-tableau').addEventListener('click', () => {
   const etat = enLigne.actif() ? enLigne.etat() : G;
   if (!etat) return;
@@ -296,7 +334,7 @@ addEventListener('resize', () => T.ajusterMain());
 /* ================================================================== */
 
 installerScore({ toast, sfx, ouvrir, fermer });
-enLigne.installer({ aller, ouvrir, fermer, nomPrefere, retenirNom });
+enLigne.installer({ aller, ouvrir, fermer, nomPrefere, retenirNom, pucesCustom });
 installerMusique('skullking', { actif: sonActif });
 
 // Une partie en ligne interrompue (application fermée, réseau perdu) : on peut la rejoindre.

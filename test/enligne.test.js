@@ -177,3 +177,20 @@ test('une vieille connexion encore ouverte est remplacée par la nouvelle', () =
   assert.ok(!a.recus.some((m) => m.t === 'z:forfeit'), 'personne n’a abandonné');
   a.partir(); b2.partir();
 });
+
+test('Skull King : le capitaine choisit les cartes custom, la partie les distribue', () => {
+  const a = connexion();
+  dire(a, { g: 'skullking', t: 'session', sid: 'sessionCUST1' });
+  dire(a, { g: 'skullking', t: 'create', name: 'Anne' });
+  const code = a.dernier('sk:salon').code;
+  const b = connexion();
+  dire(b, { g: 'skullking', t: 'session', sid: 'sessionCUST2' });
+  dire(b, { g: 'skullking', t: 'join', code, name: 'Bart' });
+  dire(b, { g: 'skullking', t: 'options', extras: ['canon'] });
+  assert.match(b.dernier('sk:erreur').msg, /capitaine/);
+  dire(a, { g: 'skullking', t: 'options', extras: ['canon', 'rhum', 'triche'] });
+  assert.deepEqual(b.dernier('sk:salon').extras, ['rhum', 'canon']);
+  dire(a, { g: 'skullking', t: 'start' });
+  assert.deepEqual(b.dernier('sk:etat').vue.extras, ['rhum', 'canon']);
+  a.partir(); b.partir();
+});

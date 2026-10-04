@@ -70,6 +70,8 @@ export class Table {
     this.prets = new Set();
     this.cle = null;
     this.finParis = 0;
+    /** Les cartes du mode custom choisies par le capitaine. */
+    this.extras = [];
     this.touchedAt = Date.now();
   }
 
@@ -124,6 +126,7 @@ export class Table {
       hostId: this.hoteId,
       max: S.MAX_JOUEURS,
       enPartie: !!this.G,
+      extras: this.extras,
       joueurs: this.places.map((p) => ({ id: p.id, name: p.name, av: p.av, bot: !!p.bot, absent: !!p.absent })),
     };
   }
@@ -150,6 +153,7 @@ export class Table {
       prets: this.places.map((p) => this.prets.has(p.id)),
       reste: Math.max(0, this.echeance - Date.now()),
       hote: this.hoteId,
+      extras: G.extras || [],
     };
   }
 
@@ -176,7 +180,7 @@ export class Table {
 
   commencer() {
     if (this.places.length < 2) return { ok: false, error: 'Il faut au moins deux joueurs (ajoutez un bot ?).' };
-    this.G = S.creerPartie({ noms: this.places.map((p) => p.name), bots: this.places.map((p) => !!p.bot) });
+    this.G = S.creerPartie({ noms: this.places.map((p) => p.name), bots: this.places.map((p) => !!p.bot), extras: this.extras });
     this.touch();
     this.diffuser({ t: 'sk:debut' });
     this.manche();
@@ -411,6 +415,14 @@ export function handleMessage(conn, msg) {
       if (!t || t.G) return;
       if (t.hoteId !== id) return conn.send({ t: 'sk:erreur', msg: 'Seul le capitaine de la table règle les bots.' });
       if (msg.delta > 0) t.ajouterBot(); else t.retirerBot();
+      return t.diffuser(t.vestiaire());
+    }
+
+    case 'options': {
+      if (!t || t.G) return;
+      if (t.hoteId !== id) return conn.send({ t: 'sk:erreur', msg: 'Seul le capitaine de la table choisit les cartes.' });
+      t.extras = S.nettoyerExtras(msg.extras);
+      t.touch();
       return t.diffuser(t.vestiaire());
     }
 

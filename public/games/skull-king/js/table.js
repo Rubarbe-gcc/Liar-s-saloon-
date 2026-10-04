@@ -170,15 +170,21 @@ export function montrerVainqueur(G, r, sfx) {
   } else if (r.gagnant === null) {
     jeux.forEach((e) => e.classList.add('englouti'));
     sfx.baleine();
-    annoncer(`🐋 La Baleine renvoie tout au fond. ${G.noms[r.meneur]} ouvre le suivant`);
+    annoncer(`${r.effet === 'hollandais' ? '👻 Le Hollandais volant' : '🐋 La Baleine'} renvoie tout au fond. ${G.noms[r.meneur]} ouvre le suivant`);
   } else {
     jeux[r.carte]?.classList.add('vainqueur');
-    if (r.effet === 'baleine') sfx.baleine();
+    if (r.effet === 'baleine' || r.effet === 'hollandais') sfx.baleine();
+    if (r.effet === 'canon') sfx.kraken();
     if (r.gagnant === 0) sfx.pli(); else sfx.pliAutre();
     if (r.bonus) setTimeout(() => sfx.bonus(), 300);
     const qui = r.gagnant === 0 ? 'Vous remportez' : `${G.noms[r.gagnant]} remporte`;
-    annoncer(`${r.effet === 'baleine' ? '🐋 ' : ''}${qui} le pli${r.bonus ? ` · +${r.bonus} (${r.details.map((d) => d.txt).join(', ')})` : ''}`);
+    const avant = { baleine: '🐋 ', hollandais: '👻 Plus petit chiffre ! ', canon: '💣 Coup de canon ! ' }[r.effet] || '';
+    const bonus = r.details.filter((d) => d.pts);
+    annoncer(`${avant}${qui} le pli${r.bonus ? ` · +${r.bonus} (${bonus.map((d) => d.txt).join(', ')})` : ''}`);
   }
+  // Ce que le pli rapporte ou coûte à d'autres (rhum, trésor maudit).
+  const autres = (r.extras || []).map((x) => `${x.pts > 0 ? '🍾' : '💀'} ${x.p === 0 ? 'vous' : G.noms[x.p]} ${x.pts > 0 ? '+' : '−'}${Math.abs(x.pts)}`);
+  if (autres.length) setTimeout(() => toast(autres.join(' · '), 2600), 700);
 }
 
 /** Les cartes du pli filent vers leur vainqueur (ou coulent). */
@@ -218,7 +224,7 @@ export function remplirBilan(G) {
   $('bilan-titre').textContent = `Fin de la manche ${G.historique.length}`;
   $('bilan').innerHTML = b.map((x, p) => {
     const ok = x.pari === x.plis;
-    const detail = `Pari ${x.pari} · ${x.plis} pli${x.plis > 1 ? 's' : ''}${x.bonus ? ` · bonus ${ok ? '+' : '(perdu) '}${x.bonus}` : ''}`;
+    const detail = `Pari ${x.pari} · ${x.plis} pli${x.plis > 1 ? 's' : ''}${x.bonus ? ` · bonus ${ok ? '+' : '(perdu) '}${x.bonus}` : ''}${x.malus ? ` · malus −${x.malus}` : ''}`;
     const pret = G.prets?.[p] ? ' <span title="Prêt">✅</span>' : '';
     return `<div class="bilan-ligne ${ok ? 'ok' : 'ko'}" style="animation-delay:${p * 0.07}s">
       <div><div class="bilan-nom">${G.avatars?.[p] || ''} ${txt(G.noms[p])}${pret}</div><div class="bilan-detail">${ok ? '✓' : '✗'} ${detail}</div></div>

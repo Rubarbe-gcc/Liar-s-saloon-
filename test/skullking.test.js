@@ -151,3 +151,84 @@ test('les ordinateurs parient avec bon sens et tiennent souvent leur pari', () =
   assert.ok(S.pariBot(['sk', 'pir1', 'pir2', 'B14'].map(carte), 4, () => 0.5) >= 3);
   assert.equal(S.pariBot(['esc1', 'esc2', 'Y2', 'G3'].map(carte), 4, () => 0.5), 0);
 });
+
+/* ================================================================== */
+/* Le mode custom                                                     */
+/* ================================================================== */
+
+const carteX = (id) => S.paquet(S.TOUTES_CUSTOM).find((c) => c.id === id);
+const pliX = (...ids) => ids.map((x, p) => {
+  const [id, as] = x.split(':');
+  return { p, c: carteX(id), as: as || null };
+});
+
+test('le paquet custom : 8 cartes de plus, et seulement celles qu’on choisit', () => {
+  assert.equal(S.paquet(S.TOUTES_CUSTOM).length, 80);
+  assert.equal(S.paquet(['canon']).length, 73);
+  assert.deepEqual(S.nettoyerExtras(['canon', 'n-importe-quoi', 'rhum']), ['rhum', 'canon']);
+  for (const t of S.TOUTES_CUSTOM) assert.ok(S.CUSTOM[t].regle.length > 20, t);
+});
+
+test('le Canon : dernier, il bat tout ; avant, c’est une fuite', () => {
+  assert.equal(S.resoudre(pliX('sk', 'pir1', 'canon')).gagnant, 2);
+  assert.equal(S.resoudre(pliX('canon', 'Y3', 'Y5')).gagnant, 2);
+  // Un pli incomplet : le Canon n'est pas encore le dernier.
+  assert.equal(S.resoudre(pliX('Y3', 'canon'), 3).gagnant, 0);
+});
+
+test('le Corsaire vaut 15 dans la couleur demandée', () => {
+  assert.equal(S.resoudre(pliX('Y14', 'cors1', 'Y12')).gagnant, 1);
+  assert.equal(S.resoudre(pliX('Y14', 'cors1', 'B1')).gagnant, 2, 'l’atout le bat');
+  assert.equal(S.resoudre(pliX('cors1', 'G9', 'G13')).gagnant, 0, 'ouvert en premier, il prend la couleur de la suite');
+  assert.equal(S.resoudre(pliX('Y5', 'cors1', 'pir2')).gagnant, 2, 'les personnages le battent');
+  // Il se joue même quand on a la couleur.
+  const main = [carteX('Y2'), carteX('cors2')];
+  assert.equal(S.legales(main, pliX('Y9')).length, 2);
+});
+
+test('le Hollandais volant : la plus petite carte gagne, sauf s’il y a un personnage', () => {
+  let r = S.resoudre(pliX('Y12', 'holl', 'B9', 'G2'));
+  assert.equal(r.gagnant, 3);
+  assert.equal(r.effet, 'hollandais');
+  r = S.resoudre(pliX('Y12', 'holl', 'pir1'));
+  assert.equal(r.gagnant, 2, 'avec un pirate, c’est une simple fuite');
+});
+
+test('rhum, trésor maudit et ancre', () => {
+  let r = S.resoudre(pliX('rhum1', 'Y5', 'Y9'));
+  assert.equal(r.gagnant, 2);
+  assert.deepEqual(r.extras, [{ p: 0, pts: 10, txt: 'Bouteille de rhum' }]);
+  r = S.resoudre(pliX('Y5', 'maudit', 'Y9'));
+  assert.deepEqual(r.extras, [{ p: 2, pts: -20, txt: 'Trésor maudit' }]);
+  r = S.resoudre(pliX('Y5', 'ancre', 'Y9'));
+  assert.equal(r.gagnant, 2);
+  assert.equal(r.meneur, 1, 'celui qui a jeté l’ancre ouvre le pli suivant');
+
+  // Le malus compte même si le pari est réussi ; le bonus du rhum seulement s'il l'est.
+  const G = S.creerPartie({ noms: ['A', 'B', 'C'], extras: S.TOUTES_CUSTOM });
+  S.nouvelleManche(G, makeRng(1));
+  G.mains = [[carteX('rhum1')], [carteX('maudit')], [carteX('Y9')]];
+  G.tour = 0;
+  [1, 0, 1].forEach((v, p) => S.parier(G, p, v));
+  for (let p = 0; p < 3; p++) S.jouer(G, p, G.mains[p][0].id);
+  S.ramasser(G);
+  const b = G.historique.at(-1);
+  assert.equal(b[2].points, 20 - 20, 'C tient son pari mais ramasse le trésor maudit');
+  assert.equal(b[0].points, -10, 'A a raté son pari : pas de rhum');
+});
+
+test('des parties custom entières entre ordinateurs, sans accroc', () => {
+  for (let seed = 1; seed <= 40; seed++) {
+    const rng = makeRng(seed + 100);
+    const n = 2 + (seed % 6);
+    const G = S.creerPartie({ noms: Array.from({ length: n }, (_, i) => `J${i}`), bots: Array(n).fill(true), extras: S.TOUTES_CUSTOM });
+    S.nouvelleManche(G, rng);
+    while (G.phase !== 'fin') {
+      if (G.phase === 'pari') for (let p = 0; p < n; p++) S.parier(G, p, S.pariBot(G.mains[p], n, rng));
+      else if (G.phase === 'jeu') { const c = S.coupBot(G, G.tour); assert.ok(S.jouer(G, G.tour, c.id, c.as).ok); }
+      else if (G.phase === 'pli') S.ramasser(G);
+      else S.nouvelleManche(G, rng);
+    }
+    assert.equal(G.historique.length, 10);
+  }
+});
