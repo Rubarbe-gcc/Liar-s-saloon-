@@ -23,6 +23,7 @@ const prefs = {
   avatar: '🤠',
   bots: 2,
   diff: 'normal',
+  diable: false,
 };
 
 function loadPrefs() {
@@ -106,6 +107,7 @@ function syncForms() {
 
   setChips('opt-bots', String(prefs.bots));
   setChips('opt-diff', prefs.diff);
+  $('opt-devil').checked = !!prefs.diable;
   $('btn-sound').innerHTML = `<span class="btn-ic">${soundOn() ? '🔊' : '🔇'}</span> Son`;
 }
 
@@ -145,7 +147,7 @@ async function startOffline() {
   const me = { name: readName('in-name'), avatar: prefs.avatar };
   $('hud-mode').textContent = 'hors-ligne';
   show('table');
-  await offline.start({ me, bots: prefs.bots, level: prefs.diff, onExit: goMenu });
+  await offline.start({ me, bots: prefs.bots, level: prefs.diff, diable: !!prefs.diable, onExit: goMenu });
 }
 
 document.addEventListener('saloon:replay-offline', () => { startOffline(); });
@@ -223,6 +225,14 @@ function renderSeats(r) {
     host.appendChild(li);
   }
 
+  // La variante : l'hôte la choisit, les autres la voient.
+  $('room-devil').checked = !!r.diable;
+  $('room-devil').disabled = !isHost;
+  $('room-devil-zone').classList.toggle('is-locked', !isHost);
+  $('room-devil-note').textContent = isHost
+    ? 'Un Diable caché dans une main à chaque manche. Démasqué, il fait tirer tous les autres.'
+    : (r.diable ? 'L\'hôte a sorti le Diable : méfiez-vous des cartes posées seules.' : 'L\'hôte n\'a pas choisi cette variante.');
+
   const enough = r.players.length >= r.min;
   $('btn-launch-room').disabled = !isHost || !enough;
   $('room-note').textContent = !enough
@@ -266,6 +276,8 @@ function bind() {
 
   bindChipGroup('opt-bots', (v) => { prefs.bots = Number(v); });
   bindChipGroup('opt-diff', (v) => { prefs.diff = v; });
+  $('opt-devil').addEventListener('change', (e) => { prefs.diable = e.target.checked; savePrefs(); });
+  $('room-devil').addEventListener('change', (e) => net.setOptions({ diable: e.target.checked }));
 
   $('in-name').addEventListener('input', () => { prefs.name = $('in-name').value; savePrefs(); });
   $('in-name-net').addEventListener('input', () => { prefs.name = $('in-name-net').value; savePrefs(); });

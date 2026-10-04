@@ -125,15 +125,16 @@ export function bandeau(jeu, { visible = () => true, rejoindre }) {
   b.style.cssText = 'position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);'
     + 'z-index:45;max-width:calc(100% - 24px);padding:12px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.35);'
     + 'background:linear-gradient(180deg,#2fbf71,#1d8a4f);color:#fff;font:700 15px/1.2 system-ui,sans-serif;'
-    + 'box-shadow:0 10px 30px rgba(0,0,0,.45);cursor:pointer;display:flex;align-items:center;gap:10px;white-space:nowrap';
-  b.hidden = true;
+    + 'box-shadow:0 10px 30px rgba(0,0,0,.45);cursor:pointer;display:none;align-items:center;gap:10px;white-space:nowrap';
   document.body.appendChild(b);
-  b.addEventListener('click', () => { b.hidden = true; rejoindre(); });
+  b.addEventListener('click', () => { b.style.display = 'none'; rejoindre(); });
   const maj = () => {
     const r = enAttente(jeu);
     const montrer = !!r && visible();
     // On ne touche à rien qui n'a pas changé : l'observateur se réveillerait pour rien.
-    if (b.hidden !== !montrer) b.hidden = !montrer;
+    // Le style en ligne l'emporterait sur [hidden] : on règle l'affichage lui-même.
+    const affichage = montrer ? 'flex' : 'none';
+    if (b.style.display !== affichage) b.style.display = affichage;
     if (montrer) {
       const min = Math.max(1, Math.ceil(r.reste / 60000));
       const html = `<span style="font-size:20px">🔄</span><span>Rejoindre la partie en cours<br><small style="font-weight:500;opacity:.85">encore ${min} min${r.code ? ` · table ${r.code}` : ''}</small></span>`;

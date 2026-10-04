@@ -8,7 +8,7 @@
  */
 
 import {
-  DECK_COMPOSITION, JOKER, MAX_PLAY, CHAMBERS,
+  DECK_COMPOSITION, JOKER, DEVIL, MAX_PLAY, CHAMBERS,
   isValidCard, playerById,
 } from './engine.js';
 
@@ -84,7 +84,11 @@ export function decide(state, botId, difficultyKey = 'normal') {
 
   const valid = [];
   const junk = [];
-  bot.hand.forEach((card, i) => (isValidCard(card, state.tableCard) ? valid : junk).push(i));
+  bot.hand.forEach((card, i) => {
+    if (card === DEVIL) return;
+    (isValidCard(card, state.tableCard) ? valid : junk).push(i);
+  });
+  const diableEnMain = bot.hand.indexOf(DEVIL);
 
   const canChallenge = !!state.lastPlay && state.lastPlay.playerId !== botId;
 
@@ -117,7 +121,19 @@ export function decide(state, botId, difficultyKey = 'normal') {
     // mieux vaut souvent tenter l'accusation.
     if (valid.length === 0) score += 0.18 * profile.nerve;
 
+    // Variante du Diable : une carte posée seule peut être un piège… sauf si
+    // c'est nous qui tenons le Diable, ou s'il est déjà sorti.
+    if (state.diable && !state.diableSorti && diableEnMain < 0 && count === 1) {
+      score -= 0.18 * diff.skill;
+    }
+
     if (Math.random() < clamp01(score - 0.42)) return { type: 'challenge' };
+  }
+
+  // Le Diable en main : on le pose seul, tôt ou tard, pour piéger un accusateur.
+  if (diableEnMain >= 0) {
+    const seul = bot.hand.length === 1;
+    if (seul || Math.random() < 0.35 + 0.15 * profile.bluff) return { type: 'play', indices: [diableEnMain] };
   }
 
   return { type: 'play', indices: choosePlay(state, bot, profile, diff, valid, junk) };
@@ -129,7 +145,7 @@ function choosePlay(state, bot, profile, diff, valid, junk) {
 
   // Finir la manche main vide est confortable : aucune accusation ne vise plus
   // le joueur, et la manche s'arrete souvent avant le coup de feu.
-  const canEmpty = handSize <= MAX_PLAY;
+  const canEmpty = handSize <= MAX_PLAY && !bot.hand.includes(DEVIL);
   if (canEmpty && (valid.length === handSize || Math.random() < 0.55 * profile.greed)) {
     return bot.hand.map((_, i) => i);
   }
@@ -154,6 +170,8 @@ function choosePlay(state, bot, profile, diff, valid, junk) {
   // Un bot faible ment de façon erratique.
   if (diff.skill < 0.5 && Math.random() < 0.3) count = 1 + Math.floor(Math.random() * Math.min(3, junk.length));
 
+  // Plus que le Diable en main : il part seul.
+  if (!junk.length) return [bot.hand.indexOf(DEVIL)];
   return junk.slice(0, Math.max(1, Math.min(count, maxPlay)));
 }
 

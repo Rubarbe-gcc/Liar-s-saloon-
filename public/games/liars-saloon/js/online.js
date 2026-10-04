@@ -251,6 +251,7 @@ export function joinRoom(code, who) {
 
 export function leaveRoom() { send({ t: 'leave' }); room = null; queue.length = 0; enJeu = false; reprise.oublier(JEU); }
 export function startMatch() { send({ t: 'start' }); }
+export function setOptions(o) { send({ t: 'options', ...o }); }
 export function backToLobby() { queue.length = 0; send({ t: 'back-to-lobby' }); }
 
 function sendAction(action) {

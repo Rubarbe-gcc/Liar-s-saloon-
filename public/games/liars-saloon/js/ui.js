@@ -22,8 +22,9 @@ export const sleep = (ms) => new Promise((r) => setTimeout(r, reduced ? Math.min
 /* Cartes                                                              */
 /* ------------------------------------------------------------------ */
 
-const SUIT = { K: '♠', Q: '♥', A: '♦', J: '✦' };
+const SUIT = { K: '♠', Q: '♥', A: '♦', J: '✦', D: '🔥' };
 const RED = new Set(['Q', 'A']);
+const GLYPHE = { J: '★', D: '😈' };
 
 /** Construit l'element DOM d'une carte. `down` la presente face cachee. */
 export function cardEl(code, { down = false, both = false } = {}) {
@@ -35,11 +36,12 @@ export function cardEl(code, { down = false, both = false } = {}) {
     const front = document.createElement('div');
     front.className = 'card-face card-front'
       + (RED.has(code) ? ' is-red' : '')
-      + (code === 'J' ? ' is-joker' : '');
+      + (code === 'J' ? ' is-joker' : '')
+      + (code === 'D' ? ' is-devil' : '');
     front.innerHTML =
-      `<span class="card-pip tl">${code === 'J' ? 'J' : code}<br>${SUIT[code]}</span>` +
-      `<span class="card-glyph">${code === 'J' ? '★' : code}</span>` +
-      `<span class="card-pip br">${code === 'J' ? 'J' : code}<br>${SUIT[code]}</span>`;
+      `<span class="card-pip tl">${code}<br>${SUIT[code]}</span>` +
+      `<span class="card-glyph">${GLYPHE[code] || code}</span>` +
+      `<span class="card-pip br">${code}<br>${SUIT[code]}</span>`;
     el.appendChild(front);
   }
   if (down || both) {
@@ -130,6 +132,11 @@ function chambers(p) {
 }
 
 function renderFelt() {
+  const marque = $('devil-mark');
+  if (marque) {
+    marque.hidden = !view.diable;
+    marque.textContent = view.diableSorti ? '😈 Le Diable est sorti' : '😈 Le Diable rôde';
+  }
   const demand = $('demand-card');
   if (demand.textContent !== CARD_LABEL[view.tableCard]) {
     demand.textContent = CARD_LABEL[view.tableCard];
@@ -214,6 +221,12 @@ function togglePick(i) {
   if (at >= 0) { picked.splice(at, 1); sfx.unpick(); }
   else {
     if (picked.length >= 3) { flashToast('Trois cartes au maximum.'); return; }
+    // Le Diable se pose seul.
+    const main = playerOf(view.viewerId)?.hand || [];
+    if (picked.length && (main[i] === 'D' || picked.some((k) => main[k] === 'D'))) {
+      flashToast('😈 Le Diable se pose seul.');
+      return;
+    }
     picked.push(i); sfx.pick();
   }
   renderMe();
@@ -429,10 +442,11 @@ async function animChallenge(ev) {
 
   await sleep(260);
   verdict.classList.add('show', ev.honest ? 'is-truth' : 'is-lie');
-  verdict.textContent = ev.honest
-    ? 'La pose était honnête.'
-    : 'Mensonge démasqué !';
-  await sleep(1500);
+  verdict.textContent = ev.devil
+    ? '😈 Le Diable ! Tous les autres tirent.'
+    : ev.honest ? 'La pose était honnête.' : 'Mensonge démasqué !';
+  if (ev.devil) sfx.knell();
+  await sleep(ev.devil ? 2200 : 1500);
 
   ov.hidden = true;
 }

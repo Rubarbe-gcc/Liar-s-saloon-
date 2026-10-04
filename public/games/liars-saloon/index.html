@@ -90,6 +90,11 @@
       </div>
     </div>
 
+    <label class="variante">
+      <input type="checkbox" id="opt-devil">
+      <span><b>😈 Carte du Diable</b><i>Un Diable caché dans une main à chaque manche. Si on le démasque, ce sont tous les autres qui tirent.</i></span>
+    </label>
+
     <button class="btn btn-gold btn-wide" id="btn-start-offline">Distribuer les cartes</button>
   </div>
 </section>
@@ -131,6 +136,10 @@
         <span class="room-code-hint">Cliquez pour copier</span>
       </div>
       <ul class="seat-list" id="seat-list"></ul>
+      <label class="variante" id="room-devil-zone">
+        <input type="checkbox" id="room-devil">
+        <span><b>😈 Carte du Diable</b><i id="room-devil-note">L'hôte choisit la variante.</i></span>
+      </label>
       <p class="room-note" id="room-note">Il faut au moins deux joueurs.</p>
       <div class="room-actions">
         <button class="btn btn-ghost" id="btn-leave-room">Quitter</button>
@@ -164,6 +173,7 @@
       <div class="pile" id="pile" aria-hidden="true"></div>
       <div class="claim" id="claim" hidden></div>
       <div class="felt-brand">LIAR'S SALOON</div>
+      <div class="devil-mark" id="devil-mark" hidden>😈 Le Diable rôde</div>
     </div>
   </div>
 
@@ -273,6 +283,13 @@
       <section>
         <h3><span>6</span> Victoire</h3>
         <p>Le <b>dernier assis à la table</b> ramasse la mise. Il n'y a pas de second.</p>
+      </section>
+      <section class="rules-devil">
+        <h3><span>😈</span> Variante : la Carte du Diable</h3>
+        <p>À chaque manche, un <b>Diable</b> remplace une carte dans la main d'un joueur au hasard.
+        Il se pose <b>seul</b>, comme une carte ordinaire. Si quelqu'un crie « Menteur ! » et
+        retourne le Diable, le poseur est épargné : <b>tous les autres joueurs</b> pressent la
+        détente, en commençant par l'accusateur. Méfiez-vous des poses d'une seule carte…</p>
       </section>
     </div>
   </div>

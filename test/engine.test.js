@@ -327,6 +327,62 @@ test('les invariants du jeu tiennent sur une longue serie', () => {
   }
 });
 
+/* ================================================================== */
+/* Variante : la Carte du Diable                                      */
+/* ================================================================== */
+
+test('le Diable : un seul par manche, glissé dans une main', () => {
+  for (let g = 0; g < 50; g++) {
+    const s = E.createGame(seats3(), { seed: g, diable: true });
+    const diables = s.players.flatMap((p) => p.hand).filter((c) => c === E.DEVIL);
+    assert.equal(diables.length, 1);
+    assert.ok(s.players.every((p) => p.hand.length === E.HAND_SIZE));
+  }
+  const sans = E.createGame(seats3(), { seed: 3 });
+  assert.ok(!sans.players.flatMap((p) => p.hand).includes(E.DEVIL), 'pas de Diable sans la variante');
+});
+
+test('le Diable se pose seul', () => {
+  const s = E.createGame(seats3(), { seed: 4, diable: true });
+  const cur = E.currentPlayer(s);
+  cur.hand = [E.DEVIL, 'K', 'Q', 'A', 'J'];
+  assert.equal(E.playCards(s, cur.id, [0, 1]).error, 'devil-alone');
+  assert.ok(E.playCards(s, cur.id, [0]).ok);
+});
+
+test('démasqué, le Diable fait tirer tous les autres — pas son poseur', () => {
+  const s = E.createGame(seats3(), { seed: 5, diable: true });
+  const poseur = E.currentPlayer(s);
+  poseur.hand = [E.DEVIL, 'K', 'Q', 'A', 'J'];
+  E.playCards(s, poseur.id, [0]);
+  const accusateur = E.currentPlayer(s);
+  const r = E.challenge(s, accusateur.id);
+  assert.ok(r.ok);
+  const tirs = r.events.filter((e) => e.type === 'shot').map((e) => e.playerId);
+  assert.ok(!tirs.includes(poseur.id), 'le poseur est épargné');
+  assert.equal(tirs[0], accusateur.id, 'l’accusateur tire le premier');
+  const autres = s.players.filter((p) => p.id !== poseur.id).map((p) => p.id);
+  // Tous les autres tirent, sauf si la partie s'arrête en route.
+  if (s.phase !== E.PHASE.GAME_OVER) assert.deepEqual([...tirs].sort(), [...autres].sort());
+  assert.ok(r.events.find((e) => e.type === 'challenge').devil);
+  assert.equal(E.viewFor(s, accusateur.id).diableSorti, true);
+});
+
+test('des parties entières avec le Diable, sans coup refusé', () => {
+  for (let g = 0; g < 300; g++) {
+    const s = E.createGame(AI.makeBots(2 + (g % 3)), { seed: 9000 + g, diable: true });
+    let steps = 0;
+    while (s.phase !== E.PHASE.GAME_OVER && steps++ < 2000) {
+      if (s.phase === E.PHASE.INTERMISSION) { E.startRound(s); continue; }
+      const cur = E.currentPlayer(s);
+      const move = AI.decide(s, cur.id, ['facile', 'normal', 'brutal'][g % 3]);
+      const res = move.type === 'challenge' ? E.challenge(s, cur.id) : E.playCards(s, cur.id, move.indices);
+      assert.ok(res.ok, `coup refusé (${res.error}) partie ${g}`);
+    }
+    assert.equal(s.phase, E.PHASE.GAME_OVER, `partie ${g} non terminée`);
+  }
+});
+
 test('les bots pretent les meilleures chances au bluff manifeste', () => {
   // Un joueur annonce 3 cartes alors que le bot detient deja toutes les
   // cartes valides : le soupcon doit etre quasi systematique.

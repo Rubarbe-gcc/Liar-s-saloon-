@@ -25,7 +25,7 @@ let exitTo = () => {};
  * @param {string} level  clef de DIFFICULTIES
  * @param {Function} onExit  retour au menu
  */
-export async function start({ me, bots, level, onExit }) {
+export async function start({ me, bots, level, diable = false, onExit }) {
   stop();
   exitTo = onExit;
   difficulty = DIFFICULTIES[level] ? level : 'normal';
@@ -38,14 +38,14 @@ export async function start({ me, bots, level, onExit }) {
   // On melange les sieges pour que le joueur n'ouvre pas systematiquement.
   shuffle(seats);
 
-  state = createGame(seats, { turnMs: 30000 });
+  state = createGame(seats, { turnMs: 30000, diable });
   running = true;
 
   ui.resetTable();
   ui.bindActions(onPlayerAction);
   ui.render(view());
 
-  await ui.banner('Liar\'s Saloon', 'Table privée', `${seats.length} joueurs à la table`, 1300);
+  await ui.banner('Liar\'s Saloon', diable ? '😈 Carte du Diable' : 'Table privée', `${seats.length} joueurs à la table`, 1300);
   await advance();
 }
 

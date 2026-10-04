@@ -194,3 +194,20 @@ test('Skull King : le capitaine choisit les cartes custom, la partie les distrib
   assert.deepEqual(b.dernier('sk:etat').vue.extras, ['rhum', 'canon']);
   a.partir(); b.partir();
 });
+
+test('Liar’s Saloon : l’hôte sort le Diable, la partie le distribue', () => {
+  const a = connexion();
+  dire(a, { t: 'session', sid: 'saloonDIAB1' });
+  dire(a, { t: 'create', name: 'Anne', avatar: '🤠' });
+  const code = a.dernier('room').code;
+  const b = connexion();
+  dire(b, { t: 'session', sid: 'saloonDIAB2' });
+  dire(b, { t: 'join', code, name: 'Bart', avatar: '🎩' });
+  dire(b, { t: 'options', diable: true });
+  assert.match(b.dernier('error').msg, /hôte/);
+  dire(a, { t: 'options', diable: true });
+  assert.equal(b.dernier('room').diable, true);
+  dire(a, { t: 'start' });
+  assert.equal(a.dernier('state').view.diable, true);
+  a.partir(); b.partir();
+});

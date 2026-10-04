@@ -69,6 +69,8 @@ class Room {
     this.seats = [];
     this.state = null;
     this.phase = 'lobby'; // lobby | playing
+    /** Variante choisie par l'hôte. */
+    this.diable = false;
     this.timer = null;
     this.createdAt = Date.now();
     this.touchedAt = Date.now();
@@ -131,6 +133,7 @@ class Room {
       hostId: this.hostId,
       max: MAX_SEATS,
       min: MIN_SEATS,
+      diable: this.diable,
       players: this.seats.map((s) => ({ id: s.id, name: s.name, avatar: s.avatar })),
     };
   }
@@ -144,7 +147,7 @@ class Room {
     this.phase = 'playing';
     this.state = createGame(
       this.seats.map((s) => ({ id: s.id, name: s.name, avatar: s.avatar })),
-      { turnMs: TURN_MS },
+      { turnMs: TURN_MS, diable: this.diable },
     );
     this.touch();
     this.broadcast({ t: 'begin' });
@@ -348,6 +351,15 @@ export function handleMessage(conn, msg) {
     case 'leave': {
       leaveRoom(c, conn.id);
       return conn.send({ t: 'left' });
+    }
+
+    case 'options': {
+      const room = c.roomCode && rooms.get(c.roomCode);
+      if (!room || room.phase === 'playing') return;
+      if (room.hostId !== conn.id) return conn.send({ t: 'error', msg: 'Seul l\'hôte choisit la variante.' });
+      room.diable = !!msg.diable;
+      room.touch();
+      return room.broadcast(room.lobbyPayload());
     }
 
     case 'start': {

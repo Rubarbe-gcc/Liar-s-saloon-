@@ -11,10 +11,16 @@
 
 export const TABLE_CARDS = ['K', 'Q', 'A'];
 export const JOKER = 'J';
+/**
+ * La Carte du Diable (variante) : une seule par manche, glissée dans la main
+ * d'un joueur au hasard. Elle se pose seule. Si quelqu'un crie au menteur et
+ * retourne le Diable, ce n'est pas le poseur qui tire : ce sont TOUS les autres.
+ */
+export const DEVIL = 'D';
 
-export const CARD_LABEL = { K: 'ROI', Q: 'DAME', A: 'AS', J: 'JOKER' };
-export const CARD_LABEL_ONE = { K: 'Roi', Q: 'Dame', A: 'As', J: 'Joker' };
-export const CARD_GLYPH = { K: 'K', Q: 'Q', A: 'A', J: '★' };
+export const CARD_LABEL = { K: 'ROI', Q: 'DAME', A: 'AS', J: 'JOKER', D: 'DIABLE' };
+export const CARD_LABEL_ONE = { K: 'Roi', Q: 'Dame', A: 'As', J: 'Joker', D: 'Diable' };
+export const CARD_GLYPH = { K: 'K', Q: 'Q', A: 'A', J: '★', D: '😈' };
 
 /** Composition du paquet : 6 rois, 6 dames, 6 as, 2 jokers. */
 export const DECK_COMPOSITION = { K: 6, Q: 6, A: 6, J: 2 };
@@ -80,6 +86,9 @@ export function createGame(seats, options = {}) {
     seed,
     rng,
     turnMs: options.turnMs ?? 30000,
+    // Variante : la Carte du Diable.
+    diable: !!options.diable,
+    diableSorti: false,
     phase: PHASE.PLAYING,
     round: 0,
     tableCard: 'K',
@@ -194,6 +203,12 @@ export function startRound(state, { first = false } = {}) {
   for (const p of state.players) {
     p.hand = p.alive ? deck.splice(0, HAND_SIZE) : [];
   }
+  // Le Diable se glisse dans une main au hasard, à la place d'une carte.
+  state.diableSorti = false;
+  if (state.diable) {
+    const elu = alive[randInt(state.rng, alive.length)];
+    elu.hand[randInt(state.rng, elu.hand.length)] = DEVIL;
+  }
 
   // Celui qui vient d'appuyer sur la detente ouvre la manche suivante ; a
   // defaut (manche blanche, ou tireur elimine) le rang d'ouverture tourne.
@@ -258,6 +273,7 @@ export function playCards(state, playerId, indices) {
   }
 
   const cards = unique.map((i) => player.hand[i]);
+  if (cards.includes(DEVIL) && cards.length > 1) return { ok: false, error: 'devil-alone' };
   for (let k = unique.length - 1; k >= 0; k--) player.hand.splice(unique[k], 1);
 
   const honest = cards.every((c) => isValidCard(c, state.tableCard));
@@ -301,6 +317,7 @@ export function challenge(state, playerId) {
 
   const accused = playerById(state, state.lastPlay.playerId);
   const { cards, honest } = state.lastPlay;
+  if (cards.includes(DEVIL)) return diable(state, accuser, accused, cards);
   // Celui qui a tort prend la balle : le menteur demasque, ou l'accusateur trop nerveux.
   const loser = honest ? accuser : accused;
 
@@ -329,6 +346,43 @@ export function challenge(state, playerId) {
 
   state.phase = PHASE.INTERMISSION;
   state.resolution = { kind: 'challenge', loserId: loser.id, honest };
+  return { ok: true, events };
+}
+
+/**
+ * Le Diable est retourné : le poseur est épargné, et tous les autres joueurs
+ * encore assis pressent la détente, en commençant par l'accusateur.
+ */
+function diable(state, accuser, accused, cards) {
+  accuser.stats.callsMade += 1;
+  accused.stats.callsTaken += 1;
+  state.diableSorti = true;
+  const events = [{
+    type: 'challenge',
+    accuserId: accuser.id,
+    accusedId: accused.id,
+    cards,
+    tableCard: state.tableCard,
+    honest: false,
+    devil: true,
+    loserId: null,
+  }];
+  logLine(state, `😈 ${accuser.name} retourne le Diable de ${accused.name} : tous les autres tirent !`);
+
+  const n = state.players.length;
+  const tireurs = [];
+  for (let step = 0; step < n; step++) {
+    const p = state.players[(accuser.seat + step) % n];
+    if (p.alive && p.id !== accused.id) tireurs.push(p);
+  }
+  for (const p of tireurs) {
+    if (state.phase === PHASE.GAME_OVER) break;
+    events.push(...pullTrigger(state, p));
+  }
+
+  if (state.phase !== PHASE.GAME_OVER) state.phase = PHASE.INTERMISSION;
+  // L'accusateur (s'il vit encore) ouvre la manche suivante.
+  state.resolution = { kind: 'devil', loserId: accuser.alive ? accuser.id : null, honest: false };
   return { ok: true, events };
 }
 
@@ -428,6 +482,8 @@ export function viewFor(state, viewerId) {
     phase: state.phase,
     round: state.round,
     tableCard: state.tableCard,
+    diable: !!state.diable,
+    diableSorti: !!state.diableSorti,
     turnId: currentPlayer(state) ? currentPlayer(state).id : null,
     turnDeadline: state.turnDeadline,
     turnMs: state.turnMs,
