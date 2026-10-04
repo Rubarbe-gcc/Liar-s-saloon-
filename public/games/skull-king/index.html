@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#07111b">
+<meta name="description" content="SKULL KING — le jeu de plis des pirates. Jouez contre l’équipage, ou comptez les points d’une vraie partie.">
+<title>Skull King</title>
+<link rel="icon" href="/games/skull-king/icons/icon-192.png">
+<link rel="manifest" href="/games/skull-king/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/games/skull-king/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Skull King">
+<link rel="stylesheet" href="/games/skull-king/css/skull-king.css">
+<script src="/maj.js" defer></script>
+</head>
+<body>
+
+<div class="ciel" aria-hidden="true">
+  <div class="lune"></div>
+  <div class="etoiles"></div>
+  <svg class="vagues" viewBox="0 0 1200 160" preserveAspectRatio="none">
+    <path class="v1" d="M0 70 Q150 30 300 70 T600 70 T900 70 T1200 70 V160 H0Z"/>
+    <path class="v2" d="M0 95 Q150 60 300 95 T600 95 T900 95 T1200 95 V160 H0Z"/>
+    <path class="v3" d="M0 120 Q150 92 300 120 T600 120 T900 120 T1200 120 V160 H0Z"/>
+  </svg>
+  <div class="brume"></div>
+</div>
+
+<!-- ============================ MENU ============================ -->
+<section class="ecran is-active" id="s-menu">
+  <div class="menu">
+    <header class="logo">
+      <div class="logo-crane" id="logo-crane"></div>
+      <div class="logo-kicker">le jeu de plis des pirates</div>
+      <h1 class="logo-titre"><span>Skull</span> <span>King</span></h1>
+      <p class="logo-tag">Annoncez vos plis. Tenez parole. Ou passez par-dessus bord.</p>
+    </header>
+
+    <nav class="menu-nav">
+      <button class="btn btn-reprendre" id="b-reprendre" hidden>
+        <span class="bi">⏳</span>
+        <span class="bt"><b>Reprendre la partie</b><i id="reprendre-info"></i></span>
+      </button>
+      <button class="btn btn-grand" data-va="s-reglage">
+        <span class="bi">⚓</span>
+        <span class="bt"><b>Jouer contre l’équipage</b><i>Vous contre 1 à 6 pirates de l’ordinateur</i></span>
+      </button>
+      <button class="btn btn-grand btn-parchemin" data-va="s-score">
+        <span class="bi">📜</span>
+        <span class="bt"><b>Feuille de score</b><i>Pour compter les points d’une vraie partie</i></span>
+      </button>
+      <div class="menu-ligne">
+        <button class="btn btn-fin" id="b-regles"><span class="bi">❓</span> Règles</button>
+        <button class="btn btn-fin" id="b-son"><span class="bi">🔊</span> Son</button>
+      </div>
+      <a class="menu-retour" href="/">‹ Retour à l’arcade</a>
+    </nav>
+  </div>
+</section>
+
+<!-- =========================== RÉGLAGE ========================== -->
+<section class="ecran" id="s-reglage">
+  <div class="panneau">
+    <button class="retour" data-va="s-menu" aria-label="Retour">‹</button>
+    <h2 class="titre-panneau">Rassemblez l’équipage</h2>
+    <label class="etiquette" for="in-nom">Votre nom de pirate</label>
+    <input id="in-nom" class="champ" type="text" maxlength="14" placeholder="Capitaine" autocomplete="off">
+    <div class="etiquette">Pirates de l’ordinateur</div>
+    <div class="puces" id="choix-bots"></div>
+    <div class="equipage" id="apercu-equipage"></div>
+    <p class="note">Dix manches. À la manche 1, une carte chacun ; à la manche 10, dix.</p>
+    <button class="btn btn-go" id="b-lancer">Hissez les voiles !</button>
+  </div>
+</section>
+
+<!-- ============================ TABLE =========================== -->
+<section class="ecran ecran-table" id="s-table">
+  <header class="barre">
+    <button class="barre-btn" id="b-quitter" aria-label="Quitter la partie">✕</button>
+    <div class="barre-manche"><span>Manche</span> <b id="no-manche">1</b><i>/10</i></div>
+    <button class="barre-btn" id="b-tableau" aria-label="Voir les scores">🏆</button>
+  </header>
+
+  <div class="adversaires" id="adversaires"></div>
+
+  <div class="pont">
+    <div class="table-ronde">
+      <div class="pli" id="pli"></div>
+      <div class="annonce" id="annonce"></div>
+    </div>
+  </div>
+
+  <div class="moi">
+    <div class="siege moi-siege" id="moi-siege"></div>
+    <div class="consigne" id="consigne"></div>
+    <div class="main" id="main"></div>
+  </div>
+
+  <div class="pari-panneau" id="pari" hidden>
+    <div class="pari-titre">Combien de plis allez-vous remporter ?</div>
+    <div class="pari-choix" id="pari-choix"></div>
+  </div>
+</section>
+
+<!-- ======================= FEUILLE DE SCORE ===================== -->
+<section class="ecran ecran-score" id="s-score">
+  <header class="barre barre-score">
+    <button class="barre-btn" data-va="s-menu" aria-label="Retour">‹</button>
+    <div class="barre-titre">📜 Feuille de score</div>
+    <button class="barre-btn" id="b-score-options" aria-label="Réglages">⚙</button>
+  </header>
+
+  <div class="score-corps">
+    <div class="podium-mini" id="sc-classement"></div>
+
+    <div class="onglets" role="tablist">
+      <button class="onglet is-on" data-vue="manche" role="tab">Manche par manche</button>
+      <button class="onglet" data-vue="tableau" role="tab">Tableau complet</button>
+    </div>
+
+    <div id="sc-vue-manche">
+      <div class="manches-pastilles" id="sc-pastilles"></div>
+      <div class="sc-entete" id="sc-entete"></div>
+      <div class="sc-joueurs" id="sc-joueurs"></div>
+      <div class="sc-nav">
+        <button class="btn btn-fin" id="sc-prec">‹ Précédente</button>
+        <button class="btn btn-go" id="sc-suiv">Suivante ›</button>
+      </div>
+    </div>
+
+    <div id="sc-vue-tableau" hidden>
+      <div class="sc-tableau-wrap"><table class="sc-tableau" id="sc-tableau"></table></div>
+      <p class="note">Touchez une manche pour la modifier.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ========================= SUPERPOSITIONS ===================== -->
+
+<div class="voile" id="ov-tigresse" hidden>
+  <div class="feuille feuille-petite">
+    <h2>La Tigresse</h2>
+    <p class="note">Elle se joue au choix :</p>
+    <div class="deux">
+      <button class="btn btn-go" data-tig="pir">🏴‍☠️ Pirate<small>elle bat les chiffres et les sirènes</small></button>
+      <button class="btn btn-fin" data-tig="esc">🏳️ Fuite<small>elle ne prend rien</small></button>
+    </div>
+    <button class="lien" data-ferme="ov-tigresse">Annuler</button>
+  </div>
+</div>
+
+<div class="voile" id="ov-bilan" hidden>
+  <div class="feuille">
+    <h2 id="bilan-titre">Fin de la manche</h2>
+    <div class="bilan" id="bilan"></div>
+    <button class="btn btn-go btn-large" id="b-suite">Manche suivante</button>
+  </div>
+</div>
+
+<div class="voile" id="ov-tableau" hidden>
+  <div class="feuille">
+    <button class="fermer" data-ferme="ov-tableau" aria-label="Fermer">✕</button>
+    <h2>Le livre de bord</h2>
+    <div class="sc-tableau-wrap"><table class="sc-tableau" id="tableau-partie"></table></div>
+  </div>
+</div>
+
+<div class="voile" id="ov-fin" hidden>
+  <div class="feuille feuille-fin">
+    <div class="fin-couronne" id="fin-couronne"></div>
+    <h2 id="fin-titre"></h2>
+    <p class="note" id="fin-sous"></p>
+    <div class="podium" id="podium"></div>
+    <div class="deux">
+      <button class="btn btn-fin" id="b-fin-menu">Menu</button>
+      <button class="btn btn-go" id="b-fin-rejouer">Revanche</button>
+    </div>
+  </div>
+</div>
+
+<div class="voile" id="ov-quitter" hidden>
+  <div class="feuille feuille-petite">
+    <h2>Quitter la table ?</h2>
+    <p class="note">La partie reste sauvegardée : vous pourrez la reprendre depuis le menu.</p>
+    <div class="deux">
+      <button class="btn btn-fin" data-ferme="ov-quitter">Rester</button>
+      <button class="btn btn-go" id="b-quitter-ok">Quitter</button>
+    </div>
+  </div>
+</div>
+
+<div class="voile" id="ov-nombre" hidden>
+  <div class="feuille feuille-petite">
+    <h2 id="nombre-titre"></h2>
+    <p class="note" id="nombre-sous"></p>
+    <div class="nombre-grille" id="nombre-grille"></div>
+    <button class="lien" id="nombre-effacer">Effacer</button>
+  </div>
+</div>
+
+<div class="voile" id="ov-bonus" hidden>
+  <div class="feuille feuille-petite">
+    <h2 id="bonus-titre">Bonus</h2>
+    <div class="bonus-total" id="bonus-total">0</div>
+    <div class="bonus-grille" id="bonus-grille"></div>
+    <div class="deux">
+      <button class="btn btn-fin" id="bonus-zero">Remettre à 0</button>
+      <button class="btn btn-go" data-ferme="ov-bonus">Valider</button>
+    </div>
+  </div>
+</div>
+
+<div class="voile" id="ov-options" hidden>
+  <div class="feuille feuille-petite">
+    <button class="fermer" data-ferme="ov-options" aria-label="Fermer">✕</button>
+    <h2>Réglages de la feuille</h2>
+    <div class="etiquette">Les joueurs</div>
+    <div class="sc-noms" id="sc-noms"></div>
+    <button class="btn btn-fin btn-large" id="sc-ajouter">＋ Ajouter un joueur</button>
+    <label class="interrupteur">
+      <input type="checkbox" id="sc-bonus-toujours">
+      <span><b>Bonus comptés même si le pari est raté</b><i>Décoché : règle officielle, les bonus ne comptent que si le pari est réussi.</i></span>
+    </label>
+    <button class="btn btn-danger btn-large" id="sc-nouvelle">Nouvelle partie</button>
+  </div>
+</div>
+
+<div class="voile" id="ov-regles" hidden>
+  <div class="feuille">
+    <button class="fermer" data-ferme="ov-regles" aria-label="Fermer">✕</button>
+    <h2>Les règles du Skull King</h2>
+    <div class="regles" id="regles"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script type="module" src="/games/skull-king/js/main.js"></script>
+</body>
+</html>

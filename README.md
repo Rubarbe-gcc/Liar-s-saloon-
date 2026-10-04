@@ -5,6 +5,9 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
 
 **Les jeux**
 
+- **SKULL KING** — le jeu de plis des pirates : on annonce ses plis, on tient
+  parole. Solo contre un équipage de bots, plus une feuille de score pour
+  compter les points d'une vraie partie autour d'une table.
 - **BRASIER** — huit champions dans une taverne-forge. On recrute des
   serviteurs, on les fusionne en dorés, les combats se jouent seuls ; le dernier
   debout l'emporte. En ligne uniquement : les chaises vides sont prises par des bots.
@@ -228,6 +231,7 @@ public/
     brasier/              BRASIER : serviteurs, héros, combat, partie, bots
     raid/                 RAID : écoles, héros, bestiaire, personnages,
                           équipement, carte, bataille, aventure, sprites, ia
+    skullking/moteur.js   SKULL KING : cartes, plis, points, partie, bots
   games/liars-saloon/
     index.html
     manifest.webmanifest  identité « Liar's Saloon »
@@ -243,6 +247,8 @@ public/
     js/{ui,audio,regles}.js          rendu, micro et sabotages, règles
   games/raid/
     js/{main,combat,textes,regles,sfx}.js   écrans de l'aventure, combat, textes, règles, sons
+  games/skull-king/
+    js/{main,cartes,score,regles,sfx}.js    table de jeu, dessin des cartes, feuille de score
 server/
   index.js                serveur autonome : statique + WebSocket
   wsproto.js              RFC 6455 minimal, sans dépendance
@@ -258,6 +264,7 @@ test/
   zenith.test.js          ZÉNITH
   echo.test.js            ÉCHO
   raid.test.js            RAID
+  skullking.test.js       SKULL KING
 ```
 
 RAID n'a pas de module serveur : c'est un jeu solo, tout tient dans

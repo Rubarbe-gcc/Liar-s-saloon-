@@ -83,6 +83,18 @@ export const THEMES = {
       [_, 12, _, 9, 7, _, 9, _], [_, 12, _, 9, 7, _, 4, _], [5, _, 9, _, 12, _, 14, _], [12, _, _, _, _, _, _, _],
     ],
   },
+  /* Un chant de marins : six temps qui tanguent, en ré mineur, la cale qui tape du pied. */
+  skullking: {
+    bpm: 132, pas: 6, ton: 146.83, volume: 0.065,
+    onde: 'square', tenue: 1.0, filtre: 1500, nappe: 0.3,
+    accords: [[0, 3, 7], [0, 3, 7], [-2, 2, 5], [-2, 2, 5], [-4, 0, 3], [-5, -1, 2], [0, 3, 7], [-5, -1, 2]],
+    basse: [0, _, _, 2, _, _],
+    batterie: 'k..s.h',
+    melodie: [
+      [0, _, 2, 3, _, 5], [7, _, 5, 3, _, 2], [-2, _, 0, 2, _, 3], [5, _, 3, 2, _, _],
+      [3, _, 5, 7, _, 8], [7, _, 11, 14, _, 11], [12, _, 10, 7, _, 3], [2, _, -1, -5, _, _],
+    ],
+  },
 };
 
 const hz = (ton, demiTons) => ton * 2 ** (demiTons / 12);

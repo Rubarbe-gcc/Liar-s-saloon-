@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v46';
+const VERSION = 'v47';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -49,6 +49,16 @@ const SHELL = [
   '/shared/zenith/ai.js',
   '/shared/zenith/sprites.js',
   '/shared/zenith/roue.js',
+  '/games/skull-king/',
+  '/games/skull-king/manifest.webmanifest',
+  '/games/skull-king/css/skull-king.css',
+  '/games/skull-king/js/main.js',
+  '/games/skull-king/js/cartes.js',
+  '/games/skull-king/js/score.js',
+  '/games/skull-king/js/regles.js',
+  '/games/skull-king/js/sfx.js',
+  '/games/skull-king/icons/icon-192.png',
+  '/shared/skullking/moteur.js',
   '/games/raid/',
   '/games/raid/manifest.webmanifest',
   '/games/raid/css/raid.css',
