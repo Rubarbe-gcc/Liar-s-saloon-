@@ -169,6 +169,7 @@ const REFUS = {
   max: 'La taverne est au rang maximum.',
   passif: 'Ce pouvoir est passif : il agit tout seul.',
   'réserve vide': 'La réserve est épuisée.',
+  main: 'Votre main est pleine (10 cartes). Posez ou vendez-en une.',
 };
 
 /** Le joueur est-il assis à une table, en partie ou au vestiaire ? */

@@ -41,7 +41,7 @@ function verifierReserve(e) {
   const compte = { ...e.reserve };
   const ajouter = (u) => { if (!S.getServiteur(u.id).jeton) compte[u.id] += u.dore ? 3 : 1; };
   for (const j of e.joueurs) {
-    j.plateau.forEach(ajouter); j.boutique.forEach(ajouter); j.decouvertes.flat().forEach(ajouter);
+    j.plateau.forEach(ajouter); j.main.forEach(ajouter); j.boutique.forEach(ajouter); j.decouvertes.flat().forEach(ajouter);
   }
   for (const s of S.RECRUTABLES) {
     assert.equal(compte[s.id], S.COPIES[s.tier], `${s.id} : ${compte[s.id]} exemplaires au lieu de ${S.COPIES[s.tier]}`);
@@ -238,20 +238,46 @@ test('acheter coute trois, vendre rend un et remet la carte en reserve', () => {
   const avant = e.reserve[id];
   assert.equal(P.agir(e, 'a', { type: 'acheter', i: 0 }).ok, true);
   assert.equal(a.or, 0);
+  assert.equal(a.main.length, 1, 'un achat va dans la main');
+  assert.equal(a.plateau.length, 0);
   assert.equal(P.agir(e, 'a', { type: 'acheter', i: 0 }).error, 'or');
+  assert.equal(P.agir(e, 'a', { type: 'jouer', i: 0 }).ok, true);
   const iPlateau = a.plateau.findIndex((u) => u.id === id);
+  assert.ok(iPlateau >= 0, 'jouer le pose sur le plateau');
   assert.equal(P.agir(e, 'a', { type: 'vendre', i: iPlateau }).ok, true);
   assert.equal(a.or, 1);
   assert.equal(e.reserve[id], avant + 1);
   verifierReserve(e);
 });
 
-test('le plateau refuse un huitieme serviteur', () => {
+test('le plateau refuse un huitieme serviteur, la main un onzieme', () => {
   const e = duo(5);
   const a = P.joueurDe(e, 'a');
-  a.plateau = Array.from({ length: 7 }, () => S.creer('diablotin-farceur', `x${++n}`));
+  a.plateau = Array.from({ length: 7 }, () => S.creer('chaton', `x${++n}`));
   a.or = 10;
-  assert.equal(P.agir(e, 'a', { type: 'acheter', i: 0 }).error, 'plein');
+  // Plateau plein : on achète quand même, dans la main…
+  assert.equal(P.agir(e, 'a', { type: 'acheter', i: 0 }).ok, true);
+  // … mais on ne pose pas.
+  assert.equal(P.agir(e, 'a', { type: 'jouer', i: 0 }).error, 'plein');
+  a.main = Array.from({ length: P.MAIN_MAX }, () => S.creer('chaton', `m${++n}`));
+  assert.equal(P.agir(e, 'a', { type: 'acheter', i: 0 }).error, 'main');
+});
+
+test('on pose une carte de sa main ou l’on veut, et la vendre depuis la main rend un', () => {
+  const e = duo(15);
+  const a = P.joueurDe(e, 'a');
+  for (const u of a.boutique) e.reserve[u.id]++;
+  a.boutique = [];
+  const [x, y, z] = ['diablotin-farceur', 'diablotin-farceur', 'diablotin-farceur'].map(() => S.creer('chaton', `q${++n}`));
+  a.plateau = [x, y];
+  a.main = [z];
+  assert.equal(P.agir(e, 'a', { type: 'jouer', i: 0, vers: 1 }).ok, true);
+  assert.deepEqual(a.plateau.map((u) => u.uid), [x.uid, z.uid, y.uid]);
+  a.main = [a.plateau.pop()];
+  a.or = 0;
+  assert.equal(P.agir(e, 'a', { type: 'vendreMain', i: 0 }).ok, true);
+  assert.equal(a.or, 1);
+  assert.equal(a.main.length, 0);
 });
 
 test('geler garde la taverne d\'un tour sur l\'autre, rafraichir la change', () => {
@@ -267,7 +293,7 @@ test('geler garde la taverne d\'un tour sur l\'autre, rafraichir la change', () 
   verifierReserve(e);
 });
 
-test('trois exemplaires font un dore, et le triple offre une decouverte du rang au-dessus', () => {
+test('trois exemplaires font un dore — main et plateau confondus — et le poser offre une decouverte', () => {
   const e = duo(7);
   const a = P.joueurDe(e, 'a');
   // Trois copies prises dans la reserve, comme si on les avait achetees ; la
@@ -275,20 +301,25 @@ test('trois exemplaires font un dore, et le triple offre une decouverte du rang 
   for (const u of a.boutique) e.reserve[u.id]++;
   const trois = [0, 1, 2].map(() => { e.reserve['diablotin-farceur']--; return S.creer('diablotin-farceur', `p${++n}`); });
   trois[0].atk += 3;                 // un exemplaire deja renforce
-  a.plateau = trois.slice(0, 2);
-  a.boutique = [trois[2]];
+  a.plateau = [trois[0]];            // un sur le plateau…
+  a.main = [trois[1]];               // … un dans la main…
+  a.boutique = [trois[2]];           // … le troisième en taverne
   a.or = 3;
   assert.equal(P.agir(e, 'a', { type: 'acheter', i: 0 }).ok, true);
-  assert.equal(a.plateau.length, 1);
-  const dore = a.plateau[0];
+  assert.equal(a.plateau.length, 0, 'les trois exemplaires ont fusionné');
+  assert.equal(a.main.length, 1, 'le doré arrive dans la main');
+  const dore = a.main[0];
   assert.equal(dore.dore, true);
   assert.equal(dore.atk, 2 * 1 + 3, 'le dore garde les renforts des trois');
   assert.ok(dore.mots.includes('provocation'));
+  assert.equal(a.decouvertes.length, 0, 'la récompense attend qu’on pose le doré');
+  verifierReserve(e);
+  assert.equal(P.agir(e, 'a', { type: 'jouer', i: 0 }).ok, true);
   assert.equal(a.decouvertes.length, 1);
   assert.ok(a.decouvertes[0].every((u) => S.getServiteur(u.id).tier === 2), 'decouverte du rang 2');
   verifierReserve(e);
   assert.equal(P.agir(e, 'a', { type: 'decouvrir', i: 1 }).ok, true);
-  assert.equal(a.plateau.length, 2);
+  assert.equal(a.main.length, 1, 'la découverte va dans la main');
   verifierReserve(e);
 });
 
@@ -459,6 +490,8 @@ test('en ligne : les chaises vides prennent des bots, on recrute, on se bat, un 
 
   // Un achat, puis un refus : plus d'or.
   hote.send({ t: 'action', a: { type: 'acheter', i: 0 } });
+  await hote.wait((m) => m.t === 'b:etat' && m.vue.moi.main.length === 1);
+  hote.send({ t: 'action', a: { type: 'jouer', i: 0 } });
   // Un cri peut invoquer un compagnon : le plateau compte un ou deux serviteurs.
   const apresAchat = await hote.wait((m) => m.t === 'b:etat' && m.vue.moi.plateau.length >= 1);
   const taille = apresAchat.vue.moi.plateau.length;
@@ -523,6 +556,8 @@ test('une coupure de connexion ne fait pas perdre sa place', async (t) => {
   b.send({ t: 'heros', id: choixB.vue.moi.offre[0] });
   const recrut = await a.wait((m) => m.t === 'b:etat' && m.vue.phase === 'recrutement');
   a.send({ t: 'action', a: { type: 'acheter', i: 0 } });
+  await a.wait((m) => m.t === 'b:etat' && m.vue.moi.main.length === 1);
+  a.send({ t: 'action', a: { type: 'jouer', i: 0 } });
   // Un cri peut invoquer un compagnon : on retient la taille, pas un chiffre.
   const achat = await a.wait((m) => m.t === 'b:etat' && m.vue.moi.plateau.length >= 1);
   const taille = achat.vue.moi.plateau.length;
@@ -567,4 +602,58 @@ test('le routeur envoie les messages du brasier a son serveur', async (t) => {
   c.send({ t: 'hello', name: 'X' });
   await c.wait((m) => m.t === 'b:bonjour', 3000);
   c.close();
+});
+
+/* ================================================================== */
+/* Des bots qui jouent comme des gens                                 */
+/* ================================================================== */
+
+test('chaque bot a son caractère, et tous ne sont pas des as', () => {
+  const c = B.NOMS_BOTS.map((nom) => B.caractere({ name: nom }));
+  for (const x of c) {
+    assert.ok(x.habilete >= 0.55 && x.habilete <= 0.93);
+    assert.ok(x.tempo >= 2 && x.tempo <= 3);
+  }
+  assert.ok(c.some((x) => x.habilete < 0.7), 'il y a des brouillons');
+  assert.ok(c.some((x) => x.habilete > 0.8), 'et des fins');
+});
+
+test('un bot loin devant le meilleur humain lève le pied', () => {
+  const e = P.creerPartie([
+    { id: 'h', name: 'Humain' },
+    ...B.NOMS_BOTS.slice(0, 3).map((name, k) => ({ id: `b${k}`, name, isBot: true })),
+  ], { seed: 21 });
+  for (const j of e.joueurs) B.choisirHerosBot(e, j.id);
+  P.commencer(e);
+  e.tour = 9;
+  const h = P.joueurDe(e, 'h');
+  const bot = P.joueurDe(e, 'b0');
+  h.plateau = [S.creer('chaton', 'hc1')];
+  bot.plateau = Array.from({ length: 7 }, (_, k) => ({ ...S.creer('diablotin-farceur', `bb${k}`), atk: 8, pv: 8 }));
+  assert.equal(B.enAvance(e, bot), true);
+  assert.equal(B.enAvance(e, h), false);
+  // Il ne monte pas sa taverne, et n'achète qu'une carte au plus.
+  bot.or = 10;
+  bot.taverne = 3;
+  bot.coutRang = 1;
+  const rang = bot.taverne;
+  B.jouerBot(e, 'b0');
+  assert.equal(bot.taverne, rang);
+  // Une carte au plus (3), et son pouvoir héroïque s'il y pense.
+  const p = H.getHeros(bot.heros).pouvoir;
+  assert.ok(bot.or >= 10 - 3 - (p.passif ? 0 : p.cout), `or restant : ${bot.or}`);
+  // Sans humain à la table, personne à ménager.
+  h.isBot = true;
+  assert.equal(B.enAvance(e, bot), false);
+});
+
+test('les bots se servent de leur main : ils posent ce qu’ils achètent', () => {
+  let plateaux = 0, mains = 0, k = 0;
+  partieDeBots(9, (e) => {
+    if (e.tour === 7 && e.phase === P.PHASE.COMBAT) {
+      for (const j of P.vivants(e)) { plateaux += j.plateau.length; mains += j.main.length; k++; }
+    }
+  });
+  assert.ok(plateaux / k >= 5, `plateau moyen ${plateaux / k}`);
+  assert.ok(mains / k <= 3, `main moyenne ${mains / k}`);
 });

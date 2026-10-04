@@ -9,7 +9,7 @@ import { RECRUTABLES, MOTS, texte, TRIBUS } from '../../../shared/brasier/servit
 import { HEROS, PV_HEROS } from '../../../shared/brasier/heros.js';
 import {
   COUT_SERVITEUR, PRIX_VENTE, COUT_RAFRAICHIR, COUT_RANG, TAILLE_TAVERNE, OR_MAX,
-  PLATEAU_MAX, JOUEURS, plafondDegats,
+  PLATEAU_MAX, MAIN_MAX, JOUEURS, plafondDegats,
 } from '../../../shared/brasier/partie.js';
 import { medaillon, portrait, esc } from './ui.js';
 
@@ -21,15 +21,17 @@ export function pagePartie() {
   <div class="regle-grille">
     <section><h4>1 · Le recrutement</h4><p>Chaque tour apporte de l'or : 3 au premier, un de plus
       à chaque tour, jusqu'à ${OR_MAX}. Un serviteur coûte ${COUT_SERVITEUR} pièces et se revend
-      ${PRIX_VENTE}. Rafraîchir la taverne coûte ${COUT_RAFRAICHIR}. Le plateau tient ${PLATEAU_MAX}
-      serviteurs.</p></section>
+      ${PRIX_VENTE}. Rafraîchir la taverne coûte ${COUT_RAFRAICHIR}. Ce qu'on achète arrive dans
+      sa <b>main</b> (${MAIN_MAX} cartes au plus) ; on le pose ensuite sur le plateau, qui tient
+      ${PLATEAU_MAX} serviteurs. Les cris se déclenchent au moment où l'on pose.</p></section>
     <section><h4>2 · La taverne</h4><p>Monter d'un rang ouvre des serviteurs plus puissants et
       élargit l'offre (de ${TAILLE_TAVERNE[1]} à ${TAILLE_TAVERNE[6]} serviteurs). Coûts de base —
       ${rangs} — et chaque tour passé sans monter en retire une pièce. ❄️ gèle l'offre pour le
       tour suivant.</p></section>
-    <section><h4>3 · Les triples</h4><p>Trois exemplaires du même serviteur fusionnent en une
-      version <b>dorée</b> : statistiques et effets doublés, et une <b>découverte</b> d'un rang
-      au-dessus de votre taverne. La réserve est commune à la table : ce que les autres
+    <section><h4>3 · Les triples</h4><p>Trois exemplaires du même serviteur — dans la main ou
+      sur le plateau, peu importe — fusionnent en une version <b>dorée</b> : statistiques et
+      effets doublés. Le doré arrive dans la main 🎁 ; en le posant, vous gagnez une
+      <b>découverte</b> d'un rang au-dessus de votre taverne. La réserve est commune à la table : ce que les autres
       achètent, vous ne le trouverez plus.</p></section>
     <section><h4>4 · Le combat</h4><p>Tout se joue seul. Le camp qui a le plus de serviteurs
       frappe en premier ; chacun attaque à son tour, de gauche à droite — l'ordre de votre
@@ -41,9 +43,11 @@ export function pagePartie() {
       peut vous coûter des PV, mais le fantôme, lui, ne saigne plus.</p></section>
   </div>
   <h3>Sur l'écran</h3>
-  <p>Glissez un serviteur de la taverne au plateau pour l'acheter, du plateau à la taverne
-    pour le vendre, ou d'une place à l'autre du plateau pour changer l'ordre d'attaque.
-    Au toucher, ses boutons apparaissent sur lui : Acheter, Vendre, ◀ ▶.
+  <p>Glissez un serviteur de la taverne vers votre main pour l'acheter, de la main au
+    plateau pour le poser (à l'endroit voulu), du plateau ou de la main à la taverne pour le
+    vendre, ou d'une place à l'autre du plateau pour changer l'ordre d'attaque. Au toucher,
+    ses boutons apparaissent sur lui : Acheter, Poser, Vendre, ◀ ▶. Un double toucher achète
+    en taverne, et pose depuis la main.
     ⚡ début de combat · ⏳ fin de tour · 💀 râle · 🩸 se nourrit des morts.</p>`;
 }
 

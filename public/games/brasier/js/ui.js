@@ -11,7 +11,7 @@ import {
 } from '../../../shared/brasier/serviteurs.js';
 import { getHeros } from '../../../shared/brasier/heros.js';
 import {
-  PHASE, COUT_SERVITEUR, PLATEAU_MAX, OR_MAX,
+  PHASE, COUT_SERVITEUR, PLATEAU_MAX, MAIN_MAX, OR_MAX,
 } from '../../../shared/brasier/partie.js';
 
 const $ = (id) => document.getElementById(id);
@@ -65,6 +65,7 @@ export function medaillon(u, o = {}) {
     <span class="srv-pv${blesse ? ' blesse' : (u.pv > d.pv * k ? ' gonfle' : '')}">${u.pv}</span>
     ${marques ? `<span class="srv-marques">${marques}</span>` : ''}
     ${o.prix ? `<span class="srv-prix">${COUT_SERVITEUR}</span>` : ''}
+    ${u.recompense ? '<span class="srv-recompense" title="Posez-le : découverte offerte">🎁</span>' : ''}
     ${o.extra || ''}
   </div>`;
 }
@@ -84,6 +85,7 @@ function detail(u) {
   return `<div class="fiche-texte">
     <span class="fiche-nom">${u.dore ? '✨ ' : ''}${esc(d.nom)}</span>
     <span class="fiche-meta">${'★'.repeat(d.tier)} · ${t.glyph} ${t.label}${u.dore ? ' · doré' : ''}</span>
+    ${u.recompense ? '<span class="fiche-dit">🎁 Triple ! Posez-le sur le plateau pour découvrir un serviteur d’un rang au-dessus.</span>' : ''}
     ${texte(u.id, u.dore) ? `<span class="fiche-dit">${texte(u.id, u.dore)}</span>` : ''}
     ${mots ? `<span class="fiche-mots">${mots}</span>` : ''}
   </div>`;
@@ -95,8 +97,9 @@ function detail(u) {
 
 let agir = () => {};
 let vue = null;
-let choix = null;           // { zone: 'boutique'|'plateau', uid }
-const connus = { boutique: new Set(), plateau: new Set() };
+let choix = null;           // { zone: 'boutique'|'plateau'|'main', uid }
+const connus = { boutique: new Set(), plateau: new Set(), main: new Set() };
+const listeDe = (m, zone) => (zone === 'boutique' ? m.boutique : zone === 'main' ? m.main : m.plateau);
 
 export function brancher(fn) { agir = fn; }
 export const vueCourante = () => vue;
@@ -114,8 +117,8 @@ export function compter(host) {
 function actionsDe(zone, i, n, m) {
   const bord = n >= 3 && i === 0 ? ' g' : (n >= 3 && i === n - 1 ? ' d' : '');
   if (zone === 'boutique') {
-    const peut = m.or >= COUT_SERVITEUR && m.plateau.length < PLATEAU_MAX;
-    const pourquoi = m.plateau.length >= PLATEAU_MAX ? 'Plateau plein' : 'Pas assez d\'or';
+    const peut = m.or >= COUT_SERVITEUR && m.main.length < MAIN_MAX;
+    const pourquoi = m.main.length >= MAIN_MAX ? 'Main pleine' : 'Pas assez d\'or';
     return `<div class="srv-actions bas${bord}">
       <button data-f="acheter" class="a-acheter" ${peut ? '' : 'disabled'}>${peut ? `Acheter · ${COUT_SERVITEUR}🪙` : pourquoi}</button></div>`;
   }
@@ -134,7 +137,7 @@ function rangee(host, zone, liste, o) {
     return medaillon(u, {
       ...o,
       cls: [choisi ? 'choisi' : '', avant.has(u.uid) ? '' : 'nouveau'].join(' '),
-      extra: choisi && !m.mort ? actionsDe(zone, i, liste.length, m) : '',
+      extra: choisi && !m.mort && zone !== 'main' ? actionsDe(zone, i, liste.length, m) : '',
     });
   }).join('');
   if (host.dataset.sig !== html) { host.dataset.sig = html; host.innerHTML = html; }
@@ -159,7 +162,7 @@ export function rendreRecrutement(v) {
 
   // Une sélection qui a disparu (achetée, vendue) se referme d'elle-même.
   if (choix) {
-    const liste = choix.zone === 'boutique' ? m.boutique : m.plateau;
+    const liste = listeDe(m, choix.zone);
     if (!liste.some((u) => u.uid === choix.uid)) choix = null;
   }
 
@@ -169,6 +172,8 @@ export function rendreRecrutement(v) {
     $('boutique').dataset.sig = '';
   }
   rangee($('plateau'), 'plateau', m.plateau, {});
+  rangee($('main'), 'main', m.main || [], {});
+  $('r-main-n').textContent = `${(m.main || []).length}/${MAIN_MAX}`;
   $('boutique').querySelectorAll('.srv').forEach((el) => el.classList.toggle('gele', m.gel));
 
   // Le héros et son pouvoir.
@@ -199,14 +204,19 @@ export function rendreRecrutement(v) {
 
 function rendreFiche() {
   const m = vue && vue.moi;
-  const u = m && choix
-    ? (choix.zone === 'boutique' ? m.boutique : m.plateau).find((x) => x.uid === choix.uid)
-    : null;
+  const u = m && choix ? listeDe(m, choix.zone).find((x) => x.uid === choix.uid) : null;
   $('fiche-vide').hidden = !!u;
   const c = $('fiche-contenu');
   c.hidden = !u;
   if (!u) return;
-  c.innerHTML = detail(u);
+  let actions = '';
+  if (choix.zone === 'main' && !m.mort) {
+    const plein = m.plateau.length >= PLATEAU_MAX;
+    actions = `<div class="fiche-actions">
+      <button class="bouton bouton-braise" data-f="poser" ${plein ? 'disabled' : ''}>${plein ? 'Plateau plein' : 'Poser ▲'}</button>
+      <button class="bouton" data-f="vendreMain">Vendre · +1🪙</button></div>`;
+  }
+  c.innerHTML = detail(u) + actions;
 }
 
 function rendreClassement(v) {
@@ -298,7 +308,7 @@ function selectionner(zone, uid) {
 function indexDe(zone, uid) {
   const m = vue && vue.moi;
   if (!m) return -1;
-  return (zone === 'boutique' ? m.boutique : m.plateau).findIndex((u) => u.uid === uid);
+  return listeDe(m, zone).findIndex((u) => u.uid === uid);
 }
 
 /** Une action sur un serviteur, désigné par son uid : les index bougent, lui non. */
@@ -308,6 +318,8 @@ function faire(f, zone, uid) {
   switch (f) {
     case 'acheter': choix = null; return agir({ type: 'acheter', i });
     case 'vendre': choix = null; return agir({ type: 'vendre', i });
+    case 'poser': choix = null; return agir({ type: 'jouer', i });
+    case 'vendreMain': choix = null; return agir({ type: 'vendreMain', i });
     case 'gauche': return agir({ type: 'deplacer', de: i, vers: i - 1 });
     case 'droite': return agir({ type: 'deplacer', de: i, vers: i + 1 });
     default: return undefined;
@@ -331,11 +343,12 @@ function toucher(zone, el) {
   const double = dernierToucher.uid === uid && t - dernierToucher.t < 380;
   dernierToucher = double ? { uid: null, t: 0 } : { uid, t };
   if (double && zone === 'boutique') return faire('acheter', zone, uid);
+  if (double && zone === 'main') return faire('poser', zone, uid);
   if (double) { choix = { zone, uid }; return rendreRecrutement(vue); }
   return selectionner(zone, uid);
 }
 
-for (const zone of ['boutique', 'plateau']) {
+for (const zone of ['boutique', 'plateau', 'main']) {
   $(zone).addEventListener('click', (e) => {
     if (performance.now() < ignorerClicsJusqua) return;
     const el = e.target.closest('.srv');
@@ -358,18 +371,20 @@ function zoneSous(x, y) {
   if (!el) return null;
   if (el.closest('#taverne')) return 'taverne';
   if (el.closest('#plateau-cadre')) return 'plateau';
+  if (el.closest('#main-cadre')) return 'main';
   return null;
 }
 
 function nettoyerGlisse(g) {
   if (g.fantome) g.fantome.remove();
   if (g.el) g.el.classList.remove('souleve');
-  document.body.classList.remove('glisse-achat', 'glisse-plateau');
+  document.body.classList.remove('glisse-achat', 'glisse-plateau', 'glisse-main');
   $('taverne').classList.remove('depot');
   $('plateau-cadre').classList.remove('depot');
+  $('main-cadre').classList.remove('depot');
 }
 
-for (const zone of ['boutique', 'plateau']) {
+for (const zone of ['boutique', 'plateau', 'main']) {
   $(zone).addEventListener('pointerdown', (e) => {
     if (e.button > 0 || e.target.closest('[data-f]')) return;
     const el = e.target.closest('.srv');
@@ -394,12 +409,13 @@ document.addEventListener('pointermove', (e) => {
     g.fantome = f;
     g.l = r.width; g.h = r.height;
     g.el.classList.add('souleve');
-    document.body.classList.add(g.zone === 'boutique' ? 'glisse-achat' : 'glisse-plateau');
+    document.body.classList.add({ boutique: 'glisse-achat', main: 'glisse-main' }[g.zone] || 'glisse-plateau');
   }
   g.fantome.style.transform = `translate(${e.clientX - g.l / 2}px,${e.clientY - g.h / 2}px) rotate(-4deg) scale(1.08)`;
   const sous = zoneSous(e.clientX, e.clientY);
-  $('taverne').classList.toggle('depot', g.zone === 'plateau' && sous === 'taverne');
-  $('plateau-cadre').classList.toggle('depot', g.zone === 'boutique' && sous === 'plateau');
+  $('taverne').classList.toggle('depot', g.zone !== 'boutique' && sous === 'taverne');
+  $('plateau-cadre').classList.toggle('depot', g.zone !== 'plateau' && sous === 'plateau');
+  $('main-cadre').classList.toggle('depot', g.zone === 'boutique' && sous === 'main');
   e.preventDefault();
 }, { passive: false });
 
@@ -412,8 +428,23 @@ function finGlisse(e, annule = false) {
   nettoyerGlisse(g);
   if (annule) return;
   const sous = zoneSous(e.clientX, e.clientY);
-  if (g.zone === 'boutique' && sous === 'plateau') return faire('acheter', g.zone, g.uid);
+  // De la taverne : on achète (la carte va dans la main, qu'on la lâche sur la main ou sur le plateau).
+  if (g.zone === 'boutique' && (sous === 'plateau' || sous === 'main')) return faire('acheter', g.zone, g.uid);
   if (g.zone === 'plateau' && sous === 'taverne') return faire('vendre', g.zone, g.uid);
+  if (g.zone === 'main' && sous === 'taverne') return faire('vendreMain', g.zone, g.uid);
+  // De la main au plateau : on pose, à l'endroit où l'on a lâché la carte.
+  if (g.zone === 'main' && sous === 'plateau') {
+    const i = indexDe('main', g.uid);
+    const places = [...$('plateau').querySelectorAll('.srv')];
+    let vers = places.findIndex((x) => {
+      const r = x.getBoundingClientRect();
+      return e.clientX < r.left + r.width / 2;
+    });
+    if (vers < 0) vers = places.length;
+    choix = null;
+    if (i >= 0) agir({ type: 'jouer', i, vers });
+    return undefined;
+  }
   if (g.zone === 'plateau' && sous === 'plateau') {
     const de = indexDe('plateau', g.uid);
     const autres = [...$('plateau').querySelectorAll('.srv')].filter((x) => x.dataset.uid !== g.uid);
@@ -428,6 +459,13 @@ function finGlisse(e, annule = false) {
 }
 document.addEventListener('pointerup', (e) => finGlisse(e));
 document.addEventListener('pointercancel', (e) => finGlisse(e, true));
+
+// Les boutons de la fiche (carte de la main sélectionnée).
+$('fiche').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-f]');
+  if (!b || b.disabled || !choix) return;
+  faire(b.dataset.f, choix.zone, choix.uid);
+});
 
 $('decouverte').addEventListener('click', (e) => {
   const b = e.target.closest('[data-decouvre]');
@@ -448,5 +486,6 @@ export function remettreAZero() {
   vue = null;
   connus.boutique = new Set();
   connus.plateau = new Set();
-  for (const id of ['boutique', 'plateau', 'decouverte']) { $(id).dataset.sig = ''; $(id).innerHTML = ''; }
+  connus.main = new Set();
+  for (const id of ['boutique', 'plateau', 'main', 'decouverte']) { $(id).dataset.sig = ''; $(id).innerHTML = ''; }
 }

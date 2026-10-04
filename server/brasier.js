@@ -65,7 +65,7 @@ function nettoyerNom(brut, defaut = 'Forgeron') {
 
 /** Ne laisse passer qu'une action connue, aux champs numériques bornés. */
 function nettoyerAction(brut) {
-  const TYPES = ['acheter', 'vendre', 'deplacer', 'rafraichir', 'geler', 'ameliorer', 'pouvoir', 'decouvrir', 'pret'];
+  const TYPES = ['acheter', 'jouer', 'vendre', 'vendreMain', 'deplacer', 'rafraichir', 'geler', 'ameliorer', 'pouvoir', 'decouvrir', 'pret'];
   if (!brut || !TYPES.includes(brut.type)) return null;
   const n = (v) => (Number.isInteger(v) && v >= 0 && v < 16 ? v : undefined);
   return {
@@ -127,6 +127,8 @@ class Table {
     place.absent = true;
     clearTimeout(place.minuteur);
     place.minuteur = setTimeout(partirPlusTard, GRACE_MS);
+    // Une attente ne doit pas, à elle seule, garder le serveur en vie.
+    if (typeof place.minuteur.unref === 'function') place.minuteur.unref();
     if (!this.partie) return;
     const j = joueurDe(this.partie, id);
     if (!j || j.isBot) return;
@@ -188,6 +190,8 @@ class Table {
     this.stop();
     this.echeance = Date.now() + ms;
     this.timer = setTimeout(fn, ms);
+    // Le rythme d'une table ne garde pas, à lui seul, le serveur en vie (les tests s'arrêtent).
+    if (typeof this.timer.unref === 'function') this.timer.unref();
   }
 
   stop() { if (this.timer) { clearTimeout(this.timer); this.timer = null; } }

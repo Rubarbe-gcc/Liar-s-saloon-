@@ -7,7 +7,9 @@
  *
  * Une partie :
  *   1. chacun choisit son héros parmi trois ;
- *   2. RECRUTEMENT — de l'or, une taverne, un plateau de sept places au plus ;
+ *   2. RECRUTEMENT — de l'or, une taverne, une MAIN de dix cartes et un
+ *      plateau de sept places : on achète dans sa main, puis on pose sur le
+ *      plateau quand on veut ;
  *   3. COMBAT — les survivants s'affrontent deux à deux, le perdant saigne ;
  *   4. on recommence, jusqu'à ce qu'il n'en reste qu'un.
  *
@@ -24,6 +26,8 @@ import { makeRng, entier, melanger, piocher } from '../hasard.js';
 
 export { PLATEAU_MAX };
 export const JOUEURS = 8;
+/** La main : ce qu'on a acheté mais pas encore posé. */
+export const MAIN_MAX = 10;
 
 export const PHASE = {
   HEROS: 'heros',
@@ -109,6 +113,7 @@ export function creerPartie(joueurs, o = {}) {
       boutique: [],
       gel: false,
       plateau: [],
+      main: [],
       decouvertes: [],
       pouvoirUtilise: false,
       rafraichiGratuit: false,
@@ -263,21 +268,22 @@ function appliquer(etat, j, source, e) {
 }
 
 /**
- * Trois exemplaires identiques fusionnent en un doré, qui garde tout ce que
- * les trois avaient gagné en route. Le triple rapporte une découverte d'un
- * rang au-dessus de la taverne.
+ * Trois exemplaires identiques — dans la main ou sur le plateau, peu importe —
+ * fusionnent en un doré, qui garde tout ce que les trois avaient gagné en
+ * route. Le doré arrive dans la main ; quand on le pose, il rapporte une
+ * découverte d'un rang au-dessus de la taverne.
  */
 function verifierTriples(etat, j) {
   for (;;) {
     const compte = {};
-    for (const u of j.plateau) {
+    for (const u of [...j.main, ...j.plateau]) {
       if (!u.dore && !getServiteur(u.id).jeton) compte[u.id] = (compte[u.id] || 0) + 1;
     }
     const id = Object.keys(compte).find((k) => compte[k] >= 3);
     if (!id) return;
     const def = getServiteur(id);
-    const trois = j.plateau.filter((u) => u.id === id && !u.dore).slice(0, 3);
-    const pos = j.plateau.indexOf(trois[0]);
+    // Ceux de la main d'abord : ce sont eux qui n'ont encore rien fait.
+    const trois = [...j.main, ...j.plateau].filter((u) => u.id === id && !u.dore).slice(0, 3);
     const dore = {
       uid: nouvelUid(etat),
       id,
@@ -285,18 +291,29 @@ function verifierTriples(etat, j) {
       pv: trois.reduce((s, u) => s + u.pv, 0) - def.pv,
       mots: [...new Set(trois.flatMap((u) => u.mots))],
       dore: true,
+      recompense: true,
     };
+    j.main = j.main.filter((u) => !trois.includes(u));
     j.plateau = j.plateau.filter((u) => !trois.includes(u));
-    j.plateau.splice(Math.min(pos, j.plateau.length), 0, dore);
+    j.main.push(dore);
     j.triples += 1;
-    const offre = offreDecouverte(etat, Math.min(j.taverne + 1, 6));
-    if (offre.length) j.decouvertes.push(offre);
   }
 }
 
-/** Pose un serviteur sur le plateau : cri, puis triple éventuel. */
-function poser(etat, j, u) {
-  j.plateau.push(u);
+/** Une carte arrive dans la main (achat, découverte) : triple éventuel. */
+function prendre(etat, j, u) {
+  j.main.push(u);
+  verifierTriples(etat, j);
+}
+
+/** Pose un serviteur sur le plateau : cri, récompense de triple, puis triple éventuel. */
+function poser(etat, j, u, pos = j.plateau.length) {
+  j.plateau.splice(Math.max(0, Math.min(pos, j.plateau.length)), 0, u);
+  if (u.recompense) {
+    delete u.recompense;
+    const offre = offreDecouverte(etat, Math.min(j.taverne + 1, 6));
+    if (offre.length) j.decouvertes.push(offre);
+  }
   const cri = effetDe(u, 'cri');
   if (cri) appliquer(etat, j, u, cri);
   verifierTriples(etat, j);
@@ -324,10 +341,28 @@ export function agir(etat, id, a) {
       const u = j.boutique[i];
       if (!u) return refus('introuvable');
       if (j.or < COUT_SERVITEUR) return refus('or');
-      if (j.plateau.length >= PLATEAU_MAX) return refus('plein');
+      if (j.main.length >= MAIN_MAX) return refus('main');
       j.boutique.splice(i, 1);
       j.or -= COUT_SERVITEUR;
-      poser(etat, j, u);
+      prendre(etat, j, u);
+      return { ok: true };
+    }
+
+    case 'jouer': {
+      const u = j.main[i];
+      if (!u) return refus('introuvable');
+      if (j.plateau.length >= PLATEAU_MAX) return refus('plein');
+      j.main.splice(i, 1);
+      poser(etat, j, u, Number.isInteger(a.vers) ? a.vers : j.plateau.length);
+      return { ok: true };
+    }
+
+    case 'vendreMain': {
+      const u = j.main[i];
+      if (!u) return refus('introuvable');
+      j.main.splice(i, 1);
+      j.or += PRIX_VENTE;
+      rendre(etat, u);
       return { ok: true };
     }
 
@@ -378,11 +413,11 @@ export function agir(etat, id, a) {
     case 'decouvrir': {
       const offre = j.decouvertes[0];
       if (!offre || !offre[i]) return refus('introuvable');
-      if (j.plateau.length >= PLATEAU_MAX) return refus('plein');
+      if (j.main.length >= MAIN_MAX) return refus('main');
       const u = offre[i];
       for (const x of offre) if (x !== u) rendre(etat, x);
       j.decouvertes.shift();
-      poser(etat, j, u);
+      prendre(etat, j, u);
       return { ok: true };
     }
 
@@ -470,8 +505,8 @@ export function terminerRecrutement(etat) {
   for (const j of vivants(etat)) {
     while (j.decouvertes.length) {
       const offre = j.decouvertes.shift();
-      if (j.plateau.length < PLATEAU_MAX) {
-        poser(etat, j, offre[0]);
+      if (j.main.length < MAIN_MAX) {
+        prendre(etat, j, offre[0]);
         for (const x of offre.slice(1)) rendre(etat, x);
       } else {
         for (const x of offre) rendre(etat, x);
@@ -563,9 +598,9 @@ function lancerCombats(etat) {
     j.mort = true;
     j.place = place--;
     etat.fantome = { name: `Fantôme de ${j.name}`, heros: j.heros, plateau: preparer(j), taverne: j.taverne };
-    for (const u of [...j.plateau, ...j.boutique]) rendre(etat, u);
+    for (const u of [...j.plateau, ...j.main, ...j.boutique]) rendre(etat, u);
     for (const offre of j.decouvertes) for (const u of offre) rendre(etat, u);
-    j.plateau = []; j.boutique = []; j.decouvertes = [];
+    j.plateau = []; j.main = []; j.boutique = []; j.decouvertes = [];
   }
 
   etat.phase = PHASE.COMBAT;
@@ -591,7 +626,7 @@ export function finirCombats(etat) {
 /* Vue                                                                 */
 /* ------------------------------------------------------------------ */
 
-const copie = (u) => ({ uid: u.uid, id: u.id, atk: u.atk, pv: u.pv, mots: [...u.mots], dore: !!u.dore });
+const copie = (u) => ({ uid: u.uid, id: u.id, atk: u.atk, pv: u.pv, mots: [...u.mots], dore: !!u.dore, recompense: !!u.recompense });
 
 /** Tribu la plus représentée d'un plateau : l'information qui se voit de loin. */
 export function tribuDominante(plateau) {
@@ -648,6 +683,7 @@ export function viewFor(etat, id) {
       boutique: j.boutique.map(copie),
       gel: j.gel,
       plateau: j.plateau.map(copie),
+      main: j.main.map(copie),
       decouverte: j.decouvertes[0] ? j.decouvertes[0].map(copie) : null,
       pouvoirUtilise: j.pouvoirUtilise,
       rafraichiGratuit: j.rafraichiGratuit,
