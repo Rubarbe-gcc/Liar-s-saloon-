@@ -12,6 +12,7 @@
 import { CARD_LABEL, CARD_LABEL_ONE, CHAMBERS } from '../../../shared/engine.js';
 import { PROFILES } from '../../../shared/ai.js';
 import { sfx } from './sfx.js';
+import * as succes from '../../../shared/succes.js';
 
 const $ = (id) => document.getElementById(id);
 const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -402,6 +403,7 @@ async function animLeft(ev) {
 
 /** Retournement de la derniere pose, une carte apres l'autre. */
 async function animChallenge(ev) {
+  if (view && ev.accuserId === view.viewerId && !ev.honest) succes.debloquer('saloon-demasque');
   const foe = document.querySelector(`.foe[data-pid="${cssEscape(ev.accuserId)}"]`);
   if (foe) bubble(foe, 'MENTEUR !', true);
   sfx.accuse();
@@ -453,6 +455,7 @@ async function animChallenge(ev) {
 
 /** Mise en scene de la roulette russe. */
 async function animShot(ev) {
+  if (view && ev.playerId === view.viewerId && !ev.died && ev.chambersLeft === 1) succes.debloquer('saloon-nerfs');
   const p = playerOf(ev.playerId);
   const ov = $('ov-roulette');
   const cyl = $('rl-cyl');

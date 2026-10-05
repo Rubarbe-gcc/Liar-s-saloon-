@@ -16,6 +16,7 @@ import * as audio from './audio.js';
 import * as karaoke from './karaoke.js';
 import * as ui from './ui.js';
 import * as reprise from '../../../shared/reprise.js';
+import * as succes from '../../../shared/succes.js';
 
 const JEU = 'echo';
 /** En pleine partie : une coupure doit pouvoir se rattraper. */
@@ -271,6 +272,7 @@ async function restituer(v, r) {
 
 function notes(v) {
   const moiJ = v.joueurs[v.viewer];
+  if (moiJ && moiJ.prise && !moiJ.prise.absente && moiJ.prise.note >= 90) succes.debloquer('echo-90');
   ui.phase(v, 'Les notes');
   ui.vedette(null);
   karaoke.montrer(false);

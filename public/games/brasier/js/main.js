@@ -13,6 +13,7 @@ import * as arene from './arene.js';
 import * as regles from './regles.js';
 import { sfx, basculer, estMuet } from './sfx.js';
 import { installerMusique } from '../../../shared/musique.js';
+import * as succes from '../../../shared/succes.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -291,6 +292,7 @@ function brancher() {
 
 cendres();
 brancher();
+succes.visiter('brasier');
 net.connecter({ name: nom || 'Forgeron' });
 
 if ('serviceWorker' in navigator) {

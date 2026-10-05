@@ -13,6 +13,7 @@
 
 import * as S from '../../../shared/skullking/moteur.js';
 import { carteHtml, portraitSkSvg } from './cartes.js';
+import * as succes from '../../../shared/succes.js';
 
 const $ = (id) => document.getElementById(id);
 export const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -162,6 +163,7 @@ export function poser(r0, depuisMain) {
  */
 export function montrerVainqueur(G, r, sfx) {
   const jeux = [...$('pli').children];
+  if (r.gagnant === 0 && (r.details || []).some((d) => d.txt.startsWith('Sirène'))) succes.debloquer('sk-sirene');
   consigne('');
   if (r.effet === 'kraken') {
     jeux.forEach((e) => e.classList.add('englouti'));
@@ -239,6 +241,14 @@ export function remplirFin(G) {
   const cl = G.noms.map((nom, p) => ({ p, nom, score: G.scores[p] })).sort((a, b) => b.score - a.score);
   cl.forEach((x, i) => { x.rang = i > 0 && x.score === cl[i - 1].score ? cl[i - 1].rang : i + 1; });
   const moi = cl.find((x) => x.p === 0);
+  // Les succès de fin de partie.
+  if (moi.rang === 1) {
+    succes.debloquer('sk-victoire');
+    if ((G.extras || []).length) succes.debloquer('sk-custom');
+  }
+  const miennes = G.historique.map((m) => m[0]).filter(Boolean);
+  if (miennes.length >= 10 && miennes.every((x) => x.pari === x.plis)) succes.debloquer('sk-parfait');
+  if (miennes.some((x, i) => i >= 7 && x.pari === 0 && x.plis === 0)) succes.debloquer('sk-zero');
   $('fin-couronne').innerHTML = portraitSkSvg();
   $('fin-titre').textContent = moi.rang === 1 ? 'Vous êtes le Skull King !' : `${cl[0].nom} est le Skull King`;
   $('fin-sous').textContent = moi.rang === 1 ? 'L’équipage s’incline devant son capitaine.' : `Vous finissez ${moi.rang}${moi.rang === 1 ? 'er' : 'e'} avec ${moi.score} points.`;

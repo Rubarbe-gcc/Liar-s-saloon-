@@ -11,6 +11,7 @@ import {
 } from '../../../shared/engine.js';
 import { decide, thinkDelay, makeBots, DIFFICULTIES } from '../../../shared/ai.js';
 import * as ui from './ui.js';
+import * as succes from '../../../shared/succes.js';
 
 let state = null;
 let meId = null;
@@ -150,6 +151,11 @@ function clearWatchdog() {
 
 function finish() {
   const v = view();
+  if (v.winnerId === meId) {
+    succes.debloquer('saloon-premiere');
+    if (difficulty === 'brutal') succes.debloquer('saloon-impitoyable');
+    if (v.diable) succes.debloquer('saloon-diable');
+  }
   ui.showEnd(v, {
     onMenu: () => { ui.hideEnd(); stop(); exitTo(); },
     onAgain: () => { ui.hideEnd(); document.dispatchEvent(new CustomEvent('saloon:replay-offline')); },

@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v53';
+const VERSION = 'v54';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -61,6 +61,7 @@ const SHELL = [
   '/games/skull-king/js/table.js',
   '/games/skull-king/js/enligne.js',
   '/shared/reprise.js',
+  '/shared/succes.js',
   '/games/skull-king/icons/icon-192.png',
   '/shared/skullking/moteur.js',
   '/games/raid/',

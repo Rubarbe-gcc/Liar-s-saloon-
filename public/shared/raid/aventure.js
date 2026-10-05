@@ -75,6 +75,61 @@ export const DIFFICULTES = {
 };
 export const difficulteDe = (av) => DIFFICULTES[av.difficulte] || DIFFICULTES.normal;
 
+/*
+ * LA PARTIE +. Le Roi Sans Aube vaincu, on peut repartir du premier chapitre
+ * avec tout son groupe — niveaux, talents, éveils, équipement, reliques, or.
+ *
+ * Les monstres ne gonflent pas au hasard : ils SE MESURENT AU GROUPE. Chaque
+ * chapitre garde l'équilibre qu'il avait au premier passage (son boss, ses
+ * élites), mais ramené à la force réelle du groupe — sa vie suit l'attaque
+ * des héros, ses coups suivent leur vie — avec un cran de plus, qui grandit
+ * de chapitre en chapitre et d'une Partie + à la suivante. L'adaptation
+ * n'est pas totale : un meilleur équipement aide toujours.
+ *
+ * Le butin, l'or et les quêtes, eux, ont la force du dernier chapitre.
+ */
+export const CYCLE_DECALAGE = 9;
+export const cycleDe = (av) => av.cycle || 1;
+/** Le chapitre dont le butin, l'or et les quêtes ont la force. */
+export const puissanceActe = (av, acte = av.acte) =>
+  (cycleDe(av) > 1 ? Math.min(ACTES.length, acte + CYCLE_DECALAGE) : acte);
+/**
+ * Ce qu'un personnage pèse, en moyenne, quand il affronte le boss de chaque
+ * chapitre au premier passage (attaque, vie maximum) : la référence à
+ * laquelle on mesure le groupe en Partie +. Relevé par simulation, en Normal.
+ */
+export const REFERENCE_GROUPE = {
+  atk: [17, 26, 39, 53, 66, 78, 95, 116, 128, 138],
+  pv: [61, 91, 124, 164, 197, 230, 290, 331, 370, 377],
+};
+/** Part de l'écart de force que les monstres rattrapent (1 = tout). */
+export const ADAPTATION = 1;
+/**
+ * Le cran de plus de la Partie +, chapitre par chapitre. Il est bien plus
+ * haut au début : au premier passage, les premiers chapitres se jouaient avec
+ * un ou deux héros débutants, sans talents ni sorts ; la force d'un groupe
+ * complet ne se résume pas à son attaque et sa vie. Réglé par simulation.
+ */
+export const CRAN_PLUS = [5, 3.5, 3.6, 3.3, 2.1, 2, 2, 1.55, 1.55, 1.3];
+/** Les boss suivent la table ; les élites et les monstres ordinaires prennent un cran de plus. */
+export const CRAN_BOSS = 1;
+export const CRAN_ELITE = 1.3;
+export const CRAN_MONSTRES = 1.75;
+export const cranPlus = (av, acte = av.acte) =>
+  (cycleDe(av) > 1 ? +(CRAN_PLUS[Math.max(0, Math.min(ACTES.length, acte) - 1)] * (1 + 0.15 * (cycleDe(av) - 2))).toFixed(3) : 1);
+/** Multiplicateurs de vie et d'attaque des monstres en Partie +. */
+export function surcroit(av, acte = av.acte) {
+  if (cycleDe(av) <= 1) return { pv: 1, atk: 1 };
+  const bonus = bonusDe(av);
+  const st = av.groupe.map((p) => statsDe(p, bonus));
+  const moy = (k) => st.reduce((t, x) => t + x[k], 0) / Math.max(1, st.length);
+  const i = Math.max(0, Math.min(ACTES.length, acte) - 1);
+  return {
+    pv: +((moy('atk') / REFERENCE_GROUPE.atk[i]) ** ADAPTATION).toFixed(3),
+    atk: +((moy('pvMax') / REFERENCE_GROUPE.pv[i]) ** ADAPTATION).toFixed(3),
+  };
+}
+
 /** Ce qu'une difficulté change, en clair. */
 export function texteDifficulte(cle) {
   const d = DIFFICULTES[cle];
@@ -258,7 +313,7 @@ export function entrer(av, id) {
       sauvegarder(av);
       break;
     case 'tresor':
-      av.etape = { type: 'tresor', or: 12 + 8 * av.acte + entier(av, 8), piece: piece(av, { plancher: 'rare' }) };
+      av.etape = { type: 'tresor', or: 12 + 8 * puissanceActe(av) + entier(av, 8), piece: piece(av, { plancher: 'rare' }) };
       break;
     case 'recrutement':
       av.etape = { type: 'compagnon', offres: offresCentre(av), centre: true };
@@ -275,15 +330,19 @@ export function entrer(av, id) {
   return { ok: true, etape: av.etape };
 }
 
-const piece = (av, { acte = av.acte, ...o } = {}) => pieceAuHasard(rng(av), acte, { chance: av.chance, ...o });
+const piece = (av, { acte = puissanceActe(av), ...o } = {}) => pieceAuHasard(rng(av), acte, { chance: av.chance, ...o });
 
 /** La difficulté pèse sur chaque ennemi, quel qu'il soit. */
-function durcir(av, ennemis) {
+function durcir(av, ennemis, acte = av.acte) {
   const d = difficulteDe(av);
+  const plus = surcroit(av, acte);
+  const cran = cranPlus(av, acte);
   for (const e of ennemis) {
-    e.pvMax = Math.max(1, Math.round(e.pvMax * d.pv));
+    // Les boss pèsent déjà lourd ; les monstres ordinaires prennent un cran de plus.
+    const c = cycleDe(av) > 1 ? cran * (e.rang === 'boss' ? CRAN_BOSS : e.rang === 'elite' ? CRAN_ELITE : CRAN_MONSTRES) : 1;
+    e.pvMax = Math.max(1, Math.round(e.pvMax * d.pv * plus.pv * c));
     e.pv = e.pvMax;
-    e.atk = Math.max(1, Math.round(e.atk * d.atk));
+    e.atk = Math.max(1, Math.round(e.atk * d.atk * plus.atk * c));
   }
   return ennemis;
 }
@@ -298,7 +357,9 @@ function rencontre(av, type) {
     const dernier = av.acte === ACTES.length;
     b.pvMax = Math.round(b.pvMax * (1 + m.pv) * (1 - blessuresBoss(av)) * (dernier ? DRAGON.pv : 1));
     b.pv = b.pvMax;
-    b.atk = Math.round(b.atk * (1 + m.atk) * (dernier ? DRAGON.atk : 1));
+    // En Partie +, chaque défaite contre ce boss l'use aussi dans ses coups : pas de mur sans fin.
+    const usure = cycleDe(av) > 1 ? 1 - 0.75 * blessuresBoss(av) : 1;
+    b.atk = Math.round(b.atk * (1 + m.atk) * (dernier ? DRAGON.atk : 1) * usure);
     for (let k = 0; k < m.retire; k++) retirerTrait(b);
   }
   return durcir(av, ennemis);
@@ -349,9 +410,10 @@ export function chasser(av) {
   } else {
     ennemis = composer(rng(av), zone, 'combat', { taille });
   }
+  const ici = embuscade ? av.acte : zone;
   av.etape = {
     type: 'combat', salle: embuscade ? 'embuscade' : 'chasse',
-    acte: embuscade ? av.acte : zone, ennemis: durcir(av, ennemis),
+    acte: ici, ennemis: durcir(av, ennemis, ici),
   };
   return { ok: true, embuscade };
 }
@@ -373,7 +435,8 @@ export const orDe = (e, acte) =>
 export function conclureCombat(av, victoire) {
   if (!av.etape || av.etape.type !== 'combat') return { ok: false };
   const { ennemis, salle } = av.etape;
-  const acte = av.etape.acte || av.acte;
+  // En Partie +, l'or, l'expérience et le butin suivent la force des monstres.
+  const acte = puissanceActe(av, av.etape.acte || av.acte);
   av.stats.combats++;
   if (!victoire) {
     av.stats.morts++;
@@ -513,6 +576,39 @@ function suite(av) {
   av.bossVaincu = false;
   av.recrueOfferte = false;
   passerActe(av);
+}
+
+/**
+ * La Partie + : le dernier roi vaincu, on repart du premier chapitre avec
+ * tout ce qu'on a gagné, face à des monstres bien plus forts.
+ */
+export function partiePlus(av) {
+  if (!av.victoire) return { ok: false, raison: 'il faut d’abord vaincre le Roi Sans Aube' };
+  av.cycle = cycleDe(av) + 1;
+  av.acte = 1;
+  av.carte = genererCarte(rng(av), 1);
+  av.position = null;
+  av.visites = [];
+  av.blessures = 0;
+  av.quete = null;
+  av.offresQuetes = tirerQuetes(av);
+  av.menaces = [];
+  av.bossVus = [];
+  av.bossVaincu = false;
+  av.recrueOfferte = false;
+  av.balade = null;
+  av.etape = null;
+  av.termine = false;
+  av.victoire = false;
+  av.inventaire.potion += difficulteDe(av).potions;
+  const bonus = bonusDe(av);
+  for (const p of av.groupe) {
+    const s = statsDe(p, bonus);
+    p.pv = s.pvMax;
+    p.pm = s.pmMax;
+  }
+  sauvegarder(av);
+  return { ok: true, cycle: av.cycle };
 }
 
 export function passerActe(av) {
@@ -1049,7 +1145,7 @@ export function faireRepos(av, choix) {
   const bonus = bonusDe(av);
   let texte;
   if (choix === 'entrainement') {
-    const gain = 20 + 12 * av.acte;
+    const gain = 20 + 12 * puissanceActe(av);
     appliquer(av, { xp: gain });
     texte = `Le groupe s’entraîne : +${gain} XP pour chacun.`;
   } else {
@@ -1352,7 +1448,7 @@ function vitrine(av) {
 
 /** Deux quêtes à proposer pour l'acte en cours. */
 function tirerQuetes(av) {
-  return melanger(av, QUETES.map((q) => q.id)).slice(0, 2).map((id) => instancierQuete(id, av.acte));
+  return melanger(av, QUETES.map((q) => q.id)).slice(0, 2).map((id) => instancierQuete(id, puissanceActe(av)));
 }
 
 /** Ouvre le tableau des quêtes, depuis la carte. */

@@ -925,3 +925,11 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 .branche.maitrise .talent { border-color: rgba(127, 216, 255, .25); }
 .branche.maitrise .talent.dispo { border-color: #bfeeff; box-shadow: 0 3px 0 rgba(0,0,0,.4), 0 0 12px rgba(127, 216, 255, .35); }
 @media (max-width: 420px) { .br-rang { grid-template-columns: 1fr; } }
+
+/* La Partie + */
+.badge-plus { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .78em; font-weight: 800;
+  color: #2a1a02; background: linear-gradient(180deg, #ffe08a, #e8b54a); }
+.partie-plus { margin-top: 14px; padding: 14px; border-radius: 14px; text-align: center;
+  background: linear-gradient(160deg, rgba(232, 181, 74, .16), rgba(0, 0, 0, .25)); border: 1px solid rgba(232, 181, 74, .5); }
+.partie-plus b { font-size: 1.1rem; color: #ffe08a; }
+.partie-plus p { font-size: .84rem; opacity: .85; margin: 6px 0 10px; line-height: 1.4; }

@@ -23,6 +23,7 @@ import { prise as prisebot, adversaires } from '../../../shared/mimic/bots.js';
 import * as audio from './audio.js';
 import * as karaoke from './karaoke.js';
 import * as ui from './ui.js';
+import * as succes from '../../../shared/succes.js';
 
 let etat = null;
 let rng = null;
@@ -262,6 +263,7 @@ async function phaseNotes() {
       `<div class="detail" id="detail">${ui.notesManche(v)}</div>`);
   } else {
     const moi = v.joueurs[v.viewer];
+    if (moi.prise && !moi.prise.absente && moi.prise.note >= 90) succes.debloquer('echo-90');
     ui.scene(moi.prise && !moi.prise.absente ? `${moi.prise.note} / 100` : 'Pas de prise', 'gros');
     document.getElementById('scene-txt').insertAdjacentHTML('afterend',
       `<div class="detail" id="detail">${ui.detailNote(moi.prise)}</div>`);

@@ -11,6 +11,7 @@ import { CASES, SABOTAGES, PHASE } from '../../../shared/mimic/partie.js';
 import { POIDS } from '../../../shared/mimic/analyse.js';
 import { bonhomme, COULEURS } from './avatars.js';
 import * as audio from './audio.js';
+import * as succes from '../../../shared/succes.js';
 
 const $ = (id) => document.getElementById(id);
 export const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
@@ -319,6 +320,10 @@ $('cible-list').addEventListener('click', (e) => {
 export function fin(v, { onMenu, onAgain, sansMoi = false }) {
   const tri = v.joueurs.map((j, i) => ({ j, i })).sort((a, b) => b.j.score - a.j.score);
   const moi = v.joueurs[v.viewer];
+  if (!sansMoi && moi) {
+    succes.debloquer('echo-partie');
+    if (moi.score >= tri[0].j.score) succes.debloquer('echo-victoire');
+  }
   const premier = tri[0].j;
   const exAequo = tri.length > 1 && tri[1].j.score === premier.score;
   const t = $('end-title');

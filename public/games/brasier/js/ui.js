@@ -13,6 +13,7 @@ import { getHeros } from '../../../shared/brasier/heros.js';
 import {
   PHASE, COUT_SERVITEUR, PLATEAU_MAX, MAIN_MAX, OR_MAX,
 } from '../../../shared/brasier/partie.js';
+import * as succes from '../../../shared/succes.js';
 
 const $ = (id) => document.getElementById(id);
 export const esc = (s) => String(s).replace(/[&<>"']/g, (c) =>
@@ -148,6 +149,8 @@ export function rendreRecrutement(v) {
   vue = v;
   const m = v.moi;
   if (!m) return;
+  if (m.taverne >= 6) succes.debloquer('brasier-rang6');
+  if (v.joueurs.find((j) => j.id === m.id)?.triples > 0) succes.debloquer('brasier-triple');
 
   $('r-tour').textContent = `Tour ${v.tour}`;
   $('r-etoiles').innerHTML = Array.from({ length: 6 }, (_, k) => (k < m.taverne ? '★' : '<i>★</i>')).join('');
@@ -275,6 +278,8 @@ export function rendreHeros(v, onChoix) {
 
 export function rendreFin(v, { elimine = false } = {}) {
   const m = v.moi;
+  if (m && m.place === 1) succes.debloquer('brasier-premier');
+  if (m && m.place && m.place <= 4) succes.debloquer('brasier-top4');
   const tri = [...v.joueurs].sort((a, b) => (a.place ?? 99) - (b.place ?? 99));
   const place = m ? m.place : null;
   $('fin-marque').innerHTML = place === 1 ? '🏆' : (place && place <= 4 ? '🔥' : '💀');

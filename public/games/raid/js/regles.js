@@ -147,5 +147,13 @@ export function rendreRegles() {
     <p>Le menu a <b>trois emplacements de sauvegarde</b> : trois aventures en parallèle, chacune avec son héros et sa difficulté. On passe de l’une à l’autre depuis le menu, et la corbeille 🗑 en supprime une. Les chapitres débloqués sont communs aux trois.</p>
     <p>Quand le jeu est mis à jour, une partie en cours reçoit les nouveautés toute seule : inutile de recommencer.</p>
     <p>La partie est enregistrée à chaque étape, <b>sur cet appareil</b> : vous pouvez fermer le jeu et reprendre plus tard.</p>
-    <p>Pour jouer la même partie sur plusieurs appareils, ouvrez <b>📱 Mes appareils</b> dans le menu et activez la <b>synchronisation automatique</b> : un code de synchro, à taper une seule fois sur chaque appareil, et la partie suit toute seule. La plus récente gagne.</p>`);
+    <p>Pour jouer la même partie sur plusieurs appareils, ouvrez <b>📱 Mes appareils</b> dans le menu et activez la <b>synchronisation automatique</b> : un code de synchro, à taper une seule fois sur chaque appareil, et la partie suit toute seule. La plus récente gagne.</p>`)
+    + bloc('⭐ La Partie +', `
+    <p>Le Roi Sans Aube vaincu, l’écran de victoire propose une <b>Partie +</b> : on repart du premier chapitre avec
+    <b>tout son groupe</b> — niveaux, talents, éveils, équipement, reliques et or.</p>
+    <p>Les monstres <b>se mesurent à votre force</b> : chaque chapitre garde son équilibre, ses boss et ses élites,
+    ramenés à la puissance réelle du groupe, avec un cran de plus qu’au premier passage. Un meilleur équipement aide
+    toujours. Le butin, l’or et les quêtes ont la force du dernier chapitre. Une Partie + vaincue en ouvre une autre,
+    encore plus dure.</p>
+    <p>En Partie +, un boss qui vous a battus s’use aussi dans ses coups, pas seulement dans sa vie.</p>`);
 }

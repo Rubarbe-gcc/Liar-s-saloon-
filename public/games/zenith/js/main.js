@@ -16,6 +16,7 @@ import { installerMusique } from '../../../shared/musique.js';
 import { bandeau } from '../../../shared/reprise.js';
 import * as A from '../../../shared/zenith/ascension.js';
 import { LEVELS as NIVEAUX } from '../../../shared/zenith/ai.js';
+import * as succes from '../../../shared/succes.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -149,6 +150,8 @@ function finAscension(gagne, finale) {
   const etage = asc.etage;
   A.apresCombat(asc, gagne);
   if (gagne) record = Math.max(record, etage);
+  if (gagne && etage >= 4) succes.debloquer('zenith-mi-tour');
+  if (asc.victoire) succes.debloquer('zenith-sommet');
   ecrireJson(CLE_RECORD, record);
   sauverAsc();
   const suite = () => {
@@ -399,6 +402,7 @@ net.listen('begin', () => { sfx.bell(); ui.hideEnd(); show('fight'); });
 net.listen('left', () => { gate(true); netStatus('Connecté.', 'ok'); show('online'); });
 net.listen('error', (m) => ui.toast(m, 2800));
 net.listen('over', (view) => {
+  if (view && view.winner === view.viewerSide) succes.debloquer('zenith-enligne');
   setTimeout(() => ui.showEnd(view, {
     onMenu: () => { ui.hideEnd(); goMenu(); },
     onAgain: () => { ui.hideEnd(); net.backToLobby(); show('online'); },
@@ -595,6 +599,8 @@ function registerServiceWorker() {
 /* ------------------------------------------------------------------ */
 
 loadPrefs();
+succes.visiter('zenith');
+if (!prefs.name && succes.pseudo()) prefs.name = succes.pseudo();
 bind();
 majMenuAscension();
 registerServiceWorker();

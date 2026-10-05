@@ -1633,3 +1633,49 @@ test('les combats rapportent moins d’or qu’avant', () => {
   assert.ok(A.orDe(e, 1) <= 6);
   assert.ok(A.orDe({ rang: 'boss' }, 5) < 80);
 });
+
+/* ================================================================== */
+/* La Partie +                                                        */
+/* ================================================================== */
+
+test('la Partie + repart du premier chapitre avec tout ce qu’on a gagné', () => {
+  const av = A.creerAventure({ heros: 'kaelis', seed: 31 });
+  for (const id of ['brandel', 'mei', 'pix']) av.groupe.push(creerPersonnage(id, 20));
+  av.groupe[0] = creerPersonnage('kaelis', 20);
+  av.or = 999;
+  assert.equal(A.partiePlus(av).ok, false, 'il faut d’abord vaincre le dernier roi');
+  av.victoire = true;
+  av.termine = true;
+  av.acte = 10;
+  const r = A.partiePlus(av);
+  assert.ok(r.ok);
+  assert.equal(r.cycle, 2);
+  assert.equal(av.acte, 1);
+  assert.equal(av.termine, false);
+  assert.equal(av.groupe.length, 4, 'le groupe reste');
+  assert.equal(av.groupe[0].niveau, 20);
+  assert.equal(av.or, 999);
+  assert.equal(A.puissanceActe(av), 10, 'le butin a la force du dernier chapitre');
+});
+
+test('en Partie +, les monstres se mesurent au groupe', () => {
+  const av = A.creerAventure({ heros: 'kaelis', seed: 32 });
+  for (const id of ['brandel', 'mei', 'pix']) av.groupe.push(creerPersonnage(id, 20));
+  av.groupe[0] = creerPersonnage('kaelis', 20);
+  av.victoire = true;
+  const force = (x) => {
+    const n = av.carte.noeuds.find((nd) => nd.rangee === 0);
+    n.type = 'combat';
+    x.etape = null; x.position = null;
+    A.entrer(x, n.id);
+    return x.etape.ennemis.reduce((t, e) => t + e.pvMax, 0) / x.etape.ennemis.length;
+  };
+  const avant = force(JSON.parse(JSON.stringify(av)));
+  A.partiePlus(av);
+  const apres = force(av);
+  assert.ok(apres > avant * 3, `${Math.round(apres)} contre ${Math.round(avant)}`);
+  // Un groupe plus fort fait face à plus fort.
+  const s = A.surcroit(av);
+  av.groupe.forEach((p) => { p.niveau = 10; });
+  assert.ok(A.surcroit(av).pv < s.pv);
+});

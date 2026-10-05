@@ -10,6 +10,7 @@ import {
 } from '../../../shared/zenith/battle.js';
 import { createBrain, think, makeOpponent } from '../../../shared/zenith/ai.js';
 import * as ui from './ui.js';
+import * as succes from '../../../shared/succes.js';
 
 let state = null;
 let brain = null;
@@ -73,6 +74,10 @@ async function commande(cmd) {
 
   if (state.phase === PHASE.OVER) {
     const finale = viewFor(state, 'me');
+    if (finale.winner === finale.viewerSide) {
+      succes.debloquer('zenith-victoire');
+      if (brain && brain.level === 'legende') succes.debloquer('zenith-legende');
+    }
     await ui.sleep(700);
     stop();
     if (surFin) { surFin(finale.winner === finale.viewerSide, finale); return; }

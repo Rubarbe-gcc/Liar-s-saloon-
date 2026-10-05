@@ -41,6 +41,11 @@
       Des jeux faits maison, jouables tout de suite dans le navigateur.
       Rien à créer comme compte — et ça s’installe comme une appli.
     </p>
+    <button class="profil-btn" id="b-profil" type="button">
+      <span class="profil-av" id="profil-av">🙂</span>
+      <span class="profil-txt"><b id="profil-nom">Choisir un pseudo</b><i id="profil-succes">🏆 0 succès</i></span>
+      <span class="profil-fleche">›</span>
+    </button>
     <div class="installer" id="installer" hidden>
       <button class="installer-btn" id="b-installer">📲 Installer l’application</button>
       <div class="installer-aide" id="installer-aide" hidden></div>
@@ -58,6 +63,19 @@
 
   <div class="grid" id="grid"></div>
 </main>
+
+<div class="ov-profil" id="ov-profil" hidden>
+  <div class="profil-feuille" role="dialog" aria-modal="true" aria-labelledby="profil-titre">
+    <button class="profil-fermer" id="profil-fermer" aria-label="Fermer">✕</button>
+    <h2 id="profil-titre">Mon profil</h2>
+    <label class="profil-lbl" for="in-pseudo">Pseudo — repris par les jeux qui demandent un nom</label>
+    <input class="profil-champ" id="in-pseudo" maxlength="14" placeholder="Votre pseudo" autocomplete="off">
+    <div class="profil-lbl">Avatar</div>
+    <div class="profil-avatars" id="profil-avatars"></div>
+    <div class="profil-bilan" id="profil-bilan"></div>
+    <div id="profil-liste"></div>
+  </div>
+</div>
 
 <footer class="wrap">
   <div class="foot">
@@ -182,6 +200,56 @@ function esc(s) {
   return String(s).replace(/[&<>"']/g, (c) =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
+
+/* Le profil et les succès, communs à toute l'arcade. */
+import * as succes from '/shared/succes.js';
+
+function majProfil() {
+  const p = succes.profil();
+  const t = succes.total();
+  document.getElementById('profil-av').textContent = p.avatar;
+  document.getElementById('profil-nom').textContent = p.pseudo || 'Choisir un pseudo';
+  document.getElementById('profil-succes').textContent = `🏆 ${t.faits} / ${t.tous} succès`;
+}
+
+function rendreProfil() {
+  const p = succes.profil();
+  const t = succes.total();
+  document.getElementById('in-pseudo').value = p.pseudo;
+  document.getElementById('profil-avatars').innerHTML = succes.AVATARS.map((a) =>
+    `<button type="button" class="${a === p.avatar ? 'on' : ''}" data-avatar="${a}">${a}</button>`).join('');
+  document.getElementById('profil-bilan').innerHTML = `<b>${t.faits}</b> succès sur ${t.tous}
+    <span class="profil-jauge"><i style="width:${Math.round((t.faits / t.tous) * 100)}%"></i></span>`;
+  document.getElementById('profil-liste').innerHTML = Object.entries(succes.JEUX).map(([cle, jeu]) => {
+    const l = succes.succesDe(cle);
+    const faits = l.filter((x) => x.quand).length;
+    return `<section class="profil-jeu"><h3>${jeu.glyphe} ${esc(jeu.nom)} <span>${faits}/${l.length}</span></h3>
+      ${l.map((x) => `<div class="succes${x.quand ? ' fait' : ''}">
+        <span class="sg">${x.quand ? x.glyphe : '🔒'}</span>
+        <span class="st"><b>${esc(x.titre)}</b><i>${esc(x.texte)}</i></span>
+        ${x.quand ? `<span class="sd">${new Date(x.quand).toLocaleDateString('fr-FR')}</span>` : ''}</div>`).join('')}</section>`;
+  }).join('');
+}
+
+document.getElementById('b-profil').addEventListener('click', () => {
+  rendreProfil();
+  document.getElementById('ov-profil').hidden = false;
+});
+document.getElementById('profil-fermer').addEventListener('click', () => { document.getElementById('ov-profil').hidden = true; majProfil(); });
+document.getElementById('ov-profil').addEventListener('click', (e) => {
+  if (e.target.id === 'ov-profil') { e.currentTarget.hidden = true; majProfil(); }
+});
+document.getElementById('in-pseudo').addEventListener('change', (e) => {
+  succes.definirProfil({ pseudo: e.target.value });
+  rendreProfil(); majProfil();
+});
+document.getElementById('profil-avatars').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-avatar]');
+  if (!b) return;
+  succes.definirProfil({ avatar: b.dataset.avatar });
+  rendreProfil(); majProfil();
+});
+majProfil();
 
 /* Installer l'application.
    Sur Android et sur ordinateur, le navigateur nous confie sa fenêtre

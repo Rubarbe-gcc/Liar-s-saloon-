@@ -9,6 +9,7 @@ import * as net from './online.js';
 import { sfx, toggle as toggleSound, isEnabled as soundOn, unlock } from './sfx.js';
 import { installerMusique } from '../../../shared/musique.js';
 import { bandeau } from '../../../shared/reprise.js';
+import * as succes from '../../../shared/succes.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -241,6 +242,11 @@ function renderSeats(r) {
 }
 
 function endOnlineGame(view) {
+  if (view && view.winnerId === view.viewerId) {
+    succes.debloquer('saloon-premiere');
+    succes.debloquer('saloon-enligne');
+    if (view.diable) succes.debloquer('saloon-diable');
+  }
   ui.showEnd(view, {
     onMenu: () => { ui.hideEnd(); goMenu(); },
     onAgain: () => {
@@ -392,6 +398,9 @@ function registerServiceWorker() {
 /* ------------------------------------------------------------------ */
 
 loadPrefs();
+succes.visiter('saloon');
+// Le pseudo du profil de l'arcade sert de nom, si aucun n'est encore choisi.
+if (!prefs.name && succes.pseudo()) prefs.name = succes.pseudo();
 bind();
 registerServiceWorker();
 syncForms();

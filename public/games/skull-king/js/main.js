@@ -17,6 +17,7 @@ import { reglesHtml, aideHtml } from './regles.js';
 import * as T from './table.js';
 import * as enLigne from './enligne.js';
 import { bandeau } from '../../../shared/reprise.js';
+import * as succes from '../../../shared/succes.js';
 
 const $ = (id) => document.getElementById(id);
 const { attendre, txt, toast } = T;
@@ -39,6 +40,8 @@ const ecrire = (cle, v) => { try { localStorage.setItem(cle, JSON.stringify(v));
 try { localStorage.removeItem('skullking.partie'); } catch { /* ignore */ }
 
 const prefs = { nom: '', bots: 3, custom: false, extras: S.TOUTES_CUSTOM.slice(), ...lire(CLE_PREFS, {}) };
+succes.visiter('skullking');
+if (!prefs.nom && succes.pseudo()) prefs.nom = succes.pseudo();
 prefs.extras = S.nettoyerExtras(prefs.extras);
 export const nomPrefere = () => prefs.nom;
 export function retenirNom(nom) { prefs.nom = nom; ecrire(CLE_PREFS, prefs); }

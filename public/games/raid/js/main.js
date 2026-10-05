@@ -32,6 +32,7 @@ import {
 import {
   arbreDe, RANG_MAX, rangDe, pointsLibres, peutApprendre, apprendre, texteTalent,
 } from '../../../shared/raid/talents.js';
+import * as succes from '../../../shared/succes.js';
 
 const $ = (id) => document.getElementById(id);
 /**
@@ -79,8 +80,15 @@ const COULEUR_DIFF = { facile: '#7fc95c', normal: '#e8c060', difficile: '#ff8a3d
 
 let derniereEcriture = null;   // ce qui a été écrit en dernier, pour ne dater que les vrais changements
 
+/**
+ * Une aventure qui se garde : en cours, ou gagnée — on peut encore en tirer
+ * une Partie +. Une aventure perdue en Hardcore, elle, ne se garde pas.
+ */
+const gardee = (x) => !!x && (!x.termine || !!x.victoire);
+succes.visiter('raid');
+
 function sauver() {
-  const texte = !av || av.termine ? '' : JSON.stringify(av);
+  const texte = gardee(av) ? JSON.stringify(av) : '';
   try {
     if (!texte) localStorage.removeItem(cleDe(emplacement));
     else localStorage.setItem(cleDe(emplacement), texte);
@@ -102,7 +110,7 @@ let etatSynchro = '';
 /** Ce que cet appareil a à déposer : ses trois emplacements et la progression. */
 const chargeCourante = () => versCode({
   version: 2, lot: true, groupe: [{ id: 'lot' }], actif: emplacement,
-  emplacements: Array.from({ length: NB_EMPLACEMENTS }, (_, i) => (i === emplacement ? (av && !av.termine ? av : null) : lireBrut(i))),
+  emplacements: Array.from({ length: NB_EMPLACEMENTS }, (_, i) => (i === emplacement ? (gardee(av) ? av : null) : lireBrut(i))),
 }, progres);
 
 function direSynchro(texte) {
@@ -222,7 +230,7 @@ async function relierSynchro() {
     msg.textContent = `⚠ ${r.vide ? 'Aucune partie sous ce code. Vérifiez-le sur l’autre appareil.' : r.indisponible ? 'La synchronisation n’est pas encore activée sur le site.' : r.msg}`;
     return;
   }
-  if (av && !av.termine && !confirm('Cet appareil a déjà une partie en cours. La remplacer par celle de vos autres appareils ?')) { msg.textContent = ''; return; }
+  if (gardee(av) && !confirm('Cet appareil a déjà une partie en cours. La remplacer par celle de vos autres appareils ?')) { msg.textContent = ''; return; }
   synchro.definirCode(c);
   if (!(await adopter(r.charge, r.date))) { synchro.oublier(); msg.textContent = '⚠ Sauvegarde illisible. Rechargez la page et réessayez.'; return; }
   sfx.victoire();
@@ -273,7 +281,7 @@ function demarrerSauvegardes() {
     if (autre !== undefined) choisirEmplacement(autre);
   }
   av = charger();
-  derniereEcriture = !av || av.termine ? '' : JSON.stringify(av);
+  derniereEcriture = gardee(av) ? JSON.stringify(av) : '';
 }
 
 /** Passe sur un autre emplacement et reprend son aventure. */
@@ -281,7 +289,7 @@ function jouerEmplacement(i) {
   sauver();
   choisirEmplacement(i);
   av = charger();
-  derniereEcriture = !av || av.termine ? '' : JSON.stringify(av);
+  derniereEcriture = gardee(av) ? JSON.stringify(av) : '';
   finJouee = false;
 }
 
@@ -299,7 +307,7 @@ function supprimerEmplacement(i) {
 
 /** Prépare la création d'une aventure dans un emplacement libre. Faux s'il n'y en a pas. */
 function preparerNouvelle(i = null) {
-  const occupe = (k) => (k === emplacement ? !!(av && !av.termine) : !!lireBrut(k));
+  const occupe = (k) => (k === emplacement ? gardee(av) : !!lireBrut(k));
   const libre = i !== null ? i : Array.from({ length: NB_EMPLACEMENTS }, (_, k) => k).find((k) => !occupe(k));
   if (libre === undefined || occupe(libre)) {
     toast('Les trois emplacements sont pris : supprimez une aventure depuis le menu.');
@@ -355,6 +363,12 @@ function suite() {
   }
   if (!e) return aller('carte');
   if (e.type === 'combat') return combattre();
+  if (e.type === 'victoire') {
+    succes.debloquer('raid-roi');
+    if (av.difficulte === 'difficile' || av.difficulte === 'hardcore') succes.debloquer('raid-difficile');
+    if (av.difficulte === 'hardcore') succes.debloquer('raid-hardcore');
+    if (A.cycleDe(av) > 1) succes.debloquer('raid-plus');
+  }
   if (e.type === 'victoire' && !finJouee) {
     finJouee = true;
     jouerCinematique(scenesFin(av.groupe), { sfx }).then(() => { aller('etape'); rendreEtape(); });
@@ -369,7 +383,7 @@ function suite() {
 /* ------------------------------------------------------------------ */
 
 function rendreMenu() {
-  const ok = av && !av.termine;
+  const ok = gardee(av);
   $('emplacements').innerHTML = Array.from({ length: NB_EMPLACEMENTS }, (_, i) => {
     const x = i === emplacement ? (ok ? av : null) : lireBrut(i);
     if (!x) {
@@ -378,12 +392,12 @@ function rendreMenu() {
         <span class="bt"><b>Emplacement ${i + 1} · Nouvelle aventure</b><i>Libre — choisissez un héros</i></span></button>`;
     }
     const h = A.heros(x);
-    const note = `${A.difficulteDe(x).glyphe} ${A.difficulteDe(x).nom} · ${h.nom} · niveau ${h.niveau} · chapitre ${x.acte}/${ACTES.length}`
+    const note = `${A.difficulteDe(x).glyphe} ${A.difficulteDe(x).nom} · ${h.nom} · niveau ${h.niveau} · chapitre ${x.acte}/${ACTES.length}${A.cycleDe(x) > 1 ? ` · ⭐ Partie +${A.cycleDe(x) > 2 ? A.cycleDe(x) - 1 : ''}` : ''}`
       + (x.groupe.length > 1 ? ` · ${x.groupe.length} dans le groupe` : ' · seul');
     return `<div class="emplacement${i === emplacement ? ' actif' : ''}">
       <button class="btn btn-big emp-jouer" data-emp="${i}">
         <span class="emp-portrait">${spriteSvg(h)}</span>
-        <span class="bt"><b>Emplacement ${i + 1} · Continuer</b><i>${txt(note)}</i></span></button>
+        <span class="bt"><b>Emplacement ${i + 1} · ${x.victoire ? 'Victoire 👑 — Partie + disponible' : 'Continuer'}</b><i>${txt(note)}</i></span></button>
       <button class="emp-suppr" data-suppr="${i}" aria-label="Supprimer l’aventure de l’emplacement ${i + 1}" title="Supprimer">🗑</button></div>`;
   }).join('');
   for (const el of $('emplacements').querySelectorAll('[data-emp]')) {
@@ -391,6 +405,8 @@ function rendreMenu() {
       debloquer(); sfx.clic();
       if (+el.dataset.emp !== emplacement) jouerEmplacement(+el.dataset.emp);
       nouveautes = [];
+      // Une aventure gagnée rouvre son écran de victoire, sans rejouer la fin.
+      if (av && av.victoire) finJouee = true;
       suite();
     });
   }
@@ -625,7 +641,7 @@ function rendreCarte() {
   if (!av) return aller('menu');
   const acte = ACTES[av.acte - 1];
   $('acte-nom').textContent = acte.nom;
-  $('acte-num').innerHTML = `Chapitre ${av.acte} / ${ACTES.length} · <span class="badge-diff" style="--d:${COULEUR_DIFF[av.difficulte] || COULEUR_DIFF.normal}">${A.difficulteDe(av).glyphe} ${A.difficulteDe(av).nom}</span>`;
+  $('acte-num').innerHTML = `Chapitre ${av.acte} / ${ACTES.length}${A.cycleDe(av) > 1 ? ` · <span class="badge-plus">⭐ Partie +${A.cycleDe(av) > 2 ? A.cycleDe(av) - 1 : ''}</span>` : ''} · <span class="badge-diff" style="--d:${COULEUR_DIFF[av.difficulte] || COULEUR_DIFF.normal}">${A.difficulteDe(av).glyphe} ${A.difficulteDe(av).nom}</span>`;
   $('ressources').innerHTML = ressources();
   $('groupe-mini').innerHTML = groupeMini();
 
@@ -723,7 +739,9 @@ function combattre() {
     sfx,
     toast,
     surFin: (victoire) => {
+      const bossDu1 = victoire && av.etape && av.etape.salle === 'boss' && av.acte === 1;
       A.conclureCombat(av, victoire);
+      if (bossDu1) succes.debloquer('raid-chapitre');
       suite();
     },
   });
@@ -821,6 +839,7 @@ function rendreEtape() {
     case 'compagnon':
       clic('[data-recruter]', (el) => {
         const r = A.recruter(av, el.dataset.recruter, el.dataset.remplace ? +el.dataset.remplace : null);
+        if (r.ok && PAR_ID[el.dataset.recruter]?.legendaire) succes.debloquer('raid-legende');
         if (r.ok) sfx.victoire();
         suite();
       });
@@ -853,8 +872,17 @@ function rendreEtape() {
       clic('#b-suite', () => { A.terminerEtape(av); suite(); });
       break;
     case 'victoire':
+      clic('#b-plus', () => {
+        const r = A.partiePlus(av);
+        if (!r.ok) return;
+        finJouee = false;
+        sfx.victoire();
+        toast(`⭐ Partie + : les monstres vous attendent, plus forts.`);
+        suite();
+      });
       clic('#b-nouvelle', () => { av = null; sauver(); cible = emplacement; chapitreDepart = 1; aller('choix'); });
-      clic('#b-menu', () => { av = null; sauver(); aller('menu'); });
+      // Le menu garde l'aventure gagnée : la Partie + reste possible plus tard.
+      clic('#b-menu', () => { sauver(); aller('menu'); });
       break;
     default: break;
   }
@@ -1050,11 +1078,18 @@ function etapeDefaite(e) {
 
 function etapeVictoire() {
   const s = av.stats;
-  return tete('👑', 'Le Roi Sans Aube est tombé !', `Au départ, ${txt(A.heros(av).nom)} voyageait seul. Dix chapitres plus tard, le groupe compte ${av.groupe.length} héros — et la montagne s’est tue.`)
+  const cycle = A.cycleDe(av);
+  const titre = cycle > 1 ? `Le Roi Sans Aube est tombé — ${cycle === 2 ? 'une seconde fois' : `pour la ${cycle}ᵉ fois`} !` : 'Le Roi Sans Aube est tombé !';
+  return tete('👑', titre, `Au départ, ${txt(A.heros(av).nom)} voyageait seul. Dix chapitres plus tard, le groupe compte ${av.groupe.length} héros — et la montagne s’est tue.`)
     + `<div class="gains">${av.groupe.map((p) => `<div class="gain">${spriteSvg(p)}<div><b>${txt(p.nom)}</b> niveau ${p.niveau}</div></div>`).join('')}</div>`
     + `<div class="journal-voyage"><div>Combats : <b>${s.combats}</b> · Défaites : <b>${s.morts}</b> · Or amassé : <b>${s.ors}</b></div></div>`
+    + `<div class="partie-plus">
+      <b>⭐ Partie +${cycle > 1 ? cycle : ''}</b>
+      <p>Repartez du premier chapitre avec tout votre groupe — niveaux, talents, éveils, équipement, reliques et or.
+      Les monstres se mesurent à votre force, et frappent plus dur que la première fois ; le butin a la force du dernier chapitre.</p>
+      <button class="btn btn-go btn-wide" id="b-plus">Commencer la Partie +${cycle > 1 ? cycle : ''}</button></div>`
     + `<div class="et-liste" style="margin-top:14px">
-      <button class="btn btn-go btn-wide" id="b-nouvelle">Nouvelle aventure</button>
+      <button class="btn btn-ghost btn-wide" id="b-nouvelle">Nouvelle aventure</button>
       <button class="btn btn-ghost btn-wide" id="b-menu">Menu</button></div>`;
 }
 
@@ -1181,7 +1216,7 @@ function brancher() {
     debloquer();
     // L'aventure en cours reste dans son emplacement ; la nouvelle prend le sien.
     if (cible !== emplacement) { sauver(); choisirEmplacement(cible); derniereEcriture = ''; }
-    else if (av && !av.termine) { if (!preparerNouvelle()) return; sauver(); choisirEmplacement(cible); derniereEcriture = ''; }
+    else if (gardee(av)) { if (!preparerNouvelle()) return; sauver(); choisirEmplacement(cible); derniereEcriture = ''; }
     av = A.creerAventure({ heros: depart, difficulte, chapitre: chapitreDepart });
     finJouee = false;
     sfx.victoire();

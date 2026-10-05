@@ -188,8 +188,12 @@ export const ECHELLE = {
   4: { pv: 1, atk: 1 },
 };
 
-/** Compose la rencontre d'une salle, pour un groupe de `taille` personnages. */
-export function composer(rng, acte, type, { vus = [], taille = 4 } = {}) {
+/**
+ * Compose la rencontre d'une salle, pour un groupe de `taille` personnages.
+ * `force` : le chapitre dont les monstres ont la force (la Partie + les
+ * prend plus avancés que le chapitre où l'on se trouve).
+ */
+export function composer(rng, acte, type, { vus = [], taille = 4, force = acte } = {}) {
   const act = ACTES[acte - 1];
   const echelle = ECHELLE[Math.max(1, Math.min(4, taille))];
   const ecole = () => (rng() < 0.55 ? act.ecole : CYCLE[entier(rng, CYCLE.length)]);
@@ -199,7 +203,7 @@ export function composer(rng, acte, type, { vus = [], taille = 4 } = {}) {
     const l = pool.length ? pool : tous;
     return l[entier(rng, l.length)];
   };
-  const creer = (m, o = {}) => ennemiRpg(m, acte, o.ecole || ecole(), rng, { echelle, ...o });
+  const creer = (m, o = {}) => ennemiRpg(m, force, o.ecole || ecole(), rng, { echelle, ...o });
 
   if (type === 'boss') {
     // Chaque chapitre a son maître, toujours le même : c'est lui que l'histoire raconte.

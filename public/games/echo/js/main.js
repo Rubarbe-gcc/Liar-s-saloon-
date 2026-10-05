@@ -14,6 +14,7 @@ import * as net from './online.js';
 import { bonhomme, prendrePhoto, photoValide, COULEURS } from './avatars.js';
 import { installerMusique } from '../../../shared/musique.js';
 import { bandeau } from '../../../shared/reprise.js';
+import * as succes from '../../../shared/succes.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -413,6 +414,8 @@ $('b-musique').addEventListener('click', () => {
   try { localStorage.setItem('echo.musique', musique ? 'on' : 'off'); } catch { /* ignore */ }
   majMusique();
 });
+succes.visiter('echo');
+
 // Une partie en ligne interrompue (application fermée, réseau perdu) : on peut la rejoindre.
 bandeau('echo', { visible: () => $('s-menu').classList.contains('is-active'), rejoindre: ouvrirEnLigne });
 
