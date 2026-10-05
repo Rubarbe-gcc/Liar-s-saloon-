@@ -228,14 +228,25 @@ export function speedOf(unit) {
 /* Création                                                            */
 /* ------------------------------------------------------------------ */
 
-function makeUnit(fighterId) {
+/**
+ * Une unité de combat. `spec` est l'identifiant du combattant, ou — pour
+ * l'Ascension — un objet { id, pv, hp, ki, attaque, armure } : vie maximum
+ * multipliée, vie de départ, ki de départ, et des galons permanents qui
+ * multiplient ses dégâts et son armure.
+ */
+function makeUnit(spec) {
+  const s = typeof spec === 'string' ? { id: spec } : spec;
+  const fighterId = s.id;
   const f = getFighter(fighterId);
   if (!f) throw new Error(`combattant inconnu : ${fighterId}`);
+  const maxHp = Math.round(f.hp * (s.pv || 1));
+  const hp = s.hp == null ? maxHp : Math.max(1, Math.min(maxHp, Math.round(s.hp)));
   return {
     fighterId,
-    hp: f.hp,
-    maxHp: f.hp,
-    ki: 30,
+    hp,
+    maxHp,
+    ki: s.ki ?? 30,
+    galon: { attaque: s.attaque || 1, armure: s.armure || 1 },
     ko: false,
     status: null,      // { key, tours, from }
     guard: false,
@@ -418,8 +429,11 @@ export function estimateDamage(
 
 /** Multiplicateurs de renfort d'une unité, 1 quand elle n'en porte pas. */
 export function boostOf(unit) {
-  if (!unit || !unit.boost) return { attaque: 1, armure: 1 };
-  return { attaque: unit.boost.attaque, armure: unit.boost.armure };
+  if (!unit) return { attaque: 1, armure: 1 };
+  // Les galons (Ascension) s'ajoutent au renfort du moment.
+  const g = unit.galon || { attaque: 1, armure: 1 };
+  if (!unit.boost) return { attaque: g.attaque, armure: g.armure };
+  return { attaque: unit.boost.attaque * g.attaque, armure: unit.boost.armure * g.armure };
 }
 
 function appliquerDegats(state, side, foe, moveKey) {
@@ -805,6 +819,7 @@ export function viewFor(state, viewerId) {
         ultUsed: u.ultUsed,
         status: u.status ? { key: u.status.key, tours: u.status.tours } : null,
         boost: u.boost ? { ...u.boost } : null,
+        galon: u.galon && (u.galon.attaque !== 1 || u.galon.armure !== 1) ? { ...u.galon } : null,
         vitesse: u.ko ? 0 : Math.round(speedOf(u)),
       })),
     })),

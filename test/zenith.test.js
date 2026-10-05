@@ -8,6 +8,7 @@ import assert from 'node:assert/strict';
 import * as F from '../public/shared/zenith/fighters.js';
 import * as B from '../public/shared/zenith/battle.js';
 import * as AI from '../public/shared/zenith/ai.js';
+import * as Asc from '../public/shared/zenith/ascension.js';
 
 const duo = (teamA, teamB, seed = 1) => B.createBattle([
   { id: 'a', name: 'A', team: teamA },
@@ -1344,4 +1345,86 @@ test('la carrure decoule des statistiques', async () => {
   const lourd = F.FIGHTERS.find((f) => f.hp >= 1200);
   if (rapide) assert.equal(S.buildOf(rapide), 'leste');
   if (lourd) assert.equal(S.buildOf(lourd), 'massif');
+});
+
+/* ================================================================== */
+/* L'Ascension                                                        */
+/* ================================================================== */
+
+
+test('les galons et la vie de l’Ascension passent dans le combat', () => {
+  const st = B.createBattle([
+    { id: 'a', name: 'A', team: [{ id: 'kaze', pv: 1.2, attaque: 1.15, armure: 1.1, ki: 45 }, 'kaze', 'kaze'] },
+    { id: 'b', name: 'B', team: ['kaze', 'kaze', 'kaze'] },
+  ], { seed: 1 });
+  const u = st.sides[0].team[0];
+  assert.equal(u.maxHp, Math.round(F.getFighter('kaze').hp * 1.2));
+  assert.equal(u.ki, 45);
+  assert.deepEqual(B.boostOf(u), { attaque: 1.15, armure: 1.1 });
+  assert.deepEqual(B.boostOf(st.sides[0].team[1]), { attaque: 1, armure: 1 });
+});
+
+test('l’Ascension : huit étages, de plus en plus forts, et trois vies', () => {
+  assert.equal(Asc.ETAGES.length, 8);
+  for (let i = 1; i < 8; i++) assert.ok(Asc.ETAGES[i].puissance > Asc.ETAGES[i - 1].puissance);
+  const asc = Asc.nouvelleAscension(['kaze', 'ignara', 'volt']);
+  assert.equal(asc.vies, Asc.VIES);
+  // L'étage de la Forge : trois combattants de Braise, renforcés.
+  asc.etage = 2;
+  const foe = Asc.adversaire(asc, () => 0.3);
+  assert.equal(foe.team.length, 3);
+  assert.ok(foe.team.every((m) => F.getFighter(m.id).element === 'braise'));
+  assert.ok(foe.team.every((m) => m.pv === Asc.ETAGES[1].puissance));
+  // Une défaite coûte une vie, on reste à l'étage.
+  Asc.apresCombat(asc, false);
+  assert.equal(asc.vies, Asc.VIES - 1);
+  assert.equal(asc.etage, 2);
+  // Une victoire fait monter, et propose trois récompenses.
+  Asc.apresCombat(asc, true, () => 0.5);
+  assert.equal(asc.etage, 3);
+  assert.equal(asc.offre.length, 3);
+});
+
+test('les récompenses renforcent l’équipe pour la suite', () => {
+  const asc = Asc.nouvelleAscension(['kaze', 'ignara', 'volt']);
+  asc.offre = [{ cle: 'entrainement' }, { cle: 'meditation' }, { cle: 'recrue', candidats: ['sylas'] }];
+  assert.equal(Asc.appliquer(asc, 'blindage').ok, false, 'une récompense non proposée est refusée');
+  assert.ok(Asc.appliquer(asc, 'entrainement', { cible: 1 }).ok);
+  assert.equal(asc.equipe[1].attaque, 1.15);
+  assert.equal(asc.offre, null);
+  asc.offre = [{ cle: 'recrue', candidats: ['sylas'] }];
+  assert.ok(Asc.appliquer(asc, 'recrue', { cible: 1, candidat: 'sylas' }).ok);
+  assert.equal(asc.equipe[1].id, 'sylas');
+  assert.equal(asc.equipe[1].attaque, 1.15, 'la recrue garde les galons');
+  const spec = Asc.equipeCombat(asc)[1];
+  assert.equal(spec.attaque, 1.15);
+});
+
+test('une ascension complète se joue sans accroc, et le sommet reste atteignable', () => {
+  let sommets = 0;
+  for (let s = 1; s <= 30; s++) {
+    let x = s * 9301 + 49297;
+    const rng = () => { x = (x * 9301 + 49297) % 233280; return x / 233280; };
+    const asc = Asc.nouvelleAscension(F.randomTeam(3, rng));
+    while (!asc.fini) {
+      const foe = Asc.adversaire(asc, rng);
+      const st = B.createBattle([
+        { id: 'me', name: 'Moi', team: Asc.equipeCombat(asc) },
+        { id: 'bot', name: foe.name, team: foe.team, isBot: true },
+      ], { seed: s * 100 + asc.etage + asc.defaites });
+      const moi = AI.createBrain('legende'), lui = AI.createBrain(foe.niveau);
+      for (let g = 0; g < 400 && st.phase !== B.PHASE.OVER; g++) {
+        AI.think(st, 0, moi); AI.think(st, 1, lui);
+        if (B.pretARésoudre(st)) B.resolveTurn(st);
+      }
+      Asc.apresCombat(asc, st.winner === 0, rng);
+      if (asc.offre) {
+        const o = asc.offre[0];
+        assert.ok(Asc.appliquer(asc, o.cle, { cible: 0, candidat: o.candidats ? o.candidats[0] : null }).ok);
+      }
+    }
+    if (asc.victoire) sommets++;
+  }
+  assert.ok(sommets >= 3, `${sommets} sommets sur 30`);
+  assert.ok(sommets <= 25, `${sommets} sommets sur 30 : trop facile`);
 });

@@ -1,7 +1,7 @@
 {
   "name": "ZÉNITH — jeu de combat",
   "short_name": "Zénith",
-  "description": "Dix-huit combattants, équipes de trois, en solo ou en ligne.",
+  "description": "Trente combattants, équipes de trois, en solo, en Ascension ou en ligne.",
   "id": "/games/zenith/",
   "start_url": "/games/zenith/",
   "scope": "/games/zenith/",

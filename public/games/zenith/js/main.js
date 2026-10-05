@@ -14,11 +14,13 @@ import * as net from './online.js';
 import { sfx, toggle as toggleSound, isEnabled as soundOn, unlock } from './sfx.js';
 import { installerMusique } from '../../../shared/musique.js';
 import { bandeau } from '../../../shared/reprise.js';
+import * as A from '../../../shared/zenith/ascension.js';
+import { LEVELS as NIVEAUX } from '../../../shared/zenith/ai.js';
 
 const $ = (id) => document.getElementById(id);
 
 const prefs = { name: '', level: 'guerrier', team: [] };
-let mode = null;      // 'solo' | 'online'
+let mode = null;      // 'solo' | 'online' | 'ascension'
 let current = 'menu';
 
 /* ------------------------------------------------------------------ */
@@ -52,7 +54,159 @@ function goMenu() {
   if (mode === 'online') { net.leaveRoom(); net.disconnect(); }
   mode = null;
   ui.hideEnd();
+  $('ov-asc').hidden = true;
+  majMenuAscension();
   show('menu');
+}
+
+/* ------------------------------------------------------------------ */
+/* L'Ascension                                                         */
+/* ------------------------------------------------------------------ */
+
+const CLE_ASC = 'zenith.ascension';
+const CLE_RECORD = 'zenith.ascension.record';
+const lireJson = (cle, defaut) => { try { return JSON.parse(localStorage.getItem(cle)) ?? defaut; } catch { return defaut; } };
+const ecrireJson = (cle, v) => { try { if (v == null) localStorage.removeItem(cle); else localStorage.setItem(cle, JSON.stringify(v)); } catch { /* ignore */ } };
+
+/** L'ascension en cours (rangée entre deux étages), et le plus haut étage franchi. */
+let asc = lireJson(CLE_ASC, null);
+if (asc && (!Array.isArray(asc.equipe) || asc.equipe.some((m) => !getFighter(m.id)))) asc = null;
+let record = Number(lireJson(CLE_RECORD, 0)) || 0;
+const sauverAsc = () => ecrireJson(CLE_ASC, asc);
+
+function majMenuAscension() {
+  const info = $('asc-menu-info');
+  if (!info) return;
+  if (asc && !asc.fini) info.textContent = `En cours : étage ${asc.etage}/${A.NB_ETAGES} · ${'❤'.repeat(asc.vies)}`;
+  else info.textContent = record ? `Record : ${record >= A.NB_ETAGES ? 'le Zénith atteint 👑' : `étage ${record} franchi`}` : 'Huit étages à gravir avec la même équipe';
+}
+
+function openAscension() {
+  mode = 'ascension';
+  unlock();
+  if (asc) { renderTour(); show('ascension'); return; }
+  renderFiltreRoles(); renderSquad(); renderRoster();
+  // Les niveaux d'adversaire sont ceux des étages : pas de réglage ici.
+  $('opt-level').hidden = true;
+  $('b-fight').textContent = 'Commencer l\'ascension';
+  show('team');
+}
+
+const pourcent = (x) => `+${Math.round((x - 1) * 100)} %`;
+
+function renderTour() {
+  const fin = asc.fini;
+  $('asc-vies').innerHTML = Array.from({ length: A.VIES }, (_, i) => (i < asc.vies ? '❤️' : '<i>❤️</i>')).join('');
+  $('asc-sub').textContent = fin
+    ? (asc.victoire ? 'Vous avez atteint le Zénith !' : `Ascension terminée à l'étage ${asc.etage}.`)
+    : `Étage ${asc.etage} sur ${A.NB_ETAGES} · ${'❤️'.repeat(asc.vies)}${'🖤'.repeat(A.VIES - asc.vies)}${record ? ` · record : étage ${Math.min(record, A.NB_ETAGES)}` : ''}`;
+
+  $('asc-tour').innerHTML = A.ETAGES.map((e, i) => {
+    const n = i + 1;
+    const etat = asc.victoire || n < asc.etage ? 'fait' : n === asc.etage ? 'courant' : 'avenir';
+    const theme = e.element ? `${ELEMENTS[e.element].glyph} ${ELEMENTS[e.element].label}`
+      : e.role ? `${ROLES[e.role].glyph} ${ROLES[e.role].label}` : e.boss ? '👑 Boss' : '🎲 Au hasard';
+    return `<li class="etage ${etat}${e.boss ? ' boss' : ''}">
+      <span class="eg">${e.glyphe}</span>
+      <span class="en"><b>${n}. ${ui.esc(e.nom)}</b><i>${ui.esc(e.garde)} · ${theme}</i></span>
+      <span class="ex">${etat === 'fait' ? '✓ franchi' : NIVEAUX[e.niveau].label}</span>
+      ${etat === 'courant' && !fin ? `<span class="texte">${ui.esc(e.texte)}</span>` : ''}
+    </li>`;
+  }).join('');
+
+  $('asc-equipe').innerHTML = asc.equipe.map((m) => {
+    const f = getFighter(m.id);
+    const el = ELEMENTS[f.element];
+    const gal = [
+      m.attaque > 1 ? `<span title="Dégâts">⚔ ${pourcent(m.attaque)}</span>` : '',
+      m.armure > 1 ? `<span title="Armure">🛡 ${pourcent(m.armure)}</span>` : '',
+      m.pv > 1 ? `<span title="Vie maximum">❤ ${pourcent(m.pv)}</span>` : '',
+      m.ki > 30 ? `<span title="Ki de départ">✨ ki ${m.ki}</span>` : '',
+    ].join('');
+    return `<div class="asc-membre" style="--el:${el.color}"><span class="av">${f.avatar}</span>
+      <b>${ui.esc(f.name)}</b><span class="pick-sub">${el.glyph} ${el.label}</span><span class="gal">${gal}</span></div>`;
+  }).join('');
+
+  $('b-asc-go').textContent = fin ? 'Nouvelle ascension' : `Combattre l'étage ${asc.etage}`;
+  $('b-asc-abandon').hidden = fin;
+}
+
+function launchAscension() {
+  const foe = A.adversaire(asc);
+  sfx.bell();
+  show('fight');
+  solo.start({
+    team: A.equipeCombat(asc),
+    foe,
+    level: foe.niveau,
+    onExit: goMenu,
+    onDone: () => {},
+    fin: finAscension,
+  });
+}
+
+function finAscension(gagne, finale) {
+  const etage = asc.etage;
+  A.apresCombat(asc, gagne);
+  if (gagne) record = Math.max(record, etage);
+  ecrireJson(CLE_RECORD, record);
+  sauverAsc();
+  const suite = () => {
+    ui.hideEnd();
+    if (asc.offre) { ouvrirRecompense(); return; }
+    renderTour();
+    show('ascension');
+  };
+  let label = 'Voir la tour';
+  if (gagne && asc.offre) label = 'Choisir une récompense';
+  else if (!gagne && !asc.fini) label = `Retenter (${asc.vies} vie${asc.vies > 1 ? 's' : ''})`;
+  ui.showEnd(finale, { onMenu: goMenu, onAgain: suite, againLabel: label });
+  if (gagne) $('end-sub').textContent = asc.victoire ? 'Le Souverain est tombé. Vous êtes au Zénith !' : `Étage ${etage} franchi.`;
+  else $('end-sub').textContent = asc.fini ? 'Plus de vies : l\'ascension s\'arrête ici.' : `Une vie perdue. Il en reste ${asc.vies}.`;
+}
+
+/** La récompense : un choix parmi trois, puis, s'il le faut, la cible. */
+function ouvrirRecompense() {
+  $('asc-ov-titre').textContent = 'Une récompense';
+  $('asc-ov-sub').textContent = `Étage ${asc.etage - 1} franchi. Choisissez ce que l'équipe emporte.`;
+  $('asc-choix').innerHTML = asc.offre.map((o) => {
+    const r = A.RECOMPENSES[o.cle];
+    return `<button class="asc-opt" data-reco="${o.cle}"><span class="og">${r.glyphe}</span>
+      <span class="ot"><b>${r.nom}</b><i>${ui.esc(r.texte)}</i></span></button>`;
+  }).join('');
+  $('ov-asc').hidden = false;
+}
+
+function choisirCible(cle, candidat = null) {
+  const r = A.RECOMPENSES[cle];
+  $('asc-ov-titre').textContent = r.nom;
+  $('asc-ov-sub').textContent = cle === 'recrue' ? 'Qui cède sa place ? La recrue garde ses galons.' : 'Pour quel combattant ?';
+  $('asc-choix').innerHTML = asc.equipe.map((m, i) => {
+    const f = getFighter(m.id);
+    return `<button class="asc-opt" data-cible="${i}" data-cle="${cle}" data-candidat="${candidat || ''}">
+      <span class="og">${f.avatar}</span><span class="ot"><b>${ui.esc(f.name)}</b><i>${ELEMENTS[f.element].glyph} ${ELEMENTS[f.element].label} · ${roleOf(f).label}</i></span></button>`;
+  }).join('');
+}
+
+function choisirCandidat() {
+  const o = asc.offre.find((x) => x.cle === 'recrue');
+  $('asc-ov-titre').textContent = 'Nouvelle recrue';
+  $('asc-ov-sub').textContent = 'Qui rejoint l\'équipe ?';
+  $('asc-choix').innerHTML = o.candidats.map((id) => {
+    const f = getFighter(id);
+    return `<button class="asc-opt" data-candidat-choisi="${id}"><span class="og">${f.avatar}</span>
+      <span class="ot"><b>${ui.esc(f.name)}</b><i>${ELEMENTS[f.element].glyph} ${ELEMENTS[f.element].label} · ${roleOf(f).label} — ${ui.esc(f.title)}</i></span></button>`;
+  }).join('');
+}
+
+function appliquerRecompense(cle, opts) {
+  const r = A.appliquer(asc, cle, opts);
+  if (!r.ok) { ui.toast('Impossible.'); return; }
+  sfx.bell();
+  sauverAsc();
+  $('ov-asc').hidden = true;
+  renderTour();
+  show('ascension');
 }
 
 /* ------------------------------------------------------------------ */
@@ -173,6 +327,7 @@ function openSolo() {
   unlock();
   renderFiltreRoles(); renderSquad(); renderRoster();
   setChips('opt-level', prefs.level);
+  $('opt-level').hidden = false;
   $('b-fight').textContent = 'Au combat';
   show('team');
 }
@@ -270,6 +425,7 @@ function bind() {
     if (to === 'menu') return goMenu();
     if (to === 'solo') return openSolo();
     if (to === 'online') return openOnline();
+    if (to === 'ascension') return openAscension();
     if (to === 'rules') { ouvrirRegles(); return; }
     if (to === 'roster') { $('codex').innerHTML = FIGHTERS.map(ui.codexCard).join(''); $('ov-roster').hidden = false; return; }
     return show(to);
@@ -315,7 +471,44 @@ function bind() {
 
   $('b-fight').addEventListener('click', () => {
     if (mode === 'online') { net.setTeam(prefs.team); show('online'); return; }
+    if (mode === 'ascension') {
+      if (prefs.team.length !== TEAM_SIZE) return;
+      asc = A.nouvelleAscension(prefs.team);
+      sauverAsc();
+      renderTour();
+      show('ascension');
+      return;
+    }
     launchSolo();
+  });
+
+  $('b-asc-go').addEventListener('click', () => {
+    sfx.click();
+    if (!asc) return;
+    if (asc.fini) { asc = null; sauverAsc(); openAscension(); return; }
+    launchAscension();
+  });
+  $('b-asc-abandon').addEventListener('click', () => {
+    if (!asc || !confirm('Abandonner cette ascension ? Votre record est gardé.')) return;
+    asc = null;
+    sauverAsc();
+    goMenu();
+  });
+  $('asc-choix').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
+    sfx.tap();
+    if (b.dataset.reco) {
+      const cle = b.dataset.reco;
+      if (cle === 'recrue') return choisirCandidat();
+      if (A.RECOMPENSES[cle].cible) return choisirCible(cle);
+      return appliquerRecompense(cle, {});
+    }
+    if (b.dataset.candidatChoisi) return choisirCible('recrue', b.dataset.candidatChoisi);
+    if (b.dataset.cible) {
+      return appliquerRecompense(b.dataset.cle, { cible: Number(b.dataset.cible), candidat: b.dataset.candidat || null });
+    }
+    return undefined;
   });
 
   $('b-sound').addEventListener('click', () => {
@@ -403,6 +596,7 @@ function registerServiceWorker() {
 
 loadPrefs();
 bind();
+majMenuAscension();
 registerServiceWorker();
 $('b-sound').innerHTML = `<span class="bi">${soundOn() ? '🔊' : '🔇'}</span> Son`;
 

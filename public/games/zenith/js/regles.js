@@ -64,6 +64,14 @@ export function pageCombat() {
       combattants adverses à terre. Changer coûte le tour mais aucun ki : c'est
       la façon de reprendre l'avantage élémentaire. Au-delà de ${MAX_TURNS} tours,
       le combat se tranche aux points de vie restants.</p></section>
+
+    <section><h3><span>🗼</span> L'Ascension</h3><p>Huit étages à gravir avec
+      <b>la même équipe</b>. Chaque étage a son thème (un élément, des colosses…)
+      et des gardiens plus forts que le précédent ; au sommet attend le Souverain
+      du Zénith. Après chaque victoire, choisissez une <b>récompense</b> parmi
+      trois : dégâts, armure, vie, ki de départ, ou une nouvelle recrue. Vous avez
+      <b>trois vies</b> : une défaite en coûte une, et vous retentez l'étage.
+      L'ascension se garde entre deux combats.</p></section>
   </div>`;
 }
 

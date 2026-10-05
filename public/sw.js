@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v52';
+const VERSION = 'v53';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -49,6 +49,7 @@ const SHELL = [
   '/shared/zenith/ai.js',
   '/shared/zenith/sprites.js',
   '/shared/zenith/roue.js',
+  '/shared/zenith/ascension.js',
   '/games/skull-king/',
   '/games/skull-king/manifest.webmanifest',
   '/games/skull-king/css/skull-king.css',

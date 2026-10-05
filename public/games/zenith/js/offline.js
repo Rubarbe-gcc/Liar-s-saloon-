@@ -15,14 +15,21 @@ let state = null;
 let brain = null;
 let exitTo = () => {};
 let onFinish = () => {};
+let surFin = null;
 let occupe = false;
 
-export function start({ team, level, onExit, onDone }) {
+/**
+ * Un combat contre l'ordinateur. `foe` : un adversaire imposé (l'Ascension),
+ * sinon tiré au hasard. `fin` : appelé à la place de l'écran de fin
+ * ordinaire, avec la victoire et la vue finale.
+ */
+export function start({ team, level, onExit, onDone, foe: impose = null, fin = null }) {
   stop();
   exitTo = onExit;
   onFinish = onDone;
+  surFin = fin;
 
-  const foe = makeOpponent(Math.random, team);
+  const foe = impose || makeOpponent(Math.random, team);
   state = createBattle([
     { id: 'me', name: 'Vous', team },
     { id: foe.id, name: foe.name, team: foe.team, isBot: true },
@@ -68,6 +75,7 @@ async function commande(cmd) {
     const finale = viewFor(state, 'me');
     await ui.sleep(700);
     stop();
+    if (surFin) { surFin(finale.winner === finale.viewerSide, finale); return; }
     ui.showEnd(finale, {
       onMenu: () => { ui.hideEnd(); exitTo(); },
       onAgain: () => { ui.hideEnd(); onFinish(); },

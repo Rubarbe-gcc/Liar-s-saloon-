@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#070310">
-<meta name="description" content="ZÉNITH — jeu de combat à cartes. 18 combattants, équipes de trois, en solo ou en ligne.">
+<meta name="description" content="ZÉNITH — jeu de combat au tour par tour. 30 combattants, équipes de trois, en solo, en Ascension ou en ligne.">
 <title>ZÉNITH</title>
 <link rel="icon" href="/games/zenith/icons/icon-192.png">
 <link rel="manifest" href="/games/zenith/manifest.webmanifest">
@@ -29,7 +29,7 @@
 <section class="screen is-active" id="s-menu">
   <div class="menu">
     <header class="logo">
-      <div class="logo-kicker">dix-huit combattants · équipes de trois</div>
+      <div class="logo-kicker">trente combattants · équipes de trois</div>
       <h1 class="logo-title">ZÉNITH</h1>
       <div class="logo-rule"><i></i><span>🔥 ⚡ 🌑 🍃 ❄️</span><i></i></div>
       <p class="logo-tag">Frappez. Esquivez. Dépassez votre limite.</p>
@@ -39,6 +39,10 @@
       <button class="btn btn-big" data-go="solo">
         <span class="bi">⚔️</span>
         <span class="bt"><b>Combat solo</b><i>Affrontez l'ordinateur</i></span>
+      </button>
+      <button class="btn btn-big btn-asc" data-go="ascension">
+        <span class="bi">🗼</span>
+        <span class="bt"><b>Ascension</b><i id="asc-menu-info">Huit étages à gravir avec la même équipe</i></span>
       </button>
       <button class="btn btn-big" data-go="online">
         <span class="bi">🌐</span>
@@ -85,6 +89,24 @@
     <div class="pick-actions">
       <button class="btn btn-go" id="b-fight" disabled>Au combat</button>
     </div>
+  </div>
+</section>
+
+<!-- =========================== ASCENSION ======================== -->
+<section class="screen" id="s-ascension">
+  <div class="panel asc">
+    <header class="pick-head">
+      <button class="pick-back" data-go="menu" aria-label="Menu">‹</button>
+      <div>
+        <h2 class="pick-title">L'Ascension</h2>
+        <p class="pick-sub" id="asc-sub"></p>
+      </div>
+      <div class="asc-vies" id="asc-vies" title="Vies"></div>
+    </header>
+    <ol class="tour" id="asc-tour"></ol>
+    <div class="asc-equipe" id="asc-equipe"></div>
+    <button class="btn btn-go btn-wide" id="b-asc-go">Combattre</button>
+    <button class="btn btn-ghost btn-sm asc-abandon" id="b-asc-abandon">Abandonner l'ascension</button>
   </div>
 </section>
 
@@ -203,6 +225,14 @@
   </div>
 </div>
 
+<div class="ov" id="ov-asc" hidden>
+  <div class="sheet sheet-sm asc-sheet">
+    <h2 id="asc-ov-titre">Une récompense</h2>
+    <p class="pick-sub" id="asc-ov-sub"></p>
+    <div class="asc-choix" id="asc-choix"></div>
+  </div>
+</div>
+
 <div class="ov" id="ov-swap" hidden>
   <div class="sheet sheet-sm">
     <button class="sheet-close" data-close="ov-swap">✕</button>
@@ -217,7 +247,7 @@
 <div class="ov" id="ov-roster" hidden>
   <div class="sheet">
     <button class="sheet-close" data-close="ov-roster">✕</button>
-    <h2>Les dix-huit</h2>
+    <h2>Les trente</h2>
     <div class="codex" id="codex"></div>
   </div>
 </div>
