@@ -203,6 +203,9 @@ function esc(s) {
 
 /* Le profil et les succès, communs à toute l'arcade. */
 import * as succes from '/shared/succes.js';
+/* Une partie en ligne interrompue ? Un bandeau pour y retourner. */
+import { bandeauAccueil } from '/shared/reprise.js';
+bandeauAccueil(succes.JEUX);
 
 function majProfil() {
   const p = succes.profil();

@@ -16,6 +16,7 @@ import * as audio from './audio.js';
 import * as karaoke from './karaoke.js';
 import * as ui from './ui.js';
 import * as reprise from '../../../shared/reprise.js';
+import { creerConnexion } from '../../../shared/connexion.js';
 import * as succes from '../../../shared/succes.js';
 
 const JEU = 'echo';
@@ -23,17 +24,11 @@ const JEU = 'echo';
 let enJeu = false;
 /** On revient d'une partie interrompue : le serveur dira s'il l'a gardée. */
 let attendReprise = false;
-let battement = null;
 
-const URL_WS = () =>
-  `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/ws`;
 
-let ws = null;
 let monId = null;
 let salon = null;
 let vueCourante = null;
-let reconnexions = 0;
-let voulu = false;
 let identite = { name: 'Voix', photo: null };
 
 const auditeurs = { statut: [], salon: [], erreur: [], parti: [] };
@@ -44,55 +39,33 @@ export const moi = () => monId;
 
 /* ------------------------------------------------------------------ */
 
-export function connecter({ name, photo } = {}) {
-  if (!voulu && !salon) attendReprise = reprise.adopter(JEU);
-  voulu = true;
-  identite = { name: name || 'Voix', photo: photo || null };
-  if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
-  dire('statut', 'connexion');
-  try { ws = new WebSocket(URL_WS()); }
-  catch { return dire('statut', 'injoignable'); }
+/** La connexion : reconnexion, réveil, clé de session — voir shared/connexion.js. */
+const net = creerConnexion({
+  jeu: JEU,
+  g: 'echo',
+  ouverte: () => envoyer({ t: 'hello', name: identite.name, photo: identite.photo }),
+  message: (m) => traiter(m),
+  enPartie: () => enJeu,
+  code: () => salon?.code,
+  statut: (s) => {
+    if ((s === 'perdu' || s === 'injoignable') && enJeu) ui.toast('Connexion perdue — on se reconnecte, votre place vous attend…', 3200);
+    dire('statut', s);
+  },
+});
 
-  ws.addEventListener('open', () => {
-    reconnexions = 0;
-    dire('statut', 'connecte');
-    // La clé de session d'abord : si une place nous attend, le serveur nous la rend.
-    envoyer({ t: 'session', sid: reprise.session(JEU) });
-    envoyer({ t: 'hello', name: identite.name, photo: identite.photo });
-    clearInterval(battement);
-    battement = setInterval(() => { envoyer({ t: 'ping' }); if (enJeu) reprise.enPartie(JEU, { code: salon?.code }); }, 20000);
-  });
-  ws.addEventListener('message', (e) => {
-    let m; try { m = JSON.parse(e.data); } catch { return; }
-    traiter(m);
-  });
-  ws.addEventListener('close', () => {
-    clearInterval(battement);
-    if (!voulu) return;
-    if (enJeu) { reprise.interrompue(JEU); ui.toast('Connexion perdue — votre place vous attend, on se reconnecte…', 3200); }
-    dire('statut', reconnexions > 4 ? 'injoignable' : 'perdu');
-    if (reconnexions > 4 && !enJeu) return;
-    const attente = Math.min(8000, 700 * 2 ** reconnexions);
-    reconnexions += 1;
-    setTimeout(() => { if (voulu) connecter(identite); }, attente);
-  });
-  ws.addEventListener('error', () => { /* le close suivra */ });
+export function connecter({ name, photo } = {}) {
+  if (!net.voulue() && !salon) attendReprise = reprise.adopter(JEU);
+  identite = { name: name || 'Voix', photo: photo || null };
+  net.ouvrir();
 }
 
 export function deconnecter() {
-  voulu = false;
   enJeu = false;
   reprise.oublier(JEU);
-  clearInterval(battement);
-  try { ws && ws.close(); } catch { /* déjà fermée */ }
-  ws = null;
+  net.fermer();
 }
 
-function envoyer(o) {
-  if (!ws || ws.readyState !== 1) return false;
-  ws.send(JSON.stringify({ g: 'echo', ...o }));
-  return true;
-}
+const envoyer = (o) => net.envoyer(o);
 
 export const creer = (name, photo, reglages) => envoyer({ t: 'create', name, photo, reglages });
 export const rejoindre = (code, name, photo) => envoyer({ t: 'join', code, name, photo });

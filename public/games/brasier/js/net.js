@@ -7,19 +7,12 @@
  */
 
 import * as reprise from '../../../shared/reprise.js';
+import { creerConnexion } from '../../../shared/connexion.js';
 
 const JEU = 'brasier';
-const RECONNEXION_MAX = 15000;
-const ABANDON_APRES = 4;
 
-let ws = null;
 let monId = null;
 let nom = 'Forgeron';
-let voulu = false;
-let delai = 800;
-let echecs = 0;
-let minuteur = null;
-let battement = null;
 /** En pleine partie : une coupure doit pouvoir se rattraper. */
 let enJeu = false;
 let code = null;
@@ -44,57 +37,31 @@ reprise.surveiller(JEU);
 export function ecouter(evt, fn) { on[evt] = fn; }
 export const moi = () => monId;
 
-const adresse = () => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/ws`;
+/**
+ * La connexion : reconnexion, réveil — voir shared/connexion.js. Le BRASIER
+ * présente son jeton dans le « hello » plutôt qu'en clé de session : son
+ * serveur gère lui-même les absences.
+ */
+const net = creerConnexion({
+  jeu: JEU,
+  g: 'brasier',
+  session: false,
+  ouverte: () => envoyer({ t: 'hello', name: nom, jeton: jeton() }),
+  message: (m) => traiter(m),
+  enPartie: () => enJeu,
+  code: () => code,
+  statut: (s) => on.statut(s),
+});
 
 export function connecter(qui) {
   if (qui && qui.name) nom = qui.name;
-  voulu = true;
-  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
-
-  on.statut('connexion');
-  try { ws = new WebSocket(adresse()); } catch { return relancer(); }
-
-  ws.addEventListener('open', () => {
-    delai = 800; echecs = 0;
-    on.statut('connecte');
-    envoyer({ t: 'hello', name: nom, jeton: jeton() });
-    clearInterval(battement);
-    battement = setInterval(() => { envoyer({ t: 'ping' }); if (enJeu) reprise.enPartie(JEU, { code }); }, 20000);
-  });
-  ws.addEventListener('message', (e) => {
-    let m; try { m = JSON.parse(e.data); } catch { return; }
-    traiter(m);
-  });
-  ws.addEventListener('close', () => {
-    clearInterval(battement);
-    ws = null;
-    if (!voulu) return;
-    if (enJeu) reprise.interrompue(JEU);
-    echecs += 1;
-    on.statut(echecs >= ABANDON_APRES ? 'injoignable' : 'perdu');
-    relancer();
-  });
-  ws.addEventListener('error', () => { /* le close suivant s'en occupe */ });
+  net.ouvrir();
 }
 
-export function deconnecter() {
-  voulu = false; echecs = 0;
-  clearTimeout(minuteur); clearInterval(battement);
-  if (ws) { try { ws.close(); } catch { /* déjà fermée */ } }
-  ws = null;
-}
-
-function relancer() {
-  clearTimeout(minuteur);
-  if (!voulu) return;
-  minuteur = setTimeout(() => { delai = Math.min(delai * 1.7, RECONNEXION_MAX); connecter(); }, delai);
-}
+export const deconnecter = () => net.fermer();
 
 /** Tout message porte `g` : c'est ce qui le route vers ce jeu-ci. */
-function envoyer(o) {
-  if (!ws || ws.readyState !== WebSocket.OPEN) return false;
-  try { ws.send(JSON.stringify({ g: 'brasier', ...o })); return true; } catch { return false; }
-}
+const envoyer = (o) => net.envoyer(o);
 
 function traiter(m) {
   switch (m.t) {

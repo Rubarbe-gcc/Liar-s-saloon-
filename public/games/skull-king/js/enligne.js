@@ -11,24 +11,21 @@
  * numéro 0, les autres suivent dans l'ordre du jeu.
  *
  * Une coupure en pleine partie n'est pas un départ : on se reconnecte avec la
- * même clé de session, et le serveur rend la place (voir shared/reprise.js).
+ * même clé de session, et le serveur rend la place (voir shared/connexion.js
+ * et shared/reprise.js).
  */
 
 import * as S from '../../../shared/skullking/moteur.js';
 import * as T from './table.js';
 import { sfx } from './sfx.js';
 import * as reprise from '../../../shared/reprise.js';
+import { creerConnexion } from '../../../shared/connexion.js';
 
 const $ = (id) => document.getElementById(id);
 const { attendre, txt, toast } = T;
 const JEU = 'skullking';
 
 let o = null;               // { aller, ouvrir, fermer, nomPrefere, retenirNom }
-let ws = null;
-let voulu = false;
-let delai = 800;
-let minuteurConnexion = 0;
-let battement = 0;
 let monId = null;
 let salon = null;           // dernier vestiaire reçu
 let enJeu = false;          // une partie est en cours à cette table
@@ -49,62 +46,36 @@ export const etat = () => local;
 /* Connexion                                                          */
 /* ------------------------------------------------------------------ */
 
-const adresse = () => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/ws`;
-
 function statut(m, cls = '') {
   const e = $('en-statut');
   e.textContent = m;
   e.className = `note ${cls}`;
 }
 
+const net = creerConnexion({
+  jeu: JEU,
+  g: JEU,
+  ouverte: () => envoyer({ t: 'hello', name: nom() }),
+  message: (m) => traiter(m),
+  enPartie: () => enJeu,
+  code: () => salon?.code,
+  statut: (s) => {
+    if (s === 'connexion') statut('Connexion au port…');
+    else if (s === 'connecte') statut('Connecté. Ouvrez une table, ou montez à bord avec un code.', 'ok');
+    else {
+      if (enJeu) toast('Connexion perdue — on se reconnecte, votre place vous attend…', 3500);
+      statut(s === 'injoignable' ? 'Le port ne répond pas. On réessaie…' : 'Connexion perdue. Nouvelle tentative…', 'ko');
+    }
+  },
+});
+
 function connecter() {
-  if (!voulu && !salon) attendReprise = reprise.adopter(JEU);
-  voulu = true;
-  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
-  statut('Connexion au port…');
-  try { ws = new WebSocket(adresse()); } catch { relancer(); return; }
-  ws.addEventListener('open', () => {
-    delai = 800;
-    statut('Connecté. Ouvrez une table, ou montez à bord avec un code.', 'ok');
-    // La clé de session d'abord : si une place nous attend, le serveur nous la rend.
-    envoyer({ t: 'session', sid: reprise.session(JEU) });
-    envoyer({ t: 'hello', name: nom() });
-    clearInterval(battement);
-    battement = setInterval(() => { envoyer({ t: 'ping' }); if (enJeu) reprise.enPartie(JEU, { code: salon?.code }); }, 20000);
-  });
-  ws.addEventListener('message', (e) => {
-    let m; try { m = JSON.parse(e.data); } catch { return; }
-    traiter(m);
-  });
-  ws.addEventListener('close', () => {
-    clearInterval(battement);
-    ws = null;
-    if (!voulu) return;
-    if (enJeu) { reprise.interrompue(JEU); toast('Connexion perdue — votre place vous attend, on se reconnecte…', 3500); }
-    statut('Connexion perdue. Nouvelle tentative…', 'ko');
-    relancer();
-  });
-  ws.addEventListener('error', () => { /* le close suivant s'en occupe */ });
+  if (!net.voulue() && !salon) attendReprise = reprise.adopter(JEU);
+  net.ouvrir();
 }
 
-function relancer() {
-  clearTimeout(minuteurConnexion);
-  if (!voulu) return;
-  minuteurConnexion = setTimeout(() => { delai = Math.min(delai * 1.6, 10000); connecter(); }, delai);
-}
-
-function deconnecter() {
-  voulu = false;
-  clearTimeout(minuteurConnexion);
-  clearInterval(battement);
-  if (ws) { try { ws.close(); } catch { /* déjà fermée */ } }
-  ws = null;
-}
-
-function envoyer(msg) {
-  if (!ws || ws.readyState !== WebSocket.OPEN) return false;
-  try { ws.send(JSON.stringify({ g: JEU, ...msg })); return true; } catch { return false; }
-}
+const deconnecter = () => net.fermer();
+const envoyer = (msg) => net.envoyer(msg);
 
 const nom = () => ($('en-nom').value.trim() || o.nomPrefere() || 'Moussaillon').slice(0, 14);
 
@@ -494,7 +465,7 @@ export function ouvrir(code = null) {
   o.aller('s-enligne');
   connecter();
   // Déjà connecté : le code d'invitation part tout de suite.
-  if (codeVoulu && ws && ws.readyState === WebSocket.OPEN) { envoyer({ t: 'join', code: codeVoulu, name: nom() }); codeVoulu = null; }
+  if (codeVoulu && net.ouverte()) { envoyer({ t: 'join', code: codeVoulu, name: nom() }); codeVoulu = null; }
 }
 
 export function installer(outils) {

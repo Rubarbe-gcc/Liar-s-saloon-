@@ -14,6 +14,11 @@
  * Deux onglets ouverts en même temps restent deux joueurs : une clé n'est
  * adoptée par un nouvel onglet que si l'ancien ne donne plus signe de vie.
  *
+ * Revenir est automatique : en rouvrant le jeu, on retourne tout droit dans
+ * la partie (voir `bandeau`), et l'accueil de l'arcade propose de la
+ * rejoindre (`bandeauAccueil`). La connexion elle-même — se reconnecter,
+ * vérifier au réveil — est l'affaire de shared/connexion.js.
+ *
  * Module de navigateur.
  */
 
@@ -113,20 +118,28 @@ export function surveiller(jeu) {
   document.addEventListener('visibilitychange', () => { if (document.hidden) interrompue(jeu); });
 }
 
+const STYLE_BANDEAU = 'position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);'
+  + 'z-index:45;max-width:calc(100% - 24px);padding:12px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.35);'
+  + 'background:linear-gradient(180deg,#2fbf71,#1d8a4f);color:#fff;font:700 15px/1.2 system-ui,sans-serif;text-decoration:none;'
+  + 'box-shadow:0 10px 30px rgba(0,0,0,.45);cursor:pointer;display:none;align-items:center;gap:10px;white-space:nowrap';
+
 /**
- * Un bandeau « Rejoindre la partie », tant qu'une partie interrompue attend.
- * `visible()` dit si l'écran s'y prête (le menu du jeu) ; `rejoindre()` est
- * appelé quand on le touche.
+ * Le retour dans une partie interrompue. À l'ouverture du jeu, si une partie
+ * attend, on y retourne tout seul — sans rien avoir à toucher. Ensuite, tant
+ * qu'elle attend (si l'on est revenu au menu), un bandeau « Rejoindre la
+ * partie » reste là. `visible()` dit si l'écran s'y prête (le menu du jeu) ;
+ * `rejoindre()` ramène dans la partie.
  */
 export function bandeau(jeu, { visible = () => true, rejoindre }) {
   const b = document.createElement('button');
   b.type = 'button';
   b.id = 'bandeau-reprise';
-  b.style.cssText = 'position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);'
-    + 'z-index:45;max-width:calc(100% - 24px);padding:12px 18px;border-radius:999px;border:1px solid rgba(255,255,255,.35);'
-    + 'background:linear-gradient(180deg,#2fbf71,#1d8a4f);color:#fff;font:700 15px/1.2 system-ui,sans-serif;'
-    + 'box-shadow:0 10px 30px rgba(0,0,0,.45);cursor:pointer;display:none;align-items:center;gap:10px;white-space:nowrap';
+  b.style.cssText = STYLE_BANDEAU;
   document.body.appendChild(b);
+  // Le retour automatique, une seule fois, à l'ouverture.
+  setTimeout(() => {
+    if (enAttente(jeu) && visible()) { b.style.display = 'none'; rejoindre(); }
+  }, 300);
   b.addEventListener('click', () => { b.style.display = 'none'; rejoindre(); });
   const maj = () => {
     const r = enAttente(jeu);
@@ -145,4 +158,30 @@ export function bandeau(jeu, { visible = () => true, rejoindre }) {
   new MutationObserver(maj).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class', 'hidden'] });
   maj();
   return maj;
+}
+
+/**
+ * Sur l'accueil de l'arcade : une partie en ligne interrompue attend dans un
+ * des jeux ? Un bandeau mène droit dedans (le jeu y retourne tout seul).
+ * `jeux` : { [cle]: { nom, url } }.
+ */
+export function bandeauAccueil(jeux) {
+  const a = document.createElement('a');
+  a.id = 'bandeau-reprise';
+  a.style.cssText = STYLE_BANDEAU;
+  document.body.appendChild(a);
+  const maj = () => {
+    const attente = Object.entries(jeux)
+      .filter(([, j]) => j.url)
+      .map(([cle, j]) => ({ ...j, r: enAttente(cle) }))
+      .filter((x) => x.r)
+      .sort((x, y) => y.r.reste - x.r.reste)[0];
+    a.style.display = attente ? 'flex' : 'none';
+    if (!attente) return;
+    const min = Math.max(1, Math.ceil(attente.r.reste / 60000));
+    a.href = attente.url;
+    a.innerHTML = `<span style="font-size:20px">🔄</span><span>Rejoindre ta partie de ${attente.nom}<br><small style="font-weight:500;opacity:.85">encore ${min} min${attente.r.code ? ` · table ${attente.r.code}` : ''}</small></span>`;
+  };
+  setInterval(maj, 5000);
+  maj();
 }

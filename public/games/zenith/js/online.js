@@ -8,6 +8,7 @@
 
 import * as ui from './ui.js';
 import * as reprise from '../../../shared/reprise.js';
+import { creerConnexion } from '../../../shared/connexion.js';
 
 const JEU = 'zenith';
 /** En plein combat : une coupure doit pouvoir se rattraper. */
@@ -15,11 +16,8 @@ let enJeu = false;
 /** On revient d'un combat interrompu : le serveur dira s'il l'a gardé. */
 let attendReprise = false;
 
-const RECONNECT_MAX = 15000;
-const GIVE_UP_AFTER = 4;
 
-let ws = null, myId = null, room = null;
-let want = false, delay = 800, timer = null, beat = null, fails = 0;
+let myId = null, room = null;
 let name = 'Challenger';
 
 const on = {
@@ -30,69 +28,35 @@ export function listen(evt, fn) { on[evt] = fn; }
 export const me = () => myId;
 export const currentRoom = () => room;
 
-function endpoint() {
-  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${proto}//${location.host}/api/ws`;
-}
+/** La connexion : reconnexion, réveil, clé de session — voir shared/connexion.js. */
+const net = creerConnexion({
+  jeu: JEU,
+  g: 'zenith',
+  ouverte: () => send({ t: 'hello', name }),
+  message: (m) => handle(m),
+  enPartie: () => enJeu,
+  code: () => room?.code,
+  statut: (s) => {
+    if ((s === 'perdu' || s === 'injoignable') && enJeu) ui.toast('Connexion perdue — on se reconnecte, votre place vous attend…', 3200);
+    on.status({ connexion: 'connecting', connecte: 'online', perdu: 'offline', injoignable: 'unreachable' }[s]);
+  },
+});
 
 export function connect(who) {
   if (who && who.name) name = who.name;
-  if (!want && !room) attendReprise = reprise.adopter(JEU);
-  want = true;
-  if (ws && (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING)) return;
-
-  on.status('connecting');
-  try { ws = new WebSocket(endpoint()); } catch { return retry(); }
-
-  ws.addEventListener('open', () => {
-    delay = 800; fails = 0;
-    on.status('online');
-    // La clé de session d'abord : si une place nous attend, le serveur nous la rend.
-    send({ t: 'session', sid: reprise.session(JEU) });
-    send({ t: 'hello', name });
-    clearInterval(beat);
-    beat = setInterval(() => { send({ t: 'ping' }); if (enJeu) reprise.enPartie(JEU, { code: room?.code }); }, 20000);
-  });
-
-  ws.addEventListener('message', (e) => {
-    let m; try { m = JSON.parse(e.data); } catch { return; }
-    handle(m);
-  });
-
-  ws.addEventListener('close', () => {
-    clearInterval(beat);
-    ws = null;
-    if (!want) return;
-    if (enJeu) { reprise.interrompue(JEU); ui.toast('Connexion perdue — votre place vous attend, on se reconnecte…', 3200); }
-    fails += 1;
-    on.status(fails >= GIVE_UP_AFTER ? 'unreachable' : 'offline');
-    retry();
-  });
-
-  ws.addEventListener('error', () => { /* le close suivant gère la suite */ });
+  if (!net.voulue() && !room) attendReprise = reprise.adopter(JEU);
+  net.ouvrir();
 }
 
 export function disconnect() {
-  want = false; fails = 0;
   enJeu = false;
   reprise.oublier(JEU);
-  clearTimeout(timer); clearInterval(beat);
-  if (ws) { try { ws.close(); } catch { /* déjà fermée */ } }
-  ws = null; room = null;
-}
-
-function retry() {
-  clearTimeout(timer);
-  if (!want) return;
-  timer = setTimeout(() => { delay = Math.min(delay * 1.7, RECONNECT_MAX); connect(); }, delay);
+  net.fermer();
+  room = null;
 }
 
 /** Tout message porte `g` : le serveur route vers le bon jeu. */
-function send(obj) {
-  if (!ws || ws.readyState !== WebSocket.OPEN) return false;
-  try { ws.send(JSON.stringify({ g: 'zenith', ...obj })); return true; }
-  catch { return false; }
-}
+const send = (obj) => net.envoyer(obj);
 
 function handle(m) {
   switch (m.t) {

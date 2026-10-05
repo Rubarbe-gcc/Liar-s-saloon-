@@ -15,7 +15,10 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
 Dans tous les jeux en ligne, une connexion qui tombe en pleine partie n'est
 pas un départ : la place attend son joueur cinq minutes (un bot joue pour lui
 quand c'est son tour), et il la reprend en revenant — même après avoir fermé
-l'application. Voir `server/hub.js` et `public/shared/reprise.js`.
+l'application. Le retour est automatique : la connexion se vérifie dès que
+l'appli revient au premier plan, et rouvrir le jeu ramène droit dans la partie
+(l'accueil de l'arcade propose aussi de la rejoindre). Voir `server/hub.js`,
+`public/shared/connexion.js` et `public/shared/reprise.js`.
 - **BRASIER** — huit champions dans une taverne-forge. On recrute des
   serviteurs, on les fusionne en dorés, les combats se jouent seuls ; le dernier
   debout l'emporte. En ligne uniquement : les chaises vides sont prises par des bots.
