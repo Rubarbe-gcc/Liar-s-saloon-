@@ -101,7 +101,9 @@ test('des parties entières entre ordinateurs, sans accroc', () => {
     let garde = 0;
     while (G.phase !== 'fin' && garde++ < 5000) {
       if (G.phase === 'pari') {
-        for (let p = 0; p < n; p++) assert.ok(S.parier(G, p, S.pariBot(G.mains[p], n, rng)).ok);
+        S.parierBots(G, rng);
+        assert.equal(G.phase, 'jeu', 'tout le monde a parié');
+        assert.notEqual(G.paris.reduce((t, b) => t + b, 0), G.manche, 'le total ne tombe jamais pile');
       } else if (G.phase === 'jeu') {
         const { id, as } = S.coupBot(G, G.tour);
         const r = S.jouer(G, G.tour, id, as);
@@ -125,7 +127,7 @@ test('on ne triche pas : couleur, tour et Tigresse', () => {
   const G = S.creerPartie({ noms: ['A', 'B'] });
   S.nouvelleManche(G, makeRng(3));
   assert.equal(S.jouer(G, 0, G.mains[0][0].id).ok, false, 'on parie d’abord');
-  S.parier(G, 0, 1); S.parier(G, 1, 0);
+  S.parier(G, 1 - G.donneur, 0); S.parier(G, G.donneur, 0);
   const autre = 1 - G.tour;
   assert.equal(S.jouer(G, autre, G.mains[autre][0].id).ok, false, 'chacun son tour');
   G.mains[G.tour] = [carte('tig')];
@@ -140,7 +142,7 @@ test('les ordinateurs parient avec bon sens et tiennent souvent leur pari', () =
     const G = S.creerPartie({ noms: ['A', 'B', 'C', 'D'], bots: [true, true, true, true] });
     S.nouvelleManche(G, rng);
     while (G.phase !== 'fin') {
-      if (G.phase === 'pari') for (let p = 0; p < 4; p++) S.parier(G, p, S.pariBot(G.mains[p], 4, rng));
+      if (G.phase === 'pari') S.parierBots(G, rng);
       else if (G.phase === 'jeu') { const c = S.coupBot(G, G.tour); S.jouer(G, G.tour, c.id, c.as); }
       else if (G.phase === 'pli') S.ramasser(G);
       else { for (const x of G.historique.at(-1)) { total++; if (x.pari === x.plis) reussis++; } S.nouvelleManche(G, rng); }
@@ -209,7 +211,8 @@ test('rhum, trésor maudit et ancre', () => {
   S.nouvelleManche(G, makeRng(1));
   G.mains = [[carteX('rhum1')], [carteX('maudit')], [carteX('Y9')]];
   G.tour = 0;
-  [1, 0, 1].forEach((v, p) => S.parier(G, p, v));
+  // Le donneur (joueur 0) parie en dernier.
+  for (const p of [1, 2, 0]) assert.ok(S.parier(G, p, [1, 0, 1][p]).ok);
   for (let p = 0; p < 3; p++) S.jouer(G, p, G.mains[p][0].id);
   S.ramasser(G);
   const b = G.historique.at(-1);
@@ -224,11 +227,39 @@ test('des parties custom entières entre ordinateurs, sans accroc', () => {
     const G = S.creerPartie({ noms: Array.from({ length: n }, (_, i) => `J${i}`), bots: Array(n).fill(true), extras: S.TOUTES_CUSTOM });
     S.nouvelleManche(G, rng);
     while (G.phase !== 'fin') {
-      if (G.phase === 'pari') for (let p = 0; p < n; p++) S.parier(G, p, S.pariBot(G.mains[p], n, rng));
+      if (G.phase === 'pari') S.parierBots(G, rng);
       else if (G.phase === 'jeu') { const c = S.coupBot(G, G.tour); assert.ok(S.jouer(G, G.tour, c.id, c.as).ok); }
       else if (G.phase === 'pli') S.ramasser(G);
       else S.nouvelleManche(G, rng);
     }
     assert.equal(G.historique.length, 10);
+  }
+});
+
+test('le dernier pari : le donneur parie après les autres, et le total ne tombe jamais pile', () => {
+  const G = S.creerPartie({ noms: ['A', 'B', 'C'], bots: [false, false, false] });
+  S.nouvelleManche(G, makeRng(4));
+  S.nouvelleManche(G, makeRng(5)); // manche 2 : deux cartes chacun
+  const d = S.dernierAParier(G);
+  const autres = [0, 1, 2].filter((p) => p !== d);
+  assert.equal(S.parier(G, d, 1).ok, false, 'le donneur attend les autres');
+  S.parier(G, autres[0], 1);
+  S.parier(G, autres[1], 0);
+  assert.equal(S.totalAutres(G, d), 1);
+  assert.equal(S.pariInterdit(G, d), 1, '1 + 1 ferait 2 plis pour 2 cartes');
+  const r = S.parier(G, d, 1);
+  assert.equal(r.ok, false);
+  assert.match(r.raison, /ne peut pas faire 2/);
+  assert.ok(S.parier(G, d, 0).ok);
+  assert.equal(G.phase, 'jeu');
+});
+
+test('un donneur de l’ordinateur se décale d’un cran si son pari est interdit', () => {
+  for (let seed = 1; seed < 60; seed++) {
+    const G = S.creerPartie({ noms: ['A', 'B', 'C', 'D'], bots: [true, true, true, true] });
+    S.nouvelleManche(G, makeRng(seed));
+    S.parierBots(G, makeRng(seed + 1000));
+    assert.equal(G.phase, 'jeu');
+    assert.notEqual(G.paris.reduce((t, b) => t + b, 0), G.manche);
   }
 });

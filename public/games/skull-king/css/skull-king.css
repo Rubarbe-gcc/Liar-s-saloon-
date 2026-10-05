@@ -549,3 +549,8 @@ body[data-ecran="s-score"] .lune { display: none; }
 .exceptions h3 { margin-top: 0 !important; }
 .exceptions p { font-size: .88rem; margin: 5px 0; }
 .regles .nb { color: #8a5a14; font-weight: 800; }
+
+/* Le dernier pari : une note, et le chiffre interdit barré. */
+.pari-note { font-size: .82rem; line-height: 1.35; text-align: center; margin: -2px 0 10px; color: #6b4210; }
+.pari-choix button:disabled { opacity: .3; filter: grayscale(1); text-decoration: line-through; cursor: not-allowed; transform: none; }
+.nombre-grille button.interdit { opacity: .3; filter: grayscale(1); text-decoration: line-through; cursor: not-allowed; }

@@ -74,6 +74,7 @@ function rendreManche() {
   let info = `${r} carte${r > 1 ? 's' : ''} chacun`;
   let cls = '';
   if (paris.length === lignes.length) info = `Annoncés : ${sp} pour ${r}`;
+  if (paris.length === lignes.length && sp === r) { info = `⚠ ${sp} plis annoncés pour ${r} : le dernier à parier doit changer`; cls = 'alerte'; }
   if (plis.length === lignes.length) {
     if (st > r) { info = `⚠ ${st} plis notés pour ${r} cartes`; cls = 'alerte'; }
     else if (st === r) { info = `✓ ${st} pli${st > 1 ? 's' : ''} sur ${r}`; cls = 'juste'; }
@@ -123,7 +124,15 @@ function ouvrirNombre(p, k) {
   const v = F.m[r - 1][p][k];
   $('nombre-titre').textContent = `${F.noms[p]} — ${k === 'b' ? 'pari' : 'plis remportés'}`;
   $('nombre-sous').textContent = k === 'b' ? `Manche ${r} : de 0 à ${r}` : `Plis ramassés par ${F.noms[p]} pendant la manche`;
-  $('nombre-grille').innerHTML = Array.from({ length: r + 1 }, (_, i) => `<button class="${v === i ? 'is-on' : ''}" data-n="${i}">${i}</button>`).join('');
+  // Le dernier pari de la manche : le total ne peut pas tomber pile sur le nombre de cartes.
+  const autres = F.m[r - 1].filter((x, i) => i !== p);
+  const interdit = k === 'b' && autres.every((x) => x.b != null) ? r - autres.reduce((t, x) => t + x.b, 0) : null;
+  if (interdit !== null && interdit >= 0 && interdit <= r) {
+    $('nombre-sous').textContent = `Dernier pari : le total ne peut pas faire ${r}, donc ${interdit} est interdit.`;
+  }
+  $('nombre-grille').innerHTML = Array.from({ length: r + 1 }, (_, i) => (i === interdit
+    ? `<button class="interdit" data-n="${i}" disabled title="Le total ferait ${r}">${i}</button>`
+    : `<button class="${v === i ? 'is-on' : ''}" data-n="${i}">${i}</button>`)).join('');
   o.ouvrir('ov-nombre');
 }
 

@@ -275,10 +275,32 @@ export function nouvelleManche(G, rng) {
   return G;
 }
 
+/*
+ * LE DERNIER PARI. Le total des paris ne doit jamais tomber pile sur le
+ * nombre de cartes de la manche : il faut qu'au moins un joueur se trompe.
+ * Le donneur parie en dernier, une fois les autres paris posés ; il connaît
+ * leur total, et le chiffre qui ferait tomber juste lui est interdit.
+ */
+export const dernierAParier = (G) => G.donneur;
+/** Ce que les autres joueurs ont annoncé, au total (les paris manquants comptent zéro). */
+export const totalAutres = (G, p) => G.paris.reduce((t, b, i) => (i === p ? t : t + (b ?? 0)), 0);
+/** Les autres ont-ils tous parié ? */
+export const autresOntParie = (G, p) => G.paris.every((b, i) => i === p || b !== null);
+/** Le pari interdit au dernier joueur, ou null (pour les autres, ou si aucun chiffre ne tombe juste). */
+export function pariInterdit(G, p) {
+  if (p !== dernierAParier(G)) return null;
+  const v = G.manche - totalAutres(G, p);
+  return v >= 0 && v <= G.manche ? v : null;
+}
+
 /** Un joueur annonce son pari. Quand tout le monde a parié, on joue. */
 export function parier(G, p, v) {
   if (G.phase !== 'pari') return { ok: false, raison: 'ce n’est pas le moment de parier' };
   if (!Number.isInteger(v) || v < 0 || v > G.manche) return { ok: false, raison: 'pari impossible' };
+  if (p === dernierAParier(G)) {
+    if (!autresOntParie(G, p)) return { ok: false, raison: 'le donneur parie en dernier : on attend les autres' };
+    if (v === pariInterdit(G, p)) return { ok: false, raison: `le total des paris ne peut pas faire ${G.manche} : changez votre pari` };
+  }
   G.paris[p] = v;
   if (G.paris.every((x) => x !== null)) G.phase = 'jeu';
   return { ok: true };
@@ -380,6 +402,27 @@ export function pariBot(main, n, rng = Math.random) {
   const somme = main.reduce((s, c) => s + chance(c, n, main.length), 0);
   const bruit = (rng() - 0.5) * 0.7;
   return Math.max(0, Math.min(main.length, Math.round(somme + bruit)));
+}
+
+/**
+ * Le pari d'un joueur de l'ordinateur à la table : s'il parie en dernier et
+ * que son chiffre est interdit, il se décale d'un cran (vers le bas d'abord,
+ * s'il le peut — on rate plus volontiers un pli en trop).
+ */
+export function pariPour(G, p, rng = Math.random) {
+  const v = pariBot(G.mains[p], G.n, rng);
+  const interdit = pariInterdit(G, p);
+  if (v !== interdit) return v;
+  return v > 0 ? v - 1 : v + 1;
+}
+
+/** Fait parier les joueurs de l'ordinateur qui le peuvent (le donneur en dernier). */
+export function parierBots(G, rng = Math.random) {
+  for (let p = 0; p < G.n; p++) {
+    if (G.bots[p] && G.paris[p] === null && p !== dernierAParier(G)) parier(G, p, pariPour(G, p, rng));
+  }
+  const d = dernierAParier(G);
+  if (G.bots[d] && G.paris[d] === null && autresOntParie(G, d)) parier(G, d, pariPour(G, d, rng));
 }
 
 /** La carte que joue l'ordinateur : { id, as }. */

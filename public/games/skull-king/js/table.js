@@ -212,9 +212,22 @@ export function feterVainqueur(r) {
 /* Pari, bilan, fin, livre de bord                                    */
 /* ------------------------------------------------------------------ */
 
-export function montrerPari(G) {
+/**
+ * Le choix du pari. `o.interdit` : le chiffre défendu au donneur (le total
+ * des paris ne doit pas tomber pile), `o.total` : ce que les autres ont annoncé.
+ */
+export function montrerPari(G, o = {}) {
   const p = $('pari');
-  $('pari-choix').innerHTML = Array.from({ length: G.manche + 1 }, (_, i) => `<button data-pari="${i}">${i}</button>`).join('');
+  const interdit = o.interdit ?? null;
+  $('pari-choix').innerHTML = Array.from({ length: G.manche + 1 }, (_, i) => (i === interdit
+    ? `<button data-pari="${i}" disabled title="Interdit : le total ferait ${G.manche}">${i}</button>`
+    : `<button data-pari="${i}">${i}</button>`)).join('');
+  const note = $('pari-note');
+  if (o.total != null) {
+    note.innerHTML = `Vous pariez en dernier : les autres ont annoncé <b>${o.total}</b> pli${o.total > 1 ? 's' : ''}.`
+      + (interdit !== null ? ` Le total ne peut pas faire ${G.manche} : <b>${interdit}</b> vous est interdit.` : '');
+    note.hidden = false;
+  } else note.hidden = true;
   p.hidden = false;
 }
 export function cacherPari() { $('pari').hidden = true; }

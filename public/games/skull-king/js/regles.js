@@ -51,6 +51,9 @@ export function reglesHtml() {
   return `
   <p>Dix manches. À la manche 1, chacun reçoit une carte ; à la manche 10, dix. Avant de jouer, chacun
   <b>annonce combien de plis il va remporter</b>. Tout l’art est de tomber pile.</p>
+  <p><b>Le dernier pari.</b> Le donneur parie en dernier, en connaissant le total des autres. Ce total, une
+  fois son pari ajouté, <b>ne peut pas être égal au nombre de cartes de la manche</b> : il faut être au-dessus
+  ou en dessous. S’il tombait pile, le donneur doit changer son pari.</p>
 
   <h3>Le pli</h3>
   <p>Le premier joueur pose une carte, les autres suivent chacun leur tour. <b>Il faut suivre la couleur

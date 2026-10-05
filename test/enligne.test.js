@@ -52,11 +52,18 @@ test('Skull King : une table, des bots, une partie entière jusqu’au classemen
   let v = a.dernier('sk:etat').vue;
   assert.equal(v.phase, 'pari');
   assert.equal(v.main.length, 1);
-  // Les paris des autres restent secrets tant que tout le monde n'a pas parié.
+  // Anne donne : elle parie en dernier.
+  assert.equal(v.donneurAttend, true);
   dire(a, { g: 'skullking', t: 'pari', v: 1 });
-  v = b.dernier('sk:etat').vue;
-  assert.equal(v.paris[0], null);
-  assert.equal(v.aParie[0], true);
+  assert.match(a.dernier('sk:erreur').msg, /dernier/);
+  // Les paris des autres restent secrets tant que tout le monde n'a pas parié.
+  dire(b, { g: 'skullking', t: 'pari', v: 1 });
+  v = a.dernier('sk:etat').vue;
+  assert.equal(v.paris[1], null);
+  assert.equal(v.aParie[1], true);
+  // Anne voit le total des autres, et le chiffre qui lui est interdit.
+  assert.equal(v.totalAutres, v.aParie.filter(Boolean).length ? v.totalAutres : null);
+  assert.ok(v.interdit === null || v.interdit === 1 - v.totalAutres);
 
   // On laisse l'ordinateur jouer pour tout le monde (délais écoulés).
   const fin = Date.now() + 20000;

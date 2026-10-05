@@ -248,6 +248,7 @@ function versLocal(v) {
     dernier: v.dernier ? { ...res(v.dernier), pli: v.dernier.pli.map((j) => ({ ...j, p: ici(j.p) })) } : null,
     historique: v.historique.map(rot),
     reste: v.reste,
+    donneurAttend: !!v.donneurAttend, totalAutres: v.totalAutres, interdit: v.interdit,
     extras: v.extras || [],
   };
 }
@@ -381,16 +382,20 @@ async function ramasserSiBesoin(avant, G) {
 const monTour = (G) => G.phase === 'jeu' && G.tour === 0;
 
 function apresPari(G) {
-  if (G.paris[0] === null) {
-    T.montrerPari(G);
-    T.consigne(`Manche ${G.manche} : ${G.manche} carte${G.manche > 1 ? 's' : ''} en main — votre pari ?`);
+  if (G.paris[0] === null && G.donneurAttend) {
+    // Le donneur parie en dernier : il attend les autres.
+    T.cacherPari();
+    T.consigne('Vous donnez : vous pariez en dernier, une fois les autres paris posés…');
+  } else if (G.paris[0] === null) {
+    T.montrerPari(G, G.totalAutres != null ? { interdit: G.interdit, total: G.totalAutres } : {});
+    T.consigne(G.totalAutres != null ? 'À vous de parier, en dernier.' : `Manche ${G.manche} : ${G.manche} carte${G.manche > 1 ? 's' : ''} en main — votre pari ?`);
   } else {
     T.cacherPari();
     const attente = G.noms.filter((_, p) => !G.aParie[p]);
     T.consigne(attente.length ? `Pari envoyé. On attend : ${attente.join(', ')}` : 'Les paris tombent…');
   }
   T.rendreMain(G);
-  chrono(G.paris[0] === null ? G.reste : null);
+  chrono(G.paris[0] === null && !G.donneurAttend ? G.reste : null);
 }
 
 function apresJeu(G) {

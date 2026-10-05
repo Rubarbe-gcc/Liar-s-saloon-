@@ -154,21 +154,24 @@ async function debutManche() {
   S.nouvelleManche(G, Math.random);
   fermer('ov-bilan');
   if (G.phase === 'fin') { finPartie(); return; }
-  // Les pirates de l'ordinateur parient tout de suite, mais en secret.
-  G.parisCaches = G.mains.map((m, p) => (G.bots[p] ? S.pariBot(m, G.n) : null));
+  // Les pirates de l'ordinateur parient tout de suite, en secret — sauf le donneur, qui parie en dernier.
+  S.parierBots(G);
   T.rendreTout(G, { donne: true });
   sfx.donne();
   await attendre(450 + G.manche * 60);
   if (j !== jeton) return;
-  T.montrerPari(G);
-  T.consigne(`Manche ${G.manche} : ${G.manche} carte${G.manche > 1 ? 's' : ''} en main`);
+  const dernier = S.dernierAParier(G) === 0;
+  T.montrerPari(G, dernier ? { interdit: S.pariInterdit(G, 0), total: S.totalAutres(G, 0) } : {});
+  T.consigne(dernier ? 'Vous donnez : vous pariez en dernier.' : `Manche ${G.manche} : ${G.manche} carte${G.manche > 1 ? 's' : ''} en main`);
 }
 
 async function parierSolo(v) {
   if (G.phase !== 'pari') return;
+  const r = S.parier(G, 0, v);
+  if (!r.ok) { toast(r.raison, 3000); return; }
   T.cacherPari();
-  S.parier(G, 0, v);
-  for (let p = 1; p < G.n; p++) S.parier(G, p, G.parisCaches[p]);
+  // Le donneur de l'ordinateur parie maintenant, en connaissant le total.
+  S.parierBots(G);
   sfx.pari();
   T.rendreSieges(G, { revele: true });
   const total = G.paris.reduce((s, x) => s + x, 0);

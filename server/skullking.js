@@ -143,6 +143,10 @@ export class Table {
       scores: G.scores,
       paris: G.paris.map((b, i) => (secret && i !== moi ? null : b)),
       aParie: G.paris.map((b) => b !== null),
+      // Le donneur parie en dernier : il voit le total des autres, et le chiffre interdit.
+      donneurAttend: secret && moi === G.donneur && !S.autresOntParie(G, moi),
+      totalAutres: secret && moi === G.donneur && S.autresOntParie(G, moi) ? S.totalAutres(G, moi) : null,
+      interdit: secret && moi === G.donneur && S.autresOntParie(G, moi) ? S.pariInterdit(G, moi) : null,
       plis: G.plis, bonus: G.bonus,
       cartes: G.mains.map((m) => m.length),
       main: moi >= 0 ? G.mains[moi] : [],
@@ -192,8 +196,8 @@ export class Table {
     this.prets.clear();
     if (this.G.phase === 'fin') return this.finir();
     this.finParis = Date.now() + DELAIS.pari;
-    // Les pirates de l'ordinateur parient tout de suite.
-    this.places.forEach((p, i) => { if (p.bot) S.parier(this.G, i, S.pariBot(this.G.mains[i], this.G.n)); });
+    // Les pirates de l'ordinateur parient tout de suite — sauf le donneur, qui parie en dernier.
+    S.parierBots(this.G);
     this.avancer();
   }
 
@@ -233,9 +237,14 @@ export class Table {
   parisManquants(tous) {
     const G = this.G;
     if (!G || G.phase !== 'pari') return;
+    const d = S.dernierAParier(G);
     this.places.forEach((p, i) => {
-      if (G.paris[i] === null && (tous || p.absent)) S.parier(G, i, S.pariBot(G.mains[i], G.n));
+      if (i !== d && G.paris[i] === null && (tous || p.absent)) S.parier(G, i, S.pariPour(G, i));
     });
+    // Le donneur, en dernier : pour lui (s'il est parti ou trop lent), ou pour le bot qui tient sa place.
+    if (G.paris[d] === null && S.autresOntParie(G, d) && (tous || this.places[d].absent || this.places[d].bot)) {
+      S.parier(G, d, S.pariPour(G, d));
+    }
     this.avancer();
   }
 
@@ -254,6 +263,8 @@ export class Table {
     if (!G || i < 0 || G.phase !== 'pari' || G.paris[i] !== null) return;
     const r = S.parier(G, i, v);
     if (!r.ok) return this.envoyer(id, { t: 'sk:erreur', msg: r.raison });
+    // Un bot donneur attendait les autres : à lui.
+    S.parierBots(G);
     if (G.phase === 'jeu') this.avancer();
     else { this.touch(); this.pousser(); }
   }
