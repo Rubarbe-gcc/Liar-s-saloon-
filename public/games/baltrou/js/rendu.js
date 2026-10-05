@@ -8,6 +8,7 @@
 
 import { COULEURS, afficheRang, AMELIORATIONS, SCEAUX, NOM_RANG } from '../../../shared/baltrou/cartes.js';
 import { JOKERS, RARETES, OBJETS, EDITIONS } from '../../../shared/baltrou/jokers.js';
+import { infoConso } from '../../../shared/baltrou/arcanes.js';
 
 export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
@@ -135,29 +136,56 @@ export function compteurJoker(j) {
 export const rarete = (id) => RARETES[id];
 
 /* ------------------------------------------------------------------ */
+/* Les consommables : planètes, tarots, Élixir                          */
+/* ------------------------------------------------------------------ */
+
+/** Une carte de planète ou de tarot. `id` : 'planete:paire', 'tarot:pape', 'elixir'. */
+export function consoHtml(id, o = {}) {
+  const info = infoConso(id);
+  const cls = ['arcane', info.sorte, o.cls || ''].join(' ').trim();
+  const haut = info.sorte === 'tarot' ? info.num : info.sorte === 'planete' ? 'PLANÈTE' : '';
+  const style = info.couleur ? ` style="--pc:${info.couleur}"` : '';
+  return `<div class="${cls}"${style} ${o.attrs || ''} title="${esc(info.nom)} — ${esc(info.texte)}">
+    <span class="num">${haut}</span><span class="g">${info.glyphe}</span><span class="n">${esc(info.nom)}</span></div>`;
+}
+
+/* ------------------------------------------------------------------ */
 /* Les objets de la boutique                                            */
 /* ------------------------------------------------------------------ */
 
 export function offreHtml(item, { prix, possible, bouton = 'Acheter', attrs = '' } = {}) {
+  const etiquette = prix === 0 ? 'Prendre · gratuit' : `${bouton} · $${prix}`;
+  const tag = item.tag ? '<span class="tag-offert">🏷️ Tag</span>' : '';
+  if (item.type === 'planete' || item.type === 'tarot') {
+    const info = infoConso(`${item.type}:${item.id}`);
+    const rc = item.type === 'planete' ? info.couleur : '#b44dff';
+    return `<div class="offre r-conso" style="--rc:${rc}" ${attrs}>${tag}
+      <span class="rar">${item.type === 'planete' ? 'Planète' : 'Tarot'}</span>
+      ${item.cote != null ? `<span class="cote-chance">~${String(item.cote).replace('.', ',')} % ce tirage</span>` : ''}
+      ${consoHtml(`${item.type}:${item.id}`)}
+      <b>${esc(info.nom)}</b><p>${esc(info.texte)}</p>
+      ${prix != null ? `<button class="btn ${possible ? 'or' : ''}" ${possible ? '' : 'disabled'} data-acheter>${etiquette}</button>` : ''}
+    </div>`;
+  }
   if (item.type === 'joker') {
     const d = JOKERS[item.id];
     const r = RARETES[d.rarete];
     const ed = item.edition ? ` <small>· ${EDITIONS[item.edition].nom} (${EDITIONS[item.edition].texte})</small>` : '';
-    return `<div class="offre r-${d.rarete}" style="--rc:${r.couleur}" ${attrs}>
+    return `<div class="offre r-${d.rarete}" style="--rc:${r.couleur}" ${attrs}>${tag}
       <span class="rar">${r.nom}${d.rarete === 'negatif' ? ' · hors place' : ''}</span>
       ${item.cote != null ? `<span class="cote-chance">~${String(item.cote).replace('.', ',')} % ce tirage</span>` : ''}
       ${jokerHtml(item)}
       <b>${esc(d.nom)}</b><p>${esc(d.texte)}${ed}</p>
-      ${prix != null ? `<button class="btn ${possible ? 'or' : ''}" ${possible ? '' : 'disabled'} data-acheter>${bouton} · $${prix}</button>` : ''}
+      ${prix != null ? `<button class="btn ${possible ? 'or' : ''}" ${possible ? '' : 'disabled'} data-acheter>${etiquette}</button>` : ''}
     </div>`;
   }
   const o = OBJETS[item.id];
   const r = RARETES[o.rarete];
-  return `<div class="offre r-${o.rarete}" style="--rc:${r.couleur}" ${attrs}>
+  return `<div class="offre r-${o.rarete}" style="--rc:${r.couleur}" ${attrs}>${tag}
     <span class="rar">${r.nom}</span>
     ${item.cote != null ? `<span class="cote-chance">~${String(item.cote).replace('.', ',')} % ce tirage</span>` : ''}
     <div class="objet-art">${o.glyphe}</div>
     <b>${esc(o.nom)}</b><p>${esc(o.texte)}</p>
-    ${prix != null ? `<button class="btn ${possible ? 'or' : ''}" ${possible ? '' : 'disabled'} data-acheter>${bouton} · $${prix}</button>` : ''}
+    ${prix != null ? `<button class="btn ${possible ? 'or' : ''}" ${possible ? '' : 'disabled'} data-acheter>${etiquette}</button>` : ''}
   </div>`;
 }

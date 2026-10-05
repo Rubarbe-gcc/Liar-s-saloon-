@@ -14,10 +14,10 @@
  */
 
 export const COULEURS = {
-  H: { nom: 'Cœur', sym: '♥', rouge: true },
-  D: { nom: 'Carreau', sym: '♦', rouge: true },
-  S: { nom: 'Pique', sym: '♠', rouge: false },
-  C: { nom: 'Trèfle', sym: '♣', rouge: false },
+  H: { nom: 'Cœur', noms: 'Cœurs', sym: '♥', rouge: true },
+  D: { nom: 'Carreau', noms: 'Carreaux', sym: '♦', rouge: true },
+  S: { nom: 'Pique', noms: 'Piques', sym: '♠', rouge: false },
+  C: { nom: 'Trèfle', noms: 'Trèfles', sym: '♣', rouge: false },
 };
 export const ORDRE_COULEURS = ['S', 'H', 'C', 'D'];
 

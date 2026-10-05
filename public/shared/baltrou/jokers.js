@@ -201,6 +201,8 @@ export const OBJETS = {
   'sceau-violet': O('sceau-violet', 'Sceau violet', 7, 'rare', 'Sur 1 carte : améliore une autre carte du paquet au hasard.', '🟣', { sceau: 'violet', n: 1 }),
   'pack-joker': O('pack-joker', 'Pack Joker', 10, 'legendaire', '3 Jokers au choix : vous en gardez un.', '🎁'),
   'pack-carte': O('pack-carte', 'Pack Carte', 9, 'legendaire', '3 améliorations de carte au choix : vous en gardez une.', '🃏'),
+  'pack-celeste': O('pack-celeste', 'Pack Céleste', 4, 'rare', '3 planètes au choix : celle que vous prenez fait aussitôt monter sa main d’un niveau.', '🪐'),
+  'pack-arcane': O('pack-arcane', 'Pack Arcane', 4, 'rare', '3 tarots au choix : vous en gardez un dans vos consommables.', '🔮'),
   bob: O('bob', 'BOB le tavernier', 12, 'legendaire', '+1 place de Joker, et 3 rafraîchissements gratuits à chaque boutique.', '🍺'),
   roulette: O('roulette', 'La Roulette', 15, 'mystique', 'Glisse une WILDCARD dans votre paquet : ×6,7 chips et Mult ! (3 % de muter en TROLL…)', '🎡'),
   'saint-livre': O('saint-livre', 'Le Saint Livre', 2, 'mystique', 'Consultez à tout moment l’effet de toutes les cartes du jeu.', '📖'),

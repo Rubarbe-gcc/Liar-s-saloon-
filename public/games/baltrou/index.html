@@ -51,6 +51,8 @@
     <button class="rond retour" data-va="s-menu" aria-label="Retour">‹</button>
     <h2>Choisissez votre deck</h2>
     <p class="sous" id="deck-mode"></p>
+    <div class="mises" id="mises"></div>
+    <p class="mise-texte" id="mise-texte"></p>
     <div class="decks" id="decks"></div>
     <div class="graine">
       <span>Graine</span>
@@ -104,7 +106,7 @@
     <div class="actions">
       <button class="btn jouer" id="b-jouer">Jouer</button>
       <div class="tris">
-        <span class="pioche" id="pioche">🂠 44/53</span>
+        <span class="pioche" id="pioche" role="button" title="Voir le paquet">🂠 44/53</span>
         <button class="btn petit" id="b-tri-rang">Valeur</button>
         <button class="btn petit" id="b-tri-couleur">Couleur</button>
       </div>
@@ -139,6 +141,13 @@
 <div class="ov" id="ov-choix" hidden><div class="feuille large" id="choix"></div></div>
 <div class="ov" id="ov-fin" hidden><div class="feuille fin" id="fin"></div></div>
 <div class="ov" id="ov-detail" hidden><div class="feuille detail" id="detail"></div></div>
+<div class="ov" id="ov-paquet" hidden>
+  <div class="feuille large vue-paquet">
+    <button class="rond fermer" data-ferme="ov-paquet">✕</button>
+    <h2>Votre paquet</h2>
+    <div id="paquet"></div>
+  </div>
+</div>
 
 <div class="ov" id="ov-niveaux" hidden>
   <div class="feuille">

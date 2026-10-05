@@ -165,7 +165,7 @@ body.boss .t1 { background: conic-gradient(from 0deg, #6e1d2a, #3d0f2e, #6e2d1d,
 .cote-bas { grid-area: bas; display: flex; gap: 5px; justify-content: space-between; }
 .cote-bas .btn { flex: 1; padding: 6px 4px; }
 
-.plateau { position: relative; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
+.plateau { position: relative; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
 .rang-jokers { display: flex; gap: 6px; align-items: stretch; }
 .jokers { flex: 1; min-height: calc(var(--jw) * 1.4 + 8px); display: flex; gap: 5px; justify-content: center; padding: 4px; border-radius: 14px;
   background: rgba(0,0,0,.28); border: 1px dashed rgba(255,255,255,.08); --jw: clamp(48px, 13vw, 84px); }
@@ -184,8 +184,8 @@ body.boss .t1 { background: conic-gradient(from 0deg, #6e1d2a, #3d0f2e, #6e2d1d,
 .info-main { min-height: 1.3em; text-align: center; font-size: .85rem; color: var(--pale); }
 .info-main b { color: #fff; font-family: var(--titre); }
 .info-main .c { color: #8ab8ff; font-weight: 800; } .info-main .m { color: #ff8a8a; font-weight: 800; }
-.main { display: flex; justify-content: center; align-items: flex-end; min-height: calc(var(--cw) * 1.4 + 26px); padding: 22px 6px 2px; }
-.main .carte + .carte { margin-left: calc(var(--cw) * -.16); }
+.main { min-width: 0; display: flex; justify-content: center; align-items: flex-end; min-height: calc(var(--cw) * 1.4 + 26px); padding: 22px 6px 2px; }
+.main .carte + .carte { margin-left: var(--chev, calc(var(--cw) * -.16)); }
 .actions { display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; }
 .btn.jouer { background: linear-gradient(180deg, #4d98ff, #1f5fd1); box-shadow: 0 4px 0 #123a85, 0 8px 18px rgba(0,0,0,.35); font-size: 1.1rem; padding: 14px 8px; }
 .btn.defausser { background: linear-gradient(180deg, #ff5d5d, #c42a3a); box-shadow: 0 4px 0 #6e1420, 0 8px 18px rgba(0,0,0,.35); font-size: 1.1rem; padding: 14px 8px; }
@@ -452,3 +452,77 @@ body.boss .t1 { background: conic-gradient(from 0deg, #6e1d2a, #3d0f2e, #6e2d1d,
 @media (prefers-reduced-motion: reduce) {
   .tourbillon, .logo, .carte.wild { animation: none; }
 }
+
+/* ------------------------------------------------------------------ */
+/* Planètes et tarots                                                   */
+/* ------------------------------------------------------------------ */
+.arcane { --aw: 64px; position: relative; flex: none; width: var(--aw); height: calc(var(--aw) * 1.45); border-radius: 9px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 5px 3px 6px; text-align: center;
+  box-shadow: 0 6px 14px rgba(0,0,0,.45); transition: transform .18s var(--doux); }
+.arcane:hover { transform: translateY(-3px) rotate(1.5deg); }
+.arcane .num { font-family: var(--titre); font-weight: 900; font-size: calc(var(--aw) * .14); letter-spacing: .08em; opacity: .85; }
+.arcane .g { font-size: calc(var(--aw) * .46); line-height: 1; filter: drop-shadow(0 3px 0 rgba(0,0,0,.3)); }
+.arcane .n { font-family: var(--titre); font-weight: 900; font-size: calc(var(--aw) * .14); line-height: 1.05; }
+.arcane.tarot { background: linear-gradient(170deg, #f6e7c4, #e3c98d); color: #3a2160;
+  box-shadow: 0 0 0 2px #b44dff, inset 0 0 0 4px rgba(120,60,180,.25), 0 6px 14px rgba(0,0,0,.45); }
+.arcane.planete { background: radial-gradient(circle at 50% 42%, color-mix(in srgb, var(--pc) 55%, #000) 0 28%, #0d0a1c 62%);
+  color: #fff; box-shadow: 0 0 0 2px var(--pc), 0 0 16px color-mix(in srgb, var(--pc) 45%, transparent), 0 6px 14px rgba(0,0,0,.45); }
+.arcane.planete .g { color: var(--pc); text-shadow: 0 0 12px var(--pc); font-family: "Segoe UI Symbol", system-ui, serif; }
+.arcane.planete::before { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(1px 1px at 20% 20%, #fff, transparent), radial-gradient(1px 1px at 75% 30%, #fff, transparent),
+    radial-gradient(1px 1px at 30% 80%, #fff, transparent), radial-gradient(1px 1px at 85% 75%, #fff, transparent); opacity: .7; }
+.arcane.elixir { background: linear-gradient(170deg, #5b2a8a, #2d1450); color: #fff; box-shadow: 0 0 0 2px var(--mystique), 0 6px 14px rgba(0,0,0,.45); }
+.consos .arcane { --aw: 42px; }
+.offre .arcane { --aw: 70px; }
+.detail .arcane { --aw: 96px; margin: 4px auto 12px; cursor: default; }
+.regles .fiche .arcane { --aw: 42px; cursor: default; }
+.tag-offert { position: absolute; top: -8px; left: 50%; transform: translateX(-50%); padding: 2px 8px; border-radius: 999px; font-size: .62rem; font-weight: 900;
+  background: var(--or); color: #3a2300; box-shadow: 0 2px 6px rgba(0,0,0,.4); white-space: nowrap; }
+.utiliser-aide { font-size: .8rem; color: var(--or-2); }
+
+/* ------------------------------------------------------------------ */
+/* Le choix de la blind                                                 */
+/* ------------------------------------------------------------------ */
+.feuille.choix-blinds { width: min(900px, 100%); }
+.blinds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
+.blind-c { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 14px 10px; border-radius: 16px;
+  background: linear-gradient(180deg, rgba(61,108,198,.35), rgba(20,16,36,.9)); border: 2px solid rgba(255,255,255,.08); transition: transform .2s; }
+.blind-c.boss { background: linear-gradient(180deg, rgba(200,54,74,.4), rgba(20,16,36,.9)); }
+.blind-c.courante { border-color: var(--or); box-shadow: 0 0 26px rgba(255,200,61,.3); transform: translateY(-4px); }
+.blind-c.finie { opacity: .5; filter: grayscale(.6); }
+.blind-c.avenir { opacity: .8; }
+.blind-c .etape { font-size: .62rem; letter-spacing: .16em; text-transform: uppercase; color: var(--pale); }
+.blind-c .jeton-grand { width: 64px; height: 64px; font-size: 1.9rem; margin: 2px auto; }
+.blind-c h3 { margin: 0; font-family: var(--titre); font-size: 1.05rem; color: #fff; }
+.blind-c .ob { font-family: var(--num); font-weight: 900; font-size: 1.15rem; }
+.blind-c .ob small { display: block; font-family: var(--ui); font-weight: 600; font-size: .7rem; color: var(--or-2); }
+.blind-c .effet { margin: 0; padding: 6px 8px; font-size: .74rem; border-radius: 10px; background: rgba(200,54,74,.3); }
+.blind-c .statut-b { font-family: var(--titre); font-weight: 900; font-size: .85rem; }
+.blind-c .btn { width: 100%; }
+.tag-passer { display: flex; align-items: center; gap: 6px; width: 100%; padding: 6px 8px; border-radius: 10px; background: rgba(0,0,0,.3); text-align: left; }
+.tag-passer .tg { font-size: 1.4rem; }
+.tag-passer b { font-size: .74rem; display: block; }
+.tag-passer span { font-size: .66rem; color: var(--pale); line-height: 1.25; }
+.tags-attente { display: inline-flex; gap: 2px; margin-left: 4px; font-size: .85rem; }
+@media (max-width: 640px) {
+  .blinds { grid-template-columns: 1fr; gap: 8px; }
+  .blind-c { flex-direction: row; flex-wrap: wrap; justify-content: center; text-align: left; padding: 10px; }
+  .blind-c.finie, .blind-c.avenir { padding: 6px 10px; }
+  .blind-c.finie .jeton-grand, .blind-c.avenir .jeton-grand { width: 40px; height: 40px; font-size: 1.2rem; }
+  .blind-c.courante { transform: none; }
+}
+
+/* Les mises */
+.mises { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 0 0 14px; }
+.mise { display: flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 999px; border: 2px solid transparent; cursor: pointer;
+  background: rgba(0,0,0,.35); font-weight: 800; font-size: .8rem; }
+.mise i { width: 14px; height: 14px; border-radius: 50%; background: var(--mc); box-shadow: 0 0 8px var(--mc); }
+.mise.on { border-color: var(--mc); background: color-mix(in srgb, var(--mc) 18%, rgba(0,0,0,.4)); }
+.mise:disabled { opacity: .35; cursor: not-allowed; }
+.mise-texte { margin: -6px 0 12px; font-size: .78rem; color: var(--pale); min-height: 1.2em; }
+
+/* Le paquet */
+.vue-paquet h3 { font-family: var(--titre); margin: 10px 0 6px; text-align: left; font-size: .95rem; color: var(--pale); }
+.vue-paquet .rang-c { display: flex; flex-wrap: wrap; gap: 6px 4px; --cw: 40px; }
+.vue-paquet .rang-c .carte.sortie { opacity: .25; filter: grayscale(1); }
+.pioche { cursor: pointer; text-decoration: underline dotted; }

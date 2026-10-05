@@ -6,7 +6,14 @@
 import { MAINS, AMELIORATIONS, SCEAUX } from '../../../shared/baltrou/cartes.js';
 import { LISTE_JOKERS, RARETES, OBJETS, VOUCHERS } from '../../../shared/baltrou/jokers.js';
 import { BOSS, DECKS, MAINS_BASE, DEFAUSSES_BASE, PLACES_JOKERS, NEGATIFS_MAX } from '../../../shared/baltrou/partie.js';
-import { jokerHtml, carteHtml, esc } from './rendu.js';
+import { jokerHtml, carteHtml, consoHtml, esc } from './rendu.js';
+import { PLANETES, TAROTS, TAGS, MISES } from '../../../shared/baltrou/arcanes.js';
+import { MAIN } from '../../../shared/baltrou/cartes.js';
+
+const planetesHtml = () => `<div class="grille">${Object.entries(PLANETES).map(([m, pl]) => `<div class="fiche">${consoHtml(`planete:${m}`)}
+  <div><b>${pl.nom}</b><small>${MAIN[m].nom} monte d’un niveau.</small></div></div>`).join('')}</div>`;
+const tarotsHtml = () => `<div class="grille">${TAROTS.map((t) => `<div class="fiche">${consoHtml(`tarot:${t.id}`)}
+  <div><b>${t.num} · ${esc(t.nom)}</b><small>${esc(t.texte)}</small></div></div>`).join('')}</div>`;
 
 export function reglesHtml() {
   return `
@@ -38,6 +45,24 @@ export function reglesHtml() {
       <div><b>${a.nom}</b><small>${a.texte}</small></div></div>`).join('')}
   </div>
 
+  <h3>Choisir sa blind, et la passer</h3>
+  <p>Avant chaque manche, les trois blinds de l’ante s’affichent, boss compris : on sait ce qui attend. On peut
+    <b>passer</b> la petite ou la grande blind : pas de récompense, mais un <b>tag</b>.</p>
+  <div class="grille">${Object.values(TAGS).map((t) => `<div class="fiche"><span style="font-size:1.6rem">${t.glyphe}</span>
+    <div><b>${esc(t.nom)}</b><small>${esc(t.texte)}</small></div></div>`).join('')}</div>
+
+  <h3>Planètes et tarots</h3>
+  <p>Des cartes à consommer (2 au plus), achetées en boutique ou trouvées dans les packs Céleste et Arcane.
+    Une <b>planète</b> fait monter sa main d’un niveau. Un <b>tarot</b> transforme les cartes de votre main :
+    sélectionnez-les, touchez le tarot, puis « Utiliser ».</p>
+  ${planetesHtml()}
+  ${tarotsHtml()}
+
+  <h3>Les mises</h3>
+  <p>Gagnez une partie Classique pour débloquer la mise suivante. Chaque mise ajoute sa difficulté à celles d’avant.</p>
+  <div class="grille">${MISES.map((m) => `<div class="fiche"><span style="width:18px;height:18px;border-radius:50%;flex:none;background:${m.couleur};box-shadow:0 0 8px ${m.couleur}"></span>
+    <div><b>${m.nom}</b><small>${m.texte}</small></div></div>`).join('')}</div>
+
   <h3>Les boss</h3>
   <div class="grille">${Object.values(BOSS).map((b) => `<div class="fiche"><span style="font-size:1.8rem">${b.glyphe}</span>
     <div><b>${b.nom}</b><small>${b.texte}</small></div></div>`).join('')}</div>
@@ -67,6 +92,8 @@ export function livreHtml() {
   + `<h3>Les objets de la boutique</h3>
     <div class="grille">${Object.values(OBJETS).map((o) => `<div class="fiche"><span style="font-size:1.6rem">${o.glyphe}</span>
       <div><b>${esc(o.nom)}</b><small>${esc(o.texte)} · $${o.prix}</small></div></div>`).join('')}</div>
+    <h3>Les planètes</h3>${planetesHtml()}
+    <h3>Les tarots</h3>${tarotsHtml()}
     <h3>Les bons (offerts après un boss)</h3>
     <div class="grille">${VOUCHERS.map((v) => `<div class="fiche"><span style="font-size:1.6rem">🎟️</span>
       <div><b>${esc(v.nom)}</b><small>${esc(v.texte)}</small></div></div>`).join('')}</div>`;

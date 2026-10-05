@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v60';
+const VERSION = 'v61';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -139,6 +139,7 @@ const SHELL = [
   '/shared/baltrou/cartes.js',
   '/shared/baltrou/jokers.js',
   '/shared/baltrou/partie.js',
+  '/shared/baltrou/arcanes.js',
 ];
 
 self.addEventListener('install', (event) => {

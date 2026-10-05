@@ -240,3 +240,130 @@ test('le mode Infini continue après l’ante 4, toujours plus dur', () => {
   assert.ok(P.blindCourante(p).objectif > b5.objectif);
   assert.ok(b5.objectif > 25000, 'plus dur que l’ante 4');
 });
+
+/* ================================================================== */
+/* Blinds passées, tags, planètes, tarots, mises                      */
+/* ================================================================== */
+
+import * as A from '../public/shared/baltrou/arcanes.js';
+
+test('passer une blind rapporte son tag, jamais le boss', () => {
+  const p = P.creerPartie({ graine: 'PASSE' });
+  p.antes[0][0].tag = 'argent';
+  p.antes[0][1].tag = 'rare';
+  const r = P.passer(p);
+  assert.ok(r.ok);
+  assert.equal(p.argent, 20, 'Tag Investissement : +10 $');
+  assert.equal(p.blindIdx, 1);
+  assert.equal(p.phase, 'intro');
+  assert.ok(P.passer(p).ok);
+  assert.deepEqual(p.tags, ['rare']);
+  assert.equal(P.passer(p).raison, 'boss');
+  // Le Tag Rare attend la boutique : un Joker rare gratuit.
+  P.commencer(p);
+  p.score = 1e9;
+  P.jouer(p, [p.main.find((x) => !p.cartes[x].special)]);
+  P.allerBoutique(p);
+  const offert = p.boutique.items[0];
+  assert.equal(offert.type, 'joker');
+  assert.equal(J.JOKERS[offert.id].rarete, 'rare');
+  assert.equal(P.prix(p, offert), 0);
+  assert.deepEqual(p.tags, []);
+});
+
+test('le Tag Jongleur : trois cartes de plus en main pour une manche', () => {
+  const p = P.creerPartie({ graine: 'JONGLE' });
+  p.antes[0][0].tag = 'jongleur';
+  P.passer(p);
+  assert.equal(p.main.length, 11);
+  P.commencer(p);
+  p.score = 1e9;
+  P.jouer(p, [p.main.find((x) => !p.cartes[x].special)]);
+  P.allerBoutique(p);
+  P.quitterBoutique(p);
+  assert.equal(p.main.length, 8, 'et c’est fini à la manche suivante');
+});
+
+test('une planète fait monter sa main ; le Pack Céleste aussi', () => {
+  const p = enBoutique('PLANETE');
+  p.argent = 100;
+  p.boutique.items = [{ type: 'planete', id: 'full' }, { type: 'objet', id: 'pack-celeste' }];
+  assert.ok(P.acheter(p, 0).ok);
+  assert.equal(p.consommables[0].id, 'planete:full');
+  const r = P.utiliserConsommable(p, 0);
+  assert.ok(r.ok);
+  assert.equal(p.niveaux.full, 2);
+  assert.ok(P.acheter(p, 0).ok);
+  const m = p.boutique.pack.options[0].id;
+  const avant = p.niveaux[m];
+  P.choisirPack(p, 0);
+  assert.equal(p.niveaux[m], avant + 1);
+});
+
+test('les tarots changent les cartes de la main', () => {
+  const p = P.creerPartie({ graine: 'TAROT' });
+  P.commencer(p);
+  const normales = p.main.filter((u) => !p.cartes[u].special);
+  const [a, b, c] = normales;
+  p.consommables = [{ uid: 'o1', id: 'tarot:soleil' }, { uid: 'o2', id: 'tarot:imperatrice' }];
+  assert.equal(P.utiliserConsommable(p, 0, []).raison, 'tarot-cibles');
+  assert.ok(P.utiliserConsommable(p, 0, [a, b, c]).ok);
+  assert.ok([a, b, c].every((u) => p.cartes[u].s === 'H'), 'trois cœurs');
+  assert.ok(P.utiliserConsommable(p, 0, [a, b]).ok);
+  assert.equal(p.cartes[a].enh, 'mult');
+  assert.equal(p.consommables.length, 0);
+  // La Force, Le Pendu, L'Arcane sans nom.
+  p.consommables = [{ uid: 'o3', id: 'tarot:force' }, { uid: 'o4', id: 'tarot:pendu' }, { uid: 'o5', id: 'tarot:mort' }];
+  const r0 = p.cartes[c].r;
+  P.utiliserConsommable(p, 0, [c]);
+  assert.equal(p.cartes[c].r, r0 >= 14 ? 2 : r0 + 1);
+  const taille = p.paquet.length;
+  P.utiliserConsommable(p, 0, [c]);
+  assert.equal(p.paquet.length, taille - 1, 'Le Pendu détruit');
+  assert.ok(!p.main.includes(c));
+  const [d, e] = p.main.filter((u) => !p.cartes[u].special);
+  P.utiliserConsommable(p, 0, [d, e]);
+  assert.equal(p.cartes[d].r, p.cartes[e].r);
+  assert.equal(p.cartes[d].s, p.cartes[e].s);
+});
+
+test('un tarot ne touche ni le Poisson, ni hors manche ; La Papesse crée des planètes', () => {
+  const p = P.creerPartie({ graine: 'PAPESSE' });
+  const poisson = p.paquet.find((u) => p.cartes[u].special === 'poisson');
+  p.consommables = [{ uid: 'o1', id: 'tarot:chariot' }];
+  assert.equal(P.utiliserConsommable(p, 0, [p.main[0]]).raison, 'tarot-jeu');
+  P.commencer(p);
+  p.main.push(poisson);
+  assert.equal(P.utiliserConsommable(p, 0, [poisson]).raison, 'tarot-special');
+  p.consommables = [{ uid: 'o2', id: 'tarot:papesse' }];
+  assert.ok(P.utiliserConsommable(p, 0).ok);
+  assert.equal(p.consommables.length, 2);
+  assert.ok(p.consommables.every((o) => o.id.startsWith('planete:')));
+});
+
+test('les mises : objectifs, récompense de la petite blind, défausses', () => {
+  const blanche = P.creerPartie({ graine: 'MISE', mise: 0 });
+  const doree = P.creerPartie({ graine: 'MISE', mise: 4 });
+  assert.equal(doree.antes[0][0].recompense, 0, 'Mise Rouge : la petite blind ne rapporte rien');
+  assert.equal(doree.antes[0][0].objectif, Math.round((blanche.antes[0][0].objectif * 1.5) / 50) * 50);
+  assert.equal(doree.defaussesRestantes, blanche.defaussesRestantes - 1, 'Mise Noire');
+  assert.equal(A.multObjectif(2), 1.25);
+});
+
+test('une sauvegarde d’avant la mise à jour se reprend', () => {
+  const p = P.creerPartie({ graine: 'VIEUX' });
+  delete p.tags; delete p.mise; p.v = 1;
+  P.migrer(p);
+  assert.deepEqual(p.tags, []);
+  assert.equal(p.mise, 0);
+  P.commencer(p);
+  assert.ok(P.jouer(p, [p.main.find((x) => !p.cartes[x].special)]).ok);
+});
+
+test('vendre un Joker pendant la manche', () => {
+  const p = P.creerPartie({ graine: 'VENTE' });
+  P.commencer(p);
+  p.jokers.push({ uid: 'jx', id: 'sage', edition: null, e: {} });
+  assert.ok(P.vendre(p, 0).ok);
+  assert.equal(p.argent, 14);
+});

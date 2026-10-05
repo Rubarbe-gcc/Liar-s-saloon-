@@ -6,7 +6,9 @@
  * reprendre plus tard, et une même graine rejoue la même run.
  *
  * Le déroulé :
- *   intro     → la blind s'annonce (objectif, récompense, effet du boss) ;
+ *   intro     → le choix de la blind : les trois blinds de l'ante sont
+ *               visibles, boss compris ; on joue la blind du moment, ou on
+ *               la passe (pas le boss) pour gagner un tag ;
  *   jeu       → on joue des mains et on défausse jusqu'à l'objectif ;
  *   gagne     → le butin de la manche ;
  *   boutique  → Jokers, objets, packs, bons ;
@@ -15,6 +17,11 @@
 
 import { MAINS, MAIN, baseMain, evaluer, chipsCarte, nomCarte, estWild, AMELIORATIONS, ORDRE_COULEURS } from './cartes.js';
 import { JOKERS, LISTE_JOKERS, OBJETS, VOUCHERS, VOUCHER, estNegatif } from './jokers.js';
+import {
+  PLANETES, TAROT, TAROTS, TAGS, TAGS_IMMEDIATS, MISES, multObjectif, infoConso, touchable,
+} from './arcanes.js';
+
+export { MISES, TAGS };
 
 export const TAILLE_MAIN = 8;
 export const MAX_SELECTION = 5;
@@ -103,12 +110,20 @@ function nouvelleCarte(p, r, s, special = null) {
   return c;
 }
 
+/** L'objectif selon la mise : arrondi, pour rester lisible. */
+const objectifMise = (p, o) => (multObjectif(p.mise || 0) === 1 ? o : Math.round((o * multObjectif(p.mise || 0)) / 50) * 50);
+/** Mise Rouge et au-delà : la petite blind ne rapporte rien. */
+const recompenseMise = (p, r, i) => ((p.mise || 0) >= 1 && i === 0 ? 0 : r);
+const tirerTag = (p) => choisir(p, Object.keys(TAGS));
+
 function construireAntes(p) {
   return ANTES_CLASSIQUES.map((niveau, i) => {
-    const blinds = niveau.map(([nom, sous, objectif, recompense]) => ({ nom, sous, objectif, recompense, boss: null }));
+    const blinds = niveau.map(([nom, sous, objectif, recompense], k) => ({
+      nom, sous, objectif: objectifMise(p, objectif), recompense: recompenseMise(p, recompense, k), boss: null, tag: tirerTag(p),
+    }));
     const boss = choisir(p, POOLS_BOSS[i]);
     const [objectif, recompense] = OBJECTIFS_BOSS[i];
-    blinds.push({ nom: BOSS[boss].nom, sous: BOSS[boss].texte, objectif, recompense, boss });
+    blinds.push({ nom: BOSS[boss].nom, sous: BOSS[boss].texte, objectif: objectifMise(p, objectif), recompense, boss });
     return blinds;
   });
 }
@@ -122,18 +137,21 @@ function anteInfinie(p, n) {
   return bases.map(([o, r], i) => ({
     nom: i === 2 ? BOSS[boss].nom : `Manche ${3 * n + i + 1}`,
     sous: i === 2 ? BOSS[boss].texte : 'Mode Infini',
-    objectif: Math.round(o * croissance / 100) * 100,
-    recompense: r + n,
+    objectif: objectifMise(p, Math.round(o * croissance / 100) * 100),
+    recompense: recompenseMise(p, r + n, i),
     boss: i === 2 ? boss : null,
+    ...(i < 2 ? { tag: tirerTag(p) } : {}),
   }));
 }
 
 /**
- * @param {{ mode?: 'classique'|'infini', deck?: 'classique'|'epure'|'chanceux', graine?: string }} o
+ * @param {{ mode?: 'classique'|'infini', deck?: 'classique'|'epure'|'chanceux', graine?: string, mise?: number }} o
  */
-export function creerPartie({ mode = 'classique', deck = 'classique', graine = 'BALTROU' } = {}) {
+export function creerPartie({ mode = 'classique', deck = 'classique', graine = 'BALTROU', mise = 0 } = {}) {
   const p = {
-    v: 1, mode: mode === 'infini' ? 'infini' : 'classique', deck: DECKS[deck] ? deck : 'classique',
+    v: 2, mode: mode === 'infini' ? 'infini' : 'classique', deck: DECKS[deck] ? deck : 'classique',
+    mise: Math.max(0, Math.min(MISES.length - 1, Math.floor(Number(mise) || 0))),
+    tags: [], jongleur: 0, dernierConso: null,
     graine: nettoyerGraine(graine) || 'BALTROU', uid: 0,
     ante: 0, blindIdx: 0, antes: [], score: 0, phase: 'intro',
     argent: ARGENT_DEPART, mainsRestantes: MAINS_BASE, defaussesRestantes: DEFAUSSES_BASE,
@@ -143,7 +161,7 @@ export function creerPartie({ mode = 'classique', deck = 'classique', graine = '
     remise: false, refreshGratuit: false, interetNiveau: 0, bob: false, saintLivre: false,
     cartes: {}, paquet: [], pioche: [], main: [],
     silence: null, boutique: null, dernier: null, gains: null, message: null,
-    stats: { mainsJouees: 0, defausses: 0, gainTotal: 0, meilleure: 0, meilleureNom: '', gagnees: 0, bossBattus: 0 },
+    stats: { mainsJouees: 0, defausses: 0, gainTotal: 0, meilleure: 0, meilleureNom: '', gagnees: 0, bossBattus: 0, passees: 0, tarots: 0, planetes: 0 },
   };
   p.alea = graineDe(p.graine);
   p.antes = construireAntes(p);
@@ -159,6 +177,18 @@ export function creerPartie({ mode = 'classique', deck = 'classique', graine = '
   return p;
 }
 
+/** Une sauvegarde d'une version précédente reçoit ce qui lui manque. */
+export function migrer(p) {
+  if (!p || p.v >= 2) return p;
+  p.v = 2;
+  p.mise = p.mise || 0;
+  p.tags = p.tags || [];
+  p.jongleur = p.jongleur || 0;
+  p.dernierConso = p.dernierConso || null;
+  Object.assign(p.stats, { passees: 0, tarots: 0, planetes: 0, ...p.stats });
+  return p;
+}
+
 /* ------------------------------------------------------------------ */
 /* Lecture                                                             */
 /* ------------------------------------------------------------------ */
@@ -168,7 +198,7 @@ export function blindCourante(p) {
   return p.antes[p.ante][p.blindIdx];
 }
 export const carte = (p, uid) => p.cartes[uid];
-export const tailleMain = (p) => TAILLE_MAIN + p.bonusTailleMain;
+export const tailleMain = (p) => TAILLE_MAIN + p.bonusTailleMain + (p.jongleur || 0);
 export const tousJokers = (p) => [...p.jokers, ...p.negatifs];
 export const aWild = (p) => p.paquet.some((u) => estWild(p.cartes[u]));
 
@@ -209,7 +239,11 @@ export function preparerManche(p) {
   p.main = [];
   p.score = 0;
   p.mainsRestantes = (b.boss === 'mur' ? 3 : MAINS_BASE) + p.bonusMains;
-  p.defaussesRestantes = (b.boss === 'acharne' ? 1 : DEFAUSSES_BASE) + p.bonusDefausses;
+  p.defaussesRestantes = Math.max(0, (b.boss === 'acharne' ? 1 : DEFAUSSES_BASE) + p.bonusDefausses - ((p.mise || 0) >= 3 ? 1 : 0));
+  // Le Tag Jongleur : trois cartes de plus en main, le temps de cette manche.
+  p.jongleur = 0;
+  const jo = (p.tags || []).indexOf('jongleur');
+  if (jo >= 0) { p.tags.splice(jo, 1); p.jongleur = 3; }
   p.silence = b.boss === 'silence' && tousJokers(p).length ? entier(p, tousJokers(p).length) : null;
   p.dernier = null;
   p.gains = null;
@@ -225,6 +259,25 @@ export function commencer(p) {
   if (p.phase !== 'intro') return refus('phase');
   p.phase = 'jeu';
   return { ok: true };
+}
+
+/**
+ * Passe la petite ou la grande blind (jamais le boss) : pas de récompense,
+ * mais un tag. Renvoie le tag gagné.
+ */
+export function passer(p) {
+  if (p.phase !== 'intro') return refus('phase');
+  const b = blindCourante(p);
+  if (b.boss || !b.tag) return refus('boss');
+  b.passee = true;
+  p.stats.passees += 1;
+  const tag = b.tag;
+  if (tag === 'argent') p.argent += 10;
+  else if (tag === 'economie') p.argent += Math.min(40, p.argent);
+  else p.tags.push(tag);
+  p.blindIdx += 1;
+  preparerManche(p);
+  return { ok: true, tag, immediat: TAGS_IMMEDIATS.includes(tag) };
 }
 
 /** Les cartes de la main qu'il faudra jouer de force (le Poisson). */
@@ -430,6 +483,8 @@ export function trierMain(p, critere = 'rang') {
 
 function gagnerManche(p) {
   const b = blindCourante(p);
+  b.vaincue = true;
+  p.jongleur = 0;
   for (const j of tousJokers(p)) JOKERS[j.id].gagne?.(j, p);
   const interet = Math.floor(p.argent / ({ 0: 5, 1: 4, 2: 3 }[p.interetNiveau] ?? 3));
   const victoires = p.stats.gagnees * 7;
@@ -479,10 +534,14 @@ function reserveBoutique(p) {
     [4, 'sceau-or'], [3, 'sceau-rouge'], [3, 'sceau-bleu'], [2, 'sceau-violet'],
     [3, 'pack-joker'], [3, 'pack-carte'],
   ];
+  objets.push([3, 'pack-celeste'], [3, 'pack-arcane']);
   if (!p.bob) objets.push([3, 'bob']);
   if (!aWild(p)) objets.push([2, 'roulette']);
   if (!p.saintLivre) objets.push([2, 'saint-livre']);
   for (const [w, id] of objets) res.push([w, { type: 'objet', id }]);
+  // Les planètes et les tarots, comme dans un vrai jeu de cartes à collectionner.
+  for (const m of Object.keys(PLANETES)) res.push([0.9, { type: 'planete', id: m }]);
+  for (const t of TAROTS) res.push([0.4, { type: 'tarot', id: t.id }]);
   return res;
 }
 
@@ -508,8 +567,10 @@ function tirer(p, reserve, n) {
   return out;
 }
 
-export const prixBase = (item) => (item.type === 'joker' ? JOKERS[item.id].prix : OBJETS[item.id].prix);
-export const prix = (p, item) => Math.floor(prixBase(item) * (p.boutique?.prixMult || 1));
+export const PRIX_CONSO = 3;
+export const prixBase = (item) => (item.type === 'joker' ? JOKERS[item.id].prix
+  : item.type === 'planete' || item.type === 'tarot' ? PRIX_CONSO : OBJETS[item.id].prix);
+export const prix = (p, item) => (item.gratuit ? 0 : Math.floor(prixBase(item) * (p.boutique?.prixMult || 1)));
 export const prixVente = (j) => Math.floor(JOKERS[j.id].prix / 2);
 export const coutRafraichir = (p) => (p.boutique?.gratuits > 0 || p.refreshGratuit ? 0 : p.remise ? 1 : 2);
 
@@ -517,8 +578,22 @@ export const coutRafraichir = (p) => (p.boutique?.gratuits > 0 || p.refreshGratu
 export function allerBoutique(p) {
   if (p.phase !== 'gagne') return refus('phase');
   for (const j of tousJokers(p)) JOKERS[j.id].boutique?.(j, p);
+  const items = tirer(p, reserveBoutique(p), PLACES_BOUTIQUE);
+  // Les tags gagnés en passant des blinds prennent effet ici.
+  const offerts = [];
+  const restants = [];
+  for (const t of p.tags || []) {
+    const parRarete = (r) => LISTE_JOKERS.filter((j) => j.rarete === r).map((j) => j.id);
+    if (t === 'rare') offerts.push({ type: 'joker', id: choisir(p, parRarete('rare')), gratuit: true, tag: t });
+    else if (t === 'edition') offerts.push({ type: 'joker', id: choisir(p, [...parRarete('commun'), ...parRarete('rare')]), edition: 'poly', gratuit: true, tag: t });
+    else if (t === 'celeste') offerts.push({ type: 'objet', id: 'pack-celeste', gratuit: true, tag: t });
+    else if (t === 'arcane') offerts.push({ type: 'objet', id: 'pack-arcane', gratuit: true, tag: t });
+    else if (t === 'coupon') for (const it of items) it.gratuit = true;
+    else restants.push(t);
+  }
+  p.tags = restants;
   p.boutique = {
-    items: tirer(p, reserveBoutique(p), PLACES_BOUTIQUE),
+    items: [...offerts, ...items],
     voucher: p.gains?.voucher || null,
     prixMult: p.gains?.avare ? 2 : 1,
     gratuits: p.bob ? 3 : p.remise ? 1 : 0,
@@ -528,6 +603,9 @@ export function allerBoutique(p) {
   p.phase = 'boutique';
   return { ok: true };
 }
+
+const creerConso = (p, id) => { p.consommables.push({ uid: nouvelUid(p, 'o'), id }); };
+const placeConso = (p) => p.consommables.length < CONSOMMABLES_MAX;
 
 const ajouterJoker = (p, id, edition = null) => {
   const j = { uid: nouvelUid(p, 'j'), id, edition, e: {} };
@@ -550,6 +628,10 @@ export function acheter(p, i) {
     if (!placeLibre(p, item.id)) return refus(estNegatif(item.id) ? 'negatifs' : 'jokers');
     p.argent -= cout;
     ajouterJoker(p, item.id, item.edition || null);
+  } else if (item.type === 'planete' || item.type === 'tarot') {
+    if (!placeConso(p)) return refus('consommables');
+    p.argent -= cout;
+    creerConso(p, `${item.type}:${item.id}`);
   } else {
     const o = OBJETS[item.id];
     if (o.consommable && p.consommables.length >= CONSOMMABLES_MAX) return refus('consommables');
@@ -564,6 +646,16 @@ export function acheter(p, i) {
       case 'pack-joker': {
         const options = tirer(p, reserveBoutique(p).filter(([, e]) => e.type === 'joker'), 3);
         bq.pack = { type: 'joker', options };
+        break;
+      }
+      case 'pack-celeste': {
+        const mains = melanger(p, Object.keys(PLANETES)).slice(0, 3);
+        bq.pack = { type: 'celeste', options: mains.map((m) => ({ type: 'planete', id: m })) };
+        break;
+      }
+      case 'pack-arcane': {
+        const ts = melanger(p, TAROTS.map((t) => t.id)).slice(0, 3);
+        bq.pack = { type: 'arcane', options: ts.map((t) => ({ type: 'tarot', id: t })) };
         break;
       }
       case 'pack-carte': {
@@ -595,9 +687,9 @@ export function rafraichir(p) {
   return { ok: true };
 }
 
-/** Vend un Joker normal (les Négatifs, eux, sont un choix définitif). */
+/** Vend un Joker normal, à tout moment (les Négatifs, eux, sont un choix définitif). */
 export function vendre(p, i) {
-  if (p.phase !== 'boutique' || p.boutique?.pack || p.boutique?.choix) return refus('phase');
+  if (!['boutique', 'jeu', 'intro'].includes(p.phase) || p.boutique?.pack || p.boutique?.choix) return refus('phase');
   const j = p.jokers[i];
   if (!j) return refus('introuvable');
   p.jokers.splice(i, 1);
@@ -621,6 +713,12 @@ export function choisirPack(p, i) {
   let revendu = false;
   if (bq.pack.type === 'joker') {
     if (!ajouterJoker(p, opt.id, opt.edition || null)) { p.argent += Math.floor(JOKERS[opt.id].prix / 2); revendu = true; }
+  } else if (bq.pack.type === 'celeste') {
+    p.niveaux[opt.id] += 1;
+    p.stats.planetes += 1;
+  } else if (bq.pack.type === 'arcane') {
+    if (placeConso(p)) creerConso(p, `tarot:${opt.id}`);
+    else { p.argent += 2; revendu = true; }
   } else {
     p.cartes[opt.uid].enh = opt.enh;
   }
@@ -677,16 +775,77 @@ export function quitterBoutique(p) {
   return { ok: true };
 }
 
-/** Un consommable (l'Élixir) : la main la moins développée monte d'un niveau. */
-export function utiliserConsommable(p, i) {
+/** Revend un consommable : 1 $. */
+export function vendreConso(p, i) {
+  if (!p.consommables[i]) return refus('introuvable');
+  p.consommables.splice(i, 1);
+  p.argent += 1;
+  return { ok: true };
+}
+
+/** Retire une carte du jeu pour de bon (Le Pendu). */
+function detruire(p, uid) {
+  p.paquet = p.paquet.filter((u) => u !== uid);
+  p.main = p.main.filter((u) => u !== uid);
+  p.pioche = p.pioche.filter((u) => u !== uid);
+  delete p.cartes[uid];
+}
+
+/**
+ * Utilise un consommable. Une planète fait monter sa main ; l'Élixir, la main
+ * la plus faible ; un tarot agit sur les cartes de la main désignées par
+ * `cibles` (des uid), s'il en demande.
+ */
+export function utiliserConsommable(p, i, cibles = []) {
   const o = p.consommables[i];
   if (!o) return refus('introuvable');
   if (!['jeu', 'intro', 'boutique'].includes(p.phase)) return refus('phase');
-  const min = Math.min(...Object.values(p.niveaux));
-  const m = choisir(p, MAINS.filter((x) => p.niveaux[x.id] === min));
-  p.niveaux[m.id] += 1;
+  const info = infoConso(o.id);
+
+  if (info.sorte === 'elixir') {
+    const min = Math.min(...Object.values(p.niveaux));
+    const m = choisir(p, MAINS.filter((x) => p.niveaux[x.id] === min));
+    p.niveaux[m.id] += 1;
+    p.consommables.splice(i, 1);
+    return { ok: true, main: m.id, niveau: p.niveaux[m.id], message: `${MAIN[m.id].nom} passe niveau ${p.niveaux[m.id]} !` };
+  }
+  if (info.sorte === 'planete') {
+    p.niveaux[info.main] += 1;
+    p.consommables.splice(i, 1);
+    p.stats.planetes += 1;
+    p.dernierConso = o.id;
+    return { ok: true, main: info.main, niveau: p.niveaux[info.main], message: `${info.nom} : ${MAIN[info.main].nom} passe niveau ${p.niveaux[info.main]} !` };
+  }
+
+  // Un tarot.
+  const t = info.tarot;
+  let cartes = [];
+  if (t.cible) {
+    if (p.phase !== 'jeu') return refus('tarot-jeu');
+    const uids = [...new Set(cibles)].filter((u) => p.main.includes(u));
+    cartes = uids.map((u) => p.cartes[u]);
+    if (cartes.some((c) => !touchable(c))) return refus('tarot-special');
+    if (cartes.length < t.cible[0] || cartes.length > t.cible[1]) return refus('tarot-cibles');
+  }
+  // Le tarot quitte l'inventaire avant d'agir : sa place se libère (La Papesse, L'Empereur).
   p.consommables.splice(i, 1);
-  return { ok: true, main: m.id, niveau: p.niveaux[m.id] };
+  const x = {
+    R: () => hasard(p),
+    choisir: (l) => choisir(p, l),
+    place: () => placeConso(p),
+    creerConso: (id) => creerConso(p, id),
+    creerJoker: () => {
+      const pool = LISTE_JOKERS.filter((j) => !['mythique', 'negatif'].includes(j.rarete)).map((j) => j.id);
+      return p.jokers.length < p.maxJokers ? ajouterJoker(p, choisir(p, pool)) : null;
+    },
+    detruire: (uid) => detruire(p, uid),
+    valeurJokers: () => p.jokers.reduce((s2, j) => s2 + prixVente(j), 0),
+  };
+  const r = t.effet(p, cartes, x);
+  if (r && r.refus) { p.consommables.splice(i, 0, o); return { ok: false, raison: 'tarot', message: r.refus }; }
+  p.stats.tarots += 1;
+  if (t.id !== 'mat') p.dernierConso = o.id;
+  return { ok: true, message: `${t.nom} : ${r}`, cartes: cartes.map((c) => c.uid) };
 }
 
 /** Les succès de la run, vérifiés en fin de partie et en cours de route. */
@@ -698,5 +857,7 @@ export function succesAtteints(p) {
   if (p.negatifs.length >= 3) out.push('baltrou-pacte-sombre');
   if (tousJokers(p).some((j) => JOKERS[j.id].rarete === 'mythique')) out.push('baltrou-elu');
   if (p.stats.meilleure >= 50000) out.push('baltrou-jackpot');
+  if (p.phase === 'victoire' && p.mode === 'classique' && (p.mise || 0) >= MISES.length - 1) out.push('baltrou-mise-doree');
+  if (Object.values(p.niveaux).some((n) => n >= 10)) out.push('baltrou-astronome');
   return out;
 }

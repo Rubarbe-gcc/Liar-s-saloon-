@@ -67,6 +67,8 @@ export const SUCCES = [
   s('baltrou-pacte-sombre', 'baltrou', '🌑', 'Pacte sombre', 'Posséder 3 Jokers négatifs en même temps.'),
   s('baltrou-elu', 'baltrou', '🌌', 'Élu des dieux', 'Posséder un Joker mythique.'),
   s('baltrou-jackpot', 'baltrou', '💥', 'Jackpot', 'Marquer 50 000 points en une seule main.'),
+  s('baltrou-astronome', 'baltrou', '🪐', 'Astronome', 'Monter une main de poker au niveau 10.'),
+  s('baltrou-mise-doree', 'baltrou', '🥇', 'Mise Dorée', 'Gagner une partie Classique en Mise Dorée.'),
   s('brasier-quete', 'brasier', '📜', 'Quête accomplie', 'Accomplir une quête dans une partie Quête.'),
   s('brasier-anomalie', 'brasier', '🌀', 'Maître du chaos', 'Finir dans les quatre premiers d’une partie Anomalie.'),
 

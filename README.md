@@ -7,7 +7,9 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
 
 - **BALTROU** — le poker roguelite : des mains de poker, des Jokers déments
   (53, du Glouton au Jackpot Cosmique), des boss jusqu'au Roi, et le Poisson
-  Dégueulasse qu'on joue de force. Solo, modes Classique et Infini, trois
+  Dégueulasse qu'on joue de force. Comme à Balatro : le choix de la blind
+  (qu'on peut passer pour un tag), 10 planètes, 22 tarots, des packs, et cinq
+  mises à débloquer. Solo, modes Classique et Infini, trois
   decks, une graine pour rejouer la même run. Sa musique est composée note
   à note (`public/games/baltrou/js/musique.js`) : un thème pour la table, un
   pour la boutique, et un par boss. Le moteur
