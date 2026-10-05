@@ -146,12 +146,16 @@ function effetsDe(u) {
     if (b.provoc && b.provoc.idx === u.idx) out.push({ glyphe: '🎯', nom: 'Provocation', bon: true, texte: `Tous les ennemis doivent l’attaquer, et il encaisse 30 % de dégâts en moins. Encore ${manches(b.provoc.tours)}.` });
     if (b.serment) out.push({ glyphe: '⚜️', nom: 'Serment d’acier', bon: true, texte: `Ne peut pas tomber sous 1 PV, encore ${manches(b.serment.tours)}.` });
     if (b.elan) out.push({ glyphe: '✨', nom: 'Élan', bon: true, texte: `+${Math.round(b.elan.valeur * 100)} % de dégâts, encore ${manches(b.elan.tours)}.` });
+    if (b.regen) out.push({ glyphe: '🌱', nom: 'Régénération', bon: true, texte: `+${Math.round(b.regen.valeur * 100)} % de vie à chaque fin de manche, encore ${manches(b.regen.tours)}.` });
+    if (b.represailles) out.push({ glyphe: '🌵', nom: 'Représailles', bon: true, texte: `Renvoie ${Math.round(b.represailles.valeur * 100)} % des dégâts reçus, encore ${manches(b.represailles.tours)}.` });
+    if (b.riposte && b.riposte.idx === u.idx) out.push({ glyphe: '⚔️', nom: 'Riposte', bon: true, texte: `Rend coup pour coup, encore ${manches(b.riposte.tours)}.` });
     if (u.poison && u.poison.tours > 0) out.push({ glyphe: '☠', nom: 'Empoisonné', bon: false, texte: `${u.poison.degats} dégâts à chaque fin de manche, encore ${manches(u.poison.tours)}.` });
   } else {
     if (u.enrage) out.push({ glyphe: '😡', nom: 'Enragé', bon: true, texte: `+${Math.round(RAGE * 100)} % d’attaque jusqu’à la fin du combat.` });
     if (u.brasier && u.brasier.tours > 0) out.push({ glyphe: '🔥', nom: 'Brûlure', bon: false, texte: `${u.brasier.degats} dégâts à chaque fin de manche, encore ${manches(u.brasier.tours)}.` });
     if (u.etourdi) out.push({ glyphe: '💫', nom: 'Étourdi', bon: false, texte: 'Passe son prochain tour.' });
     if (u.entrave) out.push({ glyphe: '⛓', nom: 'Affaibli', bon: false, texte: `−${Math.round(u.entrave.valeur * 100)} % d’attaque, encore ${manches(u.entrave.tours)}.` });
+    if (u.fragile) out.push({ glyphe: '🎯', nom: 'Fragilisé', bon: false, texte: `Subit ${Math.round(u.fragile.valeur * 100)} % de dégâts en plus, encore ${manches(u.fragile.tours)}.` });
     for (const t of u.traits) {
       const tr = TRAITS_RPG[t];
       if (!tr) continue;
@@ -168,6 +172,8 @@ function majEffetsGroupe() {
   const l = [];
   if (b.bouclier) l.push(`<span class="bon">🔰 Bouclier −${Math.round(b.bouclier.valeur * 100)} % · ${manches(b.bouclier.tours)}</span>`);
   if (b.elan) l.push(`<span class="bon">✨ Élan +${Math.round(b.elan.valeur * 100)} % · ${manches(b.elan.tours)}</span>`);
+  if (b.regen) l.push(`<span class="bon">🌱 Régénération · ${manches(b.regen.tours)}</span>`);
+  if (b.represailles) l.push(`<span class="bon">🌵 Représailles · ${manches(b.represailles.tours)}</span>`);
   if (b.serment) l.push(`<span class="bon">⚜️ Serment d’acier : personne ne tombe · ${manches(b.serment.tours)}</span>`);
   if (b.provoc && b.heros[b.provoc.idx].pv > 0) l.push(`<span class="bon">🎯 ${txt(b.heros[b.provoc.idx].nom)} provoque · ${manches(b.provoc.tours)}</span>`);
   if (b.coeur) l.push('<span class="bon">🔥 Cœur de phénix prêt</span>');
@@ -367,6 +373,11 @@ async function jouerUn(ev) {
         purge: () => '🌿 Les poisons se dissipent.',
         serment: () => '⚜️ Serment d’acier : tant qu’il tient, personne ne tombe.',
         etourdi: () => `💫 <b>${txt(u.nom)}</b> est étourdi.`,
+        fragile: () => `🎯 <b>${txt(u.nom)}</b> est fragilisé.`,
+        regen: () => '🌱 Le groupe se régénère.',
+        represailles: () => '🌵 Représailles : chaque coup reçu sera rendu.',
+        riposte: () => `⚔️ <b>${txt(u.nom)}</b> se met en garde et ripostera.`,
+        retard: () => '⏳ Les attaques chargées des ennemis reculent d’un tour.',
       };
       if (dits[ev.quoi]) $('journal').innerHTML = `<span>${dits[ev.quoi]()}</span>`;
       maj();

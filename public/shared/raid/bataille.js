@@ -124,7 +124,13 @@ function finDeManche(etat, ev) {
       subir(etat, e, b.degats, ev, { dot: 'brasier' });
     }
     if (e.entrave && --e.entrave.tours <= 0) e.entrave = null;
+    if (e.fragile && --e.fragile.tours <= 0) e.fragile = null;
     if (e.pv > 0 && e.traits.includes('regen')) soigner(e, e.pvMax * REGEN, ev);
+  }
+  // La régénération du groupe : un peu de vie à chaque fin de manche.
+  if (etat.regen) {
+    for (const h of vivants(etat.heros)) if (h.pv < h.pvMax) soigner(h, h.pvMax * etat.regen.valeur, ev);
+    if (--etat.regen.tours <= 0) etat.regen = null;
   }
   for (const h of vivants(etat.heros)) {
     if (h.poison && h.poison.tours > 0) {
@@ -137,6 +143,8 @@ function finDeManche(etat, ev) {
   if (etat.elan && --etat.elan.tours <= 0) etat.elan = null;
   if (etat.provoc && --etat.provoc.tours <= 0) etat.provoc = null;
   if (etat.serment && --etat.serment.tours <= 0) etat.serment = null;
+  if (etat.represailles && --etat.represailles.tours <= 0) etat.represailles = null;
+  if (etat.riposte && --etat.riposte.tours <= 0) etat.riposte = null;
 }
 
 function verifierFin(etat, ev) {
@@ -227,6 +235,7 @@ export function estimer(etat, src, cible, mult, { perce = 0, basique = false, al
   }
   const elem = multiplicateur(src.ecole, cible.ecole);
   let d = atk * mult * elem * alea * reduction(cible.def * (1 - perce));
+  if (cible.camp === 'e' && cible.fragile) d *= 1 + cible.fragile.valeur;
   if (basique && cible.traits && cible.traits.includes('carapace')) d *= 0.7;
   if (cible.camp === 'h') {
     if (cible.defense) d *= 0.5;
@@ -299,7 +308,7 @@ function soigner(cible, n, ev) {
 
 /** Un coup d'un héros sur un ennemi : critique, épines, drain. */
 function frapper(etat, h, e, mult, ev, opts = {}) {
-  const crit = etat.rng() < critiqueDe(etat, h);
+  const crit = !!opts.critique || etat.rng() < critiqueDe(etat, h);
   const alea = 0.9 + etat.rng() * 0.2;
   const { degats, elem } = estimer(etat, h, e, mult, { ...opts, alea, crit });
   subir(etat, e, degats, ev, { crit, elem });
@@ -397,7 +406,7 @@ function lancerOffensif(etat, h, cle, e, ev) {
   const perce = eff.type === 'perce' ? eff.valeur : 0;
   const mult = s.mult * (1 + (h.tal.sorts || 0));
   let total = 0;
-  const tous = ['zone', 'fracas', 'fournaise'].includes(eff.type);
+  const tous = ['zone', 'fracas', 'fournaise', 'seisme'].includes(eff.type);
   const touches = tous ? vivants(etat.ennemis) : [e];
   if (tous) {
     // Le balayage frappe tous les ennemis debout, de plein fouet.
@@ -407,6 +416,20 @@ function lancerOffensif(etat, h, cle, e, ev) {
   } else if (eff.type === 'double') {
     total += frapper(etat, h, e, mult * 0.6, ev);
     if (e.pv > 0) total += frapper(etat, h, e, mult * 0.6, ev);
+  } else if (eff.type === 'critique') {
+    total = frapper(etat, h, e, mult, ev, { critique: true });
+  } else if (eff.type === 'chaine') {
+    // La salve frappe sa cible, puis rebondit sur deux autres ennemis.
+    total = frapper(etat, h, e, mult, ev);
+    for (const x of vivants(etat.ennemis).filter((y) => y !== e).slice(0, 2)) total += frapper(etat, h, x, mult * 0.6, ev);
+  } else if (eff.type === 'rafale') {
+    // Cinq coups rapides : si la cible tombe, la rafale passe au suivant.
+    let c = e;
+    for (let k = 0; k < 5; k++) {
+      if (!c || c.pv <= 0) c = vivants(etat.ennemis)[0];
+      if (!c) break;
+      total += frapper(etat, h, c, mult * 0.24, ev);
+    }
   } else {
     total = frapper(etat, h, e, mult, ev, { perce });
   }
@@ -417,6 +440,14 @@ function lancerOffensif(etat, h, cle, e, ev) {
   if (eff.type === 'entrave' && e.pv > 0) {
     e.entrave = { valeur: eff.valeur, tours: 2 };
     ev.push({ t: 'effet', quoi: 'entrave', ...ref(e) });
+  }
+  if (eff.type === 'radiance') {
+    // La lumière du coup retombe en soins sur tout le groupe.
+    for (const x of vivants(etat.heros)) soigner(x, total * eff.valeur * (1 + (h.tal.soins || 0)), ev);
+  }
+  if (eff.type === 'fragilise' && e.pv > 0) {
+    e.fragile = { valeur: eff.valeur, tours: 2 };
+    ev.push({ t: 'effet', quoi: 'fragile', ...ref(e) });
   }
   if (eff.type === 'vol') {
     const blesse = vivants(etat.heros).sort((a, b) => a.pv / a.pvMax - b.pv / b.pvMax)[0];
@@ -431,6 +462,10 @@ function lancerOffensif(etat, h, cle, e, ev) {
     if (eff.type === 'fournaise') {
       x.brasier = { degats: Math.max(1, Math.round((total / touches.length) * eff.valeur * 1.4)), tours: 3 };
       ev.push({ t: 'effet', quoi: 'brasier', ...ref(x) });
+    }
+    if (eff.type === 'seisme' && x.rang !== 'boss' && etat.rng() < 0.4) {
+      x.etourdi = true;
+      ev.push({ t: 'effet', quoi: 'etourdi', ...ref(x) });
     }
     if (eff.type === 'assommer' && x.rang !== 'boss') {
       x.etourdi = true;
@@ -489,6 +524,42 @@ function lancerSoutien(etat, h, cle, ev) {
         x.pm = Math.min(x.pmMax, x.pm + 12);
         ev.push({ t: 'pm', ...ref(x), n: Math.round(x.pm - avant), pm: x.pm });
       }
+      break;
+    case 'represailles':
+      etat.represailles = { valeur: eff.valeur, tours: 2 };
+      ev.push({ t: 'effet', quoi: 'represailles' });
+      break;
+    case 'regeneration':
+      etat.regen = { valeur: eff.valeur * (1 + (etat.bonus.soin || 0) + (h.tal.soins || 0)), tours: 3 };
+      ev.push({ t: 'effet', quoi: 'regen' });
+      break;
+    case 'contre':
+      etat.provoc = { idx: h.idx, tours: 2, reduc: PROVOC_REDUC };
+      etat.riposte = { idx: h.idx, valeur: eff.valeur, tours: 2 };
+      ev.push({ t: 'effet', quoi: 'provoc', ...ref(h) });
+      ev.push({ t: 'effet', quoi: 'riposte', ...ref(h) });
+      break;
+    case 'transfusion': {
+      const blesse = vivants(etat.heros).sort((a, b) => a.pv / a.pvMax - b.pv / b.pvMax)[0];
+      if (blesse) soigner(blesse, blesse.pvMax * eff.valeur * (1 + (etat.bonus.soin || 0) + (h.tal.soins || 0)), ev);
+      break;
+    }
+    case 'souffle':
+      for (const x of vivants(etat.heros)) soigner(x, x.pvMax * eff.valeur * (1 + (etat.bonus.soin || 0) + (h.tal.soins || 0)), ev);
+      etat.elan = { valeur: Math.max(etat.elan ? etat.elan.valeur : 0, 0.22), tours: 2 };
+      ev.push({ t: 'effet', quoi: 'elan' });
+      break;
+    case 'sanctuaire':
+      etat.bouclier = { valeur: Math.min(0.6, eff.valeur), tours: 2 };
+      etat.regen = { valeur: 0.05 * (1 + (etat.bonus.soin || 0) + (h.tal.soins || 0)), tours: 2 };
+      ev.push({ t: 'effet', quoi: 'bouclier' });
+      ev.push({ t: 'effet', quoi: 'regen' });
+      break;
+    case 'retard':
+      // Le temps prêté : les attaques chargées des ennemis reculent d'un tour.
+      for (const x of vivants(etat.ennemis)) x.charge.reste = Math.min(x.charge.tours + 1, x.charge.reste + 1);
+      for (const x of vivants(etat.heros)) soigner(x, x.pvMax * eff.valeur * (1 + (etat.bonus.soin || 0) + (h.tal.soins || 0)), ev);
+      ev.push({ t: 'effet', quoi: 'retard' });
       break;
     case 'resurrection':
       for (const x of etat.heros) {
@@ -644,6 +715,10 @@ function coupEnnemi(etat, e, h, mult, ev) {
     ev.push({ t: 'pm', ...ref(h), n: Math.round(h.pm - avant), pm: h.pm });
   }
   if (h.tal.epines && e.pv > 0) subir(etat, e, Math.max(1, Math.round(degats * h.tal.epines)), ev, { epines: true });
+  // Représailles : le groupe renvoie une part de ce qu'il encaisse.
+  if (etat.represailles && e.pv > 0) subir(etat, e, Math.max(1, Math.round(degats * etat.represailles.valeur)), ev, { epines: true });
+  // Riposte : le héros qui l'a préparée rend coup pour coup.
+  if (etat.riposte && etat.riposte.idx === h.idx && h.pv > 0 && e.pv > 0) frapper(etat, h, e, etat.riposte.valeur, ev);
   if (e.traits.includes('drain')) soigner(e, degats * 0.25, ev);
 }
 

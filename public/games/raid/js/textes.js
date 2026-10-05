@@ -41,6 +41,19 @@ export function texteSort(s) {
     case 'execution': return `${coup} — doublés si la cible est sous 40 % de vie.`;
     case 'renouveau': return `Soigne tout le groupe de ${pc(v * 2)} de sa vie et rend 12 PM à chaque allié.`;
     case 'resurrection': return `Relève tous les héros tombés à ${pc(v)} de leur vie, et soigne les autres de ${pc(v * 0.6)}.`;
+    case 'radiance': return `${coup}, puis soigne chaque allié de ${pc(v)} des dégâts infligés.`;
+    case 'represailles': return `Représailles : pendant 2 manches, chaque coup reçu par le groupe renvoie ${pc(v)} des dégâts à l’attaquant.`;
+    case 'regeneration': return `Le groupe récupère ${pc(v)} de sa vie à chaque fin de manche, pendant 3 manches.`;
+    case 'fragilise': return `${coup}, et la cible subit ${pc(v)} de dégâts en plus pendant 2 manches.`;
+    case 'contre': return `Provoque pendant 2 manches et riposte à chaque coup reçu (dégâts ×${v.toFixed(1)}).`;
+    case 'seisme': return `Frappe TOUS les ennemis, dégâts ×${s.mult.toFixed(1)} chacun ; 40 % de chances d’étourdir chacun (sauf les boss).`;
+    case 'critique': return `${coup}, coup critique assuré.`;
+    case 'chaine': return `${coup}, puis rebondit sur deux autres ennemis (×${(s.mult * 0.6).toFixed(1)}).`;
+    case 'rafale': return `Cinq coups rapides (×${(s.mult * 0.24).toFixed(1)} chacun) ; si la cible tombe, la rafale passe au suivant.`;
+    case 'transfusion': return `Rend ${pc(v)} de sa vie à l’allié le plus blessé.`;
+    case 'souffle': return `Soigne tout le groupe de ${pc(v)} de sa vie, et il frappe 22 % plus fort pendant 2 manches.`;
+    case 'sanctuaire': return `Bouclier de ${pc(Math.min(0.6, v))} sur le groupe et régénération de 5 % par manche, pendant 2 manches.`;
+    case 'retard': return `Les attaques chargées de tous les ennemis reculent d’un tour, et le groupe récupère ${pc(v)} de sa vie.`;
     default: return `${coup}.`;
   }
 }

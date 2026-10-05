@@ -59,6 +59,14 @@ export function choisirAction(etat) {
     if (t === 'purge' && (part(blesse) < 0.5 || allies.some((x) => x.poison))) return { type: cle };
     if (t === 'bastion' && menace && !etat.provoc) return { type: cle };
     if (t === 'provoc' && !etat.provoc && allies.length >= 2 && part(h) > 0.4) return { type: cle };
+    const moyenne = allies.reduce((x, y) => x + part(y), 0) / allies.length;
+    if (t === 'represailles' && !etat.represailles && (menace || vivants(etat.ennemis).length >= 2)) return { type: cle };
+    if (t === 'regeneration' && !etat.regen && moyenne < 0.85) return { type: cle };
+    if (t === 'contre' && !etat.provoc && part(h) > 0.5) return { type: cle };
+    if (t === 'transfusion' && part(blesse) < 0.5) return { type: cle };
+    if (t === 'souffle' && (part(blesse) < 0.6 || (!etat.elan && allies.length >= 2))) return { type: cle };
+    if (t === 'sanctuaire' && ((menace && !etat.bouclier) || moyenne < 0.6)) return { type: cle };
+    if (t === 'retard' && (menace || moyenne < 0.6)) return { type: cle };
   }
 
   if (part(blesse) < 0.3 && a.potion.possible) return { type: 'potion', cible: blesse.idx };

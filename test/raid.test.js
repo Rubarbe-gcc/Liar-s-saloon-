@@ -163,8 +163,53 @@ test('les sorts se paient et les soutiens visent le groupe', () => {
     assert.ok(s.ultime.cout > s.special.cout, x.id);
     assert.ok(s.ultime.mult > s.special.mult, x.id);
   }
-  assert.ok(sortsDe(PAR_ID.mei).special.soutien);
+  assert.ok(sortsDe(PAR_ID.elissende).special.soutien);
   assert.ok(!sortsDe(PAR_ID.mordrec).special.soutien);
+});
+
+test('dans chaque rôle, chaque personnage a ses propres compétences', () => {
+  const vus = {};
+  for (const x of [...HEROS, ...LEGENDES]) {
+    for (const s of [x.special, x.ultime]) {
+      const t = s.effet ? s.effet.type : 'aucun';
+      const cle = `${x.role}:${t}`;
+      assert.ok(!vus[cle], `${x.id} et ${vus[cle]} partagent « ${t} » chez les ${x.role}`);
+      vus[cle] = x.id;
+    }
+  }
+});
+
+test('les nouveaux effets font ce qu’ils disent', () => {
+  // Représailles : un coup reçu revient à l'envoyeur.
+  let { b } = batailleTest({ ids: ['kraven'], niveau: 6 });
+  demarrer(b);
+  actif(b).pm = 40;
+  agir(b, { type: 'special' });
+  assert.ok(b.represailles || b.fini);
+  // Régénération : le groupe remonte en fin de manche.
+  ({ b } = batailleTest({ ids: ['faeleth'], niveau: 6 }));
+  demarrer(b);
+  actif(b).pm = 40;
+  agir(b, { type: 'special' });
+  assert.ok(b.regen || b.fini);
+  // Fragilité : la cible prend plus cher.
+  ({ b } = batailleTest({ ids: ['noctis'], niveau: 6 }));
+  demarrer(b);
+  actif(b).pm = 40;
+  const cible = b.ennemis[0];
+  cible.pvMax = cible.pv = 99999;
+  const avant = estimer(b, b.heros[0], cible, 1).degats;
+  agir(b, { type: 'special', cible: 0 });
+  assert.ok(cible.fragile);
+  assert.ok(estimer(b, b.heros[0], cible, 1).degats > avant);
+  // Temps prêté : la charge des ennemis recule.
+  ({ b } = batailleTest({ ids: ['orion'], niveau: 6 }));
+  demarrer(b);
+  const charge = b.ennemis.map((e) => e.charge.reste);
+  actif(b).pm = 40;
+  const ev = agir(b, { type: 'special' }).evenements;
+  assert.ok(ev.some((x) => x.t === 'effet' && x.quoi === 'retard'));
+  assert.ok(b.ennemis.some((e, i) => e.charge.reste >= charge[i]));
 });
 
 /* ================================================================== */
@@ -286,9 +331,9 @@ test('l’école, l’armure et la défense pèsent sur les dégâts', () => {
 });
 
 test('un soin ne dépasse pas la vie maximale, un bouclier protège tout le groupe', () => {
-  const { b } = batailleTest({ ids: ['mei', 'brandel'], niveau: 3 });
+  const { b } = batailleTest({ ids: ['elissende', 'brandel'], niveau: 3 });
   demarrer(b);
-  while (actif(b).id !== 'mei') agir(b, { type: 'defendre' });
+  while (actif(b).id !== 'elissende') agir(b, { type: 'defendre' });
   const mei = actif(b);
   for (const h of b.heros) h.pv = Math.round(h.pvMax * 0.5);
   mei.pm = 30;
@@ -916,7 +961,7 @@ test('la provocation force tous les ennemis à frapper le tank, même en attaque
   assert.ok(estimer(b, boss, b.heros[0], 1).degats > 0);
 });
 
-test('le légendaire qui frappe balaie tous les ennemis, celui qui soigne relève les morts', () => {
+test('le légendaire qui frappe enchaîne cinq coups, celui qui soigne relève les morts', () => {
   const groupe = ['noctis', 'selene', 'brandel'].map((id) => creerPersonnage(id, 8));
   const b = creerBataille({ groupe, ennemis: [gnoll(3), gnoll(3), gnoll(3)], inventaire: {}, rng: rngT(6) });
   for (const e of b.ennemis) e.vit = -5;
@@ -924,7 +969,7 @@ test('le légendaire qui frappe balaie tous les ennemis, celui qui soigne relèv
   while (actif(b).id !== 'noctis') agir(b, { type: 'defendre' });
   actif(b).pm = 40;
   const ev = agir(b, { type: 'ultime', cible: 0 }).evenements;
-  assert.equal(new Set(ev.filter((x) => x.t === 'degats' && x.camp === 'e').map((x) => x.idx)).size, 3);
+  assert.ok(ev.filter((x) => x.t === 'degats' && x.camp === 'e' && !x.epines && !x.dot).length >= 5, 'une rafale de cinq coups');
 
   while (!b.fini && actif(b).id !== 'selene') agir(b, { type: 'defendre' });
   if (b.fini) return;
@@ -1520,9 +1565,9 @@ test('la Maîtrise renforce les sorts du personnage, et en baisse le coût', () 
   assert.ok(apres.ultime.mult > avant.ultime.mult * 1.2);
   assert.equal(apres.special.cout, avant.special.cout - 2);
   // Un soigneur : c'est le soin qui grossit.
-  const mei = creerPersonnage('mei', 12);
-  mei.talents = { 'm-special': 3 };
-  assert.ok(sortsPour(mei).special.effet.valeur > sortsPour(creerPersonnage('mei', 12)).special.effet.valeur * 1.3);
+  const eli = creerPersonnage('elissende', 12);
+  eli.talents = { 'm-special': 3 };
+  assert.ok(sortsPour(eli).special.effet.valeur > sortsPour(creerPersonnage('elissende', 12)).special.effet.valeur * 1.3);
   // La provocation dure toujours trois manches, mais protège mieux.
   const aldric = creerPersonnage('aldric', 12);
   aldric.talents = { 'm-special': 3 };

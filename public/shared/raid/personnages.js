@@ -64,7 +64,8 @@ function ecart(h, k) {
 }
 
 /** Les effets de soutien visent les alliés et ne blessent personne. */
-const SOUTIENS = ['soin', 'garde', 'elan', 'mana', 'provoc', 'bastion', 'purge', 'resurrection', 'renouveau'];
+const SOUTIENS = ['soin', 'garde', 'elan', 'mana', 'provoc', 'bastion', 'purge', 'resurrection', 'renouveau',
+  'represailles', 'regeneration', 'contre', 'transfusion', 'souffle', 'sanctuaire', 'retard'];
 export const estSoutien = (sort) => !!sort.effet && SOUTIENS.includes(sort.effet.type);
 
 /** Les sorts d'un personnage, à l'échelle du jeu de rôle. */
