@@ -72,6 +72,17 @@
     <input class="profil-champ" id="in-pseudo" maxlength="14" placeholder="Votre pseudo" autocomplete="off">
     <div class="profil-lbl">Avatar</div>
     <div class="profil-avatars" id="profil-avatars"></div>
+    <div class="profil-nuage">
+      <div class="profil-lbl">☁️ Code de profil — notez-le !</div>
+      <p class="profil-aide">Ton profil et tes succès sont sauvegardés en ligne sous ce code. Sur un autre téléphone,
+        un autre navigateur, ou si ce navigateur efface ses données, entre-le ci-dessous pour tout retrouver.</p>
+      <div class="profil-code"><b id="profil-code">—</b><button type="button" id="b-copier-code">Copier</button></div>
+      <div class="profil-recup">
+        <input class="profil-champ" id="in-code-profil" maxlength="11" placeholder="J’ai déjà un code" autocomplete="off" autocapitalize="characters">
+        <button type="button" id="b-recuperer">Récupérer</button>
+      </div>
+      <p class="profil-etat" id="profil-etat"></p>
+    </div>
     <div class="profil-bilan" id="profil-bilan"></div>
     <div id="profil-liste"></div>
   </div>
@@ -218,6 +229,7 @@ function majProfil() {
 function rendreProfil() {
   const p = succes.profil();
   const t = succes.total();
+  document.getElementById('profil-code').textContent = succes.joliCode(succes.codeProfil());
   document.getElementById('in-pseudo').value = p.pseudo;
   document.getElementById('profil-avatars').innerHTML = succes.AVATARS.map((a) =>
     `<button type="button" class="${a === p.avatar ? 'on' : ''}" data-avatar="${a}">${a}</button>`).join('');
@@ -251,6 +263,27 @@ document.getElementById('profil-avatars').addEventListener('click', (e) => {
   if (!b) return;
   succes.definirProfil({ avatar: b.dataset.avatar });
   rendreProfil(); majProfil();
+});
+document.getElementById('b-copier-code').addEventListener('click', async () => {
+  const code = succes.joliCode(succes.codeProfil());
+  const etat = document.getElementById('profil-etat');
+  try { await navigator.clipboard.writeText(code); etat.textContent = '✅ Code copié.'; }
+  catch { etat.textContent = `Votre code : ${code}`; }
+});
+async function recuperer() {
+  const etat = document.getElementById('profil-etat');
+  const champ = document.getElementById('in-code-profil');
+  etat.textContent = 'Recherche du profil…';
+  const r = await succes.recuperer(champ.value);
+  etat.textContent = r.ok ? `✅ ${r.msg}` : `⚠️ ${r.msg}`;
+  if (r.ok) { champ.value = ''; rendreProfil(); majProfil(); }
+}
+document.getElementById('b-recuperer').addEventListener('click', recuperer);
+document.getElementById('in-code-profil').addEventListener('keydown', (e) => { if (e.key === 'Enter') recuperer(); });
+// La sauvegarde en ligne a apporté du nouveau : on redessine.
+addEventListener('insertcoin:profil', () => {
+  majProfil();
+  if (!document.getElementById('ov-profil').hidden) rendreProfil();
 });
 majProfil();
 

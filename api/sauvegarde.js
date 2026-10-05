@@ -1,5 +1,5 @@
 /**
- * Point d'entrée Vercel de la sauvegarde en ligne de RAID.
+ * Point d'entrée Vercel de la sauvegarde en ligne (RAID, profil de l'arcade).
  *
  * N'adapte que le transport : la logique vit dans `server/sauvegarde.js`,
  * partagée avec le serveur Node autonome.
@@ -18,7 +18,7 @@ async function lireCorps(req) {
 export default async function handler(req, res) {
   const url = new URL(req.url, 'http://x');
   const corps = req.method === 'GET' ? null : await lireCorps(req);
-  const { statut, json } = await traiter({ methode: req.method, cle: url.searchParams.get('cle'), corps });
+  const { statut, json } = await traiter({ methode: req.method, cle: url.searchParams.get('cle'), espace: url.searchParams.get('espace'), corps });
   res.statusCode = statut;
   res.setHeader('content-type', 'application/json; charset=utf-8');
   res.setHeader('cache-control', 'no-store');

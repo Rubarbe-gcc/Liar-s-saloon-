@@ -254,6 +254,18 @@ a{color:inherit;text-decoration:none;}
 .profil-avatars{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;}
 .profil-avatars button{aspect-ratio:1;font-size:1.4rem;border-radius:12px;border:1px solid var(--line);background:rgba(0,0,0,.3);cursor:pointer;}
 .profil-avatars button.on{border-color:var(--neon-3);background:rgba(255,216,77,.16);}
+.profil-nuage{margin-top:16px;padding:12px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(0,0,0,.25);}
+.profil-nuage .profil-lbl{margin-top:0;}
+.profil-aide{font-size:.82rem;color:var(--dim);line-height:1.4;margin-bottom:10px;}
+.profil-code{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.profil-code b{flex:1;font-family:var(--font-num),ui-monospace,monospace;font-size:1.35rem;letter-spacing:.14em;color:var(--neon-3);}
+.profil-code button,.profil-recup button{flex:none;padding:10px 14px;border-radius:12px;border:1px solid var(--line);
+  background:rgba(255,255,255,.08);color:var(--text);font:inherit;font-weight:700;cursor:pointer;}
+.profil-code button:hover,.profil-recup button:hover{border-color:var(--neon-3);}
+.profil-recup{display:flex;gap:8px;}
+.profil-recup .profil-champ{min-width:0;text-transform:uppercase;letter-spacing:.08em;}
+.profil-recup .profil-champ::placeholder{text-transform:none;letter-spacing:0;}
+.profil-etat{min-height:1.2em;margin-top:8px;font-size:.85rem;color:var(--dim);}
 .profil-bilan{margin:18px 0 6px;font-size:.95rem;color:var(--dim);display:flex;align-items:center;gap:10px;}
 .profil-bilan b{color:var(--neon-3);font-size:1.3rem;}
 .profil-jauge{flex:1;height:8px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden;}

@@ -1724,3 +1724,13 @@ test('en Partie +, les monstres se mesurent au groupe', () => {
   av.groupe.forEach((p) => { p.niveau = 10; });
   assert.ok(A.surcroit(av).pv < s.pv);
 });
+
+test('la sauvegarde en ligne range le profil de l’arcade à part de RAID', async () => {
+  sauvegarde.vider();
+  const cle = 'ABCDEFGHJK';
+  assert.equal((await sauvegarde.traiter({ methode: 'PUT', corps: { cle, espace: 'profil', charge: '{"pseudo":"P"}', date: 5 } })).statut, 200);
+  assert.equal((await sauvegarde.traiter({ methode: 'GET', cle })).statut, 404, 'RAID ne voit pas le profil');
+  const r = await sauvegarde.traiter({ methode: 'GET', cle, espace: 'profil' });
+  assert.equal(r.json.charge, '{"pseudo":"P"}');
+  assert.equal((await sauvegarde.traiter({ methode: 'GET', cle, espace: 'n-importe' })).statut, 404, 'un espace inconnu, c’est RAID');
+});

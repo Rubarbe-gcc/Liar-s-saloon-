@@ -6,6 +6,12 @@
  * (localStorage). Débloquer un succès affiche un petit bandeau doré, quel que
  * soit le jeu où l'on se trouve.
  *
+ * Le profil se sauvegarde aussi EN LIGNE, sous un « code de profil » tiré au
+ * hasard : un navigateur qui efface ses données, un autre téléphone, l'appli
+ * installée à côté du navigateur — on y retrouve tout avec ce code. Rien ne se
+ * perd : deux profils se FUSIONNENT (tous les succès des deux, chacun à sa
+ * date la plus ancienne). Voir server/sauvegarde.js (`espace=profil`).
+ *
  * Module de navigateur, mais sans danger hors navigateur : sans `document`
  * ni `localStorage`, il ne fait rien.
  */
@@ -73,15 +79,27 @@ export const AVATARS = ['🙂', '😎', '🤠', '🧙', '🦊', '🐼', '🐉', 
 
 /* ------------------------------------------------------------------ */
 
-function lire() {
-  try {
-    const p = JSON.parse(localStorage.getItem(CLE)) || {};
-    return { pseudo: p.pseudo || '', avatar: AVATARS.includes(p.avatar) ? p.avatar : '🙂', succes: p.succes || {}, vus: p.vus || [] };
-  } catch {
-    return { pseudo: '', avatar: '🙂', succes: {}, vus: [] };
+/** Un profil propre, quoi qu'on lui donne. */
+function propre(p) {
+  p = p && typeof p === 'object' ? p : {};
+  const succes = {};
+  for (const [id, d] of Object.entries(p.succes && typeof p.succes === 'object' ? p.succes : {})) {
+    if (PAR_ID[id] && Number.isFinite(Number(d))) succes[id] = Number(d);
   }
+  return {
+    pseudo: typeof p.pseudo === 'string' ? p.pseudo : '',
+    avatar: AVATARS.includes(p.avatar) ? p.avatar : '🙂',
+    succes,
+    vus: Array.isArray(p.vus) ? p.vus.filter((j) => JEUX[j]) : [],
+    maj: Number(p.maj) || 0,
+  };
 }
-function ecrire(p) { try { localStorage.setItem(CLE, JSON.stringify(p)); } catch { /* ignore */ } }
+
+function lire() {
+  try { return propre(JSON.parse(localStorage.getItem(CLE))); } catch { return propre(null); }
+}
+function ecrireLocal(p) { try { localStorage.setItem(CLE, JSON.stringify(p)); } catch { /* ignore */ } }
+function ecrire(p) { ecrireLocal(p); planifierEnvoi(); }
 
 /** Le profil : { pseudo, avatar, succes: { id: date }, vus: [jeux ouverts] }. */
 export const profil = () => lire();
@@ -91,6 +109,7 @@ export function definirProfil({ pseudo: nom, avatar } = {}) {
   const p = lire();
   if (typeof nom === 'string') p.pseudo = nom.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, 14);
   if (avatar && AVATARS.includes(avatar)) p.avatar = avatar;
+  p.maj = Date.now();
   ecrire(p);
   if (p.pseudo) debloquer('arcade-profil');
   return p;
@@ -125,6 +144,134 @@ export function succesDe(jeu) {
   return SUCCES.filter((x) => x.jeu === jeu).map((x) => ({ ...x, quand: p.succes[x.id] || null }));
 }
 export const total = () => ({ faits: Object.keys(lire().succes).filter((id) => PAR_ID[id]).length, tous: SUCCES.length });
+
+/* ------------------------------------------------------------------ */
+/* La sauvegarde en ligne                                              */
+/* ------------------------------------------------------------------ */
+
+const CLE_CODE = 'insertcoin.profil.code';
+const ALPHABET_CODE = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+export const LONGUEUR_CODE = 10;
+const enNavigateur = () => typeof localStorage !== 'undefined' && typeof fetch === 'function'
+  && typeof location !== 'undefined' && /^https?:$/.test(location.protocol);
+
+export const normaliserCode = (c) => String(c || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, LONGUEUR_CODE);
+export const joliCode = (c) => (c ? `${c.slice(0, 5)}-${c.slice(5)}` : '');
+const codeValide = (c) => new RegExp(`^[${ALPHABET_CODE}]{${LONGUEUR_CODE}}$`).test(c);
+
+/** Le code de profil de cet appareil : tiré au hasard la première fois, puis gardé. */
+export function codeProfil() {
+  let c = null;
+  try { c = localStorage.getItem(CLE_CODE); } catch { /* ignore */ }
+  if (c && codeValide(c)) return c;
+  const o = new Uint32Array(LONGUEUR_CODE);
+  if (globalThis.crypto && crypto.getRandomValues) crypto.getRandomValues(o);
+  else for (let i = 0; i < o.length; i++) o[i] = Math.floor(Math.random() * 2 ** 32);
+  c = [...o].map((n) => ALPHABET_CODE[n % ALPHABET_CODE.length]).join('');
+  try { localStorage.setItem(CLE_CODE, c); } catch { /* ignore */ }
+  return c;
+}
+
+/**
+ * Deux profils n'en font qu'un, sans rien perdre : tous les succès des deux
+ * (à la date la plus ancienne), tous les jeux ouverts ; le pseudo et l'avatar
+ * du plus récemment modifié.
+ */
+export function fusionner(a, b) {
+  a = propre(a); b = propre(b);
+  const succes = { ...a.succes };
+  for (const [id, d] of Object.entries(b.succes)) if (!succes[id] || d < succes[id]) succes[id] = d;
+  const recent = b.maj > a.maj ? b : a;
+  const autre = recent === a ? b : a;
+  return {
+    pseudo: recent.pseudo || autre.pseudo,
+    avatar: recent.maj || !autre.maj ? recent.avatar : autre.avatar,
+    succes,
+    vus: [...new Set([...a.vus, ...b.vus])],
+    maj: Math.max(a.maj, b.maj),
+  };
+}
+
+const memeProfil = (a, b) => JSON.stringify(propre(a)) === JSON.stringify(propre(b));
+
+async function appeler(url, options) {
+  try {
+    const r = await fetch(url, { cache: 'no-store', ...options });
+    let json = null;
+    try { json = await r.json(); } catch { /* vide */ }
+    return { ok: r.ok, statut: r.status, json };
+  } catch {
+    return { ok: false, statut: 0, json: null };
+  }
+}
+
+let envoi = 0;
+let enCours = null;
+function planifierEnvoi() {
+  if (!enNavigateur()) return;
+  clearTimeout(envoi);
+  envoi = setTimeout(() => { synchroniser(); }, 1500);
+}
+
+/**
+ * Synchronise le profil avec sa sauvegarde en ligne : on lit ce qui est en
+ * ligne, on fusionne avec ce qui est ici, et on range le résultat des deux
+ * côtés. Renvoie `{ ok, change, vide, indisponible, hors }`.
+ */
+export function synchroniser() {
+  if (!enNavigateur()) return Promise.resolve({ ok: false, hors: true });
+  if (enCours) return enCours;
+  enCours = (async () => {
+    const code = codeProfil();
+    const r = await appeler(`/api/sauvegarde?espace=profil&cle=${code}`);
+    if (r.statut === 503) return { ok: false, indisponible: true };
+    if (!r.ok && r.statut !== 404) return { ok: false, hors: r.statut === 0 };
+    let distant = null;
+    if (r.ok && r.json && typeof r.json.charge === 'string') { try { distant = JSON.parse(r.json.charge); } catch { /* illisible */ } }
+    const ici = lire();
+    const tout = distant ? fusionner(ici, distant) : ici;
+    const change = !memeProfil(tout, ici);
+    if (change) {
+      ecrireLocal(tout);
+      if (typeof dispatchEvent === 'function') dispatchEvent(new Event('insertcoin:profil'));
+    }
+    if (!distant || !memeProfil(tout, distant)) {
+      const date = Math.max(Date.now(), (r.json && Number(r.json.date) + 1) || 0);
+      await appeler('/api/sauvegarde', {
+        method: 'PUT',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ espace: 'profil', cle: code, charge: JSON.stringify(tout), date }),
+      });
+    }
+    return { ok: true, change, vide: !distant };
+  })().finally(() => { enCours = null; });
+  return enCours;
+}
+
+/**
+ * Récupère un profil avec son code (venu d'un autre appareil, ou d'avant un
+ * effacement). Ce qui a été gagné ici ne se perd pas : il s'y ajoute, et cet
+ * appareil prend ce code. Renvoie `{ ok, msg }`.
+ */
+export async function recuperer(saisi) {
+  const code = normaliserCode(saisi);
+  if (!codeValide(code)) return { ok: false, msg: `Le code fait ${LONGUEUR_CODE} caractères (lettres et chiffres).` };
+  if (!enNavigateur()) return { ok: false, msg: 'Pas de connexion.' };
+  const r = await appeler(`/api/sauvegarde?espace=profil&cle=${code}`);
+  if (r.statut === 404) return { ok: false, msg: 'Aucun profil sous ce code.' };
+  if (r.statut === 503) return { ok: false, msg: 'La sauvegarde en ligne n’est pas activée sur ce site.' };
+  if (!r.ok) return { ok: false, msg: 'Pas de connexion. Réessayez dans un instant.' };
+  try { localStorage.setItem(CLE_CODE, code); } catch { /* ignore */ }
+  await synchroniser();
+  return { ok: true, msg: 'Profil récupéré !' };
+}
+
+// À l'ouverture de chaque page : on se met à jour avec la sauvegarde en ligne.
+if (enNavigateur()) {
+  setTimeout(() => { synchroniser(); }, 600);
+  // Et, sur les appareils qui le permettent, on demande à garder les données pour de bon.
+  try { navigator.storage?.persist?.(); } catch { /* ignore */ }
+}
 
 /* ------------------------------------------------------------------ */
 /* Le bandeau « Succès débloqué »                                      */

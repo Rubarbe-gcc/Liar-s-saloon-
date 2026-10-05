@@ -45,3 +45,25 @@ test('le pseudo débloque « Une identité » ; ouvrir les six jeux, « Touche-�
   S.visiter('echo');
   assert.ok(S.estDebloque('arcade-explorateur'));
 });
+
+test('deux profils se fusionnent sans rien perdre', () => {
+  const a = { pseudo: 'Ancien', avatar: '🦊', succes: { 'saloon-premiere': 100, 'brasier-top4': 300 }, vus: ['saloon'], maj: 10 };
+  const b = { pseudo: 'Nouveau', avatar: '🐼', succes: { 'saloon-premiere': 50, 'raid-x-inconnu': 1, 'zenith-victoire': 200 }, vus: ['zenith'], maj: 20 };
+  const f = S.fusionner(a, b);
+  assert.deepEqual(f.succes, { 'saloon-premiere': 50, 'brasier-top4': 300, 'zenith-victoire': 200 }, 'tous les succès, à la date la plus ancienne ; les inconnus écartés');
+  assert.equal(f.pseudo, 'Nouveau', 'le pseudo du plus récent');
+  assert.equal(f.avatar, '🐼');
+  assert.deepEqual(f.vus.sort(), ['saloon', 'zenith']);
+  // Un profil vide ne vide rien.
+  assert.deepEqual(S.fusionner(a, {}).succes, a.succes);
+  assert.equal(S.fusionner({}, a).pseudo, 'Ancien');
+});
+
+test('le code de profil : dix caractères, gardé d’une fois sur l’autre', () => {
+  magasin.clear();
+  const c = S.codeProfil();
+  assert.match(c, /^[A-HJ-NP-Z2-9]{10}$/);
+  assert.equal(S.codeProfil(), c);
+  assert.equal(S.joliCode(c), `${c.slice(0, 5)}-${c.slice(5)}`);
+  assert.equal(S.normaliserCode(' abcde-fghjk '), 'ABCDEFGHJK');
+});

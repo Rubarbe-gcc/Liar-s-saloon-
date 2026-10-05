@@ -63,7 +63,7 @@ function resolveFile(urlPath) {
   }
 }
 
-/** La sauvegarde en ligne de RAID : même logique que la Function Vercel. */
+/** La sauvegarde en ligne (RAID, profil) : même logique que la Function Vercel. */
 function serveSauvegarde(req, res) {
   const url = new URL(req.url, 'http://x');
   const morceaux = [];
@@ -71,7 +71,7 @@ function serveSauvegarde(req, res) {
   req.on('end', async () => {
     let corps = null;
     try { corps = JSON.parse(Buffer.concat(morceaux).toString('utf8') || 'null'); } catch { /* corps illisible */ }
-    const { statut, json } = await traiterSauvegarde({ methode: req.method, cle: url.searchParams.get('cle'), corps });
+    const { statut, json } = await traiterSauvegarde({ methode: req.method, cle: url.searchParams.get('cle'), espace: url.searchParams.get('espace'), corps });
     res.writeHead(statut, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
     res.end(JSON.stringify(json));
   });
