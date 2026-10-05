@@ -10,6 +10,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import * as S from '../public/shared/brasier/serviteurs.js';
+
+// Les tables en ligne tirent leur genre au hasard (Quête, Anomalie…) : ici, on
+// veut des parties classiques, aux règles de base, pour vérifier l'or et les PV.
+process.env.BRASIER_MODE = 'classique';
 import * as H from '../public/shared/brasier/heros.js';
 import * as C from '../public/shared/brasier/combat.js';
 import * as P from '../public/shared/brasier/partie.js';

@@ -34,13 +34,13 @@ test('un succès se débloque une fois, et se garde', () => {
   assert.ok(S.succesDe('saloon').find((x) => x.id === 'saloon-premiere').quand);
 });
 
-test('le pseudo débloque « Une identité » ; ouvrir les six jeux, « Touche-à-tout »', () => {
+test('le pseudo débloque « Une identité » ; ouvrir tous les jeux, « Touche-à-tout »', () => {
   magasin.clear();
   S.definirProfil({ pseudo: '  Rubarbe <b> ', avatar: '🦊' });
   assert.equal(S.pseudo(), 'Rubarbe b');
   assert.equal(S.profil().avatar, '🦊');
   assert.ok(S.estDebloque('arcade-profil'));
-  for (const j of ['saloon', 'zenith', 'raid', 'brasier', 'skullking']) S.visiter(j);
+  for (const j of ['saloon', 'zenith', 'raid', 'brasier', 'skullking', 'baltrou']) S.visiter(j);
   assert.equal(S.estDebloque('arcade-explorateur'), false);
   S.visiter('echo');
   assert.ok(S.estDebloque('arcade-explorateur'));

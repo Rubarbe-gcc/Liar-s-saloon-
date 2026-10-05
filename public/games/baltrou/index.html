@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#140e22">
+<meta name="description" content="BALTROU — le poker roguelite. Formez des mains, collectionnez des Jokers déments, battez les boss jusqu’au Roi.">
+<title>Baltrou</title>
+<link rel="icon" href="/games/baltrou/icons/icon-192.png">
+<link rel="manifest" href="/games/baltrou/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/games/baltrou/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Baltrou">
+<link rel="stylesheet" href="/games/baltrou/css/baltrou.css">
+<script src="/maj.js" defer></script>
+</head>
+<body>
+
+<div class="fond" aria-hidden="true"><i class="tourbillon t1"></i><i class="tourbillon t2"></i><i class="grain"></i></div>
+
+<!-- ============================ MENU ============================ -->
+<section class="ecran is-active" id="s-menu">
+  <div class="menu">
+    <img class="logo" src="/games/baltrou/img/logo.png" alt="BALTROU — poker roguelite">
+    <button class="btn btn-continuer" id="b-continuer" hidden>▶ Continuer la partie<small id="continuer-info"></small></button>
+    <div class="modes">
+      <button class="mode" data-mode="classique">
+        <b>Mode Classique</b>
+        <span>4 antes, un boss à chaque fois, et le ROI au bout.</span>
+      </button>
+      <button class="mode infini" data-mode="infini">
+        <b>Mode Infini</b>
+        <span>Des antes sans fin, toujours plus dures. Jusqu’où ?</span>
+      </button>
+    </div>
+    <p class="records" id="records"></p>
+    <div class="menu-bas">
+      <a class="btn petit" href="/">‹ Arcade</a>
+      <button class="btn petit" data-ouvre="ov-regles">📜 Règles</button>
+      <button class="btn petit" data-ouvre="ov-historique">🏆 Records</button>
+      <button class="btn petit" id="b-son-menu">🔊</button>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== CHOIX DU DECK ======================= -->
+<section class="ecran" id="s-deck">
+  <div class="panneau deck-panneau">
+    <button class="rond retour" data-va="s-menu" aria-label="Retour">‹</button>
+    <h2>Choisissez votre deck</h2>
+    <p class="sous" id="deck-mode"></p>
+    <div class="decks" id="decks"></div>
+    <div class="graine">
+      <span>Graine</span>
+      <input id="in-graine" maxlength="10" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <button class="btn petit" id="b-graine" title="Nouvelle graine">🎲</button>
+    </div>
+    <p class="aide">Une même graine rejoue la même partie : partagez-la pour défier vos amis.</p>
+  </div>
+</section>
+
+<!-- ============================ JEU ============================ -->
+<section class="ecran ecran-jeu" id="s-jeu">
+  <aside class="cote">
+    <div class="blind" id="blind"></div>
+    <div class="score-manche">
+      <span>Score</span>
+      <b id="score">0</b>
+      <i class="jauge"><i id="jauge"></i></i>
+    </div>
+    <div class="calcul" id="calcul">
+      <div class="calcul-main" id="calcul-main">—</div>
+      <div class="cm">
+        <b class="chips" id="chips">0</b><span class="x">×</span><b class="mult" id="mult">0</b>
+      </div>
+    </div>
+    <div class="compteurs">
+      <div class="cpt mains"><span>Mains</span><b id="n-mains">4</b></div>
+      <div class="cpt defausses"><span>Défausses</span><b id="n-defausses">3</b></div>
+      <div class="cpt argent"><span>Argent</span><b id="n-argent">$10</b></div>
+      <div class="cpt ante"><span>Ante</span><b id="n-ante">1/4</b></div>
+    </div>
+    <div class="cote-bas">
+      <button class="btn petit" id="b-niveaux" title="Niveaux des mains">📊 Mains</button>
+      <button class="btn petit" id="b-livre" title="Le Saint Livre" hidden>📖</button>
+      <button class="btn petit" id="b-son" title="Son">🔊</button>
+      <button class="btn petit" id="b-menu" title="Menu">☰</button>
+    </div>
+  </aside>
+
+  <main class="plateau">
+    <div class="rang-jokers">
+      <div class="jokers" id="jokers"></div>
+      <div class="consos" id="consos"></div>
+    </div>
+    <div class="negatifs" id="negatifs"></div>
+    <div class="table" id="table">
+      <div class="annonce" id="annonce"></div>
+    </div>
+    <div class="info-main" id="info-main"></div>
+    <div class="main" id="main"></div>
+    <div class="actions">
+      <button class="btn jouer" id="b-jouer">Jouer</button>
+      <div class="tris">
+        <span class="pioche" id="pioche">🂠 44/53</span>
+        <button class="btn petit" id="b-tri-rang">Valeur</button>
+        <button class="btn petit" id="b-tri-couleur">Couleur</button>
+      </div>
+      <button class="btn defausser" id="b-defausser">Défausser</button>
+    </div>
+  </main>
+</section>
+
+<!-- ========================== BOUTIQUE ========================== -->
+<section class="ecran" id="s-boutique">
+  <div class="boutique">
+    <header class="bq-tete">
+      <h2>Boutique</h2>
+      <span class="bq-argent" id="bq-argent">$0</span>
+    </header>
+    <div class="bq-voucher" id="bq-voucher"></div>
+    <div class="bq-items" id="bq-items"></div>
+    <div class="bq-boutons">
+      <button class="btn" id="b-rafraichir">🔄 Rafraîchir</button>
+      <button class="btn vert" id="b-sortir">Blind suivante ›</button>
+    </div>
+    <h3 class="bq-titre">Vos Jokers <small id="bq-places"></small></h3>
+    <div class="bq-jokers" id="bq-jokers"></div>
+    <div class="bq-consos" id="bq-consos"></div>
+  </div>
+</section>
+
+<!-- ======================== SUPERPOSITIONS ====================== -->
+<div class="ov" id="ov-intro" hidden><div class="feuille intro" id="intro"></div></div>
+<div class="ov" id="ov-gains" hidden><div class="feuille gains" id="gains"></div></div>
+<div class="ov" id="ov-pack" hidden><div class="feuille large" id="pack"></div></div>
+<div class="ov" id="ov-choix" hidden><div class="feuille large" id="choix"></div></div>
+<div class="ov" id="ov-fin" hidden><div class="feuille fin" id="fin"></div></div>
+<div class="ov" id="ov-detail" hidden><div class="feuille detail" id="detail"></div></div>
+
+<div class="ov" id="ov-niveaux" hidden>
+  <div class="feuille">
+    <button class="rond fermer" data-ferme="ov-niveaux">✕</button>
+    <h2>Vos mains</h2>
+    <p class="sous">Chaque main jouée monte d’un niveau : plus de chips, plus de Mult.</p>
+    <div class="niveaux" id="niveaux"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-regles" hidden>
+  <div class="feuille large">
+    <button class="rond fermer" data-ferme="ov-regles">✕</button>
+    <h2>Les règles</h2>
+    <div class="regles" id="regles"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-livre" hidden>
+  <div class="feuille large livre">
+    <button class="rond fermer" data-ferme="ov-livre">✕</button>
+    <h2>✝ Le Saint Livre</h2>
+    <div class="regles" id="livre"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-historique" hidden>
+  <div class="feuille">
+    <button class="rond fermer" data-ferme="ov-historique">✕</button>
+    <h2>Records</h2>
+    <div id="historique"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-quitter" hidden>
+  <div class="feuille petite">
+    <h2>Pause</h2>
+    <p class="sous">Votre partie est gardée : vous la retrouverez avec « Continuer ».</p>
+    <div class="ligne-boutons">
+      <button class="btn" data-ferme="ov-quitter">Reprendre</button>
+      <button class="btn rouge" id="b-quitter">Menu</button>
+    </div>
+    <button class="btn petit abandon" id="b-abandon">Abandonner la partie</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script type="module" src="/games/baltrou/js/main.js"></script>
+</body>
+</html>

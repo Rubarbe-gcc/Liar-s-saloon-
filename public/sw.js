@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v58';
+const VERSION = 'v59';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -126,6 +126,18 @@ const SHELL = [
   '/shared/brasier/partie.js',
   '/shared/brasier/bots.js',
   '/shared/brasier/modes.js',
+  '/games/baltrou/',
+  '/games/baltrou/manifest.webmanifest',
+  '/games/baltrou/css/baltrou.css',
+  '/games/baltrou/js/main.js',
+  '/games/baltrou/js/rendu.js',
+  '/games/baltrou/js/regles.js',
+  '/games/baltrou/js/son.js',
+  '/games/baltrou/img/logo.png',
+  '/games/baltrou/icons/icon-192.png',
+  '/shared/baltrou/cartes.js',
+  '/shared/baltrou/jokers.js',
+  '/shared/baltrou/partie.js',
 ];
 
 self.addEventListener('install', (event) => {

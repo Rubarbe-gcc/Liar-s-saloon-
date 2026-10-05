@@ -25,6 +25,7 @@ export const JEUX = {
   raid: { nom: 'RAID', glyphe: '⚔', url: '/games/raid/' },
   brasier: { nom: 'BRASIER', glyphe: '🔥', url: '/games/brasier/' },
   skullking: { nom: 'Skull King', glyphe: '💀', url: '/games/skull-king/' },
+  baltrou: { nom: 'Baltrou', glyphe: '🃏', url: '/games/baltrou/' },
   echo: { nom: 'ÉCHO', glyphe: '🎤', url: '/games/echo/' },
 };
 /** Les jeux qu'il faut avoir ouverts pour le succès « Touche-à-tout ». */
@@ -34,7 +35,7 @@ const s = (id, jeu, glyphe, titre, texte) => ({ id, jeu, glyphe, titre, texte })
 
 export const SUCCES = [
   s('arcade-profil', 'arcade', '🪪', 'Une identité', 'Choisir son pseudo dans le profil.'),
-  s('arcade-explorateur', 'arcade', '🧭', 'Touche-à-tout', 'Ouvrir chacun des six jeux de l’arcade.'),
+  s('arcade-explorateur', 'arcade', '🧭', 'Touche-à-tout', 'Ouvrir chacun des jeux de l’arcade.'),
 
   s('saloon-premiere', 'saloon', '🤠', 'Dernier assis', 'Gagner une partie de Liar’s Saloon.'),
   s('saloon-impitoyable', 'saloon', '🎩', 'Plus menteur que les menteurs', 'Gagner contre des adversaires Impitoyables.'),
@@ -60,6 +61,12 @@ export const SUCCES = [
   s('brasier-top4', 'brasier', '🥉', 'Dans les flammes', 'Finir dans les quatre premiers.'),
   s('brasier-triple', 'brasier', '✨', 'Trois fois rien', 'Fusionner un triple doré.'),
   s('brasier-rang6', 'brasier', '⭐', 'Taverne légendaire', 'Monter sa taverne au rang 6.'),
+  s('baltrou-champion', 'baltrou', '👑', 'Champion', 'Vaincre le ROI en mode Classique.'),
+  s('baltrou-sans-pitie', 'baltrou', '🔥', 'Sans pitié', 'Gagner une partie Classique sans jamais défausser.'),
+  s('baltrou-increvable', 'baltrou', '♾️', 'Increvable', 'Atteindre l’Ante 10 en mode Infini.'),
+  s('baltrou-pacte-sombre', 'baltrou', '🌑', 'Pacte sombre', 'Posséder 3 Jokers négatifs en même temps.'),
+  s('baltrou-elu', 'baltrou', '🌌', 'Élu des dieux', 'Posséder un Joker mythique.'),
+  s('baltrou-jackpot', 'baltrou', '💥', 'Jackpot', 'Marquer 50 000 points en une seule main.'),
   s('brasier-quete', 'brasier', '📜', 'Quête accomplie', 'Accomplir une quête dans une partie Quête.'),
   s('brasier-anomalie', 'brasier', '🌀', 'Maître du chaos', 'Finir dans les quatre premiers d’une partie Anomalie.'),
 
