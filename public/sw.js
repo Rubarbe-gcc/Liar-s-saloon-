@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v59';
+const VERSION = 'v60';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -133,6 +133,7 @@ const SHELL = [
   '/games/baltrou/js/rendu.js',
   '/games/baltrou/js/regles.js',
   '/games/baltrou/js/son.js',
+  '/games/baltrou/js/musique.js',
   '/games/baltrou/img/logo.png',
   '/games/baltrou/icons/icon-192.png',
   '/shared/baltrou/cartes.js',

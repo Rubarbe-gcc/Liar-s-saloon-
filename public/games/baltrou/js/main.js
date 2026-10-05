@@ -120,7 +120,7 @@ function majMenu() {
   if (r.meilleure) morceaux.push(`💥 ${nb(r.meilleure)} en une main`);
   $('records').textContent = morceaux.join('  ·  ');
   $('b-son-menu').textContent = son.estMuet() ? '🔇' : '🔊';
-  son.musique('ambient');
+  son.musique('tapis');
 }
 
 function ouvrirDecks(mode) {
@@ -153,11 +153,12 @@ function suivre() {
       aller('s-jeu');
       rendreJeu();
       montrerIntro();
-      son.musique(b.boss ? `boss_${b.boss}` : 'ambient');
+      son.musique(b.boss ? `boss_${b.boss}` : 'tapis');
       break;
     case 'jeu':
       aller('s-jeu');
       rendreJeu();
+      son.musique(b.boss ? `boss_${b.boss}` : 'tapis');
       break;
     case 'gagne':
       if (!$('s-jeu').classList.contains('is-active')) { aller('s-jeu'); rendreJeu(); }
@@ -166,7 +167,7 @@ function suivre() {
     case 'boutique':
       aller('s-boutique');
       rendreBoutique();
-      son.musique('ambient');
+      son.musique('boutique');
       break;
     case 'victoire':
     case 'defaite':

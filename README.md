@@ -8,7 +8,9 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
 - **BALTROU** — le poker roguelite : des mains de poker, des Jokers déments
   (53, du Glouton au Jackpot Cosmique), des boss jusqu'au Roi, et le Poisson
   Dégueulasse qu'on joue de force. Solo, modes Classique et Infini, trois
-  decks, une graine pour rejouer la même run. Le moteur
+  decks, une graine pour rejouer la même run. Sa musique est composée note
+  à note (`public/games/baltrou/js/musique.js`) : un thème pour la table, un
+  pour la boutique, et un par boss. Le moteur
   (`public/shared/baltrou/`) tient toute la run dans un objet JSON, hasard
   compris : elle se range dans le navigateur et se reprend.
 - **SKULL KING** — le jeu de plis des pirates : on annonce ses plis, on tient
