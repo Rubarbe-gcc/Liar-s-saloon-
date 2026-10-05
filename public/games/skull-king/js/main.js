@@ -234,7 +234,42 @@ async function conclurePli() {
   T.rendreSieges(G);
   T.feterVainqueur(r);
   occupe = false;
+  if (G.phase === 'poisson') { await digererPoisson(); return; }
   if (G.phase === 'bilan') { await attendre(600); if (j === jeton) montrerBilan(); } else boucle();
+}
+
+/** Le Poisson dégueulasse est tombé : le gagnant du pli change son pari. */
+async function digererPoisson() {
+  const j = jeton;
+  const p = G.poisson.p;
+  if (p === 0) {
+    T.montrerPoisson(G, S.sensPossibles(G, 0));
+    T.consigne('🐡 Changez votre pari : +1 ou −1.');
+    return;   // la suite part du bouton
+  }
+  occupe = true;
+  await attendre(900);
+  occupe = false;
+  if (j !== jeton || G.phase !== 'poisson') return;
+  const r = S.changerPari(G, p, S.sensBot(G, p));
+  T.rendreSieges(G, { revele: true });
+  T.annoncer(`🐡 ${G.noms[p]} change son pari : ${r.avant} → ${r.apres}`);
+  await attendre(1300);
+  if (j !== jeton) return;
+  if (G.phase === 'bilan') montrerBilan(); else boucle();
+}
+
+async function poissonSolo(sens) {
+  if (!G || G.phase !== 'poisson' || G.poisson.p !== 0) return;
+  const r = S.changerPari(G, 0, sens);
+  if (!r.ok) { toast(r.raison); return; }
+  T.cacherPari();
+  T.rendreSieges(G, { revele: true });
+  T.annoncer(`🐡 Votre pari passe de ${r.avant} à ${r.apres}`);
+  const j = jeton;
+  await attendre(1100);
+  if (j !== jeton) return;
+  if (G.phase === 'bilan') montrerBilan(); else boucle();
 }
 
 function montrerBilan() {
@@ -261,6 +296,12 @@ function finPartie() {
 /* ================================================================== */
 
 $('pari-choix').addEventListener('click', (e) => {
+  const f = e.target.closest('[data-poisson]');
+  if (f) {
+    if (f.disabled) return;
+    if (enLigne.actif()) enLigne.poisson(+f.dataset.poisson); else poissonSolo(+f.dataset.poisson);
+    return;
+  }
   const b = e.target.closest('[data-pari]');
   if (!b) return;
   if (enLigne.actif()) enLigne.parier(+b.dataset.pari);

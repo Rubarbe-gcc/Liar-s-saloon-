@@ -54,6 +54,8 @@ export const SUCCES = [
   s('brasier-top4', 'brasier', '🥉', 'Dans les flammes', 'Finir dans les quatre premiers.'),
   s('brasier-triple', 'brasier', '✨', 'Trois fois rien', 'Fusionner un triple doré.'),
   s('brasier-rang6', 'brasier', '⭐', 'Taverne légendaire', 'Monter sa taverne au rang 6.'),
+  s('brasier-quete', 'brasier', '📜', 'Quête accomplie', 'Accomplir une quête dans une partie Quête.'),
+  s('brasier-anomalie', 'brasier', '🌀', 'Maître du chaos', 'Finir dans les quatre premiers d’une partie Anomalie.'),
 
   s('sk-victoire', 'skullking', '💀', 'Skull King', 'Gagner une partie de Skull King.'),
   s('sk-parfait', 'skullking', '🎯', 'Parole de pirate', 'Tenir tous ses paris sur une partie entière.'),

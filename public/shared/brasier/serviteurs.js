@@ -21,6 +21,7 @@ export const TRIBUS = {
   demon: { key: 'demon', label: 'Démon', glyph: '😈', color: '#e8505a' },
   dragon: { key: 'dragon', label: 'Dragon', glyph: '🐉', color: '#b48cff' },
   spectre: { key: 'spectre', label: 'Spectre', glyph: '💀', color: '#a6d86e' },
+  elementaire: { key: 'elementaire', label: 'Élémentaire', glyph: '🌪️', color: '#5fd3f3' },
   neutre: { key: 'neutre', label: 'Neutre', glyph: '⚒️', color: '#c9b79c' },
   tous: { key: 'tous', label: 'Toutes tribus', glyph: '🌈', color: '#ffd76a' },
 };
@@ -47,7 +48,12 @@ export const MOTS = {
  *   fin        à la fin de chaque recrutement ;
  *   debut      au début de chaque combat ;
  *   rale       à sa mort, en combat ;
- *   allieMeurt quand un allié (de la tribu donnée, ou n'importe lequel) meurt.
+ *   allieMeurt quand un allié (de la tribu donnée, ou n'importe lequel) meurt ;
+ *   allieJoue  quand on pose un autre serviteur (de la tribu donnée, ou
+ *              n'importe lequel), en recrutement.
+ *
+ * Un effet `taverne` donne ses statistiques aux serviteurs de la taverne :
+ * ils sont plus forts quand on les achète.
  *
  * Cibles d'un buff : 'soi', 'gauche', 'aleatoire' (un autre allié), 'tribu'
  * (tous les autres alliés de la tribu), 'tribu1' (un autre allié de la tribu),
@@ -69,6 +75,8 @@ export const SERVITEURS = [
     fin: { type: 'buff', cible: 'soi', atk: 1, pv: 0 } },
   { id: 'squelette-ricanant', nom: 'Squelette ricanant', tier: 1, tribu: 'spectre', glyph: '💀', atk: 2, pv: 1,
     mots: ['reincarnation'] },
+  { id: 'flammeche-errante', nom: 'Flammèche errante', tier: 1, tribu: 'elementaire', glyph: '🕯️', atk: 1, pv: 2,
+    allieJoue: { tribu: 'elementaire', atk: 1, pv: 1 } },
   { id: 'apprenti-forgeron', nom: 'Apprenti forgeron', tier: 1, tribu: 'neutre', glyph: '🧑‍🏭', atk: 2, pv: 2,
     cri: { type: 'buff', cible: 'aleatoire', atk: 1, pv: 0 } },
 
@@ -85,6 +93,8 @@ export const SERVITEURS = [
     debut: { type: 'degats', cible: 'aleatoire', n: 2 } },
   { id: 'goule-affamee', nom: 'Goule affamée', tier: 2, tribu: 'spectre', glyph: '🧟', atk: 2, pv: 2,
     rale: { type: 'buff', cible: 'aleatoire', atk: 2, pv: 2 } },
+  { id: 'brise-mutine', nom: 'Brise mutine', tier: 2, tribu: 'elementaire', glyph: '🌬️', atk: 3, pv: 2,
+    cri: { type: 'taverne', atk: 1, pv: 1 } },
   { id: 'porte-etendard', nom: 'Porte-étendard', tier: 2, tribu: 'neutre', glyph: '🚩', atk: 2, pv: 3,
     fin: { type: 'buff', cible: 'gauche', atk: 1, pv: 1 } },
 
@@ -101,6 +111,8 @@ export const SERVITEURS = [
     fin: { type: 'buff', cible: 'tribu', tribu: 'dragon', atk: 1, pv: 1 } },
   { id: 'banshee', nom: 'Banshee hurlante', tier: 3, tribu: 'spectre', glyph: '👻', atk: 2, pv: 5,
     allieMeurt: { tribu: null, atk: 1, pv: 0 } },
+  { id: 'rocher-vivant', nom: 'Rocher vivant', tier: 3, tribu: 'elementaire', glyph: '🪨', atk: 2, pv: 5,
+    mots: ['provocation'], allieJoue: { tribu: 'elementaire', atk: 1, pv: 2 } },
   { id: 'hydre-gouffres', nom: 'Hydre des gouffres', tier: 3, tribu: 'neutre', glyph: '🐙', atk: 2, pv: 4,
     mots: ['balayage'] },
 
@@ -115,6 +127,8 @@ export const SERVITEURS = [
     mots: ['bouclier'] },
   { id: 'ombre-errante', nom: 'Ombre errante', tier: 4, tribu: 'spectre', glyph: '🌫️', atk: 6, pv: 3,
     mots: ['reincarnation'] },
+  { id: 'tempete-ambulante', nom: 'Tempête ambulante', tier: 4, tribu: 'elementaire', glyph: '⛈️', atk: 4, pv: 4,
+    cri: { type: 'buff', cible: 'tribu', tribu: 'elementaire', atk: 2, pv: 1 } },
   { id: 'dresseur-braises', nom: 'Dompteur de braises', tier: 4, tribu: 'neutre', glyph: '🧙', atk: 3, pv: 5,
     mots: ['furie'] },
 
@@ -129,6 +143,8 @@ export const SERVITEURS = [
     debut: { type: 'buff', cible: 'tribu', tribu: 'dragon', atk: 2, pv: 2 } },
   { id: 'liche-cendres', nom: 'Liche des cendres', tier: 5, tribu: 'spectre', glyph: '☠️', atk: 5, pv: 5,
     cri: { type: 'mot', cible: 'tribu', tribu: 'spectre', mot: 'reincarnation' } },
+  { id: 'colosse-magma', nom: 'Colosse de magma', tier: 5, tribu: 'elementaire', glyph: '🌋', atk: 6, pv: 6,
+    allieJoue: { tribu: 'elementaire', atk: 2, pv: 2 } },
   { id: 'forge-vivante', nom: 'Forge vivante', tier: 5, tribu: 'rouage', glyph: '🏭', atk: 4, pv: 8,
     fin: { type: 'buff', cible: 'tribu', tribu: 'rouage', atk: 2, pv: 0 } },
 
@@ -142,6 +158,21 @@ export const SERVITEURS = [
   { id: 'prince-brasiers', nom: 'Prince des brasiers', tier: 6, tribu: 'demon', glyph: '🔥', atk: 8, pv: 8,
     rale: { type: 'invoque', id: 'diablotin-ardent', n: 2 } },
 
+  { id: 'seigneur-elements', nom: 'Seigneur des éléments', tier: 6, tribu: 'elementaire', glyph: '🌀', atk: 7, pv: 7,
+    cri: { type: 'taverne', atk: 3, pv: 3 }, fin: { type: 'buff', cible: 'tribu', tribu: 'elementaire', atk: 2, pv: 2 } },
+
+  /* -------------- Exclusifs : seulement en récompense de quête -------------- */
+  { id: 'phenix-azur', nom: 'Phénix d\'azur', tier: 5, tribu: 'dragon', glyph: '🕊️', atk: 6, pv: 6, exclusif: true,
+    mots: ['reincarnation', 'bouclier'] },
+  { id: 'kraken-abyssal', nom: 'Kraken abyssal', tier: 6, tribu: 'ecaille', glyph: '🦑', atk: 4, pv: 9, exclusif: true,
+    mots: ['venin', 'balayage'] },
+  { id: 'golem-runique', nom: 'Golem runique', tier: 5, tribu: 'rouage', glyph: '🗿', atk: 5, pv: 9, exclusif: true,
+    mots: ['provocation', 'bouclier'], fin: { type: 'buff', cible: 'soi', atk: 2, pv: 2 } },
+  { id: 'coeur-tempete', nom: 'Cœur de la tempête', tier: 6, tribu: 'elementaire', glyph: '⚡', atk: 8, pv: 8, exclusif: true,
+    allieJoue: { tribu: null, atk: 2, pv: 2 } },
+  { id: 'reine-meute', nom: 'Reine de la meute', tier: 5, tribu: 'fauve', glyph: '🐺', atk: 6, pv: 7, exclusif: true,
+    rale: { type: 'invoque', id: 'ourson', n: 3 } },
+
   /* --------------------- Jetons : jamais en taverne --------------------- */
   { id: 'chaton', nom: 'Chaton', tier: 1, tribu: 'fauve', glyph: '🐱', atk: 1, pv: 1, jeton: true },
   { id: 'ourson', nom: 'Ourson', tier: 1, tribu: 'fauve', glyph: '🧸', atk: 2, pv: 2, jeton: true },
@@ -152,8 +183,11 @@ export const SERVITEURS = [
 const PAR_ID = new Map(SERVITEURS.map((s) => [s.id, s]));
 export const getServiteur = (id) => PAR_ID.get(id) || null;
 
-/** Les serviteurs qu'on peut trouver en taverne, jetons exclus. */
-export const RECRUTABLES = SERVITEURS.filter((s) => !s.jeton);
+/** Les serviteurs qu'on peut trouver en taverne, jetons et exclusifs de quête exclus. */
+export const RECRUTABLES = SERVITEURS.filter((s) => !s.jeton && !s.exclusif);
+
+/** Hors réserve : un jeton ou un exclusif ne se rend pas, ne compte pas pour un triple. */
+export const horsReserve = (id) => { const s = getServiteur(id); return !s || !!s.jeton || !!s.exclusif; };
 
 /** Nombre d'exemplaires de chaque serviteur dans la réserve commune. */
 export const COPIES = { 1: 16, 2: 15, 3: 13, 4: 11, 5: 9, 6: 7 };
@@ -224,6 +258,8 @@ function effetTexte(e) {
       return `donne ${MOTS[e.mot].label} à ${cibleTexte(e)}`;
     case 'blesseHeros':
       return `votre héros perd ${e.n} PV`;
+    case 'taverne':
+      return `donne ${stats(e.atk, e.pv)} aux serviteurs de votre taverne`;
     default: return '';
   }
 }
@@ -239,6 +275,7 @@ export function texte(id, dore = false) {
   const debut = effetDe(u, 'debut');
   const rale = effetDe(u, 'rale');
   const allie = effetDe(u, 'allieMeurt');
+  const joue = effetDe(u, 'allieJoue');
   if (cri) out.push(`<b>Cri :</b> ${effetTexte(cri)}.`);
   if (debut) out.push(`<b>Début de combat :</b> ${effetTexte(debut)}.`);
   if (fin) out.push(`<b>Fin du tour :</b> ${effetTexte(fin)}.`);
@@ -246,6 +283,10 @@ export function texte(id, dore = false) {
   if (allie) {
     const qui = allie.tribu ? `un ${TRIBUS[allie.tribu].label} allié` : 'un allié';
     out.push(`Quand ${qui} meurt, gagne ${allie.pv ? stats(allie.atk, allie.pv) : `+${allie.atk} ATQ`}.`);
+  }
+  if (joue) {
+    const quoi = joue.tribu ? `un autre ${TRIBUS[joue.tribu].label}` : 'un autre serviteur';
+    out.push(`Quand vous posez ${quoi}, gagne ${stats(joue.atk, joue.pv)}.`);
   }
   return out.join(' ');
 }

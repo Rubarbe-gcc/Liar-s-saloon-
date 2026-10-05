@@ -32,7 +32,7 @@ const dire = (c, msg) => { c.g = msg.g || 'saloon'; hub.handleMessage(c, msg); }
 const couper = (c) => { c.ferme = true; hub.handleClose(c); };
 
 // Des délais courts, pour que les parties de test aillent vite.
-Object.assign(DELAIS, { pari: 60, tour: 20, bot: 5, absent: 20, pli: 5, bilan: 30 });
+Object.assign(DELAIS, { pari: 60, tour: 20, bot: 5, absent: 20, pli: 5, bilan: 30, poisson: 20 });
 
 test('Skull King : une table, des bots, une partie entière jusqu’au classement', async () => {
   const a = connexion();
@@ -217,4 +217,31 @@ test('Liar’s Saloon : l’hôte sort le Diable, la partie le distribue', () =>
   dire(a, { t: 'start' });
   assert.equal(a.dernier('state').view.diable, true);
   a.partir(); b.partir();
+});
+
+test('Skull King : une partie custom entière en ligne, Poisson dégueulasse compris', async () => {
+  const a = connexion();
+  dire(a, { g: 'skullking', t: 'session', sid: 'sessionFISH1' });
+  dire(a, { g: 'skullking', t: 'create', name: 'Anne' });
+  dire(a, { g: 'skullking', t: 'bot', delta: 1 });
+  dire(a, { g: 'skullking', t: 'bot', delta: 1 });
+  dire(a, { g: 'skullking', t: 'options', extras: ['poisson', 'rhum'] });
+  dire(a, { g: 'skullking', t: 'start' });
+  let v;
+  let poisson = false;
+  const fin = Date.now() + 20000;
+  while (Date.now() < fin) {
+    v = a.dernier('sk:etat').vue;
+    if (v.phase === 'fin') break;
+    if (v.phase === 'poisson') {
+      poisson = true;
+      if (v.poisson.p === v.moi) dire(a, { g: 'skullking', t: 'poisson', sens: v.sensPoisson[0] });
+    }
+    if (v.phase === 'bilan') dire(a, { g: 'skullking', t: 'pret' });
+    await attendre(5);
+  }
+  assert.equal(v.phase, 'fin');
+  assert.equal(v.historique.length, 10);
+  assert.ok(poisson || !a.recus.some((m) => m.t === 'sk:etat' && m.vue.dernier?.poisson != null), 'le poisson s’est digéré');
+  a.partir();
 });

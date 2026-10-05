@@ -164,8 +164,8 @@ const pliX = (...ids) => ids.map((x, p) => {
   return { p, c: carteX(id), as: as || null };
 });
 
-test('le paquet custom : 8 cartes de plus, et seulement celles qu’on choisit', () => {
-  assert.equal(S.paquet(S.TOUTES_CUSTOM).length, 80);
+test('le paquet custom : 9 cartes de plus, et seulement celles qu’on choisit', () => {
+  assert.equal(S.paquet(S.TOUTES_CUSTOM).length, 81);
   assert.equal(S.paquet(['canon']).length, 73);
   assert.deepEqual(S.nettoyerExtras(['canon', 'n-importe-quoi', 'rhum']), ['rhum', 'canon']);
   for (const t of S.TOUTES_CUSTOM) assert.ok(S.CUSTOM[t].regle.length > 20, t);
@@ -221,6 +221,7 @@ test('rhum, trésor maudit et ancre', () => {
 });
 
 test('des parties custom entières entre ordinateurs, sans accroc', () => {
+  let poissons = 0;
   for (let seed = 1; seed <= 40; seed++) {
     const rng = makeRng(seed + 100);
     const n = 2 + (seed % 6);
@@ -230,10 +231,12 @@ test('des parties custom entières entre ordinateurs, sans accroc', () => {
       if (G.phase === 'pari') S.parierBots(G, rng);
       else if (G.phase === 'jeu') { const c = S.coupBot(G, G.tour); assert.ok(S.jouer(G, G.tour, c.id, c.as).ok); }
       else if (G.phase === 'pli') S.ramasser(G);
+      else if (G.phase === 'poisson') { poissons++; assert.ok(S.changerPari(G, G.poisson.p, S.sensBot(G, G.poisson.p)).ok); }
       else S.nouvelleManche(G, rng);
     }
     assert.equal(G.historique.length, 10);
   }
+  assert.ok(poissons > 20, `le poisson est sorti ${poissons} fois`);
 });
 
 test('le dernier pari : le donneur parie après les autres, et le total ne tombe jamais pile', () => {
@@ -262,4 +265,32 @@ test('un donneur de l’ordinateur se décale d’un cran si son pari est interd
     assert.equal(G.phase, 'jeu');
     assert.notEqual(G.paris.reduce((t, b) => t + b, 0), G.manche);
   }
+});
+
+test('le Poisson dégueulasse : qui ramasse le pli change son pari, d’un cran', () => {
+  const r = S.resoudre(pliX('Y5', 'poisson', 'Y9'));
+  assert.equal(r.gagnant, 2);
+  assert.equal(r.poisson, 2);
+  assert.equal(S.resoudre(pliX('Y5', 'poisson', 'kra')).poisson, undefined, 'englouti par le Kraken : personne');
+
+  const G = S.creerPartie({ noms: ['A', 'B', 'C'], bots: [false, false, false], extras: ['poisson'] });
+  S.nouvelleManche(G, makeRng(1));
+  S.nouvelleManche(G, makeRng(2));            // manche 2 : deux cartes
+  G.mains = [[carteX('poisson'), carteX('G2')], [carteX('Y5'), carteX('G3')], [carteX('Y9'), carteX('G4')]];
+  G.meneur = G.tour = 0;
+  const d = S.dernierAParier(G);
+  for (const p of [0, 1, 2].filter((x) => x !== d)) S.parier(G, p, 0);
+  S.parier(G, d, d === 2 ? 0 : 1);
+  const pari2 = G.paris[2];
+  for (let p = 0; p < 3; p++) S.jouer(G, p, G.mains[p][0].id);
+  S.ramasser(G);
+  assert.equal(G.phase, 'poisson');
+  assert.deepEqual(G.poisson, { p: 2 });
+  assert.equal(S.parier(G, 2, 1).ok, false);
+  assert.equal(S.changerPari(G, 1, 1).ok, false, 'seul le gagnant change');
+  if (pari2 === 0) assert.deepEqual(S.sensPossibles(G, 2), [1], 'un pari de zéro ne peut que monter');
+  assert.ok(S.changerPari(G, 2, 1).ok);
+  assert.equal(G.paris[2], pari2 + 1);
+  assert.equal(G.phase, 'jeu');
+  assert.equal(G.tour, 2, 'le gagnant ouvre le pli suivant');
 });

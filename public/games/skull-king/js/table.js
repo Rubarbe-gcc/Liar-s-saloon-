@@ -230,7 +230,21 @@ export function montrerPari(G, o = {}) {
   } else note.hidden = true;
   p.hidden = false;
 }
-export function cacherPari() { $('pari').hidden = true; }
+export function cacherPari() { $('pari').hidden = true; $('pari').classList.remove('poisson'); }
+
+/** Le Poisson dégueulasse : on change son pari, d'un cran, vers le haut ou vers le bas. */
+export function montrerPoisson(G, sens) {
+  const p = $('pari');
+  const v = G.paris[0];
+  $('pari-choix').innerHTML = [-1, 1].map((d) => `<button data-poisson="${d}" ${sens.includes(d) ? '' : 'disabled'}
+    title="${d < 0 ? 'Descendre' : 'Monter'} à ${v + d}">${d < 0 ? '−1' : '+1'}<small>→ ${v + d}</small></button>`).join('');
+  const note = $('pari-note');
+  note.innerHTML = `🐡 Vous avez ramassé le <b>Poisson dégueulasse</b> ! Votre pari de <b>${v}</b> doit changer :
+    un de plus ou un de moins (${G.plis[0]} pli${G.plis[0] > 1 ? 's' : ''} déjà pris).`;
+  note.hidden = false;
+  p.classList.add('poisson');
+  p.hidden = false;
+}
 
 /** Remplit la feuille de bilan de la dernière manche. */
 export function remplirBilan(G) {

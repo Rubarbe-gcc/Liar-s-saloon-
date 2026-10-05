@@ -200,6 +200,7 @@ body[data-ecran="s-score"] .lune { display: none; }
 .t-canon { --fond-1: #8e4a2a; --fond-2: #2a0e06; }
 .t-holl { --fond-1: #2e5a5a; --fond-2: #071a1c; --liseré: rgba(159, 240, 216, .8); }
 .t-ancre { --fond-1: #4a5a6e; --fond-2: #141c26; }
+.t-poisson { --fond-1: #5a6a2a; --fond-2: #1a200a; --liseré: rgba(180, 220, 110, .75); }
 .carte.custom::after { content: "✦"; position: absolute; top: 5%; right: 9%; font-size: calc(var(--cw) * .16); color: #7fe0e6;
   text-shadow: 0 0 6px rgba(127, 224, 230, .8); }
 .carte .devenu { position: absolute; top: 4%; left: 50%; transform: translateX(-50%); white-space: nowrap; font-size: calc(var(--cw) * .13);
@@ -554,3 +555,8 @@ body[data-ecran="s-score"] .lune { display: none; }
 .pari-note { font-size: .82rem; line-height: 1.35; text-align: center; margin: -2px 0 10px; color: #6b4210; }
 .pari-choix button:disabled { opacity: .3; filter: grayscale(1); text-decoration: line-through; cursor: not-allowed; transform: none; }
 .nombre-grille button.interdit { opacity: .3; filter: grayscale(1); text-decoration: line-through; cursor: not-allowed; }
+
+/* Le Poisson dégueulasse : deux gros boutons, −1 et +1. */
+.pari-panneau.poisson .pari-titre { display: none; }
+.pari-panneau.poisson .pari-choix button { min-width: 74px; display: inline-flex; flex-direction: column; align-items: center; line-height: 1.05; }
+.pari-panneau.poisson .pari-choix button small { font-size: .62em; opacity: .75; font-weight: 600; }

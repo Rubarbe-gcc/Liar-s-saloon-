@@ -5,13 +5,16 @@
  * main, ils redeviendraient faux à la première retouche d'équilibrage.
  */
 
-import { RECRUTABLES, MOTS, texte, TRIBUS } from '../../../shared/brasier/serviteurs.js';
+import { RECRUTABLES, MOTS, texte, TRIBUS, getServiteur } from '../../../shared/brasier/serviteurs.js';
 import { HEROS, PV_HEROS } from '../../../shared/brasier/heros.js';
 import {
   COUT_SERVITEUR, PRIX_VENTE, COUT_RAFRAICHIR, COUT_RANG, TAILLE_TAVERNE, OR_MAX,
   PLATEAU_MAX, MAIN_MAX, JOUEURS, plafondDegats,
 } from '../../../shared/brasier/partie.js';
 import { medaillon, portrait, esc } from './ui.js';
+import {
+  QUETES, SORTS, ANOMALIES, EXCLUSIFS, CHANCE_QUETE, CHANCE_ANOMALIE, TOUR_QUETE,
+} from '../../../shared/brasier/modes.js';
 
 export function pagePartie() {
   const rangs = Object.entries(COUT_RANG).map(([r, c]) => `rang ${r} : ${c}`).join(', ');
@@ -48,7 +51,7 @@ export function pagePartie() {
     vendre, ou d'une place à l'autre du plateau pour changer l'ordre d'attaque. Au toucher,
     ses boutons apparaissent sur lui : Acheter, Poser, Vendre, ◀ ▶. Un double toucher achète
     en taverne, et pose depuis la main.
-    ⚡ début de combat · ⏳ fin de tour · 💀 râle · 🩸 se nourrit des morts.</p>`;
+    ⚡ début de combat · ⏳ fin de tour · 💀 râle · 🩸 se nourrit des morts · 📈 grandit quand on pose.</p>`;
 }
 
 export function pageMots() {
@@ -58,6 +61,7 @@ export function pageMots() {
     <section><h4>Fin du tour</h4><p>S'applique quand le recrutement se termine, avant le combat.</p></section>
     <section><h4>Début de combat</h4><p>S'applique avant le premier coup.</p></section>
     <section><h4>Râle</h4><p>S'applique à la mort du serviteur, en combat.</p></section>
+    <section><h4>📈 Quand vous posez…</h4><p>Le serviteur grandit chaque fois que vous posez un autre serviteur (souvent : un autre Élémentaire).</p></section>
   </div>`;
 }
 
@@ -81,4 +85,32 @@ export function pageHeros() {
     <div><b>${esc(h.nom)}</b>
     <p>${h.pouvoir.passif ? "<b>Passif</b> — " : `<b>${h.pouvoir.cout} 🪙</b> — `}${esc(h.pouvoir.texte)}</p></div>
   </div>`).join('')}</div>`;
+}
+
+const pct = (x) => `${Math.round(x * 100)} %`;
+const carteDe = (id) => {
+  const s = getServiteur(id);
+  return `<div class="ligne-carte">${medaillon({ uid: `q-${id}`, id, atk: s.atk, pv: s.pv, mots: [...(s.mots || [])], dore: false })}
+    <div><b>${esc(s.nom)}</b> <span class="fiche-meta">${TRIBUS[s.tribu].glyph} ${TRIBUS[s.tribu].label}</span>
+    <p>${texte(id) || (s.mots || []).map((m) => MOTS[m].label).join(', ')}</p></div></div>`;
+};
+
+
+export function pageModes() {
+  return `<p>Une partie est <b>classique</b>, <b>Quête</b> ou <b>Anomalie</b> — jamais deux à la fois. Le genre
+    est tiré au sort au lancement (${pct(CHANCE_QUETE)} Quête, ${pct(CHANCE_ANOMALIE)} Anomalie) et annoncé dès le
+    choix des héros. En partie, le badge en haut de l'écran rappelle ce qui est en jeu.</p>
+  <h3>📜 Partie Quête</h3>
+  <p>Au tour ${TOUR_QUETE}, chacun choisit une quête parmi trois. Les trois proposées offrent chacune une sorte de
+    récompense : un <b>serviteur exclusif</b> (introuvable en taverne), deux <b>cartes spéciales</b>, ou de
+    <b>l'or</b>. La récompense tombe dès que la quête est accomplie.</p>
+  <div class="regle-grille">${QUETES.map((q) => `<section><h4>${q.glyph} ${esc(q.nom)}</h4><p>${esc(q.texte)}</p></section>`).join('')}</div>
+  <h3>Les serviteurs exclusifs</h3>
+  <div class="liste-cartes">${EXCLUSIFS.map(carteDe).join('')}</div>
+  <h3>Les cartes spéciales</h3>
+  <p>Gardées à côté de la main, elles se lancent gratuitement, quand on veut, d'un toucher.</p>
+  <div class="regle-grille">${SORTS.map((c) => `<section><h4>${c.glyph} ${esc(c.nom)}</h4><p>${esc(c.texte)}</p></section>`).join('')}</div>
+  <h3>🌀 Partie Anomalie</h3>
+  <p>Une règle spéciale — parfois deux — s'ajoute pour toute la table.</p>
+  <div class="regle-grille">${ANOMALIES.map((a) => `<section><h4>${a.glyph} ${esc(a.nom)}</h4><p>${esc(a.texte)}</p></section>`).join('')}</div>`;
 }

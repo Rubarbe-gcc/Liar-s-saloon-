@@ -27,6 +27,7 @@ export const DELAIS = {
   bot: 1000,             // un pirate de l'ordinateur réfléchit (un peu)
   absent: 2500,          // on joue pour un joueur parti
   pli: 2400,             // le pli complet reste sous les yeux
+  poisson: 20 * 1000,    // pour changer son pari après le Poisson dégueulasse
   bilan: 25 * 1000,      // le bilan de manche, si tout le monde ne clique pas « prêt »
 };
 
@@ -158,6 +159,8 @@ export class Table {
       reste: Math.max(0, this.echeance - Date.now()),
       hote: this.hoteId,
       extras: G.extras || [],
+      poisson: G.poisson,
+      sensPoisson: G.phase === 'poisson' && G.poisson && G.poisson.p === moi ? S.sensPossibles(G, moi) : [],
     };
   }
 
@@ -224,6 +227,13 @@ export class Table {
       case 'pli':
         this.armer(() => { S.ramasser(this.G); this.avancer(); }, DELAIS.pli, `pli:${G.manche}:${G.plis.join()}`);
         break;
+      case 'poisson': {
+        // Le gagnant du pli change son pari ; un bot ou un absent le fait aussitôt.
+        const p = this.places[G.poisson.p];
+        const ms = p.bot ? DELAIS.bot : p.absent ? DELAIS.absent : DELAIS.poisson;
+        this.armer(() => this.poissonPour(G.poisson.p), ms, `poisson:${G.manche}:${G.plis.join()}`);
+        break;
+      }
       case 'bilan':
         this.armer(() => this.manche(), DELAIS.bilan, `bilan:${G.manche}`);
         break;
@@ -254,6 +264,23 @@ export class Table {
     if (!G || G.phase !== 'jeu' || G.tour !== p) return;
     const c = S.coupBot(G, p);
     S.jouer(G, p, c.id, c.as);
+    this.avancer();
+  }
+
+  /** Le temps est écoulé (ou c'est un bot) : l'ordinateur choisit le sens. */
+  poissonPour(p) {
+    const G = this.G;
+    if (!G || G.phase !== 'poisson' || !G.poisson || G.poisson.p !== p) return;
+    S.changerPari(G, p, S.sensBot(G, p));
+    this.avancer();
+  }
+
+  poisson(id, sens) {
+    const G = this.G;
+    const i = this.indexOf(id);
+    if (!G || i < 0) return;
+    const r = S.changerPari(G, i, sens);
+    if (!r.ok) return this.envoyer(id, { t: 'sk:erreur', msg: r.raison });
     this.avancer();
   }
 
@@ -457,6 +484,10 @@ export function handleMessage(conn, msg) {
 
     case 'jouer':
       if (t) t.jouer(id, msg.id, msg.as);
+      return;
+
+    case 'poisson':
+      if (t) t.poisson(id, Number(msg.sens));
       return;
 
     case 'pret':

@@ -11,6 +11,9 @@ import {
 } from '../../../shared/brasier/serviteurs.js';
 import { getHeros } from '../../../shared/brasier/heros.js';
 import {
+  MODES, getQuete, getSort, getAnomalie, recompenseTexte,
+} from '../../../shared/brasier/modes.js';
+import {
   PHASE, COUT_SERVITEUR, PLATEAU_MAX, MAIN_MAX, OR_MAX,
 } from '../../../shared/brasier/partie.js';
 import * as succes from '../../../shared/succes.js';
@@ -51,7 +54,7 @@ export function medaillon(u, o = {}) {
   const d = getServiteur(u.id);
   const k = u.dore ? 2 : 1;
   const marques = [
-    d.rale ? '💀' : '', d.debut ? '⚡' : '', d.fin ? '⏳' : '', d.allieMeurt ? '🩸' : '',
+    d.rale ? '💀' : '', d.debut ? '⚡' : '', d.fin ? '⏳' : '', d.allieMeurt ? '🩸' : '', d.allieJoue ? '📈' : '',
     u.mots.includes('balayage') ? '🪓' : '', u.mots.includes('venin') ? '☠️' : '',
   ].join('');
   const cls = [
@@ -85,7 +88,7 @@ function detail(u) {
     .map((m) => `<span>${m.glyph} <b>${m.label}</b> — ${m.texte}</span>`).join('');
   return `<div class="fiche-texte">
     <span class="fiche-nom">${u.dore ? '✨ ' : ''}${esc(d.nom)}</span>
-    <span class="fiche-meta">${'★'.repeat(d.tier)} · ${t.glyph} ${t.label}${u.dore ? ' · doré' : ''}</span>
+    <span class="fiche-meta">${'★'.repeat(d.tier)} · ${t.glyph} ${t.label}${u.dore ? ' · doré' : ''}${d.exclusif ? ' · 📜 exclusif de quête' : ''}</span>
     ${u.recompense ? '<span class="fiche-dit">🎁 Triple ! Posez-le sur le plateau pour découvrir un serviteur d’un rang au-dessus.</span>' : ''}
     ${texte(u.id, u.dore) ? `<span class="fiche-dit">${texte(u.id, u.dore)}</span>` : ''}
     ${mots ? `<span class="fiche-mots">${mots}</span>` : ''}
@@ -154,6 +157,9 @@ export function rendreRecrutement(v) {
 
   $('r-tour').textContent = `Tour ${v.tour}`;
   $('r-etoiles').innerHTML = Array.from({ length: 6 }, (_, k) => (k < m.taverne ? '★' : '<i>★</i>')).join('');
+  rendreMode(v);
+  rendreQuete(m);
+  rendreSorts(m);
   $('r-cout-rang').textContent = m.taverne >= 6 ? '—' : m.coutRang;
   $('b-ameliorer').disabled = m.mort || m.taverne >= 6 || m.or < m.coutRang;
   const coutRafr = m.rafraichiGratuit ? 0 : 1;
@@ -182,11 +188,12 @@ export function rendreRecrutement(v) {
   // Le héros et son pouvoir.
   const h = getHeros(m.heros);
   const p = h ? h.pouvoir : null;
-  const pouvoirOff = !p || p.passif || m.pouvoirUtilise || m.or < p.cout || m.mort;
+  const cout = m.coutPouvoir ?? (p ? p.cout : 0);
+  const pouvoirOff = !p || p.passif || m.pouvoirUtilise || m.or < cout || m.mort;
   $('r-heros').innerHTML = `${portrait(m.heros, m.pv)}
     ${p ? `<button class="pouvoir${p.passif ? ' passif' : ''}" id="b-pouvoir" ${pouvoirOff ? 'disabled' : ''}
       title="${esc(p.texte)}">
-      <b>${p.passif ? 'Passif' : 'Pouvoir'} ${p.passif ? '' : `<span class="cout">${p.cout}</span>`}${m.pouvoirUtilise ? ' ✓' : ''}</b>
+      <b>${p.passif ? 'Passif' : 'Pouvoir'} ${p.passif ? '' : `<span class="cout">${cout}</span>`}${m.pouvoirUtilise ? ' ✓' : ''}</b>
       <i>${esc(p.texte)}</i></button>` : ''}`;
 
   // L'or : une pièce par pièce, et celles d'avance en bleu.
@@ -222,6 +229,98 @@ function rendreFiche() {
   c.innerHTML = detail(u) + actions;
 }
 
+/* ------------------------------------------------------------------ */
+/* Parties spéciales : Quête, Anomalie                                 */
+/* ------------------------------------------------------------------ */
+
+/** Ce que dit une partie de son genre : le titre, et chaque règle en plus. */
+export function modeHtml(v) {
+  const mode = MODES[v.mode] || MODES.classique;
+  if (v.mode === 'quete') {
+    return `<h3 class="mode-titre">${mode.glyph} Partie QUÊTE</h3>
+      <p>Au tour 3, chacun choisit une quête parmi trois. Récompense : un serviteur exclusif, des cartes spéciales ou de l’or.</p>`;
+  }
+  if (v.mode === 'anomalie') {
+    return `<h3 class="mode-titre">${mode.glyph} Partie ANOMALIE</h3>${v.anomalies.map((id) => {
+      const a = getAnomalie(id);
+      const t = id === 'tribu-honneur' && v.tribuHonneur ? TRIBUS[v.tribuHonneur] : null;
+      return `<p class="anomalie"><b>${a.glyph} ${esc(a.nom)}</b> — ${esc(a.texte)}${t ? ` Cette partie : <b>${t.glyph} ${t.label}s</b>.` : ''}</p>`;
+    }).join('')}`;
+  }
+  return '';
+}
+
+function rendreMode(v) {
+  const b = $('r-mode');
+  if (!v.mode || v.mode === 'classique') { b.hidden = true; return; }
+  b.hidden = false;
+  b.className = `mode-puce ${v.mode}`;
+  b.textContent = v.mode === 'quete' ? '📜 Quête'
+    : `🌀 ${v.anomalies.map((id) => getAnomalie(id).glyph).join(' ')}`;
+  b.title = v.mode === 'quete' ? 'Partie Quête' : `Anomalie : ${v.anomalies.map((id) => getAnomalie(id).nom).join(', ')}`;
+}
+
+let queteFaite = null;
+
+function rendreQuete(m) {
+  const b = $('r-quete');
+  const q = m.quete;
+  // Une quête qui vient d'aboutir : on le fête.
+  if (q && q.faite && queteFaite === false) {
+    toast(`📜 Quête accomplie ! ${recompenseTexte(q.recompense)}`, 3500);
+    succes.debloquer('brasier-quete');
+  }
+  queteFaite = q ? q.faite : null;
+  if (!q) { b.hidden = true; } else {
+    const d = getQuete(q.id);
+    b.hidden = false;
+    b.classList.toggle('faite', q.faite);
+    b.innerHTML = q.faite ? `${d.glyph} Quête accomplie ✓` : `${d.glyph} ${q.progres}/${d.n}`;
+    b.title = `${d.nom} — ${d.texte} Récompense : ${recompenseTexte(q.recompense)}`;
+  }
+  // L'offre de quêtes, au tour 3.
+  const ov = $('ov-quete');
+  if (!m.offreQuete || m.mort) { ov.hidden = true; return; }
+  const html = m.offreQuete.map((o, i) => {
+    const d = getQuete(o.id);
+    return `<button class="carte-heros carte-quete r-${o.recompense.type}" data-quete="${i}">
+      <span class="quete-glyphe">${d.glyph}</span>
+      <b>${esc(d.nom)}</b>
+      <span class="quete-objectif">${esc(d.texte)}</span>
+      <span class="quete-recompense"><i>Récompense</i>${esc(recompenseTexte(o.recompense))}</span>
+    </button>`;
+  }).join('');
+  const host = $('quete-choix');
+  if (host.dataset.sig !== html) { host.dataset.sig = html; host.innerHTML = html; }
+  ov.hidden = false;
+}
+
+function rendreSorts(m) {
+  const host = $('r-sorts');
+  const sorts = m.sorts || [];
+  host.hidden = !sorts.length;
+  const html = sorts.map((c, i) => {
+    const d = getSort(c.id);
+    const off = m.mort || (d.plateau && !m.plateau.length);
+    return `<button class="sort" data-sort="${i}" ${off ? 'disabled' : ''} title="${esc(d.nom)} — ${esc(d.texte)}">
+      <span>${d.glyph}</span><b>${esc(d.nom)}</b></button>`;
+  }).join('');
+  if (host.dataset.sig !== html) { host.dataset.sig = html; host.innerHTML = html; }
+}
+
+export function montrerMode(v) {
+  if (!v || !v.mode || v.mode === 'classique') return;
+  let html = modeHtml(v);
+  const q = v.moi && v.moi.quete;
+  if (q) {
+    const d = getQuete(q.id);
+    html += `<p class="anomalie"><b>Votre quête : ${d.glyph} ${esc(d.nom)}</b> — ${esc(d.texte)}
+      (${q.faite ? 'accomplie ✓' : `${q.progres}/${d.n}`})<br>Récompense : ${esc(recompenseTexte(q.recompense))}</p>`;
+  }
+  $('mode-detail').innerHTML = html;
+  $('ov-mode').hidden = false;
+}
+
 function rendreClassement(v) {
   const moiId = v.moi ? v.moi.id : null;
   const tri = [...v.joueurs].sort((a, b) => (a.mort - b.mort) || (a.mort ? a.place - b.place : b.pv - a.pv));
@@ -232,7 +331,7 @@ function rendreClassement(v) {
       ${t ? `<span class="cl-tribu" title="${t.label}">${t.glyph}</span>` : ''}
       <span class="cl-rang" title="Rang de taverne">${j.taverne}</span>
       <span class="cl-tete">${h ? h.glyph : '❔'}</span>
-      <span class="cl-nom">${esc(j.name)}${j.isBot ? ' 🤖' : ''}</span>
+      <span class="cl-nom">${esc(j.name)}${j.isBot ? ' 🤖' : ''}${j.queteFaite ? ' <span title="Quête accomplie">📜</span>' : ''}</span>
       ${j.mort ? `<span class="cl-place">${j.place}ᵉ</span>` : `<span class="cl-pv">❤ ${j.pv}</span>`}
       ${j.resultat && !j.mort ? `<span class="cl-res ${j.resultat}">${{ victoire: 'gagné', defaite: 'perdu', nul: 'nul' }[j.resultat]}</span>` : ''}
       ${v.phase === PHASE.RECRUTEMENT && j.pret && !j.isBot && !j.mort ? '<span class="cl-pret">✅</span>' : ''}
@@ -265,10 +364,14 @@ export function rendreHeros(v, onChoix) {
     return `<button class="carte-heros${m.heros === id ? ' choisi' : ''}" data-heros="${id}" ${choisi ? 'disabled' : ''}>
       ${portrait(id, undefined, { grand: true })}
       <b>${esc(h.nom)}</b>
-      <span class="pouvoir${p.passif ? ' passif' : ''}"><b>${p.passif ? 'Passif' : `Pouvoir <span class="cout">${p.cout}</span>`}</b><i>${esc(p.texte)}</i></span>
+      <span class="pouvoir${p.passif ? ' passif' : ''}"><b>${p.passif ? 'Passif' : `Pouvoir <span class="cout">${Math.max(0, p.cout - ((v.anomalies || []).includes('heros-inspires') ? 1 : 0))}</span>`}</b><i>${esc(p.texte)}</i></span>
     </button>`;
   }).join('');
   $('heros-attente').hidden = !choisi;
+  const annonce = $('heros-mode');
+  annonce.innerHTML = modeHtml(v);
+  annonce.className = `mode-annonce ${v.mode || ''}`;
+  annonce.hidden = !v.mode || v.mode === 'classique';
   ov.hidden = false;
   $('heros-choix').onclick = (e) => {
     const b = e.target.closest('[data-heros]');
@@ -280,6 +383,7 @@ export function rendreFin(v, { elimine = false } = {}) {
   const m = v.moi;
   if (m && m.place === 1) succes.debloquer('brasier-premier');
   if (m && m.place && m.place <= 4) succes.debloquer('brasier-top4');
+  if (m && m.place && m.place <= 4 && v.mode === 'anomalie') succes.debloquer('brasier-anomalie');
   const tri = [...v.joueurs].sort((a, b) => (a.place ?? 99) - (b.place ?? 99));
   const place = m ? m.place : null;
   $('fin-marque').innerHTML = place === 1 ? '🏆' : (place && place <= 4 ? '🔥' : '💀');
@@ -477,6 +581,17 @@ $('decouverte').addEventListener('click', (e) => {
   if (b) agir({ type: 'decouvrir', i: Number(b.dataset.decouvre) });
 });
 
+$('quete-choix').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-quete]');
+  if (b) agir({ type: 'quete', i: Number(b.dataset.quete) });
+});
+$('r-sorts').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-sort]');
+  if (b && !b.disabled) agir({ type: 'lancer', i: Number(b.dataset.sort) });
+});
+$('r-mode').addEventListener('click', () => montrerMode(vue));
+$('r-quete').addEventListener('click', () => montrerMode(vue));
+
 $('b-ameliorer').addEventListener('click', () => agir({ type: 'ameliorer' }));
 $('b-rafraichir').addEventListener('click', () => { choix = null; agir({ type: 'rafraichir' }); });
 $('b-geler').addEventListener('click', () => agir({ type: 'geler' }));
@@ -489,8 +604,9 @@ $('r-heros').addEventListener('click', (e) => {
 export function remettreAZero() {
   choix = null;
   vue = null;
+  queteFaite = null;
   connus.boutique = new Set();
   connus.plateau = new Set();
   connus.main = new Set();
-  for (const id of ['boutique', 'plateau', 'main', 'decouverte']) { $(id).dataset.sig = ''; $(id).innerHTML = ''; }
+  for (const id of ['boutique', 'plateau', 'main', 'decouverte', 'quete-choix', 'r-sorts']) { $(id).dataset.sig = ''; $(id).innerHTML = ''; }
 }

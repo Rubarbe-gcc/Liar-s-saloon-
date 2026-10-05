@@ -21,9 +21,11 @@
 import { getServiteur, deTribu } from './serviteurs.js';
 import { getHeros } from './heros.js';
 import {
-  agir, choisirHeros, joueurDe, tribuDominante, vivants, PHASE, PLATEAU_MAX, MAIN_MAX, COUT_SERVITEUR,
+  agir, choisirHeros, joueurDe, tribuDominante, vivants, coutAmelioration, coutPouvoir,
+  PHASE, PLATEAU_MAX, MAIN_MAX, COUT_SERVITEUR,
 } from './partie.js';
-import { piocher } from '../hasard.js';
+import { getSort } from './modes.js';
+import { piocher, entier } from '../hasard.js';
 
 export const NOMS_BOTS = [
   'Braise', 'Cendrine', 'Tison', 'Enclume', 'Soufflet', 'Scorie', 'Fonte', 'Étincelle',
@@ -57,7 +59,11 @@ export function enAvance(etat, j) {
 function valeur(j, u, tribu) {
   const d = getServiteur(u.id);
   let s = d.tier * 3 + u.atk + u.pv + u.mots.length * 2;
-  if (d.cri || d.fin || d.rale || d.debut || d.allieMeurt) s += 2;
+  // Sa quête le guide un peu : le héraut aime les Cris, le chef de clan sa tribu.
+  const q = j.quete && !j.quete.faite ? j.quete.id : null;
+  if (q === 'herault' && d.cri) s += 5;
+  if (q === 'chef-clan' && tribu && deTribu(u.id, tribu)) s += 3;
+  if (d.cri || d.fin || d.rale || d.debut || d.allieMeurt || d.allieJoue) s += 2;
   if (tribu && deTribu(u.id, tribu)) s += 4;
   if (u.dore) s += 12;
   // Un deuxième exemplaire vaut cher : le troisième ferait un triple.
@@ -99,9 +105,13 @@ export function jouerBot(etat, id) {
     return tri.length > 1 && hasard() < (1 - c.habilete) * 0.6 ? tri[1] : tri[0];
   };
 
+  // Thadéus garde une carte en main, une fois le plateau bien garni : elle nourrit son serviteur de gauche.
+  const garde = getHeros(j.heros)?.pouvoir.type === 'collection' ? 1 : 0;
+
   /** Sa main sur le plateau : le meilleur d'abord ; plateau plein, il remplace le plus faible s'il gagne au change. */
   const poserMain = () => {
     for (let g = 0; j.main.length && g < 12; g++) {
+      if (garde && j.plateau.length >= 5 && j.main.length <= garde) break;
       const k = argmax(j.main, v);
       if (j.plateau.length >= PLATEAU_MAX) {
         const pire = argmin(j.plateau, v);
@@ -118,8 +128,22 @@ export function jouerBot(etat, id) {
     }
   };
 
+  /** Ses cartes spéciales : il les lance dès qu'elles servent. */
+  const lancerSorts = () => {
+    for (let k = j.sorts.length - 1; k >= 0; k--) {
+      const def = getSort(j.sorts[k].id);
+      if (def.plateau && j.plateau.length < 3) continue;
+      act({ type: 'lancer', i: k });
+    }
+  };
+
+  // Partie QUÊTE : une quête au hasard parmi les trois.
+  if (j.offreQuete) act({ type: 'quete', i: entier(etat.rng, j.offreQuete.length) });
+
   decouvrir();
   poserMain();
+  lancerSorts();
+  decouvrir();
 
   // Monter la taverne au rythme de son caractère — sans s'envoler loin
   // devant les humains, et pas du tout quand il lève le pied.
@@ -127,10 +151,15 @@ export function jouerBot(etat, id) {
   let cible = Math.min(6, 1 + Math.floor(etat.tour / c.tempo));
   if (humains.length) cible = Math.min(cible, Math.max(...humains.map((x) => x.taverne)) + 1);
   if (leve) cible = Math.min(cible, j.taverne);
-  if (j.taverne < cible && j.or >= j.coutRang) act({ type: 'ameliorer' });
+  if (j.taverne < cible && j.or >= coutAmelioration(etat, j)) act({ type: 'ameliorer' });
+
+  // Aëlis souffle sur la taverne avant d'y faire ses courses.
+  const pv = getHeros(j.heros)?.pouvoir;
+  if (pv && pv.type === 'souffleTaverne' && j.or >= coutPouvoir(etat, j) + COUT_SERVITEUR) act({ type: 'pouvoir' });
 
   let rafraichis = 0;
-  const maxRafraichis = leve ? 0 : c.habilete > 0.8 ? 2 : 1;
+  const fouille = j.quete && !j.quete.faite && j.quete.id === 'fouineur';
+  const maxRafraichis = leve ? 0 : (c.habilete > 0.8 ? 2 : 1) + (fouille ? 2 : 0);
   let achats = 0;
   const maxAchats = leve ? 1 : 9;
   for (let garde = 0; garde < 14 && achats < maxAchats; garde++) {
@@ -156,12 +185,15 @@ export function jouerBot(etat, id) {
 
   // Le pouvoir héroïque, s'il reste de quoi le payer… et s'il y pense.
   const p = getHeros(j.heros)?.pouvoir;
-  if (p && !p.passif && j.or >= p.cout && hasard() < 0.55 + c.habilete * 0.45) act({ type: 'pouvoir' });
+  if (p && !p.passif && j.or >= coutPouvoir(etat, j) && hasard() < 0.55 + c.habilete * 0.45) act({ type: 'pouvoir' });
   decouvrir();
   poserMain();
+  lancerSorts();
 
   // L'or qui reste finance le rang suivant.
-  if (j.taverne < cible && j.or >= j.coutRang) act({ type: 'ameliorer' });
+  if (j.taverne < cible && j.or >= coutAmelioration(etat, j)) act({ type: 'ameliorer' });
+  // Le fouineur dépense ses dernières pièces à fouiller la taverne.
+  for (let k = 0; fouille && k < 2 && j.or >= 1 && !j.quete.faite; k++) act({ type: 'rafraichir' });
 
   // Un joueur fin range son plateau ; un brouillon le laisse parfois tel quel.
   if (hasard() < c.habilete) ranger(j, act);

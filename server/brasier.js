@@ -36,6 +36,12 @@ const FIN_MS = 30 * 1000;
 /** Marge après la rediffusion du plus long combat, pour lire le résultat. */
 const MARGE_COMBAT_MS = 2500;
 
+/**
+ * Genre de partie imposé, pour essayer un mode en local (BRASIER_MODE=quete,
+ * anomalie ou classique). Sans lui, le genre se tire au sort.
+ */
+const MODE_FORCE = (typeof process !== 'undefined' && process.env && process.env.BRASIER_MODE) || 'hasard';
+
 /** Temps pendant lequel une place attend son joueur après une coupure. */
 export const GRACE_MS = 5 * 60 * 1000;
 
@@ -65,7 +71,7 @@ function nettoyerNom(brut, defaut = 'Forgeron') {
 
 /** Ne laisse passer qu'une action connue, aux champs numériques bornés. */
 function nettoyerAction(brut) {
-  const TYPES = ['acheter', 'jouer', 'vendre', 'vendreMain', 'deplacer', 'rafraichir', 'geler', 'ameliorer', 'pouvoir', 'decouvrir', 'pret'];
+  const TYPES = ['acheter', 'jouer', 'vendre', 'vendreMain', 'deplacer', 'rafraichir', 'geler', 'ameliorer', 'pouvoir', 'decouvrir', 'quete', 'lancer', 'pret'];
   if (!brut || !TYPES.includes(brut.type)) return null;
   const n = (v) => (Number.isInteger(v) && v >= 0 && v < 16 ? v : undefined);
   return {
@@ -209,7 +215,8 @@ class Table {
     for (let k = 0; this.places.length + bots.length < JOUEURS; k++) {
       bots.push({ id: `bot-${k + 1}`, name: noms[k % noms.length], isBot: true });
     }
-    this.partie = creerPartie([...this.places.map((p) => ({ id: p.id, name: p.name })), ...bots]);
+    // Classique, Quête ou Anomalie : tiré au sort, un seul genre par partie.
+    this.partie = creerPartie([...this.places.map((p) => ({ id: p.id, name: p.name })), ...bots], { mode: MODE_FORCE });
     for (const b of bots) choisirHerosBot(this.partie, b.id);
     this.touch();
     this.diffuser({ t: 'b:debut' });

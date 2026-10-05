@@ -18,10 +18,13 @@
  */
 
 import {
-  RECRUTABLES, COPIES, getServiteur, creer, effetDe, aMot, deTribu,
+  RECRUTABLES, COPIES, getServiteur, creer, effetDe, aMot, deTribu, horsReserve,
 } from './serviteurs.js';
 import { HEROS, getHeros, PV_HEROS } from './heros.js';
 import { simulerCombat, PLATEAU_MAX } from './combat.js';
+import {
+  tirerMode, tirerAnomalies, offreQuetes, getQuete, getSort, TOUR_QUETE, TRIBUS_HONNEUR,
+} from './modes.js';
 import { makeRng, entier, melanger, piocher } from '../hasard.js';
 
 export { PLATEAU_MAX };
@@ -65,7 +68,9 @@ export const TOUR_MAX = 40;
 
 /**
  * @param {Array<{id:string, name:string, isBot?:boolean}>} joueurs
- * @param {{seed?:number}} [o]
+ * @param {{seed?:number, mode?:'classique'|'quete'|'anomalie'|'hasard', anomalies?:string[]}} [o]
+ *   `mode` : classique par défaut ; « hasard » le tire au sort (le serveur).
+ *   Une partie n'a qu'un genre : jamais quête ET anomalie.
  */
 export function creerPartie(joueurs, o = {}) {
   if (joueurs.length < 2 || joueurs.length > JOUEURS) {
@@ -73,6 +78,11 @@ export function creerPartie(joueurs, o = {}) {
   }
   const seed = o.seed ?? Math.floor(Math.random() * 2 ** 31);
   const rng = makeRng(seed);
+  const mode = o.mode === 'hasard' ? tirerMode(rng)
+    : ['quete', 'anomalie'].includes(o.mode) ? o.mode : 'classique';
+  const anomalies = mode === 'anomalie' ? (o.anomalies?.length ? [...o.anomalies] : tirerAnomalies(rng)) : [];
+  const tribuHonneur = anomalies.includes('tribu-honneur') ? piocher(TRIBUS_HONNEUR, rng) : null;
+  const pvDepart = anomalies.includes('sang-royal') ? 40 : PV_HEROS;
 
   const reserve = {};
   for (const s of RECRUTABLES) reserve[s.id] = COPIES[s.tier];
@@ -94,6 +104,9 @@ export function creerPartie(joueurs, o = {}) {
   return {
     seed,
     rng,
+    mode,
+    anomalies,
+    tribuHonneur,
     uid: 0,
     tour: 0,
     phase: PHASE.HEROS,
@@ -104,8 +117,12 @@ export function creerPartie(joueurs, o = {}) {
       isBot: !!j.isBot,
       heros: null,
       offre: offre(),
-      pv: PV_HEROS,
+      pv: pvDepart,
       or: 0,
+      orQuete: 0,
+      quete: null,
+      offreQuete: null,
+      sorts: [],
       orMax: 0,
       orBonus: 0,
       taverne: 1,
@@ -133,6 +150,19 @@ export function creerPartie(joueurs, o = {}) {
 export const joueurDe = (etat, id) => etat.joueurs.find((j) => j.id === id) || null;
 export const vivants = (etat) => etat.joueurs.filter((j) => !j.mort);
 const nouvelUid = (etat) => `u${++etat.uid}`;
+/** Cette anomalie est-elle en jeu ? */
+export const anomalie = (etat, id) => !!etat.anomalies && etat.anomalies.includes(id);
+
+/** Ce que coûte, pour ce joueur, de monter la taverne. */
+export const coutAmelioration = (etat, j) =>
+  Math.max(0, j.coutRang - (anomalie(etat, 'rangs-soldes') ? 1 : 0));
+
+/** Ce que coûte le pouvoir héroïque (null pour un passif). */
+export function coutPouvoir(etat, j) {
+  const p = getHeros(j.heros)?.pouvoir;
+  if (!p || p.passif) return null;
+  return Math.max(0, p.cout - (anomalie(etat, 'heros-inspires') ? 1 : 0));
+}
 
 /* ------------------------------------------------------------------ */
 /* La réserve                                                          */
@@ -151,7 +181,10 @@ function tirer(etat, rang, exact = false) {
     x -= etat.reserve[s.id];
     if (x < 0) {
       etat.reserve[s.id]--;
-      return creer(s.id, nouvelUid(etat));
+      const u = creer(s.id, nouvelUid(etat));
+      // Anomalie : la tribu à l'honneur arrive plus forte.
+      if (etat.tribuHonneur && deTribu(s.id, etat.tribuHonneur)) { u.atk += 1; u.pv += 1; }
+      return u;
     }
   }
   return null;
@@ -159,15 +192,15 @@ function tirer(etat, rang, exact = false) {
 
 /** Remet un serviteur dans la réserve. Un doré y rend ses trois exemplaires. */
 function rendre(etat, u) {
-  const def = getServiteur(u.id);
-  if (!def || def.jeton) return;
+  if (horsReserve(u.id)) return;
   etat.reserve[u.id] += u.dore ? 3 : 1;
 }
 
 function renouveler(etat, j) {
   for (const u of j.boutique) rendre(etat, u);
   j.boutique = [];
-  for (let k = 0; k < TAILLE_TAVERNE[j.taverne]; k++) {
+  const taille = TAILLE_TAVERNE[j.taverne] + (anomalie(etat, 'taverne-bondee') ? 1 : 0);
+  for (let k = 0; k < taille; k++) {
     const u = tirer(etat, j.taverne);
     if (u) j.boutique.push(u);
   }
@@ -215,7 +248,7 @@ function debutTour(etat) {
   etat.phase = PHASE.RECRUTEMENT;
   for (const j of vivants(etat)) {
     j.orMax = Math.min(OR_MAX, 2 + etat.tour);
-    j.or = j.orMax + j.orBonus;
+    j.or = j.orMax + j.orBonus + j.orQuete + (anomalie(etat, 'ruee-or') ? 1 : 0);
     j.orBonus = 0;
     if (etat.tour > 1 && j.taverne < 6) j.coutRang = Math.max(0, j.coutRang - 1);
     j.pouvoirUtilise = false;
@@ -223,7 +256,92 @@ function debutTour(etat) {
     j.pret = false;
     if (j.gel) j.gel = false;
     else renouveler(etat, j);
+    // Partie QUÊTE : au tour 3, trois quêtes au choix.
+    if (etat.mode === 'quete' && etat.tour === TOUR_QUETE && !j.quete) j.offreQuete = offreQuetes(etat.rng);
+    // Anomalie : les coffres oubliés s'ouvrent au tour 5.
+    if (anomalie(etat, 'coffres') && etat.tour === 5) {
+      const offre = offreDecouverte(etat, Math.min(j.taverne + 1, 6));
+      if (offre.length) j.decouvertes.push(offre);
+    }
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Les quêtes                                                          */
+/* ------------------------------------------------------------------ */
+
+/** Une quête avance : achat, vente, combat gagné… La récompense tombe dès qu'elle est faite. */
+function progresser(etat, j, cle, n = 1) {
+  const q = j.quete;
+  if (!q || q.faite) return;
+  const def = getQuete(q.id);
+  if (def.cle !== cle) return;
+  q.progres = Math.min(def.n, q.progres + n);
+  if (q.progres >= def.n) recompenser(etat, j);
+}
+
+/** Les quêtes « d'état » se mesurent : le plus de serviteurs d'une même tribu sur le plateau. */
+function mesurerQuete(etat, j) {
+  const q = j.quete;
+  if (!q || q.faite || getQuete(q.id).cle !== 'tribu') return;
+  let mieux = 0;
+  for (const t of TRIBUS_HONNEUR) mieux = Math.max(mieux, j.plateau.filter((u) => deTribu(u.id, t)).length);
+  if (mieux > q.progres) progresser(etat, j, 'tribu', mieux - q.progres);
+}
+
+function recompenser(etat, j) {
+  const q = j.quete;
+  q.faite = true;
+  const r = q.recompense;
+  if (r.type === 'serviteur') {
+    // Un exclusif arrive dans la main — même pleine : on l'a mérité.
+    j.main.push(creer(r.id, nouvelUid(etat)));
+  } else if (r.type === 'cartes') {
+    for (const id of r.sorts) j.sorts.push({ uid: nouvelUid(etat), id });
+  } else if (r.type === 'or') {
+    if (r.parTour) j.orQuete += r.parTour;
+    if (r.tout) {
+      if (etat.phase === PHASE.RECRUTEMENT) j.or += r.tout;
+      else j.orBonus += r.tout;
+    }
+  }
+}
+
+/** Lance une carte spéciale. Gratuite ; certaines demandent un plateau. */
+function lancer(etat, j, i) {
+  const c = j.sorts[i];
+  if (!c) return refus('introuvable');
+  const def = getSort(c.id);
+  if (def.plateau && !j.plateau.length) return refus('aucune cible');
+  switch (c.id) {
+    case 'benediction':
+      for (const u of j.plateau) { u.atk += 2; u.pv += 2; }
+      break;
+    case 'pluie-or':
+      j.or += 4;
+      break;
+    case 'dorure': {
+      const u = j.plateau[0];
+      u.atk *= 2; u.pv *= 2;
+      break;
+    }
+    case 'egide':
+      for (const u of melanger(j.plateau.filter((x) => !aMot(x, 'bouclier')), etat.rng).slice(0, 3)) u.mots.push('bouclier');
+      break;
+    case 'souffle-vie':
+      for (const u of melanger(j.plateau.filter((x) => !aMot(x, 'reincarnation')), etat.rng).slice(0, 2)) u.mots.push('reincarnation');
+      break;
+    case 'grimoire': {
+      const offre = offreDecouverte(etat, Math.min(j.taverne + 1, 6));
+      if (!offre.length) return refus('réserve vide');
+      j.decouvertes.push(offre);
+      break;
+    }
+    default:
+      return refus('sort');
+  }
+  j.sorts.splice(i, 1);
+  return { ok: true };
 }
 
 /* ------------------------------------------------------------------ */
@@ -263,6 +381,9 @@ function appliquer(etat, j, source, e) {
       // Un cri ne tue jamais son propre héros : il le laisse à un souffle.
       j.pv = Math.max(1, j.pv - e.n);
       break;
+    case 'taverne':
+      for (const t of j.boutique) { t.atk += e.atk; t.pv += e.pv; }
+      break;
     default: break;
   }
 }
@@ -277,7 +398,7 @@ function verifierTriples(etat, j) {
   for (;;) {
     const compte = {};
     for (const u of [...j.main, ...j.plateau]) {
-      if (!u.dore && !getServiteur(u.id).jeton) compte[u.id] = (compte[u.id] || 0) + 1;
+      if (!u.dore && !horsReserve(u.id)) compte[u.id] = (compte[u.id] || 0) + 1;
     }
     const id = Object.keys(compte).find((k) => compte[k] >= 3);
     if (!id) return;
@@ -297,6 +418,7 @@ function verifierTriples(etat, j) {
     j.plateau = j.plateau.filter((u) => !trois.includes(u));
     j.main.push(dore);
     j.triples += 1;
+    progresser(etat, j, 'triple');
   }
 }
 
@@ -314,8 +436,14 @@ function poser(etat, j, u, pos = j.plateau.length) {
     const offre = offreDecouverte(etat, Math.min(j.taverne + 1, 6));
     if (offre.length) j.decouvertes.push(offre);
   }
+  // Ceux qui grandissent quand on pose un autre serviteur (les Élémentaires).
+  for (const x of j.plateau) {
+    if (x === u) continue;
+    const e = effetDe(x, 'allieJoue');
+    if (e && (!e.tribu || deTribu(u.id, e.tribu))) { x.atk += e.atk; x.pv += e.pv; }
+  }
   const cri = effetDe(u, 'cri');
-  if (cri) appliquer(etat, j, u, cri);
+  if (cri) { appliquer(etat, j, u, cri); progresser(etat, j, 'cri'); }
   verifierTriples(etat, j);
 }
 
@@ -334,6 +462,12 @@ export function agir(etat, id, a) {
   if (etat.phase !== PHASE.RECRUTEMENT) return refus('phase');
   const j = joueurDe(etat, id);
   if (!j || j.mort) return refus('joueur');
+  const r = action(etat, j, a);
+  if (r.ok) mesurerQuete(etat, j);
+  return r;
+}
+
+function action(etat, j, a) {
   const i = Number.isInteger(a?.i) ? a.i : -1;
 
   switch (a?.type) {
@@ -344,6 +478,8 @@ export function agir(etat, id, a) {
       if (j.main.length >= MAIN_MAX) return refus('main');
       j.boutique.splice(i, 1);
       j.or -= COUT_SERVITEUR;
+      progresser(etat, j, 'achat');
+      progresser(etat, j, 'or', COUT_SERVITEUR);
       prendre(etat, j, u);
       return { ok: true };
     }
@@ -363,6 +499,7 @@ export function agir(etat, id, a) {
       j.main.splice(i, 1);
       j.or += PRIX_VENTE;
       rendre(etat, u);
+      progresser(etat, j, 'vente');
       return { ok: true };
     }
 
@@ -372,6 +509,7 @@ export function agir(etat, id, a) {
       j.plateau.splice(i, 1);
       j.or += PRIX_VENTE;
       rendre(etat, u);
+      progresser(etat, j, 'vente');
       return { ok: true };
     }
 
@@ -391,6 +529,8 @@ export function agir(etat, id, a) {
       j.rafraichiGratuit = false;
       j.gel = false;
       renouveler(etat, j);
+      progresser(etat, j, 'rafraichir');
+      progresser(etat, j, 'or', cout);
       return { ok: true };
     }
 
@@ -400,10 +540,13 @@ export function agir(etat, id, a) {
 
     case 'ameliorer': {
       if (j.taverne >= 6) return refus('max');
-      if (j.or < j.coutRang) return refus('or');
-      j.or -= j.coutRang;
+      const cout = coutAmelioration(etat, j);
+      if (j.or < cout) return refus('or');
+      j.or -= cout;
       j.taverne += 1;
       j.coutRang = COUT_RANG[j.taverne + 1] ?? 0;
+      progresser(etat, j, 'ameliorer');
+      progresser(etat, j, 'or', cout);
       return { ok: true };
     }
 
@@ -421,6 +564,17 @@ export function agir(etat, id, a) {
       return { ok: true };
     }
 
+    case 'quete': {
+      const offre = j.offreQuete;
+      if (!offre || !offre[i]) return refus('introuvable');
+      j.quete = { id: offre[i].id, recompense: offre[i].recompense, progres: 0, faite: false };
+      j.offreQuete = null;
+      return { ok: true };
+    }
+
+    case 'lancer':
+      return lancer(etat, j, i);
+
     case 'pret':
       j.pret = typeof a.valeur === 'boolean' ? a.valeur : !j.pret;
       return { ok: true };
@@ -435,7 +589,8 @@ function pouvoir(etat, j) {
   if (!p) return refus('héros');
   if (p.passif) return refus('passif');
   if (j.pouvoirUtilise) return refus('déjà utilisé');
-  if (j.or < p.cout) return refus('or');
+  const cout = coutPouvoir(etat, j);
+  if (j.or < cout) return refus('or');
 
   const gauche = j.plateau[0];
   const droite = j.plateau[j.plateau.length - 1];
@@ -480,10 +635,15 @@ function pouvoir(etat, j) {
       j.decouvertes.push(offre);
       break;
     }
+    case 'souffleTaverne':
+      if (!j.boutique.length) return refus('aucune cible');
+      for (const u of j.boutique) { u.atk += 1; u.pv += 1; }
+      break;
     default:
       return refus('pouvoir');
   }
-  j.or -= p.cout;
+  j.or -= cout;
+  progresser(etat, j, 'or', cout);
   j.pouvoirUtilise = true;
   return { ok: true };
 }
@@ -503,6 +663,8 @@ export const humainsPrets = (etat) =>
 export function terminerRecrutement(etat) {
   if (etat.phase !== PHASE.RECRUTEMENT) return { ok: false, error: 'phase' };
   for (const j of vivants(etat)) {
+    // Une quête offerte et pas choisie : la première, d'office.
+    if (j.offreQuete) action(etat, j, { type: 'quete', i: 0 });
     while (j.decouvertes.length) {
       const offre = j.decouvertes.shift();
       if (j.main.length < MAIN_MAX) {
@@ -512,21 +674,28 @@ export function terminerRecrutement(etat) {
         for (const x of offre) rendre(etat, x);
       }
     }
+    // Thadéus : ce qu'on garde en main nourrit le serviteur de gauche.
+    if (getHeros(j.heros)?.pouvoir.type === 'collection' && j.plateau[0]) {
+      const k = Math.min(3, j.main.length);
+      j.plateau[0].atk += k; j.plateau[0].pv += k;
+    }
     for (const u of [...j.plateau]) {
       const e = effetDe(u, 'fin');
       if (e && j.plateau.includes(u)) appliquer(etat, j, u, e);
     }
+    mesurerQuete(etat, j);
   }
   lancerCombats(etat);
   return { ok: true };
 }
 
-/** Le plateau qui part au combat : une copie, avec les passifs de héros. */
-function preparer(j) {
+/** Le plateau qui part au combat : une copie, avec les passifs de héros et les anomalies. */
+function preparer(j, etat) {
   const p = j.plateau.map((u) => ({ ...u, mots: [...u.mots] }));
   if (getHeros(j.heros)?.pouvoir.type === 'colosse' && p[0]) {
     p[0].atk += 2; p[0].pv += 2;
   }
+  if (etat && anomalie(etat, 'aube') && p[0] && !aMot(p[0], 'bouclier')) p[0].mots.push('bouclier');
   return p;
 }
 
@@ -559,27 +728,30 @@ function lancerCombats(etat) {
     let adverse;
     let fantome = null;
     if (B) {
-      adverse = { plateau: preparer(B), taverne: B.taverne };
+      adverse = { plateau: preparer(B, etat), taverne: B.taverne };
     } else {
       const reflet = etat.fantome
         || (() => {
           const autre = piocher(encore.filter((x) => x !== A), etat.rng) || A;
-          return { name: `Reflet de ${autre.name}`, heros: autre.heros, plateau: preparer(autre), taverne: autre.taverne };
+          return { name: `Reflet de ${autre.name}`, heros: autre.heros, plateau: preparer(autre, etat), taverne: autre.taverne };
         })();
       fantome = { name: reflet.name, heros: reflet.heros };
       adverse = { plateau: reflet.plateau.map((u) => ({ ...u, mots: [...u.mots] })), taverne: reflet.taverne };
     }
 
-    const r = simulerCombat([preparer(A), adverse.plateau], { rng: etat.rng });
+    const r = simulerCombat([preparer(A, etat), adverse.plateau], { rng: etat.rng });
     let degats = 0;
     if (r.gagnant !== null) {
       const rang = r.gagnant === 0 ? A.taverne : adverse.taverne;
       const etoiles = r.survivants.reduce((s, u) => s + getServiteur(u.id).tier, 0);
       degats = Math.min(rang + etoiles, plafondDegats(etat.tour));
+      if (anomalie(etat, 'sang-chaud')) degats += 3;
     }
     if (r.gagnant === 1) A.pv -= degats;
     if (r.gagnant === 0 && B) B.pv -= degats;
 
+    if (r.gagnant === 0) progresser(etat, A, 'victoire');
+    if (r.gagnant === 1 && B) progresser(etat, B, 'victoire');
     A.resultat = r.gagnant === 0 ? 'victoire' : r.gagnant === 1 ? 'defaite' : 'nul';
     if (B) {
       B.resultat = r.gagnant === 1 ? 'victoire' : r.gagnant === 0 ? 'defaite' : 'nul';
@@ -597,10 +769,10 @@ function lancerCombats(etat) {
   for (const j of tombes) {
     j.mort = true;
     j.place = place--;
-    etat.fantome = { name: `Fantôme de ${j.name}`, heros: j.heros, plateau: preparer(j), taverne: j.taverne };
+    etat.fantome = { name: `Fantôme de ${j.name}`, heros: j.heros, plateau: preparer(j, etat), taverne: j.taverne };
     for (const u of [...j.plateau, ...j.main, ...j.boutique]) rendre(etat, u);
     for (const offre of j.decouvertes) for (const u of offre) rendre(etat, u);
-    j.plateau = []; j.main = []; j.boutique = []; j.decouvertes = [];
+    j.plateau = []; j.main = []; j.boutique = []; j.decouvertes = []; j.sorts = []; j.offreQuete = null;
   }
 
   etat.phase = PHASE.COMBAT;
@@ -670,6 +842,9 @@ export function viewFor(etat, id) {
     phase: etat.phase,
     tour: etat.tour,
     vainqueur: etat.vainqueur,
+    mode: etat.mode || 'classique',
+    anomalies: etat.anomalies || [],
+    tribuHonneur: etat.tribuHonneur || null,
     moi: j ? {
       id: j.id,
       heros: j.heros,
@@ -679,7 +854,12 @@ export function viewFor(etat, id) {
       orMax: j.orMax,
       orBonus: j.orBonus,
       taverne: j.taverne,
-      coutRang: j.coutRang,
+      coutRang: coutAmelioration(etat, j),
+      coutPouvoir: coutPouvoir(etat, j),
+      orQuete: j.orQuete,
+      quete: j.quete ? { ...j.quete } : null,
+      offreQuete: j.offreQuete,
+      sorts: j.sorts.map((c) => ({ ...c })),
       boutique: j.boutique.map(copie),
       gel: j.gel,
       plateau: j.plateau.map(copie),
@@ -703,6 +883,7 @@ export function viewFor(etat, id) {
       place: p.place,
       pret: p.pret,
       triples: p.triples,
+      queteFaite: !!(p.quete && p.quete.faite),
       resultat: p.resultat,
       tribu: tribuDominante(p.plateau),
     })),

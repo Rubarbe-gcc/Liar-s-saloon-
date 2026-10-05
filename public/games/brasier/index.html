@@ -84,6 +84,7 @@
   <header class="barre">
     <button class="rond petit" id="b-quitter" title="Quitter la partie">✕</button>
     <span class="barre-tour" id="r-tour">Tour 1</span>
+    <button class="mode-puce" id="r-mode" hidden></button>
     <span class="chrono" id="r-chrono">⏳ 30</span>
     <button class="rond petit" id="b-son" title="Son">🔊</button>
   </header>
@@ -118,7 +119,9 @@
 
       <div class="main-cadre" id="main-cadre">
         <span class="main-titre">✋ Main <b id="r-main-n">0/10</b></span>
+        <button class="quete-suivi" id="r-quete" hidden></button>
         <div class="rangee mainrang" id="main"></div>
+        <div class="sorts" id="r-sorts" hidden></div>
       </div>
 
       <footer class="socle">
@@ -152,6 +155,7 @@
 <div class="ov" id="ov-heros" hidden>
   <div class="feuille feuille-heros">
     <h2>Choisissez votre champion</h2>
+    <div class="mode-annonce" id="heros-mode" hidden></div>
     <p class="statut" id="heros-chrono">Vous avez 25 secondes.</p>
     <div class="heros-choix" id="heros-choix"></div>
     <p class="statut" id="heros-attente" hidden>En attente des autres champions…</p>
@@ -163,6 +167,21 @@
     <h2>✨ Découverte</h2>
     <p class="statut">Choisissez un serviteur. Il rejoint votre plateau.</p>
     <div class="rangee decouverte" id="decouverte"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-quete" hidden>
+  <div class="feuille feuille-heros">
+    <h2>📜 Choisissez votre quête</h2>
+    <p class="statut">Accomplissez-la pour gagner sa récompense. Une seule, pour toute la partie.</p>
+    <div class="heros-choix" id="quete-choix"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-mode" hidden>
+  <div class="feuille">
+    <button class="rond fermer" data-ferme="ov-mode">✕</button>
+    <div id="mode-detail"></div>
   </div>
 </div>
 
@@ -188,11 +207,13 @@
       <button class="onglet" data-page="mots">🛡️ Mots-clés</button>
       <button class="onglet" data-page="cartes">📖 Serviteurs</button>
       <button class="onglet" data-page="heros">👑 Héros</button>
+      <button class="onglet" data-page="modes">🎲 Parties spéciales</button>
     </div>
     <div class="page actif" id="rp-partie"></div>
     <div class="page" id="rp-mots"></div>
     <div class="page" id="rp-cartes"></div>
     <div class="page" id="rp-heros"></div>
+    <div class="page" id="rp-modes"></div>
   </div>
 </div>
 

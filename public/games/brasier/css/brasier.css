@@ -212,7 +212,7 @@ b{color:var(--or);}
 
 /* Tribus */
 .t-fauve{--tc:#e8913a;} .t-rouage{--tc:#8fb8d8;} .t-ecaille{--tc:#3cc8a4;} .t-demon{--tc:#e8505a;}
-.t-dragon{--tc:#b48cff;} .t-spectre{--tc:#a6d86e;} .t-neutre{--tc:#c9b79c;}
+.t-dragon{--tc:#b48cff;} .t-spectre{--tc:#a6d86e;} .t-elementaire{--tc:#5fd3f3;} .t-neutre{--tc:#c9b79c;}
 .t-tous{--tc:#ffd76a;}
 .t-tous .srv-art{background:conic-gradient(from 0deg,#e8913a55,#8fb8d855,#3cc8a455,#e8505a55,#b48cff55,#a6d86e55,#e8913a55),#120b08;}
 
@@ -539,3 +539,43 @@ body.glisse-achat .mainrang,body.glisse-main .dalle{outline:2px dashed rgba(255,
 body.glisse-main .comptoir{outline:2px dashed rgba(224,86,106,.8);outline-offset:-4px;}
 @media (min-width:900px){ .mainrang{--wm:72px;} }
 @media (orientation:landscape) and (max-height:540px){ .mainrang{--wm:46px;} }
+
+/* Parties spéciales : Quête, Anomalie ------------------------------------- */
+.mode-puce{font:inherit;font-size:.72rem;font-weight:700;padding:3px 10px;border-radius:999px;cursor:pointer;
+  background:rgba(0,0,0,.5);border:1px solid var(--ligne);color:var(--texte);white-space:nowrap;}
+.mode-puce.quete{border-color:#e9b949;color:#ffe08a;background:rgba(120,80,10,.4);}
+.mode-puce.anomalie{border-color:#b48cff;color:#e3d2ff;background:rgba(70,30,120,.45);}
+.mode-annonce{margin:6px auto 4px;max-width:620px;padding:10px 14px;border-radius:12px;text-align:left;
+  background:rgba(0,0,0,.35);border:1px solid var(--ligne);animation:entre .4s var(--doux) both;}
+.mode-annonce.quete{border-color:#e9b949;box-shadow:0 0 22px rgba(233,185,73,.25);}
+.mode-annonce.anomalie{border-color:#b48cff;box-shadow:0 0 22px rgba(180,140,255,.3);}
+.mode-titre{font-family:var(--f-titre);font-variant:small-caps;letter-spacing:.08em;color:var(--or);font-size:1.05rem;margin-bottom:4px;}
+.mode-annonce p,#mode-detail p{font-size:.78rem;color:var(--dim);line-height:1.4;margin:3px 0;}
+#mode-detail{text-align:left;}
+.anomalie b{color:var(--texte);}
+.carte-quete{justify-content:flex-start;}
+.quete-glyphe{font-size:2.2rem;line-height:1;filter:drop-shadow(0 0 10px rgba(255,200,80,.45));}
+.quete-objectif{font-size:.8rem;color:var(--texte);}
+.quete-recompense{display:flex;flex-direction:column;gap:2px;width:100%;padding:7px 8px;border-radius:10px;font-size:.74rem;
+  color:#ffe9b0;background:rgba(0,0,0,.35);border:1px dashed rgba(255,200,80,.5);}
+.quete-recompense i{font-style:normal;font-size:.6rem;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);}
+.carte-quete.r-serviteur .quete-recompense{border-color:rgba(120,220,255,.6);color:#c8f1ff;}
+.carte-quete.r-cartes .quete-recompense{border-color:rgba(190,150,255,.6);color:#e6d6ff;}
+.quete-suivi{position:absolute;top:-9px;right:12px;z-index:1;padding:1px 8px;border-radius:999px;font:inherit;font-size:.62rem;
+  font-weight:700;cursor:pointer;color:#ffe08a;background:rgba(40,26,8,.95);border:1px solid #e9b949;}
+.quete-suivi.faite{color:#b9f5b0;border-color:#5cc46a;}
+.sorts{flex:none;display:flex;flex-direction:column;gap:4px;padding:4px 0;max-height:100%;overflow-y:auto;}
+.sort{display:flex;align-items:center;gap:4px;font:inherit;font-size:.62rem;padding:4px 7px;border-radius:9px;cursor:pointer;
+  color:#e6d6ff;background:linear-gradient(180deg,rgba(90,50,150,.75),rgba(40,20,70,.9));border:1px solid #b48cff;
+  box-shadow:0 0 10px rgba(180,140,255,.35);}
+.sort span{font-size:.95rem;}
+.sort b{max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.sort:disabled{opacity:.45;cursor:not-allowed;}
+.sort:not(:disabled):hover{transform:translateY(-1px);box-shadow:0 0 16px rgba(180,140,255,.6);}
+@media (max-width:600px){
+  .mode-puce{font-size:.64rem;padding:2px 7px;}
+  .sort b{display:none;}
+  .carte-quete{flex-direction:row;flex-wrap:wrap;}
+  .carte-quete .quete-glyphe{font-size:1.6rem;}
+  .carte-quete > b{width:auto;}
+}

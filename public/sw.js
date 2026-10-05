@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v55';
+const VERSION = 'v56';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -124,6 +124,7 @@ const SHELL = [
   '/shared/brasier/combat.js',
   '/shared/brasier/partie.js',
   '/shared/brasier/bots.js',
+  '/shared/brasier/modes.js',
 ];
 
 self.addEventListener('install', (event) => {

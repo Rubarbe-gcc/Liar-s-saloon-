@@ -185,6 +185,19 @@ Object.assign(ART, {
     <path d="M12 70h76l-10 16H24z" fill="#bfe8dc" opacity=".85"/>
     <path d="M20 76h60" stroke="#7fbfae" stroke-width="2" stroke-dasharray="4 4"/>
     <path d="M6 94c10-4 16 4 26 0s16 4 26 0 16 4 26 0 10 2 12 2" stroke="#9ff0d8" stroke-width="3" fill="none" stroke-linecap="round" opacity=".7"/>`,
+  /* Un poisson-globe verdâtre, l'œil vitreux, des mouches autour. */
+  poisson: () => `
+    <path d="M22 26c2-4 6-4 8 0M70 18c2-4 6-4 8 0M80 34c2-4 6-4 8 0" stroke="#1b1720" stroke-width="1.6" fill="none"/>
+    <circle cx="26" cy="27" r="1.6" fill="#1b1720"/><circle cx="74" cy="19" r="1.6" fill="#1b1720"/><circle cx="84" cy="35" r="1.6" fill="#1b1720"/>
+    <path d="M78 60l16-14v28z" fill="#8aa34a"/>
+    <ellipse cx="48" cy="60" rx="32" ry="26" fill="#a6b85a"/>
+    <ellipse cx="48" cy="68" rx="24" ry="14" fill="#d8d49a"/>
+    <g stroke="#6b7a2c" stroke-width="2" stroke-linecap="round"><path d="M30 40l-4-6M42 35l-1-7M56 35l2-7M68 42l5-5M22 56l-7-2M24 70l-7 3"/></g>
+    <circle cx="36" cy="54" r="8" fill="#f4f1d8"/><circle cx="37" cy="55" r="3.4" fill="#4a5a2a"/>
+    <path d="M31 50l12 8M43 50l-12 8" stroke="#3a2a1a" stroke-width="1.4" opacity=".55"/>
+    <path d="M20 66c4 4 8 4 10 0" stroke="#5a3a20" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <path d="M24 70c0 6 4 8 6 4" fill="#9ad06a" opacity=".9"/>
+    <path d="M58 28c-2-6 4-8 2-14M66 30c0-6 6-6 6-12" stroke="#9ad06a" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".7"/>`,
   /* Une ancre et sa chaîne. */
   ancre: () => `
     <circle cx="50" cy="16" r="7" fill="none" stroke="#c9d6e0" stroke-width="4"/>
@@ -202,8 +215,9 @@ Object.assign(ART, {
 const TITRES = {
   pir: 'Pirate', esc: 'Fuite', sir: 'Sirène', sk: 'Skull King', tig: 'Tigresse', kra: 'Kraken', wha: 'Baleine',
   rhum: 'Rhum', maudit: 'Trésor maudit', cors: 'Corsaire', canon: 'Canon', holl: 'Hollandais', ancre: 'Ancre',
+  poisson: 'Poisson',
 };
-const CUSTOM = ['rhum', 'maudit', 'cors', 'canon', 'holl', 'ancre'];
+const CUSTOM = ['rhum', 'maudit', 'cors', 'canon', 'holl', 'ancre', 'poisson'];
 
 /** Le HTML d'une carte. `as` : ce que la Tigresse est devenue. */
 export function carteHtml(c, { as = null, attrs = '', cls = '' } = {}) {

@@ -249,6 +249,7 @@ function versLocal(v) {
     historique: v.historique.map(rot),
     reste: v.reste,
     donneurAttend: !!v.donneurAttend, totalAutres: v.totalAutres, interdit: v.interdit,
+    poisson: v.poisson ? { p: ici(v.poisson.p) } : null, sensPoisson: v.sensPoisson || [],
     extras: v.extras || [],
   };
 }
@@ -360,7 +361,22 @@ async function montrer(v) {
     return;
   }
   if (G.phase === 'pari') apresPari(G);
+  else if (G.phase === 'poisson') apresPoisson(G);
   else apresJeu(G);
+}
+
+/** Le Poisson dégueulasse : le gagnant du pli change son pari ; les autres attendent. */
+function apresPoisson(G) {
+  T.rendreMain(G);
+  if (G.poisson && G.poisson.p === 0) {
+    T.montrerPoisson(G, G.sensPoisson);
+    T.consigne('🐡 Changez votre pari : +1 ou −1.');
+    chrono(G.reste);
+  } else {
+    T.cacherPari();
+    T.consigne(G.poisson ? `🐡 ${G.noms[G.poisson.p]} change son pari…` : '');
+    chrono(null);
+  }
 }
 
 const sameStart = (a, b) => a.every((j, i) => b[i] && b[i].c.id === j.c.id);
@@ -439,6 +455,13 @@ export function jouer(id, as) {
   T.rendreMain(local);            // plus rien n'est cliquable en attendant le serveur
   chrono(null);
   envoyer({ t: 'jouer', id, as });
+}
+
+export function poisson(sens) {
+  if (!local || local.phase !== 'poisson') return;
+  T.cacherPari();
+  chrono(null);
+  envoyer({ t: 'poisson', sens });
 }
 
 export function pret() {

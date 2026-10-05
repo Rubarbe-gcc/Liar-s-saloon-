@@ -53,10 +53,12 @@ export const CUSTOM = {
     regle: 'Si aucun personnage n’est joué dans le pli, c’est la plus PETITE carte numérotée qui gagne, toutes couleurs confondues. Sinon, c’est une fuite.' },
   ancre: { nom: 'Ancre', glyphe: '⚓', nb: 1,
     regle: 'Une fuite qui retient le navire : son joueur ouvre le pli suivant, quel que soit le gagnant.' },
+  poisson: { nom: 'Poisson dégueulasse', glyphe: '🐡', nb: 1,
+    regle: 'Une fuite qui pue : celui qui remporte le pli où il tombe doit changer son pari de la manche — un de plus ou un de moins, au choix.' },
 };
 export const TOUTES_CUSTOM = Object.keys(CUSTOM);
 /** Les cartes qui ne prennent jamais rien d'elles-mêmes (elles ne fixent pas la couleur non plus). */
-const DISCRETES = ['esc', 'kra', 'wha', 'rhum', 'maudit', 'cors', 'canon', 'holl', 'ancre'];
+const DISCRETES = ['esc', 'kra', 'wha', 'rhum', 'maudit', 'cors', 'canon', 'holl', 'ancre', 'poisson'];
 const PERSONNAGES = ['sk', 'pir', 'sir'];
 
 /** Les cinq pirates ont chacun leur nom (et leur portrait). */
@@ -180,6 +182,8 @@ export function resoudre(pli, n = pli.length) {
     if (j.c.t === 'rhum') r.extras.push({ p: j.p, pts: 10, txt: 'Bouteille de rhum' });
     if (j.c.t === 'maudit' && r.gagnant !== null) r.extras.push({ p: r.gagnant, pts: -20, txt: 'Trésor maudit' });
     if (j.c.t === 'ancre') r.meneur = j.p;
+    // Le Poisson dégueulasse : le gagnant devra changer son pari.
+    if (j.c.t === 'poisson' && r.gagnant !== null) r.poisson = r.gagnant;
   }
   return r;
 }
@@ -252,7 +256,7 @@ export function creerPartie({ noms, bots, manches = MANCHES, extras = [] }) {
     manches, manche: 0, donneur: n - 1, meneur: 0, tour: 0,
     mains: [], paris: [], plis: [], bonus: [], pli: [], dernier: null,
     scores: Array(n).fill(0), historique: [], phase: 'pari',
-    extras: nettoyerExtras(extras), malus: [],
+    extras: nettoyerExtras(extras), malus: [], poisson: null,
   };
 }
 
@@ -271,6 +275,7 @@ export function nouvelleManche(G, rng) {
   G.malus = Array(G.n).fill(0);
   G.pli = [];
   G.dernier = null;
+  G.poisson = null;
   G.phase = 'pari';
   return G;
 }
@@ -334,6 +339,50 @@ export function ramasser(G) {
   G.dernier = { pli: G.pli, ...r };
   G.pli = [];
   G.meneur = G.tour = r.meneur;
+  // Le Poisson dégueulasse : on attend que le gagnant change son pari.
+  if (r.poisson != null) {
+    G.poisson = { p: r.poisson };
+    G.phase = 'poisson';
+    return r;
+  }
+  finirPli(G);
+  return r;
+}
+
+/**
+ * LE POISSON DÉGUEULASSE. Celui qui ramasse le pli où il est tombé change son
+ * pari de la manche : un de plus ou un de moins, au choix — sans sortir de
+ * 0 à n (un pari de zéro ne peut que monter).
+ */
+export function sensPossibles(G, p) {
+  const v = G.paris[p];
+  return [-1, 1].filter((d) => v + d >= 0 && v + d <= G.manche);
+}
+
+export function changerPari(G, p, sens) {
+  if (G.phase !== 'poisson' || !G.poisson) return { ok: false, raison: 'pas de poisson à digérer' };
+  if (G.poisson.p !== p) return { ok: false, raison: 'ce n’est pas à vous de changer de pari' };
+  if (!sensPossibles(G, p).includes(sens)) return { ok: false, raison: 'pari impossible' };
+  const avant = G.paris[p];
+  G.paris[p] += sens;
+  G.poisson = null;
+  if (G.dernier) G.dernier.changement = { p, avant, apres: G.paris[p] };
+  finirPli(G);
+  return { ok: true, avant, apres: G.paris[p] };
+}
+
+/** Le choix d'un pirate de l'ordinateur : vers ce qu'il pense encore pouvoir faire. */
+export function sensBot(G, p) {
+  const ok = sensPossibles(G, p);
+  if (ok.length === 1) return ok[0];
+  const reste = G.mains[p] || [];
+  const espere = G.plis[p] + reste.reduce((s, c) => s + chance(c, G.n, reste.length), 0);
+  const ecart = (d) => Math.abs(G.paris[p] + d - espere);
+  return ecart(1) < ecart(-1) ? 1 : -1;
+}
+
+/** La suite d'un pli ramassé : le pli suivant, ou le bilan de la manche. */
+function finirPli(G) {
   if (G.mains.every((m) => m.length === 0)) {
     const bilan = [];
     for (let p = 0; p < G.n; p++) {
@@ -345,7 +394,6 @@ export function ramasser(G) {
     G.historique.push(bilan);
     G.phase = 'bilan';
   } else G.phase = 'jeu';
-  return r;
 }
 
 /** Le classement : [{ p, nom, score, rang }], ex aequo au même rang. */
@@ -363,7 +411,7 @@ export function classement(G) {
 export function force(c, as = null) {
   const e = c.t === 'tig' ? as || 'pir' : c.t;
   if (e === 'n') return c.s === 'B' ? 20 + c.n : c.n;
-  return { esc: 0, kra: 0.5, wha: 15, sir: 40, pir: 50, sk: 60, rhum: 0.2, maudit: 0.1, ancre: 0.3, cors: 16, holl: 12, canon: 30 }[e] ?? 0;
+  return { esc: 0, kra: 0.5, wha: 15, sir: 40, pir: 50, sk: 60, rhum: 0.2, maudit: 0.1, ancre: 0.3, poisson: 0.15, cors: 16, holl: 12, canon: 30 }[e] ?? 0;
 }
 
 /** Les chances qu'une carte ramène un pli, à vue de nez de vieux loup de mer. */
@@ -383,7 +431,7 @@ function brute(c, taille) {
     case 'tig': return 0.55;           // souple : on décidera au moment de la jouer
     case 'sir': return 0.42;
     case 'wha': return 0.15;
-    case 'kra': case 'esc': case 'rhum': case 'maudit': case 'ancre': return 0;
+    case 'kra': case 'esc': case 'rhum': case 'maudit': case 'ancre': case 'poisson': return 0;
     case 'cors': return 0.45;
     case 'canon': return 0.3;
     case 'holl': return 0.12;

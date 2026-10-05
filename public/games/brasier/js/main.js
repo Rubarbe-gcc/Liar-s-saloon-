@@ -75,7 +75,7 @@ function remettreAZero() {
   elimineMontre = false;
   finMontree = false;
   avant = null;
-  for (const id of ['ov-heros', 'ov-decouverte', 'ov-fin']) $(id).hidden = true;
+  for (const id of ['ov-heros', 'ov-decouverte', 'ov-fin', 'ov-quete', 'ov-mode']) $(id).hidden = true;
 }
 
 /* ------------------------------------------------------------------ */
@@ -127,6 +127,7 @@ function surEtat(v, reste) {
 
     case PHASE.COMBAT:
       $('ov-decouverte').hidden = true;
+      $('ov-quete').hidden = true;
       if (v.combat && combatJoue !== v.tour) {
         combatJoue = v.tour;
         ui.montrer('combat');
@@ -171,6 +172,7 @@ const REFUS = {
   passif: 'Ce pouvoir est passif : il agit tout seul.',
   'réserve vide': 'La réserve est épuisée.',
   main: 'Votre main est pleine (10 cartes). Posez ou vendez-en une.',
+  sort: 'Cette carte ne peut pas être lancée.',
 };
 
 /** Le joueur est-il assis à une table, en partie ou au vestiaire ? */
@@ -226,7 +228,9 @@ ui.brancher((a) => net.agir(a));
 /* Branchements                                                        */
 /* ------------------------------------------------------------------ */
 
-const REGLES = { partie: regles.pagePartie, mots: regles.pageMots, cartes: regles.pageCartes, heros: regles.pageHeros };
+const REGLES = {
+  partie: regles.pagePartie, mots: regles.pageMots, cartes: regles.pageCartes, heros: regles.pageHeros, modes: regles.pageModes,
+};
 let reglesPretes = false;
 
 function ouvrirRegles(page = 'partie') {

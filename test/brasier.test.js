@@ -657,3 +657,149 @@ test('les bots se servent de leur main : ils posent ce qu’ils achètent', () =
   assert.ok(plateaux / k >= 5, `plateau moyen ${plateaux / k}`);
   assert.ok(mains / k <= 3, `main moyenne ${mains / k}`);
 });
+
+/* ================================================================== */
+/* Élémentaires, nouveaux héros, parties Quête et Anomalie            */
+/* ================================================================== */
+
+import * as M from '../public/shared/brasier/modes.js';
+
+/** Une table de deux joueurs, héros imposés, au premier recrutement. */
+function table(o = {}, heros = ['zora', 'zora']) {
+  const e = P.creerPartie([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], { seed: 7, ...o });
+  e.joueurs.forEach((j, k) => { j.offre = [heros[k]]; P.choisirHeros(e, j.id, heros[k]); });
+  P.commencer(e);
+  return e;
+}
+/** Avance d'un tour complet (recrutement, combat). */
+function tourSuivant(e) { P.terminerRecrutement(e); P.finirCombats(e); }
+
+test('les Élémentaires grandissent quand on pose un autre Élémentaire', () => {
+  const e = table();
+  const j = e.joueurs[0];
+  j.main = [srv('flammeche-errante'), srv('brise-mutine'), srv('apprenti-forgeron')];
+  P.agir(e, 'a', { type: 'jouer', i: 0 });
+  const f = j.plateau[0];
+  P.agir(e, 'a', { type: 'jouer', i: 0 });          // la brise : un Élémentaire
+  assert.equal(f.atk, 2); assert.equal(f.pv, 3);
+  P.agir(e, 'a', { type: 'jouer', i: 0 });          // l'apprenti : pas un Élémentaire
+  assert.ok(f.pv === 3, 'un neutre ne la nourrit pas');
+});
+
+test('la Brise mutine renforce les serviteurs de la taverne', () => {
+  const e = table();
+  const j = e.joueurs[0];
+  const avant = j.boutique.map((u) => u.atk + u.pv);
+  j.main = [srv('brise-mutine')];
+  P.agir(e, 'a', { type: 'jouer', i: 0 });
+  j.boutique.forEach((u, k) => assert.equal(u.atk + u.pv, avant[k] + 2));
+  assert.match(S.texte('brise-mutine'), /taverne/);
+  assert.match(S.texte('flammeche-errante'), /posez un autre Élémentaire/);
+});
+
+test('les exclusifs de quête ne sont jamais en taverne ni dans la réserve', () => {
+  for (const id of M.EXCLUSIFS) {
+    assert.ok(S.getServiteur(id).exclusif, id);
+    assert.ok(!S.RECRUTABLES.some((s) => s.id === id));
+    assert.ok(S.horsReserve(id));
+  }
+});
+
+test('les deux nouveaux héros : Aëlis souffle sur la taverne, Thadéus nourrit sa gauche de sa main', () => {
+  let e = table({}, ['aelis', 'thadeus']);
+  const a = e.joueurs[0];
+  const avant = a.boutique.map((u) => u.atk);
+  assert.ok(P.agir(e, 'a', { type: 'pouvoir' }).ok);
+  a.boutique.forEach((u, k) => assert.equal(u.atk, avant[k] + 1));
+  const t = e.joueurs[1];
+  t.plateau = [srv('apprenti-forgeron')];
+  t.main = [srv('chat-braise'), srv('chat-braise'), srv('braisillon'), srv('braisillon')];
+  P.terminerRecrutement(e);
+  assert.equal(t.plateau[0].atk, 2 + 3, '+1/+1 par carte en main, trois au plus');
+});
+
+test('une partie n’a qu’un seul genre : classique, quête ou anomalie', () => {
+  const vus = { classique: 0, quete: 0, anomalie: 0 };
+  for (let seed = 1; seed <= 400; seed++) {
+    const e = P.creerPartie([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }], { seed, mode: 'hasard' });
+    vus[e.mode]++;
+    if (e.mode === 'anomalie') assert.ok(e.anomalies.length >= 1 && e.anomalies.length <= 2);
+    else assert.equal(e.anomalies.length, 0, 'jamais d’anomalie hors d’une partie Anomalie');
+  }
+  assert.ok(vus.quete > 50 && vus.quete < 120, `quêtes : ${vus.quete}`);
+  assert.ok(vus.anomalie > 50 && vus.anomalie < 120, `anomalies : ${vus.anomalie}`);
+  assert.equal(P.creerPartie([{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }]).mode, 'classique');
+});
+
+test('partie Quête : trois quêtes au tour 3, une de chaque récompense, et la récompense tombe', () => {
+  const e = table({ mode: 'quete' });
+  assert.equal(e.joueurs[0].offreQuete, null);
+  tourSuivant(e); tourSuivant(e);
+  assert.equal(e.tour, M.TOUR_QUETE);
+  const j = e.joueurs[0];
+  assert.equal(j.offreQuete.length, 3);
+  assert.deepEqual(j.offreQuete.map((o) => o.recompense.type).sort(), ['cartes', 'or', 'serviteur']);
+  // On force une quête d'achat, récompensée d'un exclusif.
+  j.offreQuete = [{ id: 'marchand', recompense: { type: 'serviteur', id: 'phenix-azur' } }];
+  assert.ok(P.agir(e, 'a', { type: 'quete', i: 0 }).ok);
+  assert.equal(P.viewFor(e, 'a').moi.quete.id, 'marchand');
+  for (let k = 0; k < M.getQuete('marchand').n; k++) {
+    j.or = 10; j.main = [];
+    if (!j.boutique.length) P.agir(e, 'a', { type: 'rafraichir' });
+    assert.ok(P.agir(e, 'a', { type: 'acheter', i: 0 }).ok);
+  }
+  assert.ok(j.quete.faite);
+  assert.ok(j.main.some((u) => u.id === 'phenix-azur'), 'le phénix arrive dans la main');
+  // Le non-choix se règle d'office à la fin du recrutement.
+  const b = e.joueurs[1];
+  assert.ok(b.offreQuete);
+  P.terminerRecrutement(e);
+  assert.ok(b.quete && !b.offreQuete);
+});
+
+test('les cartes spéciales se lancent gratuitement', () => {
+  const e = table({ mode: 'quete' });
+  const j = e.joueurs[0];
+  j.plateau = [srv('apprenti-forgeron')];
+  j.sorts = [{ uid: 's1', id: 'pluie-or' }, { uid: 's2', id: 'dorure' }, { uid: 's3', id: 'egide' }];
+  const or = j.or;
+  assert.ok(P.agir(e, 'a', { type: 'lancer', i: 0 }).ok);
+  assert.equal(j.or, or + 4);
+  assert.ok(P.agir(e, 'a', { type: 'lancer', i: 0 }).ok);
+  assert.equal(j.plateau[0].atk, 4); assert.equal(j.plateau[0].pv, 4);
+  j.plateau = [];
+  assert.equal(P.agir(e, 'a', { type: 'lancer', i: 0 }).ok, false, 'pas de plateau, pas d’égide');
+  assert.equal(j.sorts.length, 1);
+});
+
+test('les anomalies changent les règles pour toute la table', () => {
+  let e = table({ mode: 'anomalie', anomalies: ['sang-royal', 'taverne-bondee'] });
+  assert.equal(e.joueurs[0].pv, 40);
+  assert.equal(e.joueurs[0].boutique.length, P.TAILLE_TAVERNE[1] + 1);
+  e = table({ mode: 'anomalie', anomalies: ['rangs-soldes', 'ruee-or'] });
+  assert.equal(e.joueurs[0].or, 4, 'une pièce de plus');
+  assert.equal(P.viewFor(e, 'a').moi.coutRang, P.COUT_RANG[2] - 1);
+  e = table({ mode: 'anomalie', anomalies: ['heros-inspires'] }, ['hildra', 'hildra']);
+  assert.equal(P.coutPouvoir(e, e.joueurs[0]), 2);
+  e = table({ mode: 'anomalie', anomalies: ['tribu-honneur'] });
+  assert.ok(M.TRIBUS_HONNEUR.includes(e.tribuHonneur));
+  const v = P.viewFor(e, 'a');
+  assert.equal(v.mode, 'anomalie');
+  assert.deepEqual(v.anomalies, ['tribu-honneur']);
+});
+
+test('huit bots finissent des parties Quête et Anomalie sans tricher sur la réserve', () => {
+  for (const [seed, mode] of [[11, 'quete'], [12, 'anomalie'], [13, 'quete'], [14, 'anomalie']]) {
+    const e = P.creerPartie(B.NOMS_BOTS.slice(0, 8).map((nom, i) => ({ id: `b${i}`, name: nom, isBot: true })), { seed, mode });
+    for (const j of e.joueurs) B.choisirHerosBot(e, j.id);
+    P.commencer(e);
+    while (e.phase !== P.PHASE.FIN) {
+      for (const j of P.vivants(e)) B.jouerBot(e, j.id);
+      verifierReserve(e);
+      P.terminerRecrutement(e);
+      P.finirCombats(e);
+    }
+    assert.ok(e.vainqueur);
+    if (mode === 'quete') assert.ok(e.joueurs.every((j) => j.quete), 'chacun a eu sa quête');
+  }
+});

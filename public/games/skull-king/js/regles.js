@@ -113,6 +113,7 @@ function quiBatQui(extras) {
     <p>🐙 <b>Kraken</b> : personne ne gagne le pli ; celui qui l’aurait gagné ouvre le suivant.</p>
     <p>🐋 <b>Baleine</b> : plus de personnages ; le plus gros chiffre gagne, toutes couleurs confondues.</p>
     ${extras.includes('holl') ? '<p>👻 <b>Hollandais volant</b> : sans personnage dans le pli, c’est le plus <b>petit</b> chiffre qui gagne.</p>' : ''}
+    ${extras.includes('poisson') ? '<p>🐡 <b>Poisson dégueulasse</b> : qui ramasse le pli où il tombe change son pari, +1 ou −1.</p>' : ''}
     <p>Plusieurs monstres dans un pli : le dernier posé décide.</p>
     <p>On doit suivre la couleur demandée si on en a ; les cartes spéciales se jouent toujours.</p>
   </div>`;

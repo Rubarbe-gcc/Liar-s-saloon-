@@ -8,8 +8,9 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
 - **SKULL KING** — le jeu de plis des pirates : on annonce ses plis, on tient
   parole. Solo contre un équipage de bots, en ligne entre amis (bots en
   renfort), et une feuille de score pour compter les points d'une vraie partie.
-  Un mode custom ajoute six cartes maison (rhum, trésor maudit, corsaire,
-  canon, Hollandais volant, ancre), et un aide-mémoire 📖 se consulte à table.
+  Un mode custom ajoute sept cartes maison (rhum, trésor maudit, corsaire,
+  canon, Hollandais volant, ancre, poisson dégueulasse), et un aide-mémoire 📖
+  se consulte à table.
 
 Dans tous les jeux en ligne, une connexion qui tombe en pleine partie n'est
 pas un départ : la place attend son joueur cinq minutes (un bot joue pour lui
@@ -65,8 +66,15 @@ les étoiles de ses survivants, sous un plafond qui monte avec les tours.
   rejoue au rythme d'une table `TEMPO` partagée avec le serveur, qui sait ainsi
   quand relancer le recrutement.
 - **Six mots-clés** (Provocation, Bouclier sacré, Venin, Furie, Réincarnation,
-  Balayage) et cinq moments d'effet (cri, fin de tour, début de combat, râle,
-  mort d'un allié), sur six tribus et une quarantaine de serviteurs originaux.
+  Balayage) et six moments d'effet (cri, fin de tour, début de combat, râle,
+  mort d'un allié, pose d'un allié), sur sept tribus — dont les Élémentaires,
+  qui grandissent quand on pose leurs semblables — et une cinquantaine de
+  serviteurs originaux.
+- **Trois genres de partie**, tirés au sort au lancement, jamais cumulés
+  (`modes.js`) : classique ; **Quête** (au tour 3, une quête parmi trois, qui
+  rapporte un serviteur exclusif, des cartes spéciales ou de l'or) ;
+  **Anomalie** (une ou deux règles spéciales pour toute la table). En local,
+  `BRASIER_MODE=quete` ou `anomalie` impose le genre.
 - **Les bots** passent par la même fonction `agir` que les joueurs : mêmes
   règles, même or, même réserve. Ils prennent les chaises vides au lancement,
   et la chaise de quiconque quitte la partie en cours.
