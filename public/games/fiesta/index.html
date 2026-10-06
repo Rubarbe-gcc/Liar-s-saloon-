@@ -49,9 +49,6 @@
       <label>Ordinateurs
         <select id="in-niveau"><option value="facile">Facile</option><option value="normal" selected>Normal</option><option value="expert">Expert</option></select>
       </label>
-      <label>Mini-jeux
-        <select id="in-modes"><option value="tous" selected>Tous (avec équipes et 1 contre tous)</option><option value="chacun">Chacun pour soi seulement</option></select>
-      </label>
       <label>Plateau
         <select id="in-longueur"><option value="courte">Court (30 cases)</option><option value="normale" selected>Normal (45 cases)</option><option value="longue">Long (60 cases)</option></select>
       </label>
@@ -85,9 +82,6 @@
       <div class="reglages">
         <label>Ordinateurs
           <select id="en-niveau"><option value="facile">Facile</option><option value="normal">Normal</option><option value="expert">Expert</option></select>
-        </label>
-        <label>Mini-jeux
-          <select id="en-modes"><option value="tous">Tous (avec équipes et 1 contre tous)</option><option value="chacun">Chacun pour soi seulement</option></select>
         </label>
         <label>Plateau
           <select id="en-longueur"><option value="courte">Court (30 cases)</option><option value="normale">Normal (45 cases)</option><option value="longue">Long (60 cases)</option></select>
@@ -136,6 +130,7 @@
 </section>
 
 <!-- ======================== SUPERPOSITIONS ====================== -->
+<div class="ov ov-roue" id="ov-roue" hidden><div class="roue" id="roue"></div></div>
 <div class="ov" id="ov-intro" hidden><div class="feuille intro" id="intro"></div></div>
 <div class="ov" id="ov-score" hidden><div class="feuille score-perso" id="score-perso"></div></div>
 <div class="ov" id="ov-resultats" hidden><div class="feuille" id="resultats"></div></div>

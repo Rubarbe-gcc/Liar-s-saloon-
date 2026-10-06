@@ -191,7 +191,6 @@ function lancerPartie() {
     })),
     niveau: $('in-niveau').value,
     longueur: $('in-longueur').value,
-    modes: $('in-modes').value,
     graine: Date.now(),
   });
   // Les couleurs suivent les places choisies, pas l'ordre de la partie.
@@ -236,12 +235,15 @@ async function suivre() {
   if (p.phase === 'minijeu') {
     if (enLigne) {
       // Chacun joue chez soi, une fois par tour.
-      if (!vue.faits[moi] && joueTour !== p.tour) { joueTour = p.tour; montrerIntro(p.joueurs[moi]); }
+      if (!vue.faits[moi] && joueTour !== p.tour) { joueTour = p.tour; montrerRoue(() => montrerIntro(p.joueurs[moi])); }
       majAttente();
       return;
     }
     const h = P.humainSuivant(p);
-    if (h) montrerIntro(h);
+    if (!h) return;
+    // La roue tourne une fois par tour, avant le premier joueur.
+    if (p.roue !== p.tour) montrerRoue(() => { p.roue = p.tour; sauver(); montrerIntro(h); });
+    else montrerIntro(h);
     return;
   }
   if (p.phase === 'resultats') { montrerResultats(); return; }
@@ -295,8 +297,89 @@ function preparerEntrainement(m) {
   if (m.style === 'duo') ctx = { role: 'equipe', equipe: [0, 1] };
   // Un contre tous : un rôle au hasard, contre l'ordinateur.
   if (m.style === 'seul') ctx = Math.random() < 0.5 ? { role: 'solo', solo: 0, autres: [1, 2, 3] } : { role: 'autres', solo: 1, autres: [0, 2, 3] };
-  essai = { joueurs, ctx };
+  // Ce que l'ordinateur joue en face, prêt d'avance (le gardien affronte ces tirs-là).
+  const scores = joueurs.map((_, i) => (i === 0 || !m.cpuJouer ? null
+    : m.cpuJouer('normal', Math.random, { ...ctx, role: i === ctx.solo ? 'solo' : 'autres' })));
+  essai = { joueurs, ctx, scores };
   return essai;
+}
+
+/* ------------------------------------------------------------------ */
+/* La roue : le style du mini-jeu, puis le mini-jeu lui-même            */
+/* ------------------------------------------------------------------ */
+
+const CARTE_ROUE = 132;     // largeur d'une case de la roue, écart compris
+let arreterRoue = null;
+
+/**
+ * Comme dans Mario Party : on annonce d'abord le style du mini-jeu (chacun
+ * pour soi, 2 contre 2, 1 contre 3…) et les camps, puis la roue fait
+ * défiler les mini-jeux de ce style, ralentit, et s'arrête sur celui du tour.
+ * Un toucher passe l'animation.
+ */
+function montrerRoue(suite) {
+  arreterRoue?.();
+  const f = P.formatDe(p);
+  const cible = MINIJEU[p.minijeu];
+  const duStyle = MINIJEUX.filter((m) => m.style === cible.style);
+  // Une longue bande : les mini-jeux du style, mélangés, plusieurs fois ; la cible tombe vers la fin.
+  const bande = [];
+  while (bande.length < 26) bande.push(...[...duStyle].sort(() => Math.random() - 0.5));
+  const arret = 22;
+  bande[arret] = cible;
+  if (duStyle.length > 1 && bande[arret - 1] === cible) [bande[arret - 1], bande[arret - 2]] = [bande[arret - 2], bande[arret - 1]];
+  $('roue').innerHTML = `<p class="sous">Tour ${p.tour}</p>
+    <div class="roue-style f-${f.type}">${P.FORMATS[f.type].glyphe} ${esc(P.nomFormat(p))} !</div>
+    ${f.type === 'chacun' ? '<p class="roue-aide">Tout le monde contre tout le monde !</p>'
+      : `<div class="versus"><div class="camp">${campHtml(f.equipes[0])}</div><span class="vs">VS</span><div class="camp">${campHtml(f.equipes[1])}</div></div>`}
+    <div class="roue-fenetre"><div class="roue-bande">${bande.map((m, k) => `<div class="roue-carte" data-k="${k}"><span>${m.glyphe}</span><b>${esc(m.nom)}</b></div>`).join('')}</div>
+      <i class="roue-fleche"></i></div>
+    <h2 class="roue-nom">&nbsp;</h2>
+    <button class="btn rose btn-large" id="b-roue" hidden>C’est parti ! 🎮</button>`;
+  ouvrir('ov-roue');
+  son.fanfare();
+  const fen = $('roue').querySelector('.roue-fenetre');
+  const ruban = $('roue').querySelector('.roue-bande');
+  const cartes = [...ruban.children];
+  // Le décalage qui met la case k sous la flèche.
+  const decalage = (x) => fen.clientWidth / 2 - CARTE_ROUE / 2 - x * CARTE_ROUE;
+  ruban.style.transform = `translateX(${decalage(0)}px)`;
+
+  let fini = false;
+  let tic = 0;
+  let attente = 0;
+  const DUREE = 3600;
+  const terminer = () => {
+    if (fini) return;
+    fini = true;
+    clearInterval(tic);
+    clearTimeout(attente);
+    ruban.style.transform = `translateX(${decalage(arret)}px)`;
+    cartes.forEach((c) => c.classList.toggle('choisie', Number(c.dataset.k) === arret));
+    $('roue').querySelector('.roue-nom').textContent = `${cible.glyphe} ${cible.nom} !`;
+    son.top();
+    setTimeout(() => son.fanfare(), 150);
+    const b = $('b-roue');
+    b.hidden = false;
+    b.onclick = () => { arreterRoue = null; fermer('ov-roue'); suite(); };
+  };
+  // Un toucher pendant que la roue tourne : on saute à la fin.
+  $('roue').onpointerdown = (e) => { if (!fini && !e.target.closest('button')) terminer(); };
+  arreterRoue = () => { fini = true; clearInterval(tic); clearTimeout(attente); arreterRoue = null; fermer('ov-roue'); };
+
+  // L'annonce du style, puis la roue : rapide d'abord, de plus en plus lente.
+  attente = setTimeout(() => {
+    const t0 = performance.now();
+    let derniere = 0;
+    tic = setInterval(() => {
+      const t = Math.min(1, (performance.now() - t0) / DUREE);
+      const x = arret * (1 - (1 - t) ** 3.2);
+      ruban.style.transform = `translateX(${decalage(x)}px)`;
+      const k = Math.round(x);
+      if (k !== derniere) { derniere = k; son.tic(); }
+      if (t >= 1) terminer();
+    }, 16);
+  }, 1300);
 }
 
 function montrerIntro(j, entrainement = false) {
@@ -304,8 +387,8 @@ function montrerIntro(j, entrainement = false) {
   const ctx = entrainement ? preparerEntrainement(m).ctx : P.contexte(p, j.i);
   const humains = entrainement ? [] : p.joueurs.filter((x) => x.humain);
   const premier = !entrainement && (enLigne || humains.indexOf(j) === 0);
-  $('intro').innerHTML = `${!entrainement && premier ? `<p class="sous">Tour ${p.tour} — le mini-jeu est…</p>` : ''}
-    ${entrainement ? '' : formatHtml(j.i, premier)}
+  $('intro').innerHTML = `${!entrainement && premier ? `<p class="sous">Tour ${p.tour}</p>` : ''}
+    ${entrainement ? '' : formatHtml(j.i)}
     <div class="glyphe">${m.glyphe}</div>
     <h2>${esc(m.nom)}</h2>
     <p class="regle">${esc(m.regle)}</p>
@@ -314,6 +397,10 @@ function montrerIntro(j, entrainement = false) {
       ${humains.length > 1 && !enLigne ? '<p class="passe">Passez-lui le téléphone 📱</p>' : ''}`}
     <button class="btn rose btn-large" id="b-pret">Je suis prêt ! 🎮</button>`;
   ouvrir('ov-intro');
+  if (!entrainement && gardienAttend(j.i)) {
+    $('b-pret').disabled = true;
+    $('b-pret').textContent = '⏳ Les tireurs s’élancent…';
+  }
   $('b-pret').onclick = () => {
     fermer('ov-intro');
     jouerMinijeu(m.id, entrainement ? null : j);
@@ -332,6 +419,9 @@ async function jouerMinijeu(id, j) {
   arreterJeu = mod.demarrer($('arene'), {
     ctx: j ? P.contexte(p, j.i) : essai.ctx,
     joueurs: j ? p.joueurs : essai.joueurs,
+    scores: j ? p.scores : essai.scores,
+    // En ligne, le gardien raconte chaque tir aux autres, en direct.
+    direct: enLigne && j ? (e) => EL.envoyer({ t: 'direct', e }) : null,
     moi: j ? j.i : 0,
     fin: (score) => {
       if (fini) return;
@@ -375,7 +465,7 @@ function apresMinijeu(id, j, score, abandon = false) {
     } else {
       // À l'entraînement, l'ordinateur donne la réplique tout de suite.
       const { ctx } = essai;
-      const val = (i) => (i === 0 ? score : m.cpuJouer('normal', Math.random, { ...ctx, role: i === ctx.solo ? 'solo' : 'autres' }));
+      const val = (i) => (i === 0 ? score : essai.scores[i]);
       const r = m.resoudre(ctx.solo, ctx.autres, val);
       const monCamp = ctx.role === 'solo' ? 0 : 1;
       gros = esc(fmt(id, r.valeurs[0], ctx.role));
@@ -637,6 +727,8 @@ async function traiterEnLigne(m) {
     vue = null;
     joueTour = 0;
     finComptee = false;
+    arreterRoue?.();
+    fermerDirect();
     ['ov-intro', 'ov-score', 'ov-resultats', 'ov-fin', 'ov-des', 'ov-pause'].forEach(fermer);
     return;
   }
@@ -653,6 +745,7 @@ async function traiterEnLigne(m) {
     await attendre(300);
     return;
   }
+  if (m.t === 'fi:direct') { montrerDirect(m); return; }
   if (m.t === 'fi:roule' && p.phase === 'des') {
     const j = p.joueurs[m.i];
     console_(`${j.avatar} <b>${esc(j.nom)}</b> fait rouler ses dés… 🎲`);
@@ -682,6 +775,9 @@ function surEtat(v) {
   const change = avant.phase !== p.phase || avant.tour !== p.tour || P.quiLance(avant) !== P.quiLance(p);
   if (!change) { rendreClassement(P.quiLance(p)); majAttente(); return; }
   if (avant.phase === 'minijeu' && p.phase !== 'minijeu') {
+    arreterRoue?.();
+    // Le direct reste un instant, le temps de voir le dernier tir.
+    setTimeout(fermerDirect, 1500);
     fermer('ov-intro');
     // Le temps du mini-jeu s'est écoulé en pleine partie : l'ordinateur a joué pour nous.
     if (couperJeu) { couperJeu(); toast('⏱️ Temps écoulé !'); aller('s-jeu'); PL.dessiner(p); }
@@ -693,8 +789,50 @@ function surEtat(v) {
 }
 
 /** Qui reste-t-il à attendre (mini-jeu, résultats) ? */
+/**
+ * Le gardien des tirs au but joue en dernier, contre les tirs des autres : en
+ * ligne, il attend qu'ils aient tous frappé.
+ */
+function gardienAttend(i) {
+  if (!enLigne) return P.attendLesAutres(p, i);
+  const f = P.formatDe(p);
+  return f.type === 'seul' && !!MINIJEU[p.minijeu].soloEnDernier && f.equipes[0][0] === i && f.equipes[1].some((x) => !vue.faits[x]);
+}
+
+/* Le direct : les autres suivent le gardien, tir après tir. */
+let directEl = null;
+function montrerDirect({ i, e }) {
+  if (!p || p.phase !== 'minijeu') return;
+  const g = p.joueurs[i];
+  const t = p.joueurs[e.tireur];
+  if (!g || !t) return;
+  if (!directEl) {
+    directEl = document.createElement('div');
+    directEl.className = 'direct';
+    directEl.marque = [];
+    document.body.appendChild(directEl);
+  }
+  const moiTireur = e.tireur === moi;
+  const texte = e.resultat === 'arret' ? `🧤 ARRÊT de ${g.avatar} sur ${t.avatar} !`
+    : e.resultat === 'but' ? `⚽ BUT de ${t.avatar} ${esc(t.nom)} !` : `❌ ${t.avatar} ${esc(t.nom)} rate son tir…`;
+  directEl.marque.push(e.resultat === 'arret' ? '🧤' : e.resultat === 'but' ? '✅' : '❌');
+  directEl.innerHTML = `<span class="en-direct">● EN DIRECT</span>
+    <div class="evt flash">${texte}</div>
+    <div class="score-direct">${directEl.marque.join(' ')}</div>
+    <small>${g.avatar} ${esc(g.nom)} au but${moiTireur ? ' — c’était votre tir !' : ''}</small>`;
+  if (e.resultat === 'but') son.bon(); else if (e.resultat === 'arret') son.mauvais(); else son.tic();
+}
+function fermerDirect() { directEl?.remove(); directEl = null; }
+
 function majAttente() {
   if (!enLigne || !p || !vue) return;
+  // Les tireurs ont tous frappé : au gardien !
+  const bp = $('b-pret');
+  if (p.phase === 'minijeu' && !$('ov-intro').hidden && bp?.disabled && !gardienAttend(moi)) {
+    bp.disabled = false;
+    bp.textContent = 'À vous, gardien ! 🧤';
+    son.top();
+  }
   const autour = (ok) => p.joueurs.filter((j) => !ok(j.i) && !vue.bots[j.i]).map((j) => j.avatar).join(' ');
   if (p.phase === 'minijeu' && vue.faits[moi]) {
     const qui = autour((i) => vue.faits[i]);
@@ -709,6 +847,8 @@ function majAttente() {
 
 /** La partie en ligne s'arrête (on a quitté, ou la table a fermé). */
 function finirEnLigne() {
+  arreterRoue?.();
+  fermerDirect();
   couperJeu?.();
   annulerDes?.();
   enLigne = false;
@@ -812,6 +952,7 @@ function brancher() {
   $('b-pause').addEventListener('click', () => ouvrir('ov-pause'));
   $('b-menu').addEventListener('click', () => {
     fermer('ov-pause');
+    arreterRoue?.();
     // En ligne, quitter la partie : l'ordinateur prend la place.
     if (enLigne) { EL.quitter(); majMenu(); return; }
     sauver(); p = null; majMenu();

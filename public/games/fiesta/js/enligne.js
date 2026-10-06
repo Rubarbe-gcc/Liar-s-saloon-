@@ -128,6 +128,7 @@ function traiter(m) {
     case 'fi:etat':
     case 'fi:lance':
     case 'fi:roule':
+    case 'fi:direct':
       if (!enJeu) { enJeu = true; reprise.enPartie(JEU, { code: salon?.code }); o.recevoir({ t: 'fi:debut', reprise: true }); }
       // Une partie finie ne se reprend plus.
       if (m.t === 'fi:etat' && m.vue.p.phase === 'fin') reprise.oublier(JEU);
@@ -176,7 +177,7 @@ function rendreSalon() {
   $('en-nb-bots').textContent = bots;
   $('en-moins').disabled = bots === 0;
   $('en-plus').disabled = n >= salon.max;
-  for (const k of ['niveau', 'longueur', 'modes']) {
+  for (const k of ['niveau', 'longueur']) {
     $(`en-${k}`).value = salon.options[k];
     $(`en-${k}`).disabled = !hote;
   }
@@ -217,9 +218,9 @@ export function init(opts) {
   $('en-moins').addEventListener('click', () => envoyer({ t: 'bot', delta: -1 }));
   $('en-lancer').addEventListener('click', () => envoyer({ t: 'start' }));
   $('en-joueurs').addEventListener('click', (e) => { if (e.target.closest('[data-avatar]')) envoyer({ t: 'avatar' }); });
-  for (const k of ['niveau', 'longueur', 'modes']) {
+  for (const k of ['niveau', 'longueur']) {
     $(`en-${k}`).addEventListener('change', () => envoyer({
-      t: 'options', options: { niveau: $('en-niveau').value, longueur: $('en-longueur').value, modes: $('en-modes').value },
+      t: 'options', options: { niveau: $('en-niveau').value, longueur: $('en-longueur').value },
     }));
   }
   $('en-quitter').addEventListener('click', () => { quitter(); porte(true); });

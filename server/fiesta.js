@@ -14,6 +14,7 @@
  */
 
 import * as P from '../public/shared/fiesta/partie.js';
+import { MINIJEU } from '../public/shared/fiesta/minijeux.js';
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 const CODE_LEN = 4;
@@ -24,6 +25,7 @@ const PARTIE_TTL = 30 * 60 * 1000;
 export const DELAIS = {
   minijeu: 3 * 60 * 1000,  // pour finir le mini-jeu (le Mémo d'un champion peut durer)
   absentJeu: 15 * 1000,    // un absent : l'ordinateur joue le mini-jeu pour lui
+  gardien: 60 * 1000,      // au moins ce temps-là au gardien, quand les tireurs ont fini
   resultats: 25 * 1000,    // les résultats, si tout le monde ne clique pas « aux dés »
   lancer: 30 * 1000,       // pour arrêter ses dés
   bot: 1200,               // l'ordinateur lance
@@ -158,11 +160,18 @@ export class Table {
     };
   }
 
-  /** Ce qu'un joueur a le droit de voir : pendant le mini-jeu, seulement son propre score. */
+  /**
+   * Ce qu'un joueur a le droit de voir : pendant le mini-jeu, seulement son
+   * propre score — sauf le gardien des tirs au but, qui reçoit les tirs des
+   * autres une fois qu'ils ont tous frappé, pour les affronter en direct.
+   */
   vue(id) {
     const p = this.p;
     const moi = this.indexOf(id);
-    const cache = p.phase === 'minijeu';
+    const f = P.formatDe(p);
+    const gardien = p.phase === 'minijeu' && f.type === 'seul' && MINIJEU[p.minijeu].soloEnDernier
+      && f.equipes[0][0] === moi && !P.attendLesAutres(p, moi);
+    const cache = p.phase === 'minijeu' && !gardien;
     return {
       p: { ...p, alea: 0, scores: cache ? p.scores.map((s, i) => (i === moi ? s : null)) : p.scores },
       faits: p.scores.map((s) => s !== null),
@@ -260,6 +269,12 @@ export class Table {
     if (!Number.isFinite(n)) return;
     const r = P.score(p, i, Math.max(0, Math.min(99999, Math.round(n))));
     if (!r.ok) return;
+    // Le gardien entre en jeu quand tous les tireurs ont frappé : il a le temps de jouer.
+    const f = P.formatDe(p);
+    if (p.phase === 'minijeu' && f.type === 'seul' && MINIJEU[p.minijeu].soloEnDernier
+      && p.scores[f.equipes[0][0]] === null && !P.attendLesAutres(p, f.equipes[0][0])) {
+      this.finMinijeu = Math.max(this.finMinijeu, Date.now() + DELAIS.gardien);
+    }
     this.avancer();
   }
 
@@ -300,6 +315,23 @@ export class Table {
     if (i < 0 || !Array.isArray(tirage)) return;
     const r = this.lancerPour(i, tirage.slice(0, 2).map(Number));
     if (r.ok === false && r.raison) this.envoyer(id, { t: 'fi:erreur', msg: 'Ces dés ne sont pas valables.' });
+  }
+
+  /** Le gardien vient d'affronter un tir : les autres le voient en direct. */
+  direct(id, e) {
+    const p = this.p;
+    const i = this.indexOf(id);
+    if (!p || p.phase !== 'minijeu' || !e || typeof e !== 'object') return;
+    const f = P.formatDe(p);
+    if (f.type !== 'seul' || f.equipes[0][0] !== i) return;
+    const evt = {
+      tireur: f.equipes[1].includes(e.tireur) ? e.tireur : null,
+      k: Math.max(0, Math.min(9, Number(e.k) || 0)),
+      coin: [0, 1, 2].includes(e.coin) ? e.coin : null,
+      resultat: ['arret', 'but', 'rate'].includes(e.resultat) ? e.resultat : null,
+    };
+    if (evt.tireur === null || !evt.resultat) return;
+    for (const x of this.humains()) if (x.id !== id) this.envoyer(x.id, { t: 'fi:direct', i, e: evt });
   }
 
   /** Le joueur fait rouler ses dés : les autres le voient. */
@@ -497,6 +529,10 @@ export function handleMessage(conn, msg) {
 
     case 'roule':
       if (t) t.roule(id);
+      return;
+
+    case 'direct':
+      if (t) t.direct(id, msg.e);
       return;
 
     case 'lancer':

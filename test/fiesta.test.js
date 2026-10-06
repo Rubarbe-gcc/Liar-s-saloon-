@@ -233,30 +233,35 @@ function tourSeul(id) {
   throw new Error(id);
 }
 
-test('Tirs au But : le gardien qui devine tout gagne deux dés et un bonus', () => {
+test('Tirs au But : le gardien joue en dernier, et qui arrête tout gagne deux dés et un bonus', () => {
   const p = tourSeul('tirs');
   const [[gardien], tireurs] = P.formatDe(p).equipes;
-  // Tous les tireurs frappent à gauche (0) ; le gardien plonge toujours à gauche.
-  P.score(p, gardien, M.coder(Array(9).fill(0), 3));
-  for (const t of tireurs) P.score(p, t, M.coder([0, 0, 0], 4));
+  assert.equal(P.humainSuivant(p).i, tireurs[0], 'les tireurs d’abord');
+  assert.equal(P.attendLesAutres(p, gardien), true);
+  // Chaque tireur frappe à gauche, à pleine puissance : 1 + 0×3 + 2.
+  for (const t of tireurs) P.score(p, t, M.coder([3, 3, 3], 10));
+  assert.equal(P.attendLesAutres(p, gardien), false);
+  assert.equal(P.humainSuivant(p).i, gardien, 'puis le gardien');
+  P.score(p, gardien, M.coder(Array(9).fill(1), 2));
   assert.equal(p.phase, 'resultats');
   assert.equal(p.equipes[0].gagne, true);
   assert.equal(p.equipes[0].score, 9, '9 arrêts');
-  assert.equal(p.resolution.texte, '0 but sur 9 tirs');
   assert.deepEqual(P.desDe(p, gardien), { i: gardien, des: 2, bonus: 3 });
   for (const t of tireurs) assert.deepEqual(P.desDe(p, t), { i: t, des: 1, bonus: 0 });
+  assert.deepEqual(M.lireTir(3), { coin: 0, puissance: 2 });
+  assert.equal(M.lireTir(0), null);
 });
 
-test('Tirs au But : les tireurs qui marquent plus de la moitié gagnent', () => {
+test('Tirs au But : un tir sur trois au fond, et les tireurs gagnent', () => {
   const p = tourSeul('tirs');
   const [[gardien], tireurs] = P.formatDe(p).equipes;
-  P.score(p, gardien, M.coder(Array(9).fill(0), 3));
-  // À droite (2) : but. Au-dessus (3) : raté. Le premier tireur rate tout, les autres marquent tout.
-  tireurs.forEach((t, k) => P.score(p, t, M.coder(k === 0 ? [3, 3, 3] : [2, 2, 2], 4)));
+  // Le premier tireur rate tout (0) ; les autres cadrent tout.
+  tireurs.forEach((t, k) => P.score(p, t, M.coder(k === 0 ? [0, 0, 0] : [5, 5, 5], 10)));
+  // Le gardien arrête les tirs ratés (peu importe) et un tir sur deux des autres.
+  P.score(p, gardien, M.coder([1, 1, 1, 1, 0, 1, 0, 1, 0], 2));
+  assert.equal(p.resolution.texte, '3 buts sur 9 tirs (il en fallait 3)');
   assert.equal(p.equipes[1].gagne, true);
-  assert.equal(p.equipes[1].score, 6);
   assert.equal(p.classement.find((c) => c.i === tireurs[0]).score, 0);
-  assert.equal(p.classement.find((c) => c.i === tireurs[1]).score, 3);
   for (const t of tireurs) assert.equal(P.desDe(p, t).des, 2);
   assert.equal(P.desDe(p, gardien).des, 1);
 });

@@ -209,8 +209,24 @@ export function contexte(p, i) {
   return { role: A[0] === i ? 'solo' : 'autres', solo: A[0], autres: B };
 }
 
-/** Le prochain humain qui doit jouer le mini-jeu, ou null. */
-export const humainSuivant = (p) => p.joueurs.find((j) => j.humain && p.scores[j.i] === null) || null;
+/**
+ * Le prochain humain qui doit jouer le mini-jeu, ou null. Dans un mini-jeu
+ * où le joueur seul affronte en direct ce que les autres ont fait (le
+ * gardien des tirs au but), il passe en dernier.
+ */
+export function humainSuivant(p) {
+  const libres = p.joueurs.filter((j) => j.humain && p.scores[j.i] === null);
+  const f = formatDe(p);
+  if (libres.length > 1 && f.type === 'seul' && MINIJEU[p.minijeu]?.soloEnDernier) return libres.find((j) => j.i !== f.equipes[0][0]);
+  return libres[0] || null;
+}
+
+/** Ce joueur seul attend que les autres aient joué (vrai seulement pour le gardien des tirs au but). */
+export function attendLesAutres(p, i) {
+  const f = formatDe(p);
+  if (f.type !== 'seul' || !MINIJEU[p.minijeu]?.soloEnDernier || f.equipes[0][0] !== i) return false;
+  return f.equipes[1].some((x) => p.scores[x] === null);
+}
 
 /** Un humain vient de finir le mini-jeu. */
 export function score(p, i, valeur) {

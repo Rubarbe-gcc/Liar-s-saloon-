@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import * as hub from '../server/hub.js';
 import { DELAIS } from '../server/fiesta.js';
 import { MINIJEU } from '../public/shared/fiesta/minijeux.js';
+import * as M from '../public/shared/fiesta/minijeux.js';
 
 const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
 let seq = 0;
@@ -29,7 +30,7 @@ function connexion() {
 const dire = (c, msg) => hub.handleMessage(c, { g: 'fiesta', ...msg });
 const couper = (c) => { c.ferme = true; hub.handleClose(c); };
 
-Object.assign(DELAIS, { minijeu: 400, absentJeu: 30, resultats: 40, lancer: 60, bot: 3, absent: 10, animation: 0 });
+Object.assign(DELAIS, { minijeu: 400, absentJeu: 30, gardien: 200, resultats: 40, lancer: 60, bot: 3, absent: 10, animation: 0 });
 
 /** Joue pour un humain ce que la table attend de lui. */
 function jouerPour(c) {
@@ -153,4 +154,41 @@ test('FIESTA en ligne : une coupure en pleine partie, l’ordi joue en attendant
   assert.equal(v.bots[1], true);
   assert.equal(v.p.joueurs[1].humain, false);
   a.partir();
+});
+
+test('FIESTA en ligne : le gardien reçoit les tirs quand tous ont frappé, et les autres le suivent en direct', async () => {
+  const P = await import('../public/shared/fiesta/partie.js');
+  // On cherche une table dont le premier tour est un Tirs au But, avec un humain au but et un autre au tir.
+  for (let essai = 0; essai < 400; essai++) {
+    const a = connexion();
+    dire(a, { t: 'session', sid: `fiestaGARD${String(essai).padStart(3, '0')}` });
+    dire(a, { t: 'create', name: 'Anne' });
+    const code = a.dernier('fi:salon').code;
+    const b = connexion();
+    dire(b, { t: 'session', sid: `fiestaTIRE${String(essai).padStart(3, '0')}` });
+    dire(b, { t: 'join', code, name: 'Bart' });
+    dire(a, { t: 'bot', delta: 1 });
+    dire(a, { t: 'bot', delta: 1 });
+    dire(a, { t: 'start' });
+    const v = a.dernier('fi:etat').vue;
+    const f = P.formatDe(v.p);
+    if (v.p.minijeu !== 'tirs' || ![0, 1].includes(f.equipes[0][0])) { a.partir(); b.partir(); continue; }
+    const [gardien, tireur] = f.equipes[0][0] === 0 ? [a, b] : [b, a];
+    const ig = f.equipes[0][0];
+    const it = 1 - ig;
+    assert.equal(gardien.dernier('fi:etat').vue.p.scores[it], null, 'les tirs restent secrets tant que tous n’ont pas frappé');
+    dire(tireur, { t: 'score', v: M.coder([4, 5, 6], 10) });
+    const vg = gardien.dernier('fi:etat').vue;
+    assert.equal(vg.p.scores[it], M.coder([4, 5, 6], 10), 'le gardien reçoit les tirs');
+    assert.equal(tireur.dernier('fi:etat').vue.p.scores[ig], null);
+    // En direct : un arrêt, relayé aux autres (et pas au gardien lui-même).
+    dire(gardien, { t: 'direct', e: { tireur: it, k: 0, coin: 1, resultat: 'arret' } });
+    assert.deepEqual(tireur.dernier('fi:direct'), { t: 'fi:direct', i: ig, e: { tireur: it, k: 0, coin: 1, resultat: 'arret' } });
+    assert.equal(gardien.dernier('fi:direct'), undefined);
+    dire(tireur, { t: 'direct', e: { tireur: ig, k: 0, coin: 1, resultat: 'but' } });
+    assert.equal(gardien.dernier('fi:direct'), undefined, 'seul le gardien parle en direct');
+    a.partir(); b.partir();
+    return;
+  }
+  assert.fail('aucune table avec un Tirs au But');
 });

@@ -30,6 +30,16 @@ export const MANCHES_FANTOME = 3;
 /** Autant de pièces que de chasseurs, plus deux : trouver le fantôme n'est jamais gagné d'avance. */
 export const piecesFantome = (chasseurs) => chasseurs + 2;
 const RATE_TIR = { facile: 0.3, normal: 0.15, expert: 0.07 };
+const ARRET_ORDI = { facile: 0.45, normal: 0.6, expert: 0.72 };
+/** Un tir lu par le gardien : raté, ou le coin (0 à 2) et la puissance (0 à 2). */
+export function lireTir(chiffreTir) {
+  if (!chiffreTir) return null;
+  return { coin: Math.floor((chiffreTir - 1) / 3), puissance: (chiffreTir - 1) % 3 };
+}
+/** Le temps (ms) que met le ballon à entrer, selon la puissance : c'est le temps du gardien pour plonger. */
+export const VOL_BALLON = [760, 580, 430];
+/** Les tireurs gagnent s'ils marquent au moins un tir sur trois. */
+export const butsPourGagner = (tirs) => Math.ceil(tirs / 3);
 
 export const MINIJEUX = [
   M('tapotage', 'Tapotage Turbo', '👆', 'Tapez le plus vite possible sur le gros bouton pendant 8 secondes !', 'haut', 'tapes',
@@ -59,17 +69,29 @@ export const MINIJEUX = [
 
   /* ---- 1 contre tous ---- */
   {
-    ...M('tirs', 'Tirs au But', '⚽', 'Un gardien contre tous les tireurs, trois tirs chacun. Les tireurs gagnent s’ils marquent plus de la moitié des tirs !', 'haut', 'buts', null, 'seul'),
+    ...M('tirs', 'Tirs au But', '⚽', 'Les tireurs frappent d’abord, trois tirs chacun. Puis le gardien affronte chaque tir en direct : il voit le ballon partir et doit plonger du bon côté avant qu’il n’entre ! Les tireurs gagnent s’ils marquent au moins un tir sur trois.', 'haut', 'buts', null, 'seul'),
     roles: {
-      solo: 'Vous êtes le gardien 🧤 : pour chaque tir, devinez le coin et plongez !',
-      autres: 'Vous êtes tireur ⚽ : choisissez un coin, puis frappez au bon moment. Trop fort, c’est au-dessus !',
+      solo: 'Vous êtes le gardien 🧤 : regardez partir chaque tir, et plongez du bon côté avant que le ballon n’entre !',
+      autres: 'Vous êtes tireur ⚽ : choisissez un coin, puis frappez. Plus c’est fort, plus le ballon va vite… mais trop fort, c’est au-dessus !',
     },
     unites: { solo: 'arrêts', autres: 'buts' },
-    /** Gardien : un plongeon par tir (0, 1, 2). Tireur : un tir par essai (0, 1, 2, ou 3 = raté). */
+    /** Le gardien joue en dernier, en direct, contre les tirs des autres. */
+    soloEnDernier: true,
+    /**
+     * Tireur : un chiffre par tir (base 10) — 0 raté, sinon 1 + coin × 3 + puissance (0 à 2).
+     * Gardien : un chiffre par tir (base 2) — 1 arrêté.
+     */
     cpuJouer(niveau, R, ctx) {
-      if (ctx.role === 'solo') return coder(Array.from({ length: ctx.autres.length * TIRS_PAR_TIREUR }, () => Math.floor(R() * 3)), 3);
+      if (ctx.role === 'solo') {
+        const arret = ARRET_ORDI[niveau] ?? ARRET_ORDI.normal;
+        return coder(Array.from({ length: ctx.autres.length * TIRS_PAR_TIREUR }, () => (R() < arret ? 1 : 0)), 2);
+      }
       const rate = RATE_TIR[niveau] ?? RATE_TIR.normal;
-      return coder(Array.from({ length: TIRS_PAR_TIREUR }, () => (R() < rate ? 3 : Math.floor(R() * 3))), 4);
+      return coder(Array.from({ length: TIRS_PAR_TIREUR }, () => {
+        if (R() < rate) return 0;
+        const r = R();
+        return 1 + Math.floor(R() * 3) * 3 + (r < 0.4 ? 0 : r < 0.8 ? 1 : 2);
+      }), 10);
     },
     resoudre(solo, autres, val) {
       const valeurs = {};
@@ -78,17 +100,17 @@ export const MINIJEUX = [
       autres.forEach((t, s) => {
         let b = 0;
         for (let k = 0; k < TIRS_PAR_TIREUR; k++) {
-          const tir = chiffre(val(t), 4, k);
-          if (tir < 3 && tir !== chiffre(val(solo), 3, s * TIRS_PAR_TIREUR + k)) b += 1;
+          if (chiffre(val(t), 10, k) > 0 && !chiffre(val(solo), 2, s * TIRS_PAR_TIREUR + k)) b += 1;
         }
         valeurs[t] = b;
         buts += b;
       });
       valeurs[solo] = tirs - buts;
+      const seuil = butsPourGagner(tirs);
       return {
         valeurs, equipes: [tirs - buts, buts],
-        gagnante: buts * 2 > tirs ? 1 : buts * 2 < tirs ? 0 : -1,
-        texte: `${buts} but${buts > 1 ? 's' : ''} sur ${tirs} tirs`,
+        gagnante: buts >= seuil ? 1 : 0,
+        texte: `${buts} but${buts > 1 ? 's' : ''} sur ${tirs} tirs (il en fallait ${seuil})`,
       };
     },
   },
