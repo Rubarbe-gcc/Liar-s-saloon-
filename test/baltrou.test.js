@@ -367,3 +367,28 @@ test('vendre un Joker pendant la manche', () => {
   assert.ok(P.vendre(p, 0).ok);
   assert.equal(p.argent, 14);
 });
+
+test('l’économie : intérêts plafonnés, petit bonus de victoire, un seul mythique à la fois', () => {
+  const p = P.creerPartie({ graine: 'ECO' });
+  P.commencer(p);
+  p.argent = 200;
+  p.score = 299;
+  P.jouer(p, [p.main.find((x) => !p.cartes[x].special)]);
+  assert.equal(p.gains.interet, 5, '200 $ ne rapportent que 5 $');
+  p.interetNiveau = 1;
+  p.argent = 200;
+  assert.equal(P.interetDe(p), 10);
+  P.allerBoutique(p);
+  P.quitterBoutique(p);
+  P.commencer(p);
+  p.score = 499;
+  P.jouer(p, [p.main.find((x) => !p.cartes[x].special)]);
+  assert.equal(p.gains.victoires, 2, '+2 $ par manche déjà gagnée');
+  // Avec un mythique en poche, la boutique n'en propose plus.
+  p.jokers.push({ uid: 'm1', id: 'bug', edition: null, e: {} });
+  for (let k = 0; k < 40; k++) {
+    P.allerBoutique(p);
+    assert.ok(!p.boutique.items.some((it) => it.type === 'joker' && J.JOKERS[it.id].rarete === 'mythique'));
+    p.phase = 'gagne';
+  }
+});

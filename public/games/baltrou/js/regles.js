@@ -78,8 +78,11 @@ export function reglesHtml() {
     <div><b>${d.nom}</b><small>${d.texte}</small></div></div>`).join('')}</div>
 
   <h3>L’argent</h3>
-  <p>Chaque manche gagnée rapporte sa récompense, des <b>intérêts</b> (1 $ par tranche de 5 $ que vous gardez),
-    un bonus qui grandit à chaque victoire (+7 $ par manche déjà gagnée), et un bonus de boss.</p>`;
+  <p>Chaque manche gagnée rapporte sa récompense, des <b>intérêts</b> (1 $ par tranche de 5 $ que vous gardez,
+    <b>5 $ au plus</b> — 10 $ puis 20 $ avec les bons Intérêt), un petit bonus qui grandit à chaque victoire
+    (+2 $ par manche déjà gagnée), et un bonus de boss.</p>
+  <p>Les Jokers <b>mythiques</b> sont rares, et on n’en tient qu’<b>un à la fois</b> : tant que vous en avez un,
+    la boutique n’en propose plus.</p>`;
 }
 
 /** Le Saint Livre : l'effet de chaque carte du jeu. */

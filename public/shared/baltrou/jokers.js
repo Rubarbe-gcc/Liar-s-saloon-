@@ -212,11 +212,11 @@ export const OBJETS = {
 export const VOUCHERS = [
   { id: 'grand-sac', nom: 'Grand Sac', texte: '+1 carte en main, pour toute la run.' },
   { id: 'bon-marchand', nom: 'Bon Marchand', texte: 'Rafraîchir la boutique coûte moins cher.' },
-  { id: 'interet', nom: 'Intérêt +', texte: 'Plus d’intérêts sur votre argent en fin de manche.' },
+  { id: 'interet', nom: 'Intérêt +', texte: 'Les intérêts de fin de manche montent jusqu’à 10 $ (au lieu de 5 $).' },
   { id: 'poche', nom: 'Poche Extra', texte: '+1 place de Joker, pour toute la run.' },
   { id: 'grand-sac+', nom: 'Grand Sac +', texte: 'Encore +1 carte en main.', requiert: 'grand-sac' },
   { id: 'bon-marchand+', nom: 'Bon Marchand +', texte: 'Rafraîchir la boutique devient gratuit.', requiert: 'bon-marchand' },
-  { id: 'interet+', nom: 'Intérêt ++', texte: 'Encore plus d’intérêts.', requiert: 'interet' },
+  { id: 'interet+', nom: 'Intérêt ++', texte: 'Les intérêts montent jusqu’à 20 $.', requiert: 'interet' },
   { id: 'poche+', nom: 'Poche Extra +', texte: 'Encore +1 place de Joker.', requiert: 'poche' },
 ];
 export const VOUCHER = Object.fromEntries(VOUCHERS.map((v) => [v.id, v]));

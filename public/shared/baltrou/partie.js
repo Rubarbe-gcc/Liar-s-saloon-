@@ -34,6 +34,16 @@ export const CONSOMMABLES_MAX = 2;
 export const PLACES_BOUTIQUE = 4;
 export const CHANCE_TROLL = 0.03;
 export const MALEDICTION_POISSON = 0.15;
+/**
+ * L'économie. Des intérêts sans plafond et un bonus qui grossissait de 7 $ à
+ * chaque victoire faisaient pleuvoir l'argent : dès l'ante 3, on s'offrait un
+ * Joker mythique, et plus aucun objectif ne tenait.
+ */
+export const PLAFONDS_INTERET = [5, 10, 20];      // selon les bons Intérêt + et Intérêt ++
+export const BONUS_PAR_VICTOIRE = 2;
+export const interetDe = (p) => Math.min(Math.floor(p.argent / 5), PLAFONDS_INTERET[Math.min(p.interetNiveau || 0, 2)]);
+/** Un Joker mythique à la fois : on n'en voit plus en boutique tant qu'on en a un. */
+export const aMythique = (p) => tousJokers(p).some((j) => JOKERS[j.id].rarete === 'mythique');
 
 export const DECKS = {
   classique: { nom: 'Deck Classique', glyphe: '🂠', texte: 'Les 52 cartes, et le Poisson Dégueulasse.' },
@@ -50,9 +60,9 @@ export const BOSS = {
   silence: { nom: 'Le Silencieux', glyphe: '🤫', texte: 'Un de vos Jokers, au hasard, est désactivé.' },
   miroir: { nom: 'Le Miroir', glyphe: '🪞', texte: 'Les chips des cartes deviennent du Mult.' },
   voleur: { nom: 'Le Voleur', glyphe: '🦹', texte: 'Vole 10 % de votre argent à chaque main jouée.' },
-  roi: { nom: 'LE ROI', glyphe: '👑', texte: 'Boss final : score ×0,25.' },
+  roi: { nom: 'LE ROI', glyphe: '👑', texte: 'Boss final : score ×0,5.' },
 };
-const PENALITE_BOSS = { crane: 0.5, roi: 0.25 };
+const PENALITE_BOSS = { crane: 0.5, roi: 0.5 };
 const POOLS_BOSS = [['limace', 'avare', 'voleur'], ['mur', 'acharne', 'miroir'], ['crane', 'silence', 'voleur', 'miroir'], ['roi']];
 
 /*
@@ -66,7 +76,7 @@ const ANTES_CLASSIQUES = [
   [['Le Crâne', 'La vraie partie', 12000, 4], ['Le Squelette', 'Pas de pitié', 18000, 6]],
   [['Le Soldat', 'Courage !', 40000, 5], ['La Garde Royale', 'Presque là…', 70000, 7]],
 ];
-const OBJECTIFS_BOSS = [[950, 4], [6000, 6], [25000, 9], [150000, 15]];
+const OBJECTIFS_BOSS = [[950, 4], [6000, 6], [25000, 9], [60000, 15]];
 export const ANTES_CLASSIQUE = ANTES_CLASSIQUES.length;
 
 /* ------------------------------------------------------------------ */
@@ -491,8 +501,8 @@ function gagnerManche(p) {
   b.vaincue = true;
   p.jongleur = 0;
   for (const j of tousJokers(p)) JOKERS[j.id].gagne?.(j, p);
-  const interet = Math.floor(p.argent / ({ 0: 5, 1: 4, 2: 3 }[p.interetNiveau] ?? 3));
-  const victoires = p.stats.gagnees * 7;
+  const interet = interetDe(p);
+  const victoires = p.stats.gagnees * BONUS_PAR_VICTOIRE;
   let bossBonus = 0;
   let voucher = null;
   if (b.boss) {
@@ -526,10 +536,10 @@ function offreVoucher(p) {
 /** Les poids de la boutique : les Jokers, puis les objets. */
 function reserveBoutique(p) {
   const res = [];
-  const possede = (id) => tousJokers(p).some((j) => j.id === id);
+  const mythique = aMythique(p);
   for (const j of LISTE_JOKERS) {
-    const w = { commun: 12, rare: 8, legendaire: 4, mythique: 1, negatif: 3 }[j.rarete];
-    if (j.rarete === 'mythique' && possede(j.id)) continue;
+    const w = { commun: 12, rare: 8, legendaire: 4, mythique: 0.5, negatif: 3 }[j.rarete];
+    if (j.rarete === 'mythique' && mythique) continue;
     if (j.rarete === 'negatif' && p.negatifs.length >= NEGATIFS_MAX) continue;
     res.push([w, { type: 'joker', id: j.id }]);
   }
