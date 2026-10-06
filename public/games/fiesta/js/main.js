@@ -59,6 +59,12 @@ let annulerDes = null;     // arrête des dés qui roulent encore (le serveur a 
 let finComptee = false;    // la fin de cette partie est déjà dans les records
 const file = [];
 let vidage = false;
+let agiCle = null;         // en ligne, au cache-cache : la dernière action ouverte (tour, manche, étape)
+
+/* Le cache-cache du Fantôme : les portes ouvertes qu'on n'a pas encore montrées. */
+let revVues = { tour: 0, n: 0 };
+let revEnCours = false;
+let dernierActeur = null;  // sur un même téléphone : l'intro ne revient que si le joueur change
 
 /** Un joueur de cet écran : en ligne, moi seul ; sur un même téléphone, tous les humains. */
 const estMoi = (i) => (enLigne ? i === moi : !!p.joueurs[i]?.humain);
@@ -232,6 +238,10 @@ function console_(texte, bouton = null, action = null) {
 async function suivre() {
   sauver();
   rendreClassement(P.quiLance(p));
+  // La roue tourne, une porte s'ouvre : la suite attend.
+  if (arreterRoue || revEnCours) return;
+  if (revelationEnAttente()) { montrerRevelation(); return; }
+  if (p.phase === 'minijeu' && p.jeu) { suivreCacheCache(); return; }
   if (p.phase === 'minijeu') {
     if (enLigne) {
       // Chacun joue chez soi, une fois par tour.
@@ -249,6 +259,56 @@ async function suivre() {
   if (p.phase === 'resultats') { montrerResultats(); return; }
   if (p.phase === 'des') { tourDeDes(); return; }
   if (p.phase === 'fin') montrerFin();
+}
+
+/* ------------------------------------------------------------------ */
+/* Le cache-cache du Fantôme : manche après manche                      */
+/* ------------------------------------------------------------------ */
+
+function revelationEnAttente() {
+  if (!p?.jeu || !['minijeu', 'resultats'].includes(p.phase)) return false;
+  if (revVues.tour !== p.tour) revVues = { tour: p.tour, n: 0 };
+  return p.jeu.revelations.length > revVues.n;
+}
+
+/** Le fantôme ouvre une porte : tout le monde regarde. */
+async function montrerRevelation() {
+  revEnCours = true;
+  const rev = p.jeu.revelations[revVues.n];
+  revVues.n += 1;
+  const { revelationHtml } = await import('./jeux/fantome.js');
+  const f = p.joueurs[P.formatDe(p).equipes[0][0]];
+  $('revele').innerHTML = `<p class="sous">Manche ${rev.manche} — ${f.avatar} ${esc(f.nom)} ouvre une porte…</p>${revelationHtml(rev, p.joueurs)}`;
+  ouvrir('ov-revele');
+  son.tic();
+  await attendre(900);
+  if (rev.trouves.length) son.boum(); else son.mauvais();
+  await attendre(2100);
+  fermer('ov-revele');
+  revEnCours = false;
+  if (p) suivre();
+}
+
+/** À qui d'agir ? Se cacher, ou ouvrir une porte. */
+function suivreCacheCache() {
+  if (enLigne) {
+    // La roue d'abord, une fois par tour.
+    if (joueTour !== p.tour) { joueTour = p.tour; montrerRoue(() => suivre()); return; }
+    if (!P.doitAgir(p, moi)) { majAttente(); return; }
+    const cle = `${p.tour}:${p.jeu.manche}:${p.jeu.etape}`;
+    if (agiCle === cle) return;
+    const premiere = !agiCle || !agiCle.startsWith(`${p.tour}:`);
+    agiCle = cle;
+    if (premiere) montrerIntro(p.joueurs[moi]); else jouerMinijeu(p.minijeu, p.joueurs[moi]);
+    return;
+  }
+  const h = P.humainSuivant(p);
+  if (!h) return;
+  if (p.roue !== p.tour) { montrerRoue(() => { p.roue = p.tour; sauver(); suivre(); }); return; }
+  // Sur le même téléphone, l'intro revient quand c'est à quelqu'un d'autre (on passe le téléphone).
+  const qui = `${p.tour}:${h.i}`;
+  if (dernierActeur === qui) jouerMinijeu(p.minijeu, h);
+  else { dernierActeur = qui; montrerIntro(h); }
 }
 
 /* ------------------------------------------------------------------ */
@@ -423,11 +483,12 @@ async function jouerMinijeu(id, j) {
     // En ligne, le gardien raconte chaque tir aux autres, en direct.
     direct: enLigne && j ? (e) => EL.envoyer({ t: 'direct', e }) : null,
     moi: j ? j.i : 0,
-    fin: (score) => {
+    etat: j ? p.jeu : null,
+    fin: (score, bilan = null) => {
       if (fini) return;
       fini = true;
       arreterJeu = null;
-      apresMinijeu(id, j, score);
+      apresMinijeu(id, j, score, false, bilan);
     },
   });
   // En ligne, le temps du mini-jeu peut s'écouler : on s'arrête là.
@@ -449,15 +510,31 @@ async function jouerMinijeu(id, j) {
   };
 }
 
-function apresMinijeu(id, j, score, abandon = false) {
+function apresMinijeu(id, j, score, abandon = false, bilan = null) {
   couperJeu = null;
+  const m = MINIJEU[id];
+  // Le cache-cache : une action de la manche, pas un score. La partie enchaîne.
+  if (m.interactif && j) {
+    noterRecord(id, 0);
+    const st = p.jeu;
+    const v = abandon || !st?.ouvertes.includes(score) ? st.ouvertes[Math.floor(Math.random() * st.ouvertes.length)] : score;
+    if (enLigne) EL.envoyer({ t: 'agir', v });
+    else P.agir(p, j.i, v);
+    aller('s-jeu');
+    PL.dessiner(p);
+    if (enLigne) majAttente(); else suivre();
+    return;
+  }
   const record = abandon ? false : noterRecord(id, score);
   // En ligne, le score part tout de suite : les autres n'attendent pas qu'on clique.
   if (enLigne && j) EL.envoyer({ t: 'score', v: score });
-  const m = MINIJEU[id];
   let gros = abandon ? 'Abandon' : esc(fmt(id, score));
   let suite = '';
-  if (m.resoudre && !abandon) {
+  if (bilan && !abandon) {
+    // L'entraînement au cache-cache : le module a joué toute la partie.
+    gros = esc(fmt(id, score, essai.ctx.role));
+    suite = `<p class="sous">${esc(bilan.texte)} — ${bilan.gagne ? 'gagné ! 🎉' : 'perdu…'}</p>`;
+  } else if (m.resoudre && !abandon) {
     if (j) {
       // Les choix des autres sont encore secrets : le verdict tombera aux résultats.
       gros = 'C’est noté ! ✅';
@@ -727,6 +804,8 @@ async function traiterEnLigne(m) {
     vue = null;
     joueTour = 0;
     finComptee = false;
+    agiCle = null;
+    revVues = { tour: 0, n: 0 };
     arreterRoue?.();
     fermerDirect();
     ['ov-intro', 'ov-score', 'ov-resultats', 'ov-fin', 'ov-des', 'ov-pause'].forEach(fermer);
@@ -772,7 +851,8 @@ function surEtat(v) {
     return;
   }
   for (const x of p.joueurs) PL.placerPion(x.i, x.pos, p);
-  const change = avant.phase !== p.phase || avant.tour !== p.tour || P.quiLance(avant) !== P.quiLance(p);
+  const change = avant.phase !== p.phase || avant.tour !== p.tour || P.quiLance(avant) !== P.quiLance(p)
+    || avant.jeu?.manche !== p.jeu?.manche || avant.jeu?.etape !== p.jeu?.etape;
   if (!change) { rendreClassement(P.quiLance(p)); majAttente(); return; }
   if (avant.phase === 'minijeu' && p.phase !== 'minijeu') {
     arreterRoue?.();
@@ -826,6 +906,14 @@ function fermerDirect() { directEl?.remove(); directEl = null; }
 
 function majAttente() {
   if (!enLigne || !p || !vue) return;
+  // Le cache-cache : qui fait quoi pendant qu'on attend.
+  if (p.phase === 'minijeu' && p.jeu && !P.doitAgir(p, moi)) {
+    const st = p.jeu;
+    const f = p.joueurs[P.formatDe(p).equipes[0][0]];
+    const pris = st.cacheurs.includes(moi) && !st.libres.includes(moi);
+    console_(st.etape === 'cherche' ? `👻 ${f.avatar} <b>${esc(f.nom)}</b> cherche… (manche ${st.manche}/${st.manches})`
+      : `🙈 Les joueurs se cachent… (manche ${st.manche}/${st.manches})${pris ? ' — vous êtes attrapé, regardez la suite !' : ''}`);
+  }
   // Les tireurs ont tous frappé : au gardien !
   const bp = $('b-pret');
   if (p.phase === 'minijeu' && !$('ov-intro').hidden && bp?.disabled && !gardienAttend(moi)) {

@@ -17,7 +17,13 @@
  *            même temps) ; `resoudre` les confronte à la fin. Les choix
  *            tiennent dans un seul nombre (un chiffre par choix, voir
  *            `coder`), comme n'importe quel score.
+ *
+ * Un mini-jeu `interactif` (le cache-cache du Fantôme) se joue manche par
+ * manche, les uns après les autres : la partie le mène (voir partie.agir et
+ * cachecache.js), et chacun n'y reçoit qu'un score final.
  */
+
+import { seuilFantome } from './cachecache.js';
 
 const M = (id, nom, glyphe, regle, sens, unite, cpu, style = 'chacun') => ({ id, nom, glyphe, regle, sens, unite, cpu, style });
 
@@ -26,9 +32,6 @@ export const coder = (choix, base) => choix.reduce((t, x, k) => t + x * base ** 
 export const chiffre = (v, base, k) => Math.floor(v / base ** k) % base;
 
 export const TIRS_PAR_TIREUR = 3;
-export const MANCHES_FANTOME = 3;
-/** Autant de pièces que de chasseurs, plus deux : trouver le fantôme n'est jamais gagné d'avance. */
-export const piecesFantome = (chasseurs) => chasseurs + 2;
 const RATE_TIR = { facile: 0.3, normal: 0.15, expert: 0.07 };
 const ARRET_ORDI = { facile: 0.45, normal: 0.6, expert: 0.72 };
 /** Un tir lu par le gardien : raté, ou le coin (0 à 2) et la puissance (0 à 2). */
@@ -115,31 +118,23 @@ export const MINIJEUX = [
     },
   },
   {
-    ...M('fantome', 'Le Fantôme', '👻', 'Un fantôme se cache dans le manoir, les autres le cherchent. Trois manches : trouvé deux fois, le fantôme a perdu !', 'haut', 'trouvailles', null, 'seul'),
+    ...M('fantome', 'Le Fantôme', '👻', 'Un cache-cache dans le manoir hanté ! Chaque manche, les joueurs se cachent ; le fantôme regarde les ombres bouger, puis ouvre une porte. Une pièce fouillée est condamnée. Le fantôme gagne s’il attrape tout le monde.', 'haut', 'attrapés', null, 'seul'),
+    interactif: true,
     roles: {
-      solo: 'Vous êtes le fantôme 👻 : à chaque manche, choisissez une cachette. Ne vous faites pas prendre deux fois !',
-      autres: 'Vous êtes chasseur 🔦 : à chaque manche, fouillez une pièce. Il suffit qu’un chasseur tombe sur le fantôme !',
+      solo: 'Vous êtes le fantôme 👻 : regardez bien les ombres bouger, puis ouvrez la porte où quelqu’un se cache. Attrapez tout le monde !',
+      autres: 'Vous vous cachez 🙈 : à chaque manche, choisissez une pièce. Une pièce fouillée est condamnée : plus personne n’y va !',
     },
-    unites: { solo: 'manches cachées', autres: 'trouvailles' },
-    cpuJouer(niveau, R, ctx) {
-      const n = piecesFantome(ctx.autres.length);
-      return coder(Array.from({ length: MANCHES_FANTOME }, () => Math.floor(R() * n)), n);
-    },
+    unites: { solo: 'attrapés', autres: 'manches tenues' },
+    /** Le fantôme : combien il en a attrapé ; les autres : combien de manches ils ont tenu. */
     resoudre(solo, autres, val) {
-      const n = piecesFantome(autres.length);
-      const valeurs = Object.fromEntries(autres.map((c) => [c, 0]));
-      let trouve = 0;
-      for (let m = 0; m < MANCHES_FANTOME; m++) {
-        const cachette = chiffre(val(solo), n, m);
-        const qui = autres.filter((c) => chiffre(val(c), n, m) === cachette);
-        for (const c of qui) valeurs[c] += 1;
-        if (qui.length) trouve += 1;
-      }
-      valeurs[solo] = MANCHES_FANTOME - trouve;
+      const pris = val(solo);
+      const valeurs = { [solo]: pris };
+      for (const a of autres) valeurs[a] = val(a);
+      const seuil = seuilFantome(autres.length);
       return {
-        valeurs, equipes: [MANCHES_FANTOME - trouve, trouve],
-        gagnante: trouve >= 2 ? 1 : 0,
-        texte: trouve ? `Trouvé ${trouve} fois sur ${MANCHES_FANTOME}` : 'Jamais trouvé !',
+        valeurs, equipes: [pris, autres.reduce((t, a) => t + val(a), 0)],
+        gagnante: pris >= seuil ? 0 : 1,
+        texte: pris >= seuil ? 'Tout le monde attrapé !' : `${pris} attrapé${pris > 1 ? 's' : ''} sur ${autres.length}`,
       };
     },
   },

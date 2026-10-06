@@ -10,6 +10,7 @@ import * as hub from '../server/hub.js';
 import { DELAIS } from '../server/fiesta.js';
 import { MINIJEU } from '../public/shared/fiesta/minijeux.js';
 import * as M from '../public/shared/fiesta/minijeux.js';
+import * as P from '../public/shared/fiesta/partie.js';
 
 const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
 let seq = 0;
@@ -30,14 +31,15 @@ function connexion() {
 const dire = (c, msg) => hub.handleMessage(c, { g: 'fiesta', ...msg });
 const couper = (c) => { c.ferme = true; hub.handleClose(c); };
 
-Object.assign(DELAIS, { minijeu: 400, absentJeu: 30, gardien: 200, resultats: 40, lancer: 60, bot: 3, absent: 10, animation: 0 });
+Object.assign(DELAIS, { minijeu: 400, absentJeu: 30, gardien: 200, cache: 60, resultats: 40, lancer: 60, bot: 3, absent: 10, animation: 0 });
 
 /** Joue pour un humain ce que la table attend de lui. */
 function jouerPour(c) {
   const v = c.dernier('fi:etat')?.vue;
   if (!v || v.moi < 0) return;
   const { p, moi } = v;
-  if (p.phase === 'minijeu' && !v.faits[moi]) dire(c, { t: 'score', v: MINIJEU[p.minijeu].sens === 'haut' ? 20 : 100 });
+  if (p.phase === 'minijeu' && p.jeu) { if (P.doitAgir(p, moi)) dire(c, { t: 'agir', v: p.jeu.ouvertes[0] }); }
+  else if (p.phase === 'minijeu' && !v.faits[moi]) dire(c, { t: 'score', v: MINIJEU[p.minijeu].sens === 'haut' ? 20 : 100 });
   else if (p.phase === 'resultats' && !v.prets[moi]) dire(c, { t: 'pret' });
   else if (p.phase === 'des' && p.aJouer[0] === moi) {
     const d = p.des.find((x) => x.i === moi);
@@ -61,7 +63,7 @@ test('FIESTA en ligne : une table, un ordi, une partie entière jusqu’au podiu
   dire(b, { t: 'bot', delta: 1 });
   assert.match(b.dernier('fi:erreur').msg, /hôte/);
   dire(a, { t: 'bot', delta: 1 });
-  dire(a, { t: 'options', options: { longueur: 'courte', niveau: 'expert', modes: 'tous' } });
+  dire(a, { t: 'options', options: { longueur: 'courte', niveau: 'expert', modes: 'chacun' } });
   s = a.dernier('fi:salon');
   assert.equal(s.joueurs.length, 3);
   assert.equal(s.options.longueur, 'courte');
@@ -157,7 +159,6 @@ test('FIESTA en ligne : une coupure en pleine partie, l’ordi joue en attendant
 });
 
 test('FIESTA en ligne : le gardien reçoit les tirs quand tous ont frappé, et les autres le suivent en direct', async () => {
-  const P = await import('../public/shared/fiesta/partie.js');
   // On cherche une table dont le premier tour est un Tirs au But, avec un humain au but et un autre au tir.
   for (let essai = 0; essai < 400; essai++) {
     const a = connexion();
@@ -191,4 +192,44 @@ test('FIESTA en ligne : le gardien reçoit les tirs quand tous ont frappé, et l
     return;
   }
   assert.fail('aucune table avec un Tirs au But');
+});
+
+test('FIESTA en ligne : le cache-cache du Fantôme, manche par manche, cachettes secrètes', async () => {
+  for (let essai = 0; essai < 400; essai++) {
+    const a = connexion();
+    dire(a, { t: 'session', sid: `fiestaFANT${String(essai).padStart(3, '0')}` });
+    dire(a, { t: 'create', name: 'Anne' });
+    const code = a.dernier('fi:salon').code;
+    const b = connexion();
+    dire(b, { t: 'session', sid: `fiestaCACH${String(essai).padStart(3, '0')}` });
+    dire(b, { t: 'join', code, name: 'Bart' });
+    dire(a, { t: 'bot', delta: 1 });
+    dire(a, { t: 'bot', delta: 1 });
+    dire(a, { t: 'start' });
+    const v = a.dernier('fi:etat').vue;
+    const f = P.formatDe(v.p);
+    if (v.p.minijeu !== 'fantome' || f.equipes[0][0] > 1) { a.partir(); b.partir(); continue; }
+    const [fantome, cache] = f.equipes[0][0] === 0 ? [a, b] : [b, a];
+    const ic = 1 - f.equipes[0][0];
+    assert.equal(P.doitAgir(fantome.dernier('fi:etat').vue.p, f.equipes[0][0]), false, 'le fantôme attend que tout le monde soit caché');
+    dire(fantome, { t: 'agir', v: 0 });
+    assert.match(fantome.dernier('fi:erreur').msg, /Pas maintenant/);
+    dire(cache, { t: 'agir', v: 2 });
+    const vf = fantome.dernier('fi:etat').vue;
+    assert.equal(vf.p.jeu.etape, 'cherche');
+    assert.deepEqual(vf.p.jeu.choix, {}, 'le fantôme ne voit pas les cachettes');
+    assert.equal(cache.dernier('fi:etat').vue.p.jeu.choix[ic], 2, 'chacun voit sa propre cachette');
+    assert.ok(Object.keys(vf.p.jeu.chemins).length >= 1, 'mais il voit les ombres');
+    dire(fantome, { t: 'agir', v: 2 });
+    const r = fantome.dernier('fi:etat').vue.p.jeu.revelations[0];
+    assert.equal(r.piece, 2);
+    assert.ok(r.trouves.includes(ic), 'attrapé !');
+    // Les manches suivantes : l'ordinateur et le fantôme finissent le jeu.
+    const fin = Date.now() + 5000;
+    while (Date.now() < fin && fantome.dernier('fi:etat').vue.p.phase === 'minijeu') { jouerPour(fantome); jouerPour(cache); await attendre(3); }
+    assert.notEqual(fantome.dernier('fi:etat').vue.p.phase, 'minijeu');
+    a.partir(); b.partir();
+    return;
+  }
+  assert.fail('aucune table avec un Fantôme');
 });

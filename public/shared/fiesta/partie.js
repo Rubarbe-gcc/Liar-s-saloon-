@@ -19,6 +19,7 @@
  */
 
 import { MINIJEUX, MINIJEU, scoreOrdinateur } from './minijeux.js';
+import * as CC from './cachecache.js';
 
 export const JOUEURS_MAX = 4;
 export const NIVEAUX = ['facile', 'normal', 'expert'];
@@ -116,7 +117,7 @@ export function creerPartie({ joueurs, niveau = 'normal', longueur = 'normale', 
       humain: !!j.humain, pos: 0, bloque: false, victoires: 0,
     })),
     cases: [], tour: 0, phase: 'minijeu', minijeu: null, format: null, dernierSeul: null, recents: [], scores: [], ordreHumains: [],
-    classement: [], equipes: null, resolution: null, des: [], aJouer: [], journal: [], vainqueur: null,
+    classement: [], equipes: null, resolution: null, jeu: null, des: [], aJouer: [], journal: [], vainqueur: null,
   };
   p.cases = construirePlateau(p, LONGUEURS[p.longueur]);
   nouveauTour(p);
@@ -187,13 +188,83 @@ function nouveauTour(p) {
   p.equipes = null;
   p.resolution = null;
   p.scores = p.joueurs.map(() => null);
-  // L'ordinateur a déjà « joué » : son score attend d'être révélé.
-  for (const j of p.joueurs) if (!j.humain) p.scores[j.i] = scoreOrdinateur(p.minijeu, p.niveau, () => hasard(p), contexte(p, j.i));
   p.classement = [];
   p.des = [];
   p.aJouer = [];
+  p.jeu = null;
+  // Un mini-jeu qui se joue manche par manche : la partie le mène.
+  if (MINIJEU[p.minijeu].interactif) {
+    p.jeu = CC.nouveau(p.format.equipes[1]);
+    jouerOrdis(p);
+    return;
+  }
+  // L'ordinateur a déjà « joué » : son score attend d'être révélé.
+  for (const j of p.joueurs) if (!j.humain) p.scores[j.i] = scoreOrdinateur(p.minijeu, p.niveau, () => hasard(p), contexte(p, j.i));
   // Que des ordinateurs à la table : le mini-jeu se classe tout seul.
   if (!humainSuivant(p)) classer(p);
+}
+
+/* ------------------------------------------------------------------ */
+/* Le mini-jeu interactif : le cache-cache du Fantôme                  */
+/* ------------------------------------------------------------------ */
+
+const fantomeDe = (p) => formatDe(p).equipes[0][0];
+
+/** Ce joueur doit-il agir maintenant (se cacher, ou ouvrir une porte) ? */
+export function doitAgir(p, i) {
+  const st = p.jeu;
+  if (p.phase !== 'minijeu' || !st) return false;
+  if (st.etape === 'cache') return st.libres.includes(i) && st.choix[i] === undefined;
+  if (st.etape === 'cherche') return i === fantomeDe(p);
+  return false;
+}
+
+/** L'ordinateur joue ce qu'il a à jouer, jusqu'à ce qu'un humain doive agir (ou la fin). */
+export function jouerOrdis(p) {
+  const st = p.jeu;
+  if (!st || p.phase !== 'minijeu') return;
+  const R = () => hasard(p);
+  for (let garde = 0; garde < 60 && st.etape !== 'fini'; garde++) {
+    if (st.etape === 'cache') {
+      for (const i of CC.reste(st)) if (!p.joueurs[i].humain) CC.cacher(st, i, CC.cachetteAuHasard(st, R));
+      if (CC.reste(st).length) return;
+      CC.versRecherche(st, R);
+    } else {
+      if (p.joueurs[fantomeDe(p)].humain) return;
+      CC.chercher(st, CC.porteOrdi(st, p.niveau, R));
+    }
+  }
+  if (st.etape === 'fini') {
+    const f = fantomeDe(p);
+    p.scores = p.joueurs.map((j) => (j.i === f ? CC.attrapes(st) : CC.manchesTenues(st, j.i)));
+    classer(p);
+  }
+}
+
+/** Un humain agit : il se cache dans une pièce, ou (le fantôme) ouvre une porte. */
+export function agir(p, i, piece) {
+  if (!doitAgir(p, i)) return refus('joueur');
+  const st = p.jeu;
+  const r = st.etape === 'cache' ? CC.cacher(st, i, piece) : CC.chercher(st, piece);
+  if (!r.ok) return r;
+  jouerOrdis(p);
+  return { ok: true };
+}
+
+/** L'ordinateur agit à la place d'un joueur (parti, absent, trop lent). */
+function agirOrdi(p, i) {
+  const st = p.jeu;
+  const R = () => hasard(p);
+  return agir(p, i, st.etape === 'cache' ? CC.cachetteAuHasard(st, R) : CC.porteOrdi(st, 'facile', R));
+}
+
+/** Le temps est écoulé : l'ordinateur joue tout ce qui reste, jusqu'à la fin du cache-cache. */
+export function finirJeu(p) {
+  for (let garde = 0; garde < 60 && p.phase === 'minijeu' && p.jeu; garde++) {
+    const qui = p.joueurs.find((j) => doitAgir(p, j.i));
+    if (!qui) break;
+    agirOrdi(p, qui.i);
+  }
 }
 
 /**
@@ -215,6 +286,7 @@ export function contexte(p, i) {
  * gardien des tirs au but), il passe en dernier.
  */
 export function humainSuivant(p) {
+  if (p.jeu) return p.joueurs.find((j) => j.humain && doitAgir(p, j.i)) || null;
   const libres = p.joueurs.filter((j) => j.humain && p.scores[j.i] === null);
   const f = formatDe(p);
   if (libres.length > 1 && f.type === 'seul' && MINIJEU[p.minijeu]?.soloEnDernier) return libres.find((j) => j.i !== f.equipes[0][0]);
@@ -231,6 +303,7 @@ export function attendLesAutres(p, i) {
 /** Un humain vient de finir le mini-jeu. */
 export function score(p, i, valeur) {
   if (p.phase !== 'minijeu') return refus('phase');
+  if (p.jeu) return refus('interactif');
   const j = p.joueurs[i];
   if (!j || !j.humain || p.scores[i] !== null) return refus('joueur');
   if (!Number.isFinite(valeur)) return refus('score');
@@ -245,6 +318,7 @@ export function score(p, i, valeur) {
  */
 export function scoreAuto(p, i, niveau = 'facile') {
   if (p.phase !== 'minijeu') return refus('phase');
+  if (p.jeu) return doitAgir(p, i) ? agirOrdi(p, i) : refus('joueur');
   if (!p.joueurs[i] || p.scores[i] !== null) return refus('joueur');
   p.scores[i] = scoreOrdinateur(p.minijeu, niveau, () => hasard(p), contexte(p, i));
   if (!humainSuivant(p)) classer(p);

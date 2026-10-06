@@ -26,6 +26,9 @@ export const DELAIS = {
   minijeu: 3 * 60 * 1000,  // pour finir le mini-jeu (le Mémo d'un champion peut durer)
   absentJeu: 15 * 1000,    // un absent : l'ordinateur joue le mini-jeu pour lui
   gardien: 60 * 1000,      // au moins ce temps-là au gardien, quand les tireurs ont fini
+  cache: 25 * 1000,        // cache-cache : pour se cacher, ou pour ouvrir une porte
+  ombres: 6000,            // cache-cache : les ombres qui bougent, avant que le fantôme choisisse (× animation)
+  porte: 3500,             // cache-cache : la porte qui s'ouvre, avant la manche suivante (× animation)
   resultats: 25 * 1000,    // les résultats, si tout le monde ne clique pas « aux dés »
   lancer: 30 * 1000,       // pour arrêter ses dés
   bot: 1200,               // l'ordinateur lance
@@ -173,7 +176,11 @@ export class Table {
       && f.equipes[0][0] === moi && !P.attendLesAutres(p, moi);
     const cache = p.phase === 'minijeu' && !gardien;
     return {
-      p: { ...p, alea: 0, scores: cache ? p.scores.map((s, i) => (i === moi ? s : null)) : p.scores },
+      p: {
+        ...p, alea: 0, scores: cache ? p.scores.map((s, i) => (i === moi ? s : null)) : p.scores,
+        // Au cache-cache, chacun ne connaît que sa propre cachette.
+        jeu: p.jeu && { ...p.jeu, choix: p.jeu.choix[moi] === undefined ? {} : { [moi]: p.jeu.choix[moi] } },
+      },
       faits: p.scores.map((s) => s !== null),
       moi,
       absents: this.places.map((x) => !!x.absent),
@@ -224,6 +231,7 @@ export class Table {
     this.touch();
     switch (p.phase) {
       case 'minijeu': {
+        if (p.jeu) { this.avancerCacheCache(); break; }
         // Les absents n'attendent pas : l'ordinateur joue pour eux.
         const reste = Math.max(0, this.finMinijeu - Date.now());
         const absents = this.places.some((x, i) => x.absent && p.scores[i] === null);
@@ -249,6 +257,35 @@ export class Table {
         break;
     }
     this.pousser();
+  }
+
+  /**
+   * Le cache-cache, manche par manche : ceux qui doivent agir ont un temps
+   * (les absents, presque aucun) ; passé ce temps, l'ordinateur agit pour eux.
+   * Le mini-jeu entier garde sa limite.
+   */
+  avancerCacheCache() {
+    const p = this.p;
+    const st = p.jeu;
+    if (Date.now() >= this.finMinijeu) { P.finirJeu(p); this.avancer(); return; }
+    const attendus = p.joueurs.filter((j) => P.doitAgir(p, j.i)).map((j) => j.i);
+    const absents = attendus.some((i) => this.places[i].absent);
+    // Le temps de voir la porte s'ouvrir (et, pour le fantôme, les ombres bouger).
+    const vue = (st.etape === 'cherche' ? DELAIS.ombres : 0) + (st.revelations.length ? DELAIS.porte : 0);
+    const ms = absents ? DELAIS.absent : DELAIS.cache + vue * DELAIS.animation;
+    this.armer(() => {
+      for (const i of attendus) if (P.doitAgir(p, i) && (!absents || this.places[i].absent)) P.scoreAuto(p, i);
+      this.avancer();
+    }, Math.min(ms, Math.max(0, this.finMinijeu - Date.now())), `cc:${p.tour}:${st.manche}:${st.etape}:${absents}`);
+  }
+
+  agir(id, v) {
+    const p = this.p;
+    const i = this.indexOf(id);
+    if (!p || i < 0 || !p.jeu) return;
+    const r = P.agir(p, i, Number(v));
+    if (!r.ok) return this.envoyer(id, { t: 'fi:erreur', msg: r.raison === 'piece' ? 'Cette pièce est condamnée !' : 'Pas maintenant.' });
+    this.avancer();
   }
 
   /** Le temps du mini-jeu est écoulé (ou un joueur est absent) : l'ordinateur joue pour eux. */
@@ -367,6 +404,8 @@ export class Table {
     x.remplace = true;
     x.absent = false;
     this.p.joueurs[i].humain = false;
+    // Au cache-cache, l'ordinateur joue désormais les manches suivantes pour lui.
+    P.jouerOrdis(this.p);
     if (this.hoteId === id) this.hoteId = this.humains()[0]?.id || null;
     this.diffuser({ t: 'fi:notice', msg: `🤖 ${x.name} a quitté la partie : l’ordinateur prend sa place.` });
     this.avancer();
@@ -533,6 +572,10 @@ export function handleMessage(conn, msg) {
 
     case 'direct':
       if (t) t.direct(id, msg.e);
+      return;
+
+    case 'agir':
+      if (t) t.agir(id, msg.v);
       return;
 
     case 'lancer':

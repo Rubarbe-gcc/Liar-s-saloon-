@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v68';
+const VERSION = 'v69';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -164,6 +164,7 @@ const SHELL = [
   '/games/fiesta/icons/icon-192.png',
   '/shared/fiesta/minijeux.js',
   '/shared/fiesta/partie.js',
+  '/shared/fiesta/cachecache.js',
 ];
 
 self.addEventListener('install', (event) => {

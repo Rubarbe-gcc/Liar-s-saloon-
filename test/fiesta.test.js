@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 
 import * as P from '../public/shared/fiesta/partie.js';
 import * as M from '../public/shared/fiesta/minijeux.js';
+import * as CC from '../public/shared/fiesta/cachecache.js';
 
 const joueurs = (n, humains = 1) => Array.from({ length: n }, (_, k) => ({ nom: `J${k}`, humain: k < humains }));
 
@@ -14,7 +15,12 @@ const joueurs = (n, humains = 1) => Array.from({ length: n }, (_, k) => ({ nom: 
 function jouerTout(p, R = Math.random) {
   let garde = 0;
   while (p.phase !== 'fin' && garde++ < 600) {
-    if (p.phase === 'minijeu') { const h = P.humainSuivant(p); assert.ok(P.score(p, h.i, M.scoreOrdinateur(p.minijeu, 'normal', R, P.contexte(p, h.i))).ok); }
+    if (p.phase === 'minijeu') {
+      const h = P.humainSuivant(p);
+      // Le cache-cache se joue manche par manche : l'ordinateur agit pour l'humain.
+      if (p.jeu) assert.ok(P.scoreAuto(p, h.i).ok);
+      else assert.ok(P.score(p, h.i, M.scoreOrdinateur(p.minijeu, 'normal', R, P.contexte(p, h.i))).ok);
+    }
     else if (p.phase === 'resultats') P.versLesDes(p);
     else if (p.phase === 'des') assert.ok(P.lancer(p).ok);
   }
@@ -31,7 +37,7 @@ test('le catalogue des mini-jeux est complet', () => {
     assert.ok(['haut', 'bas'].includes(m.sens), m.id);
     if (m.style === 'seul') {
       // Un contre tous : un rôle et une unité pour chaque camp, des choix pour l'ordinateur, et de quoi les confronter.
-      assert.ok(m.roles.solo && m.roles.autres && m.unites.solo && m.unites.autres && m.cpuJouer && m.resoudre, m.id);
+      assert.ok(m.roles.solo && m.roles.autres && m.unites.solo && m.unites.autres && (m.cpuJouer || m.interactif) && m.resoudre, m.id);
       continue;
     }
     for (const n of P.NIVEAUX) {
@@ -266,31 +272,76 @@ test('Tirs au But : un tir sur trois au fond, et les tireurs gagnent', () => {
   assert.equal(P.desDe(p, gardien).des, 1);
 });
 
-test('Le Fantôme : trouvé deux fois sur trois, il a perdu', () => {
+test('Le Fantôme : un cache-cache manche par manche, et une pièce fouillée est condamnée', () => {
   const p = tourSeul('fantome');
-  const [[fantome], chasseurs] = P.formatDe(p).equipes;
-  assert.equal(M.piecesFantome(chasseurs.length), 5);
-  // Le fantôme se cache en 0, 1, 2 ; un chasseur fouille 0, 1, 4 : trouvé deux fois.
-  P.score(p, fantome, M.coder([0, 1, 2], 5));
-  P.score(p, chasseurs[0], M.coder([0, 1, 4], 5));
-  P.score(p, chasseurs[1], M.coder([3, 3, 3], 5));
-  P.score(p, chasseurs[2], M.coder([4, 4, 4], 5));
-  assert.equal(p.equipes[1].gagne, true);
-  assert.equal(p.resolution.texte, 'Trouvé 2 fois sur 3');
-  assert.equal(p.classement[0].i, chasseurs[0], 'le meilleur chasseur en tête');
-  assert.equal(p.classement[0].score, 2);
+  const [[fantome], caches] = P.formatDe(p).equipes;
+  const st = p.jeu;
+  assert.equal(st.pieces, 4, 'trois joueurs cachés : quatre pièces');
+  assert.equal(st.manches, 3);
+  // Les joueurs cachés d'abord ; le fantôme attend.
+  assert.equal(P.doitAgir(p, fantome), false);
+  assert.equal(P.score(p, caches[0], 5).raison, 'interactif');
+  assert.ok(P.agir(p, caches[0], 0).ok);
+  assert.equal(P.agir(p, caches[0], 1).raison, 'joueur', 'on ne se cache qu’une fois par manche');
+  assert.ok(P.agir(p, caches[1], 0).ok);
+  assert.ok(P.agir(p, caches[2], 2).ok);
+  // Tout le monde est caché : les ombres bougent, au fantôme d'ouvrir une porte.
+  assert.equal(st.etape, 'cherche');
+  assert.equal(Object.keys(st.chemins).length, 3);
+  assert.equal(P.humainSuivant(p).i, fantome);
+  assert.ok(P.agir(p, fantome, 0).ok);
+  assert.deepEqual(st.revelations[0].trouves.sort(), [caches[0], caches[1]].sort(), 'deux joueurs attrapés dans la chambre');
+  assert.deepEqual(st.ouvertes, [1, 2, 3], 'la chambre est condamnée');
+  assert.equal(st.manche, 2);
+  // Plus le droit d'aller dans la pièce fouillée.
+  assert.equal(P.agir(p, caches[2], 0).raison, 'piece');
+  assert.equal(P.doitAgir(p, caches[0]), false, 'un joueur attrapé ne joue plus');
+  assert.ok(P.agir(p, caches[2], 3).ok);
+  assert.ok(P.agir(p, fantome, 1).ok);
+  assert.deepEqual(st.revelations[1].trouves, [], 'personne dans la cuisine');
+  assert.ok(P.agir(p, caches[2], 3).ok);
+  assert.ok(P.agir(p, fantome, 3).ok);
+  // Tout le monde est attrapé : le fantôme gagne, deux dés et un bonus.
+  assert.equal(p.phase, 'resultats');
+  assert.equal(p.equipes[0].gagne, true);
+  assert.equal(p.resolution.texte, 'Tout le monde attrapé !');
+  assert.equal(p.classement.find((c) => c.i === caches[2]).score, 2, 'il a tenu deux manches');
+  assert.deepEqual(P.desDe(p, fantome), { i: fantome, des: 2, bonus: 3 });
+});
 
-  const q = tourSeul('fantome');
-  const [[f2], c2] = P.formatDe(q).equipes;
-  P.score(q, f2, M.coder([0, 0, 0], 5));
-  for (const c of c2) P.score(q, c, M.coder([1, 2, 0], 5));
-  assert.equal(q.equipes[0].gagne, true, 'trouvé une seule fois : le fantôme gagne');
-  assert.equal(q.classement[0].i, f2);
+test('Le Fantôme : un joueur qui tient jusqu’au bout fait gagner les autres', () => {
+  const p = tourSeul('fantome');
+  const [[fantome], caches] = P.formatDe(p).equipes;
+  for (let m = 0; m < 3; m++) {
+    for (const c of caches) if (P.doitAgir(p, c)) assert.ok(P.agir(p, c, p.jeu.ouvertes.at(-1)).ok);
+    // Le fantôme ouvre toujours la première pièce encore ouverte ; tout le monde est dans la dernière.
+    assert.ok(P.agir(p, fantome, p.jeu.ouvertes[0]).ok);
+  }
+  assert.equal(p.phase, 'resultats');
+  assert.equal(p.equipes[1].gagne, true);
+  assert.equal(p.resolution.texte, '0 attrapé sur 3');
+  for (const c of caches) assert.equal(P.desDe(p, c).des, 2);
+});
+
+test('Le Fantôme : l’ordinateur suit les ombres, et le jeu reste équilibré', () => {
+  for (const n of [2, 3]) {
+    let gagne = 0;
+    for (let k = 0; k < 3000; k++) {
+      const st = CC.nouveau(Array.from({ length: n }, (_, i) => i + 1));
+      while (st.etape !== 'fini') {
+        for (const i of CC.reste(st)) CC.cacher(st, i, CC.cachetteAuHasard(st, Math.random));
+        CC.versRecherche(st, Math.random);
+        CC.chercher(st, CC.porteOrdi(st, 'normal', Math.random));
+      }
+      if (CC.attrapes(st) >= CC.seuilFantome(n)) gagne += 1;
+    }
+    assert.ok(gagne / 3000 > 0.4 && gagne / 3000 < 0.7, `${n} cachés : le fantôme gagne ${gagne / 30} %`);
+  }
 });
 
 test('1 contre tous : les choix de l’ordinateur sont valables, et la partie va au bout', () => {
   const R = () => Math.random();
-  for (const id of ['tirs', 'fantome']) {
+  for (const id of ['tirs']) {
     const m = M.MINIJEU[id];
     for (let k = 0; k < 200; k++) {
       const autres = [1, 2, 3].slice(0, 2 + (k % 2));
