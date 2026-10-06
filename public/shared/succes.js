@@ -72,7 +72,7 @@ export const SUCCES = [
   s('baltrou-mise-doree', 'baltrou', '🥇', 'Mise Dorée', 'Gagner une partie Classique en Mise Dorée.'),
   s('fiesta-victoire', 'fiesta', '🎉', 'Roi de la fête', 'Gagner une partie de FIESTA.'),
   s('fiesta-expert', 'fiesta', '🤖', 'Plus fort que la machine', 'Gagner une partie contre des ordinateurs Experts.'),
-  s('fiesta-tous', 'fiesta', '🕹️', 'Touche-à-tout de la fête', 'Jouer aux 9 mini-jeux.'),
+  s('fiesta-tous', 'fiesta', '🕹️', 'Touche-à-tout de la fête', 'Jouer à tous les mini-jeux.'),
   s('fiesta-tour', 'fiesta', '🧱', 'Architecte', 'Monter une Tour Infernale de 15 étages.'),
   s('fiesta-eclair', 'fiesta', '🤠', 'La gâchette la plus rapide', 'Tirer en moins de 250 ms en moyenne au Duel au Soleil.'),
   s('fiesta-heros', 'fiesta', '🦸', 'Seul contre tous', 'Gagner un mini-jeu « 1 contre tous » en étant le joueur seul.'),

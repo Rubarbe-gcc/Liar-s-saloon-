@@ -7,9 +7,8 @@
  * Un tour :
  *   minijeu   → tout le monde joue le même mini-jeu (les humains l'un après
  *               l'autre, sur le même appareil ; l'ordinateur, lui, est tiré).
- *               Le tour a un format : chacun pour soi, 2 contre 2, ou un
- *               joueur seul contre tous les autres (en équipe, c'est la
- *               moyenne de l'équipe qui compte) ;
+ *               Certains mini-jeux se jouent chacun pour soi, d'autres à
+ *               2 contre 2, d'autres à un contre tous (voir minijeux.js) ;
  *   resultats → le classement donne les dés : le premier en lance deux, les
  *               suivants un seul, avec un bonus qui baisse avec le rang (en
  *               équipe : deux dés pour chaque gagnant, un pour les autres) ;
@@ -45,13 +44,13 @@ export const COULEURS = ['#ff4d6d', '#3fa9ff', '#3ecf6e', '#ffc83d'];
 export const AVATARS = ['🦊', '🐼', '🐸', '🐙', '🦄', '🐯', '🐧', '🐵', '🦁', '🐨', '🐷', '🐲', '🤖', '👽', '🦖', '🐝'];
 export const NOMS_ORDI = ['Robotto', 'Pixel', 'Bip-Bop', 'Turbo', 'Gizmo', 'Néon'];
 
-/** Les formats d'un tour de mini-jeu. */
+/** Les styles de mini-jeux (voir minijeux.js). */
 export const FORMATS = {
   chacun: { nom: 'Chacun pour soi', glyphe: '🎯' },
   duo: { nom: '2 contre 2', glyphe: '🤝' },
   seul: { nom: '1 contre tous', glyphe: '⚔️' },
 };
-/** `tous` : les trois formats se mêlent ; `chacun` : toujours chacun pour soi. */
+/** `tous` : les trois styles de mini-jeux se mêlent ; `chacun` : seulement les mini-jeux chacun pour soi. */
 export const MODES = ['tous', 'chacun'];
 
 /* ------------------------------------------------------------------ */
@@ -117,7 +116,7 @@ export function creerPartie({ joueurs, niveau = 'normal', longueur = 'normale', 
       humain: !!j.humain, pos: 0, bloque: false, victoires: 0,
     })),
     cases: [], tour: 0, phase: 'minijeu', minijeu: null, format: null, dernierSeul: null, recents: [], scores: [], ordreHumains: [],
-    classement: [], equipes: null, des: [], aJouer: [], journal: [], vainqueur: null,
+    classement: [], equipes: null, resolution: null, des: [], aJouer: [], journal: [], vainqueur: null,
   };
   p.cases = construirePlateau(p, LONGUEURS[p.longueur]);
   nouveauTour(p);
@@ -131,9 +130,11 @@ export const fin = (p) => p.cases.length - 1;
 /* Le mini-jeu                                                         */
 /* ------------------------------------------------------------------ */
 
-/** Un mini-jeu qu'on n'a pas joué récemment. */
-function choisirMinijeu(p) {
-  const dispo = MINIJEUX.filter((m) => !p.recents.includes(m.id));
+/** Un mini-jeu du style voulu, qu'on n'a pas joué récemment. */
+function choisirMinijeu(p, style) {
+  const duStyle = MINIJEUX.filter((m) => m.style === style);
+  const frais = duStyle.filter((m) => !p.recents.includes(m.id));
+  const dispo = frais.length ? frais : duStyle;
   const m = dispo[entier(p, dispo.length)];
   p.recents = [...p.recents, m.id].slice(-4);
   return m.id;
@@ -149,17 +150,20 @@ export function nomFormat(p) {
 }
 
 /**
- * Le format du tour, tiré au sort : à quatre, la moitié des tours se jouent
- * chacun pour soi, un quart à 2 contre 2, un quart à 1 contre 3 ; à trois,
- * un tour sur trois environ à 1 contre 2 ; à deux, toujours en duel. Le
- * joueur seul n'est jamais deux fois de suite le même.
+ * Le style du mini-jeu du tour, tiré au sort : à quatre, la moitié des tours
+ * se jouent chacun pour soi, un quart à 2 contre 2, un quart à 1 contre 3 ;
+ * à trois, un tour sur trois environ à 1 contre 2 ; à deux, toujours en duel.
  */
-function choisirFormat(p) {
+function choisirStyle(p) {
   const n = p.joueurs.length;
   const r = hasard(p);
-  let type = 'chacun';
-  if (p.modes !== 'chacun' && n === 4) type = r < 0.5 ? 'chacun' : r < 0.75 ? 'duo' : 'seul';
-  else if (p.modes !== 'chacun' && n === 3) type = r < 0.65 ? 'chacun' : 'seul';
+  if (p.modes !== 'chacun' && n === 4) return r < 0.5 ? 'chacun' : r < 0.75 ? 'duo' : 'seul';
+  if (p.modes !== 'chacun' && n === 3) return r < 0.65 ? 'chacun' : 'seul';
+  return 'chacun';
+}
+
+/** Les camps du tour. Le joueur seul n'est jamais deux fois de suite le même. */
+function formerEquipes(p, type) {
   const tous = p.joueurs.map((j) => j.i);
   if (type === 'duo') {
     const [a, b, c, d] = melanger(p, tous);
@@ -177,17 +181,32 @@ function choisirFormat(p) {
 function nouveauTour(p) {
   p.tour += 1;
   p.phase = 'minijeu';
-  p.minijeu = choisirMinijeu(p);
-  p.format = choisirFormat(p);
+  const style = choisirStyle(p);
+  p.minijeu = choisirMinijeu(p, style);
+  p.format = formerEquipes(p, style);
   p.equipes = null;
+  p.resolution = null;
   p.scores = p.joueurs.map(() => null);
   // L'ordinateur a déjà « joué » : son score attend d'être révélé.
-  for (const j of p.joueurs) if (!j.humain) p.scores[j.i] = scoreOrdinateur(p.minijeu, p.niveau, () => hasard(p));
+  for (const j of p.joueurs) if (!j.humain) p.scores[j.i] = scoreOrdinateur(p.minijeu, p.niveau, () => hasard(p), contexte(p, j.i));
   p.classement = [];
   p.des = [];
   p.aJouer = [];
   // Que des ordinateurs à la table : le mini-jeu se classe tout seul.
   if (!humainSuivant(p)) classer(p);
+}
+
+/**
+ * Le rôle d'un joueur dans le mini-jeu du tour : `chacun`, `equipe` (avec
+ * son coéquipier), ou, en 1 contre tous, `solo` ou `autres` (avec la liste
+ * des autres, dans l'ordre où le joueur seul les affronte).
+ */
+export function contexte(p, i) {
+  const f = formatDe(p);
+  if (f.type === 'chacun') return { role: 'chacun' };
+  const [A, B] = f.equipes;
+  if (f.type === 'duo') return { role: 'equipe', equipe: A.includes(i) ? A : B };
+  return { role: A[0] === i ? 'solo' : 'autres', solo: A[0], autres: B };
 }
 
 /** Le prochain humain qui doit jouer le mini-jeu, ou null. */
@@ -211,7 +230,7 @@ export function score(p, i, valeur) {
 export function scoreAuto(p, i, niveau = 'facile') {
   if (p.phase !== 'minijeu') return refus('phase');
   if (!p.joueurs[i] || p.scores[i] !== null) return refus('joueur');
-  p.scores[i] = scoreOrdinateur(p.minijeu, niveau, () => hasard(p));
+  p.scores[i] = scoreOrdinateur(p.minijeu, niveau, () => hasard(p), contexte(p, i));
   if (!humainSuivant(p)) classer(p);
   return { ok: true };
 }
@@ -239,26 +258,37 @@ function classer(p) {
 }
 
 /**
- * En équipe : la moyenne de chaque équipe décide. Les gagnants lancent deux
- * dés chacun, les perdants un seul. Le joueur seul qui bat tous les autres
- * gagne en plus un bonus (un par adversaire battu). Égalité : tout le monde
- * a gagné.
+ * En équipe. À 2 contre 2, les points des coéquipiers s'additionnent ; à un
+ * contre tous, le mini-jeu confronte les choix de chacun (`resoudre`). Les
+ * gagnants lancent deux dés chacun, les perdants un seul. Le joueur seul qui
+ * bat tous les autres gagne en plus un bonus (un par adversaire). Égalité :
+ * tout le monde a gagné.
  */
 function classerEquipes(p) {
   const f = formatDe(p);
-  const sens = MINIJEU[p.minijeu].sens;
-  const mieux = (a, b) => (sens === 'haut' ? a > b : a < b);
-  const parScore = (a, b) => (sens === 'haut' ? p.scores[b] - p.scores[a] : p.scores[a] - p.scores[b]);
-  const eqs = f.equipes.map((membres) => ({
-    membres: [...membres].sort(parScore),
-    score: Math.round((membres.reduce((t, i) => t + p.scores[i], 0) / membres.length) * 10) / 10,
-  }));
+  const m = MINIJEU[p.minijeu];
+  // La valeur de chacun, telle qu'on l'affiche (buts, arrêts… ou le score lui-même).
+  let valeur = (i) => p.scores[i];
+  let totaux;
+  let gagnante;
+  if (m.resoudre) {
+    const r = m.resoudre(f.equipes[0][0], f.equipes[1], (i) => p.scores[i]);
+    valeur = (i) => r.valeurs[i];
+    totaux = r.equipes;
+    gagnante = r.gagnante;
+    p.resolution = { texte: r.texte };
+  } else {
+    const mieux = (a, b) => (m.sens === 'haut' ? a > b : a < b);
+    totaux = f.equipes.map((membres) => membres.reduce((t, i) => t + p.scores[i], 0));
+    gagnante = mieux(totaux[0], totaux[1]) ? 0 : mieux(totaux[1], totaux[0]) ? 1 : -1;
+  }
+  const meilleurDabord = m.resoudre || m.sens === 'haut' ? (a, b) => valeur(b) - valeur(a) : (a, b) => valeur(a) - valeur(b);
+  const eqs = f.equipes.map((membres, k) => ({ membres: [...membres].sort(meilleurDabord), score: totaux[k] }));
   const [A, B] = eqs;
-  const gagnante = mieux(A.score, B.score) ? 0 : mieux(B.score, A.score) ? 1 : -1;
   eqs.forEach((e, k) => { e.gagne = gagnante === -1 || gagnante === k; e.egalite = gagnante === -1; });
   p.equipes = eqs;
   const ordre = gagnante === 1 ? [B, A] : [A, B];
-  p.classement = ordre.flatMap((e) => e.membres.map((i) => ({ i, rang: e.gagne ? 0 : 1, score: p.scores[i], equipe: eqs.indexOf(e) })));
+  p.classement = ordre.flatMap((e) => e.membres.map((i) => ({ i, rang: e.gagne ? 0 : 1, score: valeur(i), equipe: eqs.indexOf(e) })));
   const soloGagne = f.type === 'seul' && gagnante === 0;
   p.des = p.classement.map(({ i, rang }) => ({
     i, des: rang === 0 ? 2 : 1, bonus: soloGagne && i === f.equipes[0][0] ? p.joueurs.length - 1 : 0,

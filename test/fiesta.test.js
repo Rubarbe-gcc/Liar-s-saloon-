@@ -14,7 +14,7 @@ const joueurs = (n, humains = 1) => Array.from({ length: n }, (_, k) => ({ nom: 
 function jouerTout(p, R = Math.random) {
   let garde = 0;
   while (p.phase !== 'fin' && garde++ < 600) {
-    if (p.phase === 'minijeu') { const h = P.humainSuivant(p); assert.ok(P.score(p, h.i, M.scoreOrdinateur(p.minijeu, 'normal', R)).ok); }
+    if (p.phase === 'minijeu') { const h = P.humainSuivant(p); assert.ok(P.score(p, h.i, M.scoreOrdinateur(p.minijeu, 'normal', R, P.contexte(p, h.i))).ok); }
     else if (p.phase === 'resultats') P.versLesDes(p);
     else if (p.phase === 'des') assert.ok(P.lancer(p).ok);
   }
@@ -22,10 +22,18 @@ function jouerTout(p, R = Math.random) {
 }
 
 test('le catalogue des mini-jeux est complet', () => {
-  assert.equal(M.MINIJEUX.length, 9);
+  const parStyle = (st) => M.MINIJEUX.filter((m) => m.style === st).length;
+  assert.equal(parStyle('chacun'), 9);
+  assert.equal(parStyle('duo'), 2);
+  assert.equal(parStyle('seul'), 2);
   for (const m of M.MINIJEUX) {
     assert.ok(m.nom && m.glyphe && m.regle && m.unite, m.id);
     assert.ok(['haut', 'bas'].includes(m.sens), m.id);
+    if (m.style === 'seul') {
+      // Un contre tous : un rôle et une unité pour chaque camp, des choix pour l'ordinateur, et de quoi les confronter.
+      assert.ok(m.roles.solo && m.roles.autres && m.unites.solo && m.unites.autres && m.cpuJouer && m.resoudre, m.id);
+      continue;
+    }
     for (const n of P.NIVEAUX) {
       const [a, b] = m.cpu[n];
       assert.ok(a <= b, `${m.id} ${n}`);
@@ -183,11 +191,11 @@ test('les formats : à quatre, les trois se mêlent ; à deux, toujours chacun p
   assert.equal(P.formatDe(p).equipes[1].length, 3);
 });
 
-test('2 contre 2 : la moyenne de l’équipe décide, chaque gagnant lance deux dés', () => {
+test('2 contre 2 : les points des coéquipiers s’additionnent, chaque gagnant lance deux dés', () => {
   const p = tourAuFormat('duo');
   const [A, B] = P.formatDe(p).equipes;
   const [fort, faible] = fortFaible(p);
-  // L'équipe A a un très bon et un très mauvais joueur, mais la meilleure moyenne.
+  // L'équipe A a un très bon et un très mauvais joueur, mais le meilleur total.
   P.score(p, A[0], fort + (fort > faible ? 20 : -5));
   P.score(p, A[1], faible);
   P.score(p, B[0], (fort + faible) / 2);
@@ -201,23 +209,106 @@ test('2 contre 2 : la moyenne de l’équipe décide, chaque gagnant lance deux 
   for (const i of A) assert.equal(p.joueurs[i].victoires, 1);
 });
 
-test('1 contre tous : le joueur seul qui gagne lance deux dés et un bonus', () => {
-  const p = tourAuFormat('seul');
-  const [[solo], autres] = P.formatDe(p).equipes;
-  const [fort, faible] = fortFaible(p);
-  P.score(p, solo, fort);
-  for (const i of autres) P.score(p, i, faible);
-  assert.equal(p.classement[0].i, solo);
-  assert.deepEqual(P.desDe(p, solo), { i: solo, des: 2, bonus: 3 });
-  for (const i of autres) assert.equal(P.desDe(p, i).des, 1);
+test('chaque tour joue un mini-jeu de son style', () => {
+  for (let g = 0; g < 200; g++) {
+    const p = P.creerPartie({ joueurs: joueurs(4), graine: g });
+    const f = P.formatDe(p);
+    assert.equal(M.MINIJEU[p.minijeu].style, f.type, `graine ${g}`);
+    for (const j of p.joueurs) {
+      const c = P.contexte(p, j.i);
+      if (f.type === 'seul') assert.equal(c.role, j.i === f.equipes[0][0] ? 'solo' : 'autres');
+      if (f.type === 'duo') assert.ok(c.equipe.includes(j.i));
+    }
+  }
+  // « Chacun pour soi » seulement : jamais un mini-jeu d'équipe.
+  for (let g = 0; g < 50; g++) assert.equal(M.MINIJEU[P.creerPartie({ joueurs: joueurs(4), graine: g, modes: 'chacun' }).minijeu].style, 'chacun');
+});
 
-  const q = tourAuFormat('seul');
-  const [[s2], a2] = P.formatDe(q).equipes;
-  const [f2, l2] = fortFaible(q);
-  P.score(q, s2, l2);
-  for (const i of a2) P.score(q, i, f2);
-  assert.deepEqual(P.desDe(q, s2), { i: s2, des: 1, bonus: 0 });
-  for (const i of a2) assert.deepEqual(P.desDe(q, i), { i, des: 2, bonus: 0 });
+/** Un tour à 1 contre tous sur le mini-jeu voulu, avec 4 humains. */
+function tourSeul(id) {
+  for (let g = 0; g < 2000; g++) {
+    const p = P.creerPartie({ joueurs: joueurs(4, 4), graine: g });
+    if (p.minijeu === id) return p;
+  }
+  throw new Error(id);
+}
+
+test('Tirs au But : le gardien qui devine tout gagne deux dés et un bonus', () => {
+  const p = tourSeul('tirs');
+  const [[gardien], tireurs] = P.formatDe(p).equipes;
+  // Tous les tireurs frappent à gauche (0) ; le gardien plonge toujours à gauche.
+  P.score(p, gardien, M.coder(Array(9).fill(0), 3));
+  for (const t of tireurs) P.score(p, t, M.coder([0, 0, 0], 4));
+  assert.equal(p.phase, 'resultats');
+  assert.equal(p.equipes[0].gagne, true);
+  assert.equal(p.equipes[0].score, 9, '9 arrêts');
+  assert.equal(p.resolution.texte, '0 but sur 9 tirs');
+  assert.deepEqual(P.desDe(p, gardien), { i: gardien, des: 2, bonus: 3 });
+  for (const t of tireurs) assert.deepEqual(P.desDe(p, t), { i: t, des: 1, bonus: 0 });
+});
+
+test('Tirs au But : les tireurs qui marquent plus de la moitié gagnent', () => {
+  const p = tourSeul('tirs');
+  const [[gardien], tireurs] = P.formatDe(p).equipes;
+  P.score(p, gardien, M.coder(Array(9).fill(0), 3));
+  // À droite (2) : but. Au-dessus (3) : raté. Le premier tireur rate tout, les autres marquent tout.
+  tireurs.forEach((t, k) => P.score(p, t, M.coder(k === 0 ? [3, 3, 3] : [2, 2, 2], 4)));
+  assert.equal(p.equipes[1].gagne, true);
+  assert.equal(p.equipes[1].score, 6);
+  assert.equal(p.classement.find((c) => c.i === tireurs[0]).score, 0);
+  assert.equal(p.classement.find((c) => c.i === tireurs[1]).score, 3);
+  for (const t of tireurs) assert.equal(P.desDe(p, t).des, 2);
+  assert.equal(P.desDe(p, gardien).des, 1);
+});
+
+test('Le Fantôme : trouvé deux fois sur trois, il a perdu', () => {
+  const p = tourSeul('fantome');
+  const [[fantome], chasseurs] = P.formatDe(p).equipes;
+  assert.equal(M.piecesFantome(chasseurs.length), 5);
+  // Le fantôme se cache en 0, 1, 2 ; un chasseur fouille 0, 1, 4 : trouvé deux fois.
+  P.score(p, fantome, M.coder([0, 1, 2], 5));
+  P.score(p, chasseurs[0], M.coder([0, 1, 4], 5));
+  P.score(p, chasseurs[1], M.coder([3, 3, 3], 5));
+  P.score(p, chasseurs[2], M.coder([4, 4, 4], 5));
+  assert.equal(p.equipes[1].gagne, true);
+  assert.equal(p.resolution.texte, 'Trouvé 2 fois sur 3');
+  assert.equal(p.classement[0].i, chasseurs[0], 'le meilleur chasseur en tête');
+  assert.equal(p.classement[0].score, 2);
+
+  const q = tourSeul('fantome');
+  const [[f2], c2] = P.formatDe(q).equipes;
+  P.score(q, f2, M.coder([0, 0, 0], 5));
+  for (const c of c2) P.score(q, c, M.coder([1, 2, 0], 5));
+  assert.equal(q.equipes[0].gagne, true, 'trouvé une seule fois : le fantôme gagne');
+  assert.equal(q.classement[0].i, f2);
+});
+
+test('1 contre tous : les choix de l’ordinateur sont valables, et la partie va au bout', () => {
+  const R = () => Math.random();
+  for (const id of ['tirs', 'fantome']) {
+    const m = M.MINIJEU[id];
+    for (let k = 0; k < 200; k++) {
+      const autres = [1, 2, 3].slice(0, 2 + (k % 2));
+      const v = { 0: m.cpuJouer('normal', R, { role: 'solo', solo: 0, autres }) };
+      for (const a of autres) v[a] = m.cpuJouer('expert', R, { role: 'autres', solo: 0, autres });
+      const r = m.resoudre(0, autres, (i) => v[i]);
+      assert.ok([0, 1, -1].includes(r.gagnante));
+      assert.ok(Object.values(r.valeurs).every((x) => Number.isInteger(x) && x >= 0));
+    }
+  }
+  // Des parties à 4 ordinateurs : tous les styles passent, jusqu'au bout.
+  const vus = new Set();
+  for (let g = 0; g < 30; g++) {
+    const p = P.creerPartie({ joueurs: joueurs(4, 0), graine: g });
+    let garde = 0;
+    while (p.phase !== 'fin' && garde++ < 600) {
+      vus.add(p.minijeu);
+      if (p.phase === 'resultats') P.versLesDes(p);
+      else if (p.phase === 'des') P.lancer(p);
+    }
+    assert.equal(p.phase, 'fin');
+  }
+  for (const id of ['corde', 'relais', 'tirs', 'fantome']) assert.ok(vus.has(id), id);
 });
 
 test('égalité entre équipes : tout le monde a gagné', () => {

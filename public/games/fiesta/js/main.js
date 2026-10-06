@@ -12,7 +12,7 @@
  */
 
 import * as P from '../../../shared/fiesta/partie.js';
-import { MINIJEUX, MINIJEU, meilleur } from '../../../shared/fiesta/minijeux.js';
+import { MINIJEUX, MINIJEU, meilleur, uniteDe } from '../../../shared/fiesta/minijeux.js';
 import * as PL from './plateau.js';
 import { son, estMuet, basculerSon, attendre } from './jeux/outils.js';
 import { installerMusique } from '../../../shared/musique.js';
@@ -39,6 +39,10 @@ const JEUX = {
   taupes: () => import('./jeux/taupes.js'),
   tour: () => import('./jeux/tour.js'),
   calcul: () => import('./jeux/calcul.js'),
+  corde: () => import('./jeux/corde.js'),
+  relais: () => import('./jeux/relais.js'),
+  tirs: () => import('./jeux/tirs.js'),
+  fantome: () => import('./jeux/fantome.js'),
 };
 
 let p = null;
@@ -90,12 +94,25 @@ function confettis(n = 90) {
   }
 }
 
-const fmt = (id, v) => `${v} ${MINIJEU[id].unite}`;
+/** Un score et son unité, au singulier pour 0 et 1 (« 1 but », « 1 manche cachée »). */
+const fmt = (id, v, role = null) => {
+  const u = uniteDe(id, role);
+  return `${v} ${Math.abs(v) < 2 ? u.replace(/(\p{L}{2,})s\b/gu, '$1') : u}`;
+};
+/** En 1 contre tous, le camp d'un joueur : le joueur seul, ou les autres. */
+const roleDe = (i) => (P.formatDe(p).type === 'seul' ? (P.formatDe(p).equipes[0][0] === i ? 'solo' : 'autres') : null);
 const records = () => ({ jeux: {}, joues: [], victoires: 0, parties: 0, ...lire(CLE_RECORDS, {}) });
 const sauver = () => { if (p && !enLigne) ecrire(CLE_PARTIE, p.phase === 'fin' ? null : p); };
 
 function noterRecord(id, v) {
   const r = records();
+  // Un contre tous : des choix, pas un score. Le mini-jeu compte comme joué.
+  if (MINIJEU[id].resoudre) {
+    if (!r.joues.includes(id)) r.joues.push(id);
+    ecrire(CLE_RECORDS, r);
+    if (r.joues.length >= MINIJEUX.length) succes.debloquer('fiesta-tous');
+    return false;
+  }
   const ancien = r.jeux[id];
   // Un zéro n'est pas un record (là où plus haut, c'est mieux).
   const nul = MINIJEU[id].sens === 'haut' && v <= 0;
@@ -242,24 +259,49 @@ const campHtml = (membres, moi = null) => membres.map((i) => {
   return `<span class="pastille${i === moi ? ' moi' : ''}" style="--pc:${x.couleur}" title="${esc(x.nom)}">${x.avatar}</span>`;
 }).join('');
 
-/** L'annonce du format du tour : chacun pour soi, 2 contre 2, 1 contre tous. */
+/** Le style du mini-jeu du tour (chacun pour soi, 2 contre 2, 1 contre tous), et les camps. */
 function formatHtml(moi = null, grand = false) {
   const f = P.formatDe(p);
   const titre = `<div class="format-titre f-${f.type}">${P.FORMATS[f.type].glyphe} ${esc(P.nomFormat(p))}</div>`;
   if (f.type === 'chacun') return `<div class="format${grand ? ' grand' : ''}">${titre}</div>`;
   const [A, B] = f.equipes;
-  let aide = 'La moyenne de l’équipe compte. Chaque gagnant lance deux dés !';
+  let aide = 'Les points des deux coéquipiers s’additionnent. Chaque gagnant lance deux dés !';
   if (f.type === 'seul') {
     const solo = p.joueurs[A[0]];
-    aide = `${solo.avatar} ${esc(solo.nom)} doit battre la moyenne des autres : deux dés et +${p.joueurs.length - 1} s’il y arrive. Sinon, les autres lancent deux dés chacun !`;
+    aide = `S’il gagne, ${solo.avatar} ${esc(solo.nom)} lance deux dés et +${p.joueurs.length - 1}. Sinon, les autres lancent deux dés chacun !`;
   }
   return `<div class="format${grand ? ' grand' : ''}">${titre}
     <div class="versus"><div class="camp">${campHtml(A, moi)}</div><span class="vs">VS</span><div class="camp">${campHtml(B, moi)}</div></div>
     <p class="format-aide">${aide}</p></div>`;
 }
 
+/** Le rôle de ce joueur dans un mini-jeu à 1 contre tous (le gardien, un tireur…). */
+function roleHtml(m, ctx) {
+  if (!m.roles || !ctx || !m.roles[ctx.role]) return '';
+  return `<p class="role">${esc(m.roles[ctx.role])}</p>`;
+}
+
+/* L'entraînement : le joueur, et l'ordinateur pour lui donner la réplique. */
+let essai = null;
+function preparerEntrainement(m) {
+  const av = succes.profil?.().avatar;
+  const joueurs = [
+    { avatar: P.AVATARS.includes(av) ? av : '🦊', nom: 'Vous', couleur: P.COULEURS[0] },
+    { avatar: '🤖', nom: 'Robotto', couleur: P.COULEURS[1] },
+    { avatar: '👾', nom: 'Pixel', couleur: P.COULEURS[2] },
+    { avatar: '🐸', nom: 'Turbo', couleur: P.COULEURS[3] },
+  ];
+  let ctx = { role: 'chacun' };
+  if (m.style === 'duo') ctx = { role: 'equipe', equipe: [0, 1] };
+  // Un contre tous : un rôle au hasard, contre l'ordinateur.
+  if (m.style === 'seul') ctx = Math.random() < 0.5 ? { role: 'solo', solo: 0, autres: [1, 2, 3] } : { role: 'autres', solo: 1, autres: [0, 2, 3] };
+  essai = { joueurs, ctx };
+  return essai;
+}
+
 function montrerIntro(j, entrainement = false) {
   const m = MINIJEU[entrainement ? j.minijeu : p.minijeu];
+  const ctx = entrainement ? preparerEntrainement(m).ctx : P.contexte(p, j.i);
   const humains = entrainement ? [] : p.joueurs.filter((x) => x.humain);
   const premier = !entrainement && (enLigne || humains.indexOf(j) === 0);
   $('intro').innerHTML = `${!entrainement && premier ? `<p class="sous">Tour ${p.tour} — le mini-jeu est…</p>` : ''}
@@ -267,6 +309,7 @@ function montrerIntro(j, entrainement = false) {
     <div class="glyphe">${m.glyphe}</div>
     <h2>${esc(m.nom)}</h2>
     <p class="regle">${esc(m.regle)}</p>
+    ${roleHtml(m, ctx)}
     ${entrainement ? '' : `<div class="qui" style="--pc:${j.couleur}">${j.avatar} À ${esc(j.nom)} !</div>
       ${humains.length > 1 && !enLigne ? '<p class="passe">Passez-lui le téléphone 📱</p>' : ''}`}
     <button class="btn rose btn-large" id="b-pret">Je suis prêt ! 🎮</button>`;
@@ -287,6 +330,9 @@ async function jouerMinijeu(id, j) {
   const mod = await JEUX[id]();
   let fini = false;
   arreterJeu = mod.demarrer($('arene'), {
+    ctx: j ? P.contexte(p, j.i) : essai.ctx,
+    joueurs: j ? p.joueurs : essai.joueurs,
+    moi: j ? j.i : 0,
     fin: (score) => {
       if (fini) return;
       fini = true;
@@ -319,9 +365,26 @@ function apresMinijeu(id, j, score, abandon = false) {
   // En ligne, le score part tout de suite : les autres n'attendent pas qu'on clique.
   if (enLigne && j) EL.envoyer({ t: 'score', v: score });
   const m = MINIJEU[id];
+  let gros = abandon ? 'Abandon' : esc(fmt(id, score));
+  let suite = '';
+  if (m.resoudre && !abandon) {
+    if (j) {
+      // Les choix des autres sont encore secrets : le verdict tombera aux résultats.
+      gros = 'C’est noté ! ✅';
+      suite = '<p class="sous">Le verdict tombe aux résultats…</p>';
+    } else {
+      // À l'entraînement, l'ordinateur donne la réplique tout de suite.
+      const { ctx } = essai;
+      const val = (i) => (i === 0 ? score : m.cpuJouer('normal', Math.random, { ...ctx, role: i === ctx.solo ? 'solo' : 'autres' }));
+      const r = m.resoudre(ctx.solo, ctx.autres, val);
+      const monCamp = ctx.role === 'solo' ? 0 : 1;
+      gros = esc(fmt(id, r.valeurs[0], ctx.role));
+      suite = `<p class="sous">${esc(r.texte)} — ${r.gagnante === -1 ? 'égalité !' : r.gagnante === monCamp ? 'gagné ! 🎉' : 'perdu…'}</p>`;
+    }
+  }
   $('score-perso').innerHTML = `<div style="font-size:2.6rem">${m.glyphe}</div>
     <p class="sous">${j ? `${j.avatar} ${esc(j.nom)}` : 'Entraînement'}</p>
-    <div class="gros">${abandon ? 'Abandon' : esc(fmt(id, score))}</div>
+    <div class="gros">${gros}</div>${suite}
     ${record ? '<p class="record">🏅 Nouveau record personnel !</p>' : ''}
     <button class="btn rose btn-large" id="b-suite">${j ? 'Suite ›' : 'Retour à la salle'}</button>`;
   ouvrir('ov-score');
@@ -347,10 +410,12 @@ function equipesHtml() {
     const solo = p.joueurs[A.membres[0]];
     verdict = A.gagne ? `${solo.avatar} ${esc(solo.nom)} a battu tout le monde ! 🦸` : `Les autres ont eu raison de ${solo.avatar} ${esc(solo.nom)} !`;
   } else verdict = `L’équipe ${campHtml((A.gagne ? A : B).membres)} gagne !`;
-  const bloc = (e) => `<div class="eq${e.gagne ? ' gagne' : ''}"><div class="camp">${campHtml(e.membres)}</div>
-    <b>${esc(fmt(p.minijeu, String(e.score).replace('.', ',')))}</b><small>${e.membres.length > 1 ? 'moyenne' : 'score'}</small></div>`;
+  const seul = f.type === 'seul';
+  const bloc = (e, k) => `<div class="eq${e.gagne ? ' gagne' : ''}"><div class="camp">${campHtml(e.membres)}</div>
+    <b>${esc(fmt(p.minijeu, e.score, seul ? (k ? 'autres' : 'solo') : null))}</b><small>${seul ? '' : 'au total'}</small></div>`;
   return `<div class="format-titre f-${f.type}">${P.FORMATS[f.type].glyphe} ${esc(P.nomFormat(p))}</div>
-    <div class="equipes-res">${bloc(A)}<span class="vs">VS</span>${bloc(B)}</div><p class="verdict">${verdict}</p>`;
+    <div class="equipes-res">${bloc(A, 0)}<span class="vs">VS</span>${bloc(B, 1)}</div>
+    ${p.resolution ? `<p class="resolution">${esc(p.resolution.texte)}</p>` : ''}<p class="verdict">${verdict}</p>`;
 }
 
 function montrerResultats() {
@@ -358,7 +423,7 @@ function montrerResultats() {
   const medailles = ['🥇', '🥈', '🥉', '4ᵉ'];
   const enEquipe = !!p.equipes;
   $('resultats').innerHTML = `<div style="font-size:2.4rem">${m.glyphe}</div><h2>${esc(m.nom)}</h2>
-    <p class="sous">${m.sens === 'haut' ? 'Le plus haut score gagne.' : 'Le plus petit score gagne.'}</p>
+    ${m.resoudre ? '' : `<p class="sous">${m.sens === 'haut' ? 'Le plus haut score gagne.' : 'Le plus petit score gagne.'}</p>`}
     ${equipesHtml()}
     <div class="tableau-res">${p.classement.map(({ i, rang, score }, k) => {
       const j = p.joueurs[i];
@@ -366,7 +431,7 @@ function montrerResultats() {
       const marque = enEquipe ? (rang === 0 ? '🏆' : '😵') : (medailles[rang] || `${rang + 1}ᵉ`);
       return `<div class="res${enEquipe && rang ? ' perd' : ''}" style="--pc:${j.couleur};animation-delay:${k * 140}ms">
         <span class="rang">${marque}</span><span class="av">${j.avatar}</span>
-        <span><b>${esc(j.nom)}</b><small>${esc(fmt(p.minijeu, score))}${j.humain ? '' : ' 🤖'}</small></span>
+        <span><b>${esc(j.nom)}</b><small>${esc(fmt(p.minijeu, score, roleDe(i)))}${j.humain ? '' : ' 🤖'}</small></span>
         <span class="gain">${'🎲'.repeat(d.des)}${d.bonus ? ` +${d.bonus}` : ''}</span></div>`;
     }).join('')}</div>
     <button class="btn jaune btn-large" id="b-aux-des">Aux dés ! 🎲</button>`;
@@ -702,7 +767,7 @@ function ouvrirSalle() {
   const r = records();
   $('salle').innerHTML = MINIJEUX.map((m) => `<button class="carte-jeu" data-jeu="${m.id}">
     <span class="g">${m.glyphe}</span><b>${esc(m.nom)}</b>
-    <small>${r.jeux[m.id] !== undefined ? `Record : ${esc(fmt(m.id, r.jeux[m.id]))}` : 'Pas encore joué'}</small></button>`).join('');
+    <small>${m.resoudre ? `${P.FORMATS.seul.glyphe} contre l’ordi` : r.jeux[m.id] !== undefined ? `Record : ${esc(fmt(m.id, r.jeux[m.id]))}` : 'Pas encore joué'}</small></button>`).join('');
   aller('s-salle');
 }
 
@@ -716,17 +781,17 @@ function reglesHtml() {
   <p>1. <b>Un mini-jeu</b> : chaque joueur humain y joue à son tour, sur le même téléphone. Les ordinateurs jouent aussi !<br>
   2. <b>Le classement</b> donne les dés : le 1ᵉʳ lance <b>deux dés</b>, les suivants un seul dé, avec un petit bonus qui baisse avec le rang.<br>
   3. <b>On avance</b>, dans l’ordre du classement : chacun <b>arrête ses dés</b> en touchant l’écran. Gare aux cases spéciales !</p>
-  <h3>Les formats de mini-jeux</h3>
+  <h3>Trois sortes de mini-jeux</h3>
   <div class="grille">
     <div class="fiche"><span class="g">🎯</span><div><b>Chacun pour soi</b><small>Le 1ᵉʳ lance deux dés, les suivants un dé et un petit bonus.</small></div></div>
-    <div class="fiche"><span class="g">🤝</span><div><b>2 contre 2</b><small>À quatre joueurs. La moyenne de l’équipe compte : chaque gagnant lance deux dés, chaque perdant un seul.</small></div></div>
-    <div class="fiche"><span class="g">⚔️</span><div><b>1 contre tous</b><small>À trois ou quatre. Si le joueur seul bat la moyenne des autres, il lance deux dés et un bonus. Sinon, les autres lancent deux dés chacun !</small></div></div>
+    <div class="fiche"><span class="g">🤝</span><div><b>2 contre 2</b><small>À quatre joueurs, en équipes tirées au sort. Les points des coéquipiers s’additionnent : chaque gagnant lance deux dés, chaque perdant un seul.</small></div></div>
+    <div class="fiche"><span class="g">⚔️</span><div><b>1 contre tous</b><small>À trois ou quatre. Le joueur seul a son propre rôle (gardien, fantôme…). S’il gagne, il lance deux dés et un bonus ; sinon, les autres lancent deux dés chacun !</small></div></div>
   </div>
   <h3>Les cases</h3>
   <div class="grille">${Object.entries(P.CASES).filter(([k]) => !['normale', 'depart'].includes(k)).map(([, c]) => `<div class="fiche"><span class="g">${c.glyphe}</span>
     <div><b>${c.nom}</b><small>${c.texte}</small></div></div>`).join('')}</div>
-  <h3>Les mini-jeux</h3>
-  <div class="grille">${MINIJEUX.map((m) => `<div class="fiche"><span class="g">${m.glyphe}</span><div><b>${esc(m.nom)}</b><small>${esc(m.regle)}</small></div></div>`).join('')}</div>`;
+  ${['chacun', 'duo', 'seul'].map((st) => `<h3>${P.FORMATS[st].glyphe} Mini-jeux ${st === 'chacun' ? 'chacun pour soi' : st === 'duo' ? '2 contre 2' : '1 contre tous'}</h3>
+  <div class="grille">${MINIJEUX.filter((m) => m.style === st).map((m) => `<div class="fiche"><span class="g">${m.glyphe}</span><div><b>${esc(m.nom)}</b><small>${esc(m.regle)}</small></div></div>`).join('')}</div>`).join('')}`;
 }
 
 /* ------------------------------------------------------------------ */
