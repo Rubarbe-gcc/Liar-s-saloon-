@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v63';
+const VERSION = 'v64';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -140,6 +140,24 @@ const SHELL = [
   '/shared/baltrou/jokers.js',
   '/shared/baltrou/partie.js',
   '/shared/baltrou/arcanes.js',
+  '/games/fiesta/',
+  '/games/fiesta/manifest.webmanifest',
+  '/games/fiesta/css/fiesta.css',
+  '/games/fiesta/js/main.js',
+  '/games/fiesta/js/plateau.js',
+  '/games/fiesta/js/jeux/outils.js',
+  '/games/fiesta/js/jeux/tapotage.js',
+  '/games/fiesta/js/jeux/reflexe.js',
+  '/games/fiesta/js/jeux/chrono.js',
+  '/games/fiesta/js/jeux/memo.js',
+  '/games/fiesta/js/jeux/fruits.js',
+  '/games/fiesta/js/jeux/moutons.js',
+  '/games/fiesta/js/jeux/taupes.js',
+  '/games/fiesta/js/jeux/tour.js',
+  '/games/fiesta/js/jeux/calcul.js',
+  '/games/fiesta/icons/icon-192.png',
+  '/shared/fiesta/minijeux.js',
+  '/shared/fiesta/partie.js',
 ];
 
 self.addEventListener('install', (event) => {

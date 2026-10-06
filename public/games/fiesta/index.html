@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1b0f3a">
+<meta name="description" content="FIESTA — le jeu de plateau à mini-jeux. Jusqu’à 4 joueurs sur le même téléphone, des dés, des pièges et 9 mini-jeux.">
+<title>Fiesta</title>
+<link rel="icon" href="/games/fiesta/icons/icon-192.png">
+<link rel="manifest" href="/games/fiesta/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/games/fiesta/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Fiesta">
+<link rel="stylesheet" href="/games/fiesta/css/fiesta.css">
+<script src="/maj.js" defer></script>
+</head>
+<body>
+
+<div class="fond" aria-hidden="true"><i class="bulle b1"></i><i class="bulle b2"></i><i class="bulle b3"></i><i class="bulle b4"></i><i class="rayons"></i></div>
+
+<!-- ============================ MENU ============================ -->
+<section class="ecran is-active" id="s-menu">
+  <div class="menu">
+    <h1 class="logo" aria-label="Fiesta"><span>F</span><span>I</span><span>E</span><span>S</span><span>T</span><span>A</span></h1>
+    <p class="slogan">Le jeu de plateau à mini-jeux 🎉</p>
+    <button class="btn jaune btn-large" id="b-continuer" hidden>▶ Continuer la partie<small id="continuer-info"></small></button>
+    <button class="btn rose btn-large" id="b-nouvelle">🎲 Nouvelle partie</button>
+    <button class="btn bleu btn-large" id="b-salle">🕹️ Salle des mini-jeux</button>
+    <div class="menu-bas">
+      <a class="btn petit" href="/">‹ Arcade</a>
+      <button class="btn petit" data-ouvre="ov-regles">📜 Règles</button>
+      <button class="btn petit" id="b-son-menu">🔊</button>
+    </div>
+    <p class="records" id="records"></p>
+  </div>
+</section>
+
+<!-- ======================= LES JOUEURS ======================= -->
+<section class="ecran" id="s-config">
+  <div class="panneau">
+    <button class="rond retour" data-va="s-menu" aria-label="Retour">‹</button>
+    <h2>Qui joue ?</h2>
+    <p class="sous">De 2 à 4 joueurs. Les humains se passent le téléphone pour les mini-jeux.</p>
+    <div class="places" id="places"></div>
+    <div class="reglages">
+      <label>Ordinateurs
+        <select id="in-niveau"><option value="facile">Facile</option><option value="normal" selected>Normal</option><option value="expert">Expert</option></select>
+      </label>
+      <label>Plateau
+        <select id="in-longueur"><option value="courte">Court (30 cases)</option><option value="normale" selected>Normal (45 cases)</option><option value="longue">Long (60 cases)</option></select>
+      </label>
+    </div>
+    <button class="btn rose btn-large" id="b-lancer">C’est parti ! 🎉</button>
+  </div>
+</section>
+
+<!-- ============================ JEU ============================ -->
+<section class="ecran ecran-jeu" id="s-jeu">
+  <header class="barre">
+    <button class="rond petit" id="b-pause" aria-label="Pause">☰</button>
+    <span class="barre-tour" id="tour">Tour 1</span>
+    <button class="rond petit" id="b-son">🔊</button>
+  </header>
+  <div class="classement" id="classement"></div>
+  <div class="plateau-cadre"><div class="plateau" id="plateau"></div></div>
+  <div class="console" id="console">
+    <div class="console-texte" id="console-texte"></div>
+    <button class="btn rose" id="b-action" hidden></button>
+  </div>
+</section>
+
+<!-- ========================== L'ARÈNE ========================= -->
+<section class="ecran ecran-arene" id="s-arene">
+  <header class="barre arene-tete">
+    <span class="arene-joueur" id="arene-joueur"></span>
+    <span class="arene-nom" id="arene-nom"></span>
+    <button class="rond petit" id="b-abandon-jeu" aria-label="Quitter" title="Quitter le mini-jeu">✕</button>
+  </header>
+  <div class="arene" id="arene"></div>
+</section>
+
+<!-- ===================== SALLE DES MINI-JEUX ===================== -->
+<section class="ecran" id="s-salle">
+  <div class="panneau large">
+    <button class="rond retour" data-va="s-menu" aria-label="Retour">‹</button>
+    <h2>Salle des mini-jeux</h2>
+    <p class="sous">Entraînez-vous, et battez vos records.</p>
+    <div class="salle" id="salle"></div>
+  </div>
+</section>
+
+<!-- ======================== SUPERPOSITIONS ====================== -->
+<div class="ov" id="ov-intro" hidden><div class="feuille intro" id="intro"></div></div>
+<div class="ov" id="ov-score" hidden><div class="feuille score-perso" id="score-perso"></div></div>
+<div class="ov" id="ov-resultats" hidden><div class="feuille" id="resultats"></div></div>
+<div class="ov" id="ov-fin" hidden><div class="feuille fin" id="fin"></div></div>
+<div class="ov ov-des" id="ov-des" hidden><div class="des-zone" id="des"></div></div>
+
+<div class="ov" id="ov-regles" hidden>
+  <div class="feuille large">
+    <button class="rond fermer" data-ferme="ov-regles">✕</button>
+    <h2>Les règles</h2>
+    <div class="regles" id="regles"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-pause" hidden>
+  <div class="feuille petite">
+    <h2>Pause</h2>
+    <p class="sous">La partie est gardée : vous la retrouverez avec « Continuer ».</p>
+    <div class="ligne-boutons">
+      <button class="btn" data-ferme="ov-pause">Reprendre</button>
+      <button class="btn rose" id="b-menu">Menu</button>
+    </div>
+  </div>
+</div>
+
+<div class="confettis" id="confettis" aria-hidden="true"></div>
+<div class="toast" id="toast" hidden></div>
+
+<script type="module" src="/games/fiesta/js/main.js"></script>
+</body>
+</html>

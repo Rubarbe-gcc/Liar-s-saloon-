@@ -5,6 +5,11 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
 
 **Les jeux**
 
+- **FIESTA** — le jeu de plateau à mini-jeux, dans l'esprit de Wii Party : 2 à
+  4 joueurs sur le même téléphone (ou contre l'ordinateur), un mini-jeu à chaque
+  tour dont le classement donne les dés, des cases piégées, et 9 mini-jeux
+  (tapotage, duel, chrono, mémo, fruits, moutons, taupes, tour, calcul) à
+  rejouer aussi en salle d'entraînement. Moteur dans `public/shared/fiesta/`.
 - **BALTROU** — le poker roguelite : des mains de poker, des Jokers déments
   (53, du Glouton au Jackpot Cosmique), des boss jusqu'au Roi, et le Poisson
   Dégueulasse qu'on joue de force. Comme à Balatro : le choix de la blind

@@ -83,6 +83,18 @@ export const THEMES = {
       [_, 12, _, 9, 7, _, 9, _], [_, 12, _, 9, 7, _, 4, _], [5, _, 9, _, 12, _, 14, _], [12, _, _, _, _, _, _, _],
     ],
   },
+  /* Une fête : un calypso majeur, sautillant, des percussions qui claquent. */
+  fiesta: {
+    bpm: 124, pas: 8, ton: 196, volume: 0.06, swing: 0.15,
+    onde: 'triangle', tenue: 0.9, filtre: 2600, nappe: 0.3,
+    accords: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7], [0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]],
+    basse: [0, _, 2, _, 0, 1, 2, _],
+    batterie: 'k.hck.hc',
+    melodie: [
+      [12, _, 14, 16, _, 14, 12, _], [17, _, 16, 14, _, 12, 9, _], [11, _, 14, 19, _, 17, 14, _], [16, _, 12, _, 7, _, _, _],
+      [12, 12, 14, 16, _, 19, _, 16], [17, _, 21, _, 19, 17, 16, _], [14, _, 19, 17, 16, 14, 11, _], [12, _, _, _, 24, _, _, _],
+    ],
+  },
   /* Un chant de marins : six temps qui tanguent, en ré mineur, la cale qui tape du pied. */
   skullking: {
     bpm: 132, pas: 6, ton: 146.83, volume: 0.065,

@@ -26,6 +26,7 @@ export const JEUX = {
   brasier: { nom: 'BRASIER', glyphe: '🔥', url: '/games/brasier/' },
   skullking: { nom: 'Skull King', glyphe: '💀', url: '/games/skull-king/' },
   baltrou: { nom: 'Baltrou', glyphe: '🃏', url: '/games/baltrou/' },
+  fiesta: { nom: 'Fiesta', glyphe: '🎉', url: '/games/fiesta/' },
   echo: { nom: 'ÉCHO', glyphe: '🎤', url: '/games/echo/' },
 };
 /** Les jeux qu'il faut avoir ouverts pour le succès « Touche-à-tout ». */
@@ -69,6 +70,11 @@ export const SUCCES = [
   s('baltrou-jackpot', 'baltrou', '💥', 'Jackpot', 'Marquer 50 000 points en une seule main.'),
   s('baltrou-astronome', 'baltrou', '🪐', 'Astronome', 'Monter une main de poker au niveau 10.'),
   s('baltrou-mise-doree', 'baltrou', '🥇', 'Mise Dorée', 'Gagner une partie Classique en Mise Dorée.'),
+  s('fiesta-victoire', 'fiesta', '🎉', 'Roi de la fête', 'Gagner une partie de FIESTA.'),
+  s('fiesta-expert', 'fiesta', '🤖', 'Plus fort que la machine', 'Gagner une partie contre des ordinateurs Experts.'),
+  s('fiesta-tous', 'fiesta', '🕹️', 'Touche-à-tout de la fête', 'Jouer aux 9 mini-jeux.'),
+  s('fiesta-tour', 'fiesta', '🧱', 'Architecte', 'Monter une Tour Infernale de 15 étages.'),
+  s('fiesta-eclair', 'fiesta', '🤠', 'La gâchette la plus rapide', 'Tirer en moins de 250 ms en moyenne au Duel au Soleil.'),
   s('brasier-quete', 'brasier', '📜', 'Quête accomplie', 'Accomplir une quête dans une partie Quête.'),
   s('brasier-anomalie', 'brasier', '🌀', 'Maître du chaos', 'Finir dans les quatre premiers d’une partie Anomalie.'),
 
