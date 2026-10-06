@@ -51,7 +51,7 @@ test('le plateau : départ, arrivée, et toutes les sortes de cases spéciales',
 });
 
 test('un tour : les ordinateurs ont joué, les humains jouent, le classement donne les dés', () => {
-  const p = P.creerPartie({ joueurs: joueurs(4, 2), graine: 3 });
+  const p = P.creerPartie({ joueurs: joueurs(4, 2), graine: 3, modes: 'chacun' });
   assert.equal(p.phase, 'minijeu');
   assert.ok(p.scores[2] !== null && p.scores[3] !== null, 'les ordinateurs ont déjà leur score');
   assert.equal(P.humainSuivant(p).i, 0);
@@ -69,7 +69,7 @@ test('un tour : les ordinateurs ont joué, les humains jouent, le classement don
 });
 
 test('les ex æquo partagent leur rang et leurs dés', () => {
-  const p = P.creerPartie({ joueurs: joueurs(3, 3), graine: 5 });
+  const p = P.creerPartie({ joueurs: joueurs(3, 3), graine: 5, modes: 'chacun' });
   for (const j of p.joueurs) P.score(p, j.i, 10);
   assert.ok(p.classement.every((c) => c.rang === 0));
   assert.ok(p.des.every((d) => d.des === 2));
@@ -156,4 +156,102 @@ test('une même graine rejoue le même plateau et les mêmes mini-jeux', () => {
   const b = P.creerPartie({ joueurs: joueurs(3), graine: 'FETE' });
   assert.deepEqual(a.cases, b.cases);
   assert.equal(a.minijeu, b.minijeu);
+});
+
+/** Une partie de 4 humains dont le tour a le format voulu. */
+function tourAuFormat(type) {
+  for (let g = 0; g < 200; g++) {
+    const p = P.creerPartie({ joueurs: joueurs(4, 4), graine: g });
+    if (P.formatDe(p).type === type) return p;
+  }
+  throw new Error(type);
+}
+const fortFaible = (p) => (M.MINIJEU[p.minijeu].sens === 'haut' ? [50, 10] : [10, 50]);
+
+test('les formats : à quatre, les trois se mêlent ; à deux, toujours chacun pour soi', () => {
+  const vus = { chacun: 0, duo: 0, seul: 0 };
+  for (let g = 0; g < 300; g++) vus[P.formatDe(P.creerPartie({ joueurs: joueurs(4), graine: g })).type] += 1;
+  assert.ok(vus.chacun > 100 && vus.duo > 40 && vus.seul > 40, JSON.stringify(vus));
+  for (let g = 0; g < 50; g++) {
+    assert.equal(P.formatDe(P.creerPartie({ joueurs: joueurs(2), graine: g })).type, 'chacun');
+    assert.notEqual(P.formatDe(P.creerPartie({ joueurs: joueurs(3), graine: g })).type, 'duo');
+    assert.equal(P.formatDe(P.creerPartie({ joueurs: joueurs(4), graine: g, modes: 'chacun' })).type, 'chacun');
+  }
+  const p = tourAuFormat('seul');
+  assert.equal(P.nomFormat(p), '1 contre 3');
+  assert.equal(P.formatDe(p).equipes[0].length, 1);
+  assert.equal(P.formatDe(p).equipes[1].length, 3);
+});
+
+test('2 contre 2 : la moyenne de l’équipe décide, chaque gagnant lance deux dés', () => {
+  const p = tourAuFormat('duo');
+  const [A, B] = P.formatDe(p).equipes;
+  const [fort, faible] = fortFaible(p);
+  // L'équipe A a un très bon et un très mauvais joueur, mais la meilleure moyenne.
+  P.score(p, A[0], fort + (fort > faible ? 20 : -5));
+  P.score(p, A[1], faible);
+  P.score(p, B[0], (fort + faible) / 2);
+  P.score(p, B[1], (fort + faible) / 2);
+  assert.equal(p.phase, 'resultats');
+  assert.equal(p.equipes[0].gagne, true);
+  assert.equal(p.equipes[1].gagne, false);
+  for (const i of A) assert.deepEqual(P.desDe(p, i), { i, des: 2, bonus: 0 });
+  for (const i of B) assert.deepEqual(P.desDe(p, i), { i, des: 1, bonus: 0 });
+  assert.deepEqual(p.aJouer.slice(0, 2).sort(), [...A].sort(), 'les gagnants lancent d’abord');
+  for (const i of A) assert.equal(p.joueurs[i].victoires, 1);
+});
+
+test('1 contre tous : le joueur seul qui gagne lance deux dés et un bonus', () => {
+  const p = tourAuFormat('seul');
+  const [[solo], autres] = P.formatDe(p).equipes;
+  const [fort, faible] = fortFaible(p);
+  P.score(p, solo, fort);
+  for (const i of autres) P.score(p, i, faible);
+  assert.equal(p.classement[0].i, solo);
+  assert.deepEqual(P.desDe(p, solo), { i: solo, des: 2, bonus: 3 });
+  for (const i of autres) assert.equal(P.desDe(p, i).des, 1);
+
+  const q = tourAuFormat('seul');
+  const [[s2], a2] = P.formatDe(q).equipes;
+  const [f2, l2] = fortFaible(q);
+  P.score(q, s2, l2);
+  for (const i of a2) P.score(q, i, f2);
+  assert.deepEqual(P.desDe(q, s2), { i: s2, des: 1, bonus: 0 });
+  for (const i of a2) assert.deepEqual(P.desDe(q, i), { i, des: 2, bonus: 0 });
+});
+
+test('égalité entre équipes : tout le monde a gagné', () => {
+  const p = tourAuFormat('duo');
+  for (const j of p.joueurs) P.score(p, j.i, 7);
+  assert.ok(p.equipes.every((e) => e.gagne && e.egalite));
+  assert.ok(p.des.every((d) => d.des === 2 && d.bonus === 0));
+});
+
+test('le joueur seul change d’un tour à l’autre', () => {
+  let p = P.creerPartie({ joueurs: joueurs(4, 0), graine: 4 });
+  let avant = null;
+  for (let t = 0; t < 120 && p.phase !== 'fin'; t++) {
+    const f = P.formatDe(p);
+    if (f.type === 'seul') { assert.notEqual(f.equipes[0][0], avant); avant = f.equipes[0][0]; }
+    if (p.phase === 'resultats') P.versLesDes(p);
+    while (p.phase === 'des') P.lancer(p);
+  }
+});
+
+test('arrêter ses dés : le tirage du joueur est pris tel quel, s’il est valable', () => {
+  const p = P.creerPartie({ joueurs: joueurs(2, 2), graine: 11, modes: 'chacun' });
+  p.cases = p.cases.map((c, i) => (i === 0 ? 'depart' : i === p.cases.length - 1 ? 'arrivee' : 'normale'));
+  const [fort, faible] = fortFaible(p);
+  P.score(p, 0, fort);
+  P.score(p, 1, faible);
+  P.versLesDes(p);
+  assert.equal(P.lancer(p, [7, 1]).raison, 'tirage');
+  assert.equal(P.lancer(p, [6]).raison, 'tirage', 'deux dés, deux faces');
+  assert.equal(P.lancer(p, [2.5, 1]).raison, 'tirage');
+  assert.equal(P.quiLance(p), 0, 'un tirage refusé ne fait pas passer son tour');
+  const r = P.lancer(p, [6, 6]).resultat;
+  assert.deepEqual(r.tirage, [6, 6]);
+  assert.equal(p.joueurs[0].pos, 12);
+  const r2 = P.lancer(p, [3]).resultat;
+  assert.equal(r2.total, 3 + r2.bonus);
 });

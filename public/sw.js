@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v65';
+const VERSION = 'v66';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -146,6 +146,7 @@ const SHELL = [
   '/games/fiesta/css/fiesta.css',
   '/games/fiesta/js/main.js',
   '/games/fiesta/js/plateau.js',
+  '/games/fiesta/js/enligne.js',
   '/games/fiesta/js/jeux/outils.js',
   '/games/fiesta/js/jeux/tapotage.js',
   '/games/fiesta/js/jeux/reflexe.js',

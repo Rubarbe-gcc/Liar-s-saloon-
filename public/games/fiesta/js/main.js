@@ -3,8 +3,12 @@
  *
  * La partie vit dans `p` (shared/fiesta/partie.js) ; cet écran l'anime : le
  * mini-jeu de chaque tour (les humains l'un après l'autre, sur le même
- * téléphone), le classement, les dés qui roulent, les pions qui sautent de
+ * téléphone), le classement, les dés qu'on arrête, les pions qui sautent de
  * case en case. La partie se range dans le navigateur à chaque étape.
+ *
+ * En ligne, la partie vient du serveur (enligne.js) : chacun joue le
+ * mini-jeu sur son téléphone, et cet écran rejoue chaque état reçu, un par
+ * un, pour qu'une animation ne soit jamais coupée par la suivante.
  */
 
 import * as P from '../../../shared/fiesta/partie.js';
@@ -13,6 +17,8 @@ import * as PL from './plateau.js';
 import { son, estMuet, basculerSon, attendre } from './jeux/outils.js';
 import { installerMusique } from '../../../shared/musique.js';
 import * as succes from '../../../shared/succes.js';
+import { bandeau } from '../../../shared/reprise.js';
+import * as EL from './enligne.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -38,6 +44,20 @@ const JEUX = {
 let p = null;
 let occupe = false;
 let arreterJeu = null;
+
+/* En ligne : la partie vient du serveur. */
+let enLigne = false;
+let vue = null;            // le dernier état reçu : qui a joué, qui est prêt…
+let moi = -1;              // ma place dans la partie
+let joueTour = 0;          // le tour dont on a déjà ouvert le mini-jeu
+let couperJeu = null;      // arrête le mini-jeu en cours (temps écoulé)
+let annulerDes = null;     // arrête des dés qui roulent encore (le serveur a lancé pour nous)
+let finComptee = false;    // la fin de cette partie est déjà dans les records
+const file = [];
+let vidage = false;
+
+/** Un joueur de cet écran : en ligne, moi seul ; sur un même téléphone, tous les humains. */
+const estMoi = (i) => (enLigne ? i === moi : !!p.joueurs[i]?.humain);
 
 /* ------------------------------------------------------------------ */
 /* Petits outils                                                        */
@@ -72,7 +92,7 @@ function confettis(n = 90) {
 
 const fmt = (id, v) => `${v} ${MINIJEU[id].unite}`;
 const records = () => ({ jeux: {}, joues: [], victoires: 0, parties: 0, ...lire(CLE_RECORDS, {}) });
-const sauver = () => { if (p) ecrire(CLE_PARTIE, p.phase === 'fin' ? null : p); };
+const sauver = () => { if (p && !enLigne) ecrire(CLE_PARTIE, p.phase === 'fin' ? null : p); };
 
 function noterRecord(id, v) {
   const r = records();
@@ -154,6 +174,7 @@ function lancerPartie() {
     })),
     niveau: $('in-niveau').value,
     longueur: $('in-longueur').value,
+    modes: $('in-modes').value,
     graine: Date.now(),
   });
   // Les couleurs suivent les places choisies, pas l'ordre de la partie.
@@ -196,6 +217,12 @@ async function suivre() {
   sauver();
   rendreClassement(P.quiLance(p));
   if (p.phase === 'minijeu') {
+    if (enLigne) {
+      // Chacun joue chez soi, une fois par tour.
+      if (!vue.faits[moi] && joueTour !== p.tour) { joueTour = p.tour; montrerIntro(p.joueurs[moi]); }
+      majAttente();
+      return;
+    }
     const h = P.humainSuivant(p);
     if (h) montrerIntro(h);
     return;
@@ -209,16 +236,39 @@ async function suivre() {
 /* Le mini-jeu du tour                                                  */
 /* ------------------------------------------------------------------ */
 
+/** Les avatars d'un camp, chacun dans sa couleur. */
+const campHtml = (membres, moi = null) => membres.map((i) => {
+  const x = p.joueurs[i];
+  return `<span class="pastille${i === moi ? ' moi' : ''}" style="--pc:${x.couleur}" title="${esc(x.nom)}">${x.avatar}</span>`;
+}).join('');
+
+/** L'annonce du format du tour : chacun pour soi, 2 contre 2, 1 contre tous. */
+function formatHtml(moi = null, grand = false) {
+  const f = P.formatDe(p);
+  const titre = `<div class="format-titre f-${f.type}">${P.FORMATS[f.type].glyphe} ${esc(P.nomFormat(p))}</div>`;
+  if (f.type === 'chacun') return `<div class="format${grand ? ' grand' : ''}">${titre}</div>`;
+  const [A, B] = f.equipes;
+  let aide = 'La moyenne de l’équipe compte. Chaque gagnant lance deux dés !';
+  if (f.type === 'seul') {
+    const solo = p.joueurs[A[0]];
+    aide = `${solo.avatar} ${esc(solo.nom)} doit battre la moyenne des autres : deux dés et +${p.joueurs.length - 1} s’il y arrive. Sinon, les autres lancent deux dés chacun !`;
+  }
+  return `<div class="format${grand ? ' grand' : ''}">${titre}
+    <div class="versus"><div class="camp">${campHtml(A, moi)}</div><span class="vs">VS</span><div class="camp">${campHtml(B, moi)}</div></div>
+    <p class="format-aide">${aide}</p></div>`;
+}
+
 function montrerIntro(j, entrainement = false) {
   const m = MINIJEU[entrainement ? j.minijeu : p.minijeu];
   const humains = entrainement ? [] : p.joueurs.filter((x) => x.humain);
-  const premier = !entrainement && humains.indexOf(j) === 0;
+  const premier = !entrainement && (enLigne || humains.indexOf(j) === 0);
   $('intro').innerHTML = `${!entrainement && premier ? `<p class="sous">Tour ${p.tour} — le mini-jeu est…</p>` : ''}
+    ${entrainement ? '' : formatHtml(j.i, premier)}
     <div class="glyphe">${m.glyphe}</div>
     <h2>${esc(m.nom)}</h2>
     <p class="regle">${esc(m.regle)}</p>
     ${entrainement ? '' : `<div class="qui" style="--pc:${j.couleur}">${j.avatar} À ${esc(j.nom)} !</div>
-      ${humains.length > 1 ? '<p class="passe">Passez-lui le téléphone 📱</p>' : ''}`}
+      ${humains.length > 1 && !enLigne ? '<p class="passe">Passez-lui le téléphone 📱</p>' : ''}`}
     <button class="btn rose btn-large" id="b-pret">Je suis prêt ! 🎮</button>`;
   ouvrir('ov-intro');
   $('b-pret').onclick = () => {
@@ -244,10 +294,19 @@ async function jouerMinijeu(id, j) {
       apresMinijeu(id, j, score);
     },
   });
+  // En ligne, le temps du mini-jeu peut s'écouler : on s'arrête là.
+  couperJeu = () => {
+    couperJeu = null;
+    if (fini) return;
+    fini = true;
+    arreterJeu?.();
+    arreterJeu = null;
+  };
   // Quitter en plein mini-jeu : le pire score.
   $('b-abandon-jeu').onclick = () => {
     if (fini) return;
     fini = true;
+    couperJeu = null;
     arreterJeu?.();
     arreterJeu = null;
     apresMinijeu(id, j, m.sens === 'haut' ? 0 : 9999, true);
@@ -255,7 +314,10 @@ async function jouerMinijeu(id, j) {
 }
 
 function apresMinijeu(id, j, score, abandon = false) {
+  couperJeu = null;
   const record = abandon ? false : noterRecord(id, score);
+  // En ligne, le score part tout de suite : les autres n'attendent pas qu'on clique.
+  if (enLigne && j) EL.envoyer({ t: 'score', v: score });
   const m = MINIJEU[id];
   $('score-perso').innerHTML = `<div style="font-size:2.6rem">${m.glyphe}</div>
     <p class="sous">${j ? `${j.avatar} ${esc(j.nom)}` : 'Entraînement'}</p>
@@ -267,29 +329,56 @@ function apresMinijeu(id, j, score, abandon = false) {
   $('b-suite').onclick = () => {
     fermer('ov-score');
     if (!j) { ouvrirSalle(); return; }
-    P.score(p, j.i, score);
+    if (!enLigne) P.score(p, j.i, score);
     aller('s-jeu');
     PL.dessiner(p);
     suivre();
   };
 }
 
+/** Le verdict d'un tour en équipe. */
+function equipesHtml() {
+  const f = P.formatDe(p);
+  if (!p.equipes) return '';
+  const [A, B] = p.equipes;
+  let verdict;
+  if (A.egalite) verdict = 'Égalité parfaite ! Tout le monde lance deux dés.';
+  else if (f.type === 'seul') {
+    const solo = p.joueurs[A.membres[0]];
+    verdict = A.gagne ? `${solo.avatar} ${esc(solo.nom)} a battu tout le monde ! 🦸` : `Les autres ont eu raison de ${solo.avatar} ${esc(solo.nom)} !`;
+  } else verdict = `L’équipe ${campHtml((A.gagne ? A : B).membres)} gagne !`;
+  const bloc = (e) => `<div class="eq${e.gagne ? ' gagne' : ''}"><div class="camp">${campHtml(e.membres)}</div>
+    <b>${esc(fmt(p.minijeu, String(e.score).replace('.', ',')))}</b><small>${e.membres.length > 1 ? 'moyenne' : 'score'}</small></div>`;
+  return `<div class="format-titre f-${f.type}">${P.FORMATS[f.type].glyphe} ${esc(P.nomFormat(p))}</div>
+    <div class="equipes-res">${bloc(A)}<span class="vs">VS</span>${bloc(B)}</div><p class="verdict">${verdict}</p>`;
+}
+
 function montrerResultats() {
   const m = MINIJEU[p.minijeu];
   const medailles = ['🥇', '🥈', '🥉', '4ᵉ'];
+  const enEquipe = !!p.equipes;
   $('resultats').innerHTML = `<div style="font-size:2.4rem">${m.glyphe}</div><h2>${esc(m.nom)}</h2>
     <p class="sous">${m.sens === 'haut' ? 'Le plus haut score gagne.' : 'Le plus petit score gagne.'}</p>
+    ${equipesHtml()}
     <div class="tableau-res">${p.classement.map(({ i, rang, score }, k) => {
       const j = p.joueurs[i];
       const d = P.desDe(p, i);
-      return `<div class="res" style="--pc:${j.couleur};animation-delay:${k * 140}ms">
-        <span class="rang">${medailles[rang] || `${rang + 1}ᵉ`}</span><span class="av">${j.avatar}</span>
+      const marque = enEquipe ? (rang === 0 ? '🏆' : '😵') : (medailles[rang] || `${rang + 1}ᵉ`);
+      return `<div class="res${enEquipe && rang ? ' perd' : ''}" style="--pc:${j.couleur};animation-delay:${k * 140}ms">
+        <span class="rang">${marque}</span><span class="av">${j.avatar}</span>
         <span><b>${esc(j.nom)}</b><small>${esc(fmt(p.minijeu, score))}${j.humain ? '' : ' 🤖'}</small></span>
         <span class="gain">${'🎲'.repeat(d.des)}${d.bonus ? ` +${d.bonus}` : ''}</span></div>`;
     }).join('')}</div>
     <button class="btn jaune btn-large" id="b-aux-des">Aux dés ! 🎲</button>`;
   ouvrir('ov-resultats');
   son.fanfare();
+  const f = P.formatDe(p);
+  if (f.type === 'seul' && p.equipes[0].gagne && !p.equipes[0].egalite && estMoi(f.equipes[0][0])) succes.debloquer('fiesta-heros');
+  if (enLigne) {
+    $('b-aux-des').onclick = () => { EL.envoyer({ t: 'pret' }); $('b-aux-des').disabled = true; };
+    majAttente();
+    return;
+  }
   $('b-aux-des').onclick = () => { fermer('ov-resultats'); P.versLesDes(p); suivre(); };
 }
 
@@ -305,45 +394,131 @@ function tourDeDes() {
   PL.marquerActif(i);
   rendreClassement(i);
   const quoi = `${'🎲'.repeat(d.des)}${d.bonus ? ` + ${d.bonus}` : ''}`;
+  if (enLigne) {
+    // Le serveur mène : il lance pour l'ordinateur, et attend nos dés quand c'est notre tour.
+    if (j.bloque) console_(`${j.avatar} <b>${esc(j.nom)}</b> est coincé dans un trou ! 🕳️`);
+    else if (i === moi) {
+      console_(`${j.avatar} <b>À vous de lancer</b> : ${quoi}`, 'Lancer ! 🎲', async () => {
+        EL.envoyer({ t: 'roule' });
+        EL.envoyer({ t: 'lancer', tirage: await arreterDes(d.des) });
+      });
+    } else console_(`${j.avatar} <b>${esc(j.nom)}</b> va lancer ${quoi}…`);
+    return;
+  }
   if (j.bloque) {
     console_(`${j.avatar} <b>${esc(j.nom)}</b> est coincé dans un trou ! 🕳️`, j.humain ? 'Zut…' : null, () => lancer());
     if (!j.humain) setTimeout(lancer, 1200);
     return;
   }
-  if (j.humain) console_(`${j.avatar} <b>${esc(j.nom)}</b>, à vous de lancer : ${quoi}`, 'Lancer ! 🎲', () => lancer());
+  if (j.humain) console_(`${j.avatar} <b>${esc(j.nom)}</b>, à vous de lancer : ${quoi}`, 'Lancer ! 🎲', async () => lancer(await arreterDes(d.des)));
   else { console_(`${j.avatar} <b>${esc(j.nom)}</b> lance ${quoi}…`); setTimeout(lancer, 900); }
 }
 
-async function lancer() {
+/**
+ * Les dés roulent, et le joueur les arrête : un toucher (ou Espace, Entrée)
+ * par dé. Les faces défilent dans le désordre, trop vite pour viser. Rend
+ * les faces obtenues ; les dés restent affichés.
+ */
+function arreterDes(n) {
+  return new Promise((fini) => {
+    $('des').innerHTML = `<div class="des-ligne">${'<div class="de roule">?</div>'.repeat(n)}</div><div class="des-total"></div>
+      <button class="btn jaune btn-large stop" type="button">STOP ✋</button>
+      <p class="des-aide">Touchez l’écran pour arrêter ${n > 1 ? 'chaque dé' : 'le dé'} !</p>`;
+    const ov = $('ov-des');
+    ov.classList.add('a-toi');
+    ouvrir('ov-des');
+    const faces = [...$('des').querySelectorAll('.de')];
+    const valeurs = faces.map(() => 1 + Math.floor(Math.random() * 6));
+    const tirage = [];
+    const depuis = Date.now();
+    const tic = setInterval(() => {
+      faces.forEach((f, x) => {
+        if (x < tirage.length) return;
+        let v;
+        do v = 1 + Math.floor(Math.random() * 6); while (v === valeurs[x]);
+        valeurs[x] = v;
+        f.textContent = v;
+      });
+      son.de();
+    }, 70);
+    const stop = (e) => {
+      e.preventDefault();
+      if (Date.now() - depuis < 300) return;      // un double toucher n'arrête pas le dé tout de suite
+      const x = tirage.length;
+      tirage.push(valeurs[x]);
+      faces[x].classList.remove('roule');
+      faces[x].classList.add('pose');
+      faces[x].textContent = valeurs[x];
+      son.top();
+      if (tirage.length < n) return;
+      annulerDes();
+      $('des').querySelector('.stop')?.remove();
+      $('des').querySelector('.des-aide')?.remove();
+      if (n === 2 && tirage[0] === 6 && tirage[1] === 6) succes.debloquer('fiesta-double-six');
+      fini(tirage);
+    };
+    const clavier = (e) => { if (e.key === ' ' || e.key === 'Enter') stop(e); };
+    ov.addEventListener('pointerdown', stop);
+    addEventListener('keydown', clavier);
+    annulerDes = () => {
+      annulerDes = null;
+      clearInterval(tic);
+      ov.removeEventListener('pointerdown', stop);
+      removeEventListener('keydown', clavier);
+      ov.classList.remove('a-toi');
+    };
+  });
+}
+
+/** Sur un même téléphone : `tirage`, les dés qu'un humain vient d'arrêter (ils sont déjà à l'écran). */
+async function lancer(tirage = null) {
   if (occupe) return;
   occupe = true;
   const avant = p.joueurs.map((j) => j.pos);
-  const res = P.lancer(p);
-  if (!res.ok) { occupe = false; return; }
-  const r = res.resultat;
-  const j = p.joueurs[r.i];
+  const res = P.lancer(p, tirage);
+  if (!res.ok) { occupe = false; fermer('ov-des'); suivre(); return; }
+  // Le moteur a tout calculé ; l'écran rejoue le chemin depuis les anciennes places.
+  const apres = p.joueurs.map((j) => j.pos);
+  p.joueurs.forEach((j, k) => { j.pos = avant[k]; });
+  await animerLancer(res.resultat, !!tirage);
+  p.joueurs.forEach((j, k) => { j.pos = apres[k]; });
+  for (const x of p.joueurs) PL.placerPion(x.i, x.pos, p);
+  rendreClassement();
+  await attendre(500);
+  occupe = false;
+  if (p.phase === 'minijeu' && p.tour > 1) toast(`🎉 Tour ${p.tour} !`, 1500);
+  suivre();
+}
 
+/**
+ * Montre un lancer : les dés (sauf s'ils sont déjà à l'écran), puis le pion
+ * qui avance case par case, la case spéciale et ses effets.
+ */
+async function animerLancer(r, desMontres = false) {
+  const j = p.joueurs[r.i];
   if (!r.bloque) {
-    // Les dés roulent, puis se posent.
-    $('des').innerHTML = `<div class="des-ligne">${r.tirage.map(() => '<div class="de roule">?</div>').join('')}</div><div class="des-total"></div>`;
-    ouvrir('ov-des');
-    const faces = [...$('des').querySelectorAll('.de')];
-    for (let k = 0; k < 10; k++) { faces.forEach((f) => { f.textContent = 1 + Math.floor(Math.random() * 6); }); son.de(); await attendre(70); }
-    faces.forEach((f, k) => { f.classList.remove('roule'); f.classList.add('pose'); f.textContent = r.tirage[k]; });
-    $('des').querySelector('.des-total').innerHTML = `${r.total}${r.bonus ? `<small>dont +${r.bonus} de bonus</small>` : ''}`;
+    if (!desMontres) {
+      // Les dés roulent, puis se posent.
+      $('des').innerHTML = `<div class="des-ligne">${r.tirage.map(() => '<div class="de roule">?</div>').join('')}</div><div class="des-total"></div>`;
+      ouvrir('ov-des');
+      const faces = [...$('des').querySelectorAll('.de')];
+      for (let k = 0; k < 10; k++) { faces.forEach((f) => { f.textContent = 1 + Math.floor(Math.random() * 6); }); son.de(); await attendre(70); }
+      faces.forEach((f, k) => { f.classList.remove('roule'); f.classList.add('pose'); f.textContent = r.tirage[k]; });
+    }
+    const total = $('des').querySelector('.des-total');
+    if (total) total.innerHTML = `${r.total}${r.bonus ? `<small>dont +${r.bonus} de bonus</small>` : ''}`;
     son.top();
     await attendre(900);
     fermer('ov-des');
   } else {
+    fermer('ov-des');
     toast(`${j.avatar} ${esc(j.nom)} sort du trou au prochain tour.`);
     await attendre(800);
   }
 
   // Le pion avance, case par case.
-  let pos = avant[r.i];
   const pas = async (chemin) => {
     for (const c of chemin) {
-      pos = c;
       j.pos = c;
       PL.placerPion(r.i, c, p);
       PL.sauterPion(r.i);
@@ -351,9 +526,6 @@ async function lancer() {
       await attendre(210);
     }
   };
-  // Pendant l'animation, la position affichée suit le chemin (le moteur a déjà tout calculé).
-  const finale = j.pos;
-  j.pos = avant[r.i];
   await pas(r.chemin);
   if (r.effet) {
     const c = P.CASES[r.effet.type];
@@ -366,18 +538,119 @@ async function lancer() {
     else if (['tornade', 'trou', 'cadeau'].includes(r.effet.type)) son.mauvais();
     else son.top();
     await attendre(900);
-    if (r.effet.type === 'echange' && !r.effet.rien) { j.pos = finale; PL.placerPion(r.i, finale, p); PL.sauterPion(r.i); }
-    else await pas(r.effet.chemin);
-    for (const a of r.autres) { PL.placerPion(a.i, a.pos, p); PL.sauterPion(a.i); }
+    await pas(r.effet.chemin);
+    for (const a of r.autres) { p.joueurs[a.i].pos = a.pos; PL.placerPion(a.i, a.pos, p); PL.sauterPion(a.i); }
   }
-  j.pos = finale;
-  // Tous les pions se recalent (deux pions sur la même case s'écartent).
+}
+
+/* ------------------------------------------------------------------ */
+/* En ligne : les états du serveur, rejoués un par un                   */
+/* ------------------------------------------------------------------ */
+
+function recevoir(m) {
+  file.push(m);
+  vider();
+}
+
+async function vider() {
+  if (vidage) return;
+  vidage = true;
+  try {
+    while (file.length) await traiterEnLigne(file.shift());
+  } catch (err) {
+    console.error('[fiesta] en ligne', err);
+  } finally {
+    vidage = false;
+  }
+}
+
+async function traiterEnLigne(m) {
+  if (m.t === 'fi:debut') {
+    // Une nouvelle partie (ou une reprise) : le prochain état redessine tout.
+    enLigne = true;
+    p = null;
+    vue = null;
+    joueTour = 0;
+    finComptee = false;
+    ['ov-intro', 'ov-score', 'ov-resultats', 'ov-fin', 'ov-des', 'ov-pause'].forEach(fermer);
+    return;
+  }
+  if (m.t === 'fi:etat') { surEtat(m.vue); return; }
+  if (!p) return;
+  if (m.t === 'fi:lance') {
+    PL.marquerActif(m.r.i);
+    console_('');
+    // Nos dés sont posés à l'écran, sauf si le temps a filé et que le serveur a lancé pour nous.
+    const poses = m.r.i === moi && !$('ov-des').hidden && !annulerDes;
+    annulerDes?.();
+    await animerLancer(m.r, poses);
+    for (const x of p.joueurs) PL.placerPion(x.i, x.pos, p);
+    await attendre(300);
+    return;
+  }
+  if (m.t === 'fi:roule' && p.phase === 'des') {
+    const j = p.joueurs[m.i];
+    console_(`${j.avatar} <b>${esc(j.nom)}</b> fait rouler ses dés… 🎲`);
+    return;
+  }
+  if (m.t === 'fi:erreur' && p.phase === 'des' && P.quiLance(p) === moi) {
+    // Nos dés ont été refusés : on recommence.
+    fermer('ov-des');
+    tourDeDes();
+  }
+}
+
+/** Un état reçu du serveur. */
+function surEtat(v) {
+  const avant = p;
+  vue = v;
+  moi = v.moi;
+  p = v.p;
+  if (!avant) {
+    aller('s-jeu');
+    PL.dessiner(p);
+    rendreClassement();
+    suivre();
+    return;
+  }
   for (const x of p.joueurs) PL.placerPion(x.i, x.pos, p);
-  rendreClassement();
-  await attendre(500);
-  occupe = false;
-  if (p.phase === 'minijeu' && p.tour > 1) toast(`🎉 Tour ${p.tour} !`, 1500);
+  const change = avant.phase !== p.phase || avant.tour !== p.tour || P.quiLance(avant) !== P.quiLance(p);
+  if (!change) { rendreClassement(P.quiLance(p)); majAttente(); return; }
+  if (avant.phase === 'minijeu' && p.phase !== 'minijeu') {
+    fermer('ov-intro');
+    // Le temps du mini-jeu s'est écoulé en pleine partie : l'ordinateur a joué pour nous.
+    if (couperJeu) { couperJeu(); toast('⏱️ Temps écoulé !'); aller('s-jeu'); PL.dessiner(p); }
+    // Notre score est encore à l'écran : « Suite » montrera les résultats.
+    if (!$('ov-score').hidden) return;
+  }
+  if (avant.phase === 'resultats' && p.phase !== 'resultats') fermer('ov-resultats');
   suivre();
+}
+
+/** Qui reste-t-il à attendre (mini-jeu, résultats) ? */
+function majAttente() {
+  if (!enLigne || !p || !vue) return;
+  const autour = (ok) => p.joueurs.filter((j) => !ok(j.i) && !vue.bots[j.i]).map((j) => j.avatar).join(' ');
+  if (p.phase === 'minijeu' && vue.faits[moi]) {
+    const qui = autour((i) => vue.faits[i]);
+    console_(qui ? `⏳ En attente de ${qui}…` : '⏳ Les résultats arrivent…');
+  }
+  if (p.phase === 'resultats' && !$('ov-resultats').hidden && vue.prets[moi]) {
+    const qui = autour((i) => vue.prets[i] || vue.absents[i]);
+    $('b-aux-des').disabled = true;
+    $('b-aux-des').textContent = qui ? `En attente de ${qui}…` : 'C’est parti !';
+  }
+}
+
+/** La partie en ligne s'arrête (on a quitté, ou la table a fermé). */
+function finirEnLigne() {
+  couperJeu?.();
+  annulerDes?.();
+  enLigne = false;
+  p = null;
+  vue = null;
+  file.length = 0;
+  ['ov-intro', 'ov-score', 'ov-resultats', 'ov-fin', 'ov-des', 'ov-pause'].forEach(fermer);
 }
 
 /* ------------------------------------------------------------------ */
@@ -388,21 +661,21 @@ function montrerFin() {
   const g = p.joueurs[p.vainqueur];
   const tri = P.podium(p);
   const r = records();
-  if (!p.compte) {
-    p.compte = true;
+  if (enLigne ? !finComptee : !p.compte) {
+    if (enLigne) finComptee = true; else p.compte = true;
     r.parties += 1;
-    if (g.humain) {
+    if (estMoi(g.i)) {
       r.victoires += 1;
       succes.debloquer('fiesta-victoire');
       if (p.niveau === 'expert' && p.joueurs.some((x) => !x.humain)) succes.debloquer('fiesta-expert');
     }
     ecrire(CLE_RECORDS, r);
-    ecrire(CLE_PARTIE, null);
+    if (!enLigne) ecrire(CLE_PARTIE, null);
   }
   const ordre = [1, 0, 2, 3].filter((k) => k < tri.length);
   $('fin').innerHTML = `<div class="couronne">👑</div>
     <h2>${g.avatar} ${esc(g.nom)} gagne !</h2>
-    <p class="sous">${g.humain ? 'Bravo, quelle fête ! 🎉' : 'L’ordinateur l’emporte… la revanche ?'}</p>
+    <p class="sous">${estMoi(g.i) ? 'Bravo, quelle fête ! 🎉' : g.humain ? 'Quelle partie ! La revanche ?' : 'L’ordinateur l’emporte… la revanche ?'}</p>
     <div class="podium">${ordre.map((k) => `<div class="marche p${k + 1}" style="--pc:${tri[k].couleur}">
       <span class="av">${tri[k].avatar}</span>${k + 1}<small style="font-size:.7rem">${tri[k].victoires} 🏅</small></div>`).join('')}</div>
     <p class="sous">🏅 = mini-jeux gagnés · ${p.tour} tours</p>
@@ -410,6 +683,13 @@ function montrerFin() {
   ouvrir('ov-fin');
   confettis();
   son.fanfare();
+  if (enLigne) {
+    $('b-fin-menu').textContent = 'Quitter';
+    $('b-fin-menu').onclick = () => { EL.quitter(); majMenu(); };
+    $('b-revanche').textContent = 'Retour au salon';
+    $('b-revanche').onclick = () => EL.envoyer({ t: 'rejouer' });
+    return;
+  }
   $('b-fin-menu').onclick = () => { fermer('ov-fin'); p = null; majMenu(); };
   $('b-revanche').onclick = () => { fermer('ov-fin'); p = null; places = lire(CLE_PLACES, null) || placesParDefaut(); lancerPartie(); };
 }
@@ -435,7 +715,13 @@ function reglesHtml() {
   <h3>Un tour</h3>
   <p>1. <b>Un mini-jeu</b> : chaque joueur humain y joue à son tour, sur le même téléphone. Les ordinateurs jouent aussi !<br>
   2. <b>Le classement</b> donne les dés : le 1ᵉʳ lance <b>deux dés</b>, les suivants un seul dé, avec un petit bonus qui baisse avec le rang.<br>
-  3. <b>On avance</b>, dans l’ordre du classement. Gare aux cases spéciales !</p>
+  3. <b>On avance</b>, dans l’ordre du classement : chacun <b>arrête ses dés</b> en touchant l’écran. Gare aux cases spéciales !</p>
+  <h3>Les formats de mini-jeux</h3>
+  <div class="grille">
+    <div class="fiche"><span class="g">🎯</span><div><b>Chacun pour soi</b><small>Le 1ᵉʳ lance deux dés, les suivants un dé et un petit bonus.</small></div></div>
+    <div class="fiche"><span class="g">🤝</span><div><b>2 contre 2</b><small>À quatre joueurs. La moyenne de l’équipe compte : chaque gagnant lance deux dés, chaque perdant un seul.</small></div></div>
+    <div class="fiche"><span class="g">⚔️</span><div><b>1 contre tous</b><small>À trois ou quatre. Si le joueur seul bat la moyenne des autres, il lance deux dés et un bonus. Sinon, les autres lancent deux dés chacun !</small></div></div>
+  </div>
   <h3>Les cases</h3>
   <div class="grille">${Object.entries(P.CASES).filter(([k]) => !['normale', 'depart'].includes(k)).map(([, c]) => `<div class="fiche"><span class="g">${c.glyphe}</span>
     <div><b>${c.nom}</b><small>${c.texte}</small></div></div>`).join('')}</div>
@@ -459,7 +745,13 @@ function brancher() {
   document.querySelectorAll('[data-ouvre]').forEach((b) => b.addEventListener('click', () => { if (b.dataset.ouvre === 'ov-regles') $('regles').innerHTML = reglesHtml(); ouvrir(b.dataset.ouvre); }));
   document.addEventListener('click', (e) => { const f = e.target.closest('[data-ferme]'); if (f) fermer(f.dataset.ferme); });
   $('b-pause').addEventListener('click', () => ouvrir('ov-pause'));
-  $('b-menu').addEventListener('click', () => { fermer('ov-pause'); sauver(); p = null; majMenu(); });
+  $('b-menu').addEventListener('click', () => {
+    fermer('ov-pause');
+    // En ligne, quitter la partie : l'ordinateur prend la place.
+    if (enLigne) { EL.quitter(); majMenu(); return; }
+    sauver(); p = null; majMenu();
+  });
+  $('b-enligne').addEventListener('click', () => EL.ouvrir());
 
   // Les places
   $('places').addEventListener('click', (e) => {
@@ -498,6 +790,17 @@ function brancher() {
 }
 
 brancher();
+EL.init({
+  aller, toast, recevoir,
+  finir: () => { finirEnLigne(); },
+  nomPrefere: () => succes.pseudo?.() || lire(CLE_PLACES, null)?.find((x) => x.type === 'humain')?.nom || '',
+  avatarPrefere: () => {
+    const a = succes.profil?.().avatar;
+    return P.AVATARS.includes(a) ? a : lire(CLE_PLACES, null)?.find((x) => x.type === 'humain')?.avatar || null;
+  },
+  retenirNom: () => {},
+});
+bandeau('fiesta', { visible: () => $('s-menu').classList.contains('is-active'), rejoindre: () => EL.ouvrir() });
 succes.visiter('fiesta');
 majMenu();
 installerMusique('fiesta', { actif: () => !estMuet(), permis: () => !$('s-arene').classList.contains('is-active') });

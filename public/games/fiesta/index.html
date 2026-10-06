@@ -27,6 +27,7 @@
     <p class="slogan">Le jeu de plateau à mini-jeux 🎉</p>
     <button class="btn jaune btn-large" id="b-continuer" hidden>▶ Continuer la partie<small id="continuer-info"></small></button>
     <button class="btn rose btn-large" id="b-nouvelle">🎲 Nouvelle partie</button>
+    <button class="btn vert btn-large" id="b-enligne">🌐 Jouer en ligne</button>
     <button class="btn bleu btn-large" id="b-salle">🕹️ Salle des mini-jeux</button>
     <div class="menu-bas">
       <a class="btn petit" href="/">‹ Arcade</a>
@@ -48,11 +49,54 @@
       <label>Ordinateurs
         <select id="in-niveau"><option value="facile">Facile</option><option value="normal" selected>Normal</option><option value="expert">Expert</option></select>
       </label>
+      <label>Mini-jeux
+        <select id="in-modes"><option value="tous" selected>Équipes et 1 contre tous</option><option value="chacun">Chacun pour soi</option></select>
+      </label>
       <label>Plateau
         <select id="in-longueur"><option value="courte">Court (30 cases)</option><option value="normale" selected>Normal (45 cases)</option><option value="longue">Long (60 cases)</option></select>
       </label>
     </div>
     <button class="btn rose btn-large" id="b-lancer">C’est parti ! 🎉</button>
+  </div>
+</section>
+
+<!-- ========================= EN LIGNE ========================= -->
+<section class="ecran" id="s-enligne">
+  <div class="panneau">
+    <button class="rond retour" id="en-retour" aria-label="Retour">‹</button>
+    <h2>🌐 En ligne</h2>
+    <p class="en-statut" id="en-statut">Connexion…</p>
+    <div id="en-porte">
+      <p class="sous">Chacun sur son téléphone : les mini-jeux se jouent tous en même temps !</p>
+      <label class="en-champ">Votre nom<input id="en-nom" maxlength="12" autocomplete="nickname"></label>
+      <button class="btn rose btn-large" id="en-creer">🎉 Créer une partie</button>
+      <div class="en-rejoindre">
+        <input id="en-code" maxlength="4" placeholder="CODE" autocapitalize="characters" autocomplete="off" spellcheck="false" aria-label="Code de la partie">
+        <button class="btn bleu" id="en-rejoindre">Rejoindre</button>
+      </div>
+    </div>
+    <div id="en-salon" hidden>
+      <button class="en-code-table" id="en-code-table" title="Inviter des amis">----</button>
+      <p class="sous">Touchez le code pour envoyer l’invitation 📨</p>
+      <div class="places" id="en-joueurs"></div>
+      <div class="en-bots" id="en-bots">🤖 Ordis
+        <button class="btn petit" id="en-moins" aria-label="Un ordi de moins">−</button><b id="en-nb-bots">0</b><button class="btn petit" id="en-plus" aria-label="Un ordi de plus">+</button>
+      </div>
+      <div class="reglages">
+        <label>Ordinateurs
+          <select id="en-niveau"><option value="facile">Facile</option><option value="normal">Normal</option><option value="expert">Expert</option></select>
+        </label>
+        <label>Mini-jeux
+          <select id="en-modes"><option value="tous">Équipes et 1 contre tous</option><option value="chacun">Chacun pour soi</option></select>
+        </label>
+        <label>Plateau
+          <select id="en-longueur"><option value="courte">Court (30 cases)</option><option value="normale">Normal (45 cases)</option><option value="longue">Long (60 cases)</option></select>
+        </label>
+      </div>
+      <p class="sous" id="en-note"></p>
+      <button class="btn rose btn-large" id="en-lancer">C’est parti ! 🎉</button>
+      <button class="btn petit" id="en-quitter">Quitter la partie</button>
+    </div>
   </div>
 </section>
 

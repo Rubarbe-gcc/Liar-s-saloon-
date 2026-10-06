@@ -6,10 +6,13 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
 **Les jeux**
 
 - **FIESTA** — le jeu de plateau à mini-jeux, dans l'esprit de Wii Party : 2 à
-  4 joueurs sur le même téléphone (ou contre l'ordinateur), un mini-jeu à chaque
-  tour dont le classement donne les dés, des cases piégées, et 9 mini-jeux
-  (tapotage, duel, chrono, mémo, fruits, moutons, taupes, tour, calcul) à
-  rejouer aussi en salle d'entraînement. Moteur dans `public/shared/fiesta/`.
+  4 joueurs sur le même téléphone, ou **en ligne** chacun sur le sien (les
+  mini-jeux s'y jouent tous en même temps), avec ou sans l'ordinateur. Un
+  mini-jeu à chaque tour — chacun pour soi, **2 contre 2** ou **1 contre tous**
+  — dont le classement donne les dés, des dés qu'on **arrête soi-même**, des
+  cases piégées, et 9 mini-jeux (tapotage, duel, chrono, mémo, fruits, moutons,
+  taupes, tour, calcul) à rejouer aussi en salle d'entraînement. Moteur dans
+  `public/shared/fiesta/`, tables en ligne dans `server/fiesta.js`.
 - **BALTROU** — le poker roguelite : des mains de poker, des Jokers déments
   (53, du Glouton au Jackpot Cosmique), des boss jusqu'au Roi, et le Poisson
   Dégueulasse qu'on joue de force. Comme à Balatro : le choix de la blind
@@ -292,6 +295,7 @@ server/
   mimic.js                salons d'ÉCHO
   brasier.js              tables de BRASIER, bots compris
   skullking.js            tables de SKULL KING, bots compris
+  fiesta.js               tables de FIESTA, ordis compris
 api/
   ws.js                   même logique, exposée comme Function Vercel
 test/

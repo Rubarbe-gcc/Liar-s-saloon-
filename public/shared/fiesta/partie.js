@@ -6,11 +6,16 @@
  *
  * Un tour :
  *   minijeu   → tout le monde joue le même mini-jeu (les humains l'un après
- *               l'autre, sur le même appareil ; l'ordinateur, lui, est tiré) ;
+ *               l'autre, sur le même appareil ; l'ordinateur, lui, est tiré).
+ *               Le tour a un format : chacun pour soi, 2 contre 2, ou un
+ *               joueur seul contre tous les autres (en équipe, c'est la
+ *               moyenne de l'équipe qui compte) ;
  *   resultats → le classement donne les dés : le premier en lance deux, les
- *               suivants un seul, avec un bonus qui baisse avec le rang ;
- *   des       → chacun, dans l'ordre du classement, lance et avance ; les
- *               cases spéciales s'en mêlent ;
+ *               suivants un seul, avec un bonus qui baisse avec le rang (en
+ *               équipe : deux dés pour chaque gagnant, un pour les autres) ;
+ *   des       → chacun, dans l'ordre du classement, lance et avance — un
+ *               humain arrête ses dés lui-même ; les cases spéciales s'en
+ *               mêlent ;
  *   … jusqu'à ce que quelqu'un atteigne l'arrivée.
  */
 
@@ -39,6 +44,15 @@ const MELANGE = { fusee: 2, echange: 2, cadeau: 2, trou: 3, de: 3, etoile: 5, to
 export const COULEURS = ['#ff4d6d', '#3fa9ff', '#3ecf6e', '#ffc83d'];
 export const AVATARS = ['🦊', '🐼', '🐸', '🐙', '🦄', '🐯', '🐧', '🐵', '🦁', '🐨', '🐷', '🐲', '🤖', '👽', '🦖', '🐝'];
 export const NOMS_ORDI = ['Robotto', 'Pixel', 'Bip-Bop', 'Turbo', 'Gizmo', 'Néon'];
+
+/** Les formats d'un tour de mini-jeu. */
+export const FORMATS = {
+  chacun: { nom: 'Chacun pour soi', glyphe: '🎯' },
+  duo: { nom: '2 contre 2', glyphe: '🤝' },
+  seul: { nom: '1 contre tous', glyphe: '⚔️' },
+};
+/** `tous` : les trois formats se mêlent ; `chacun` : toujours chacun pour soi. */
+export const MODES = ['tous', 'chacun'];
 
 /* ------------------------------------------------------------------ */
 /* Le hasard, rangé dans la partie                                     */
@@ -90,19 +104,20 @@ export function construirePlateau(p, longueur) {
 }
 
 /**
- * @param {{ joueurs: Array<{nom:string, avatar:string, humain:boolean}>, niveau?: string, longueur?: string, graine?: string|number }} o
+ * @param {{ joueurs: Array<{nom:string, avatar:string, humain:boolean}>, niveau?: string, longueur?: string, modes?: string, graine?: string|number }} o
  */
-export function creerPartie({ joueurs, niveau = 'normal', longueur = 'normale', graine = Date.now() } = {}) {
+export function creerPartie({ joueurs, niveau = 'normal', longueur = 'normale', modes = 'tous', graine = Date.now() } = {}) {
   if (!joueurs || joueurs.length < 2 || joueurs.length > JOUEURS_MAX) throw new Error('de 2 à 4 joueurs');
   const p = {
     v: 1, alea: graineDe(graine), niveau: NIVEAUX.includes(niveau) ? niveau : 'normal',
     longueur: LONGUEURS[longueur] ? longueur : 'normale',
+    modes: MODES.includes(modes) ? modes : 'tous',
     joueurs: joueurs.map((j, i) => ({
       i, nom: String(j.nom || `Joueur ${i + 1}`).slice(0, 12), avatar: j.avatar || AVATARS[i], couleur: COULEURS[i],
       humain: !!j.humain, pos: 0, bloque: false, victoires: 0,
     })),
-    cases: [], tour: 0, phase: 'minijeu', minijeu: null, recents: [], scores: [], ordreHumains: [],
-    classement: [], des: [], aJouer: [], journal: [], vainqueur: null,
+    cases: [], tour: 0, phase: 'minijeu', minijeu: null, format: null, dernierSeul: null, recents: [], scores: [], ordreHumains: [],
+    classement: [], equipes: null, des: [], aJouer: [], journal: [], vainqueur: null,
   };
   p.cases = construirePlateau(p, LONGUEURS[p.longueur]);
   nouveauTour(p);
@@ -124,10 +139,47 @@ function choisirMinijeu(p) {
   return m.id;
 }
 
+/** Le format du tour (une vieille partie sans format joue chacun pour soi). */
+export const formatDe = (p) => p.format || { type: 'chacun', equipes: null };
+
+/** Le nom du format, avec le bon compte (« 1 contre 3 », « 1 contre 2 »). */
+export function nomFormat(p) {
+  const f = formatDe(p);
+  return f.type === 'seul' ? `1 contre ${p.joueurs.length - 1}` : FORMATS[f.type].nom;
+}
+
+/**
+ * Le format du tour, tiré au sort : à quatre, la moitié des tours se jouent
+ * chacun pour soi, un quart à 2 contre 2, un quart à 1 contre 3 ; à trois,
+ * un tour sur trois environ à 1 contre 2 ; à deux, toujours en duel. Le
+ * joueur seul n'est jamais deux fois de suite le même.
+ */
+function choisirFormat(p) {
+  const n = p.joueurs.length;
+  const r = hasard(p);
+  let type = 'chacun';
+  if (p.modes !== 'chacun' && n === 4) type = r < 0.5 ? 'chacun' : r < 0.75 ? 'duo' : 'seul';
+  else if (p.modes !== 'chacun' && n === 3) type = r < 0.65 ? 'chacun' : 'seul';
+  const tous = p.joueurs.map((j) => j.i);
+  if (type === 'duo') {
+    const [a, b, c, d] = melanger(p, tous);
+    return { type, equipes: [[a, b], [c, d]] };
+  }
+  if (type === 'seul') {
+    const candidats = tous.filter((i) => i !== p.dernierSeul);
+    const solo = candidats[entier(p, candidats.length)];
+    p.dernierSeul = solo;
+    return { type, equipes: [[solo], tous.filter((i) => i !== solo)] };
+  }
+  return { type, equipes: null };
+}
+
 function nouveauTour(p) {
   p.tour += 1;
   p.phase = 'minijeu';
   p.minijeu = choisirMinijeu(p);
+  p.format = choisirFormat(p);
+  p.equipes = null;
   p.scores = p.joueurs.map(() => null);
   // L'ordinateur a déjà « joué » : son score attend d'être révélé.
   for (const j of p.joueurs) if (!j.humain) p.scores[j.i] = scoreOrdinateur(p.minijeu, p.niveau, () => hasard(p));
@@ -153,10 +205,24 @@ export function score(p, i, valeur) {
 }
 
 /**
+ * L'ordinateur joue le mini-jeu à la place d'un joueur : parti, coupé du
+ * réseau, ou trop lent (en ligne).
+ */
+export function scoreAuto(p, i, niveau = 'facile') {
+  if (p.phase !== 'minijeu') return refus('phase');
+  if (!p.joueurs[i] || p.scores[i] !== null) return refus('joueur');
+  p.scores[i] = scoreOrdinateur(p.minijeu, niveau, () => hasard(p));
+  if (!humainSuivant(p)) classer(p);
+  return { ok: true };
+}
+
+/**
  * Le classement du mini-jeu, et les dés qu'il rapporte. Les ex æquo partagent
  * le même rang (et les mêmes dés).
  */
 function classer(p) {
+  if (formatDe(p).type !== 'chacun') { classerEquipes(p); return; }
+  p.equipes = null;
   const sens = MINIJEU[p.minijeu].sens;
   const ordre = p.joueurs.map((j) => j.i).sort((a, b) => (sens === 'haut' ? p.scores[b] - p.scores[a] : p.scores[a] - p.scores[b]));
   const n = p.joueurs.length;
@@ -167,6 +233,36 @@ function classer(p) {
   });
   // Les dés : le premier en lance deux ; les autres, un dé et un bonus qui baisse avec le rang.
   p.des = p.classement.map(({ i, rang: r }) => ({ i, des: r === 0 ? 2 : 1, bonus: r === 0 ? 0 : Math.max(0, n - 1 - r) }));
+  for (const c of p.classement) if (c.rang === 0) p.joueurs[c.i].victoires += 1;
+  p.aJouer = p.classement.map((c) => c.i);
+  p.phase = 'resultats';
+}
+
+/**
+ * En équipe : la moyenne de chaque équipe décide. Les gagnants lancent deux
+ * dés chacun, les perdants un seul. Le joueur seul qui bat tous les autres
+ * gagne en plus un bonus (un par adversaire battu). Égalité : tout le monde
+ * a gagné.
+ */
+function classerEquipes(p) {
+  const f = formatDe(p);
+  const sens = MINIJEU[p.minijeu].sens;
+  const mieux = (a, b) => (sens === 'haut' ? a > b : a < b);
+  const parScore = (a, b) => (sens === 'haut' ? p.scores[b] - p.scores[a] : p.scores[a] - p.scores[b]);
+  const eqs = f.equipes.map((membres) => ({
+    membres: [...membres].sort(parScore),
+    score: Math.round((membres.reduce((t, i) => t + p.scores[i], 0) / membres.length) * 10) / 10,
+  }));
+  const [A, B] = eqs;
+  const gagnante = mieux(A.score, B.score) ? 0 : mieux(B.score, A.score) ? 1 : -1;
+  eqs.forEach((e, k) => { e.gagne = gagnante === -1 || gagnante === k; e.egalite = gagnante === -1; });
+  p.equipes = eqs;
+  const ordre = gagnante === 1 ? [B, A] : [A, B];
+  p.classement = ordre.flatMap((e) => e.membres.map((i) => ({ i, rang: e.gagne ? 0 : 1, score: p.scores[i], equipe: eqs.indexOf(e) })));
+  const soloGagne = f.type === 'seul' && gagnante === 0;
+  p.des = p.classement.map(({ i, rang }) => ({
+    i, des: rang === 0 ? 2 : 1, bonus: soloGagne && i === f.equipes[0][0] ? p.joueurs.length - 1 : 0,
+  }));
   for (const c of p.classement) if (c.rang === 0) p.joueurs[c.i].victoires += 1;
   p.aJouer = p.classement.map((c) => c.i);
   p.phase = 'resultats';
@@ -188,13 +284,20 @@ export const desDe = (p, i) => p.des.find((d) => d.i === i);
 /**
  * Le joueur dont c'est le tour lance ses dés et avance. Renvoie tout ce que
  * l'écran doit montrer : les dés, le chemin case par case, l'effet de la case.
+ *
+ * `tirage` : les faces sur lesquelles un humain a arrêté ses dés (sinon, les
+ * dés sont tirés ici).
  */
-export function lancer(p) {
+export function lancer(p, tirage = null) {
   if (p.phase !== 'des') return refus('phase');
-  const i = p.aJouer.shift();
+  const i = p.aJouer[0];
   const j = p.joueurs[i];
   const d = desDe(p, i);
-  const tirage = Array.from({ length: d.des }, () => de6(p));
+  const valide = (t) => Array.isArray(t) && t.length === d.des && t.every((x) => Number.isInteger(x) && x >= 1 && x <= 6);
+  if (tirage != null && !j.bloque && !valide(tirage)) return refus('tirage');
+  p.aJouer.shift();
+  if (tirage == null || j.bloque) tirage = Array.from({ length: d.des }, () => de6(p));
+  else tirage = [...tirage];
   const total = tirage.reduce((s, x) => s + x, 0) + d.bonus;
   const r = { i, tirage, bonus: d.bonus, total, chemin: [], effet: null, bloque: false, autres: [] };
 

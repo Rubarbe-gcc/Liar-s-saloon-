@@ -75,6 +75,8 @@ export const SUCCES = [
   s('fiesta-tous', 'fiesta', '🕹️', 'Touche-à-tout de la fête', 'Jouer aux 9 mini-jeux.'),
   s('fiesta-tour', 'fiesta', '🧱', 'Architecte', 'Monter une Tour Infernale de 15 étages.'),
   s('fiesta-eclair', 'fiesta', '🤠', 'La gâchette la plus rapide', 'Tirer en moins de 250 ms en moyenne au Duel au Soleil.'),
+  s('fiesta-heros', 'fiesta', '🦸', 'Seul contre tous', 'Gagner un mini-jeu « 1 contre tous » en étant le joueur seul.'),
+  s('fiesta-double-six', 'fiesta', '🎲', 'Double six', 'Arrêter ses deux dés sur 6.'),
   s('brasier-quete', 'brasier', '📜', 'Quête accomplie', 'Accomplir une quête dans une partie Quête.'),
   s('brasier-anomalie', 'brasier', '🌀', 'Maître du chaos', 'Finir dans les quatre premiers d’une partie Anomalie.'),
 
