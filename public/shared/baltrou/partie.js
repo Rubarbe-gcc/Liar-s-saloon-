@@ -55,13 +55,18 @@ export const BOSS = {
 const PENALITE_BOSS = { crane: 0.5, roi: 0.25 };
 const POOLS_BOSS = [['limace', 'avare', 'voleur'], ['mur', 'acharne', 'miroir'], ['crane', 'silence', 'voleur', 'miroir'], ['roi']];
 
+/*
+ * Les objectifs. À partir de l'ante 3, les Jokers commencent à se répondre et
+ * les scores s'envolent : les objectifs grimpent plus vite pour suivre (une
+ * main moyenne ne doit pas suffire à battre une blind).
+ */
 const ANTES_CLASSIQUES = [
   [['La Fourmi', 'Échauffez-vous !', 300, 2], ['Le Scarabée', 'Ça commence !', 500, 3]],
   [['Le Ciment', 'Allez-y !', 3000, 3], ['La Brique', 'Concentrez-vous !', 4000, 4]],
-  [['Le Crâne', 'La vraie partie', 7000, 4], ['Le Squelette', 'Pas de pitié', 10000, 6]],
-  [['Le Soldat', 'Courage !', 25000, 5], ['La Garde Royale', 'Presque là…', 50000, 7]],
+  [['Le Crâne', 'La vraie partie', 12000, 4], ['Le Squelette', 'Pas de pitié', 18000, 6]],
+  [['Le Soldat', 'Courage !', 40000, 5], ['La Garde Royale', 'Presque là…', 70000, 7]],
 ];
-const OBJECTIFS_BOSS = [[950, 4], [6000, 6], [15000, 9], [100000, 15]];
+const OBJECTIFS_BOSS = [[950, 4], [6000, 6], [25000, 9], [150000, 15]];
 export const ANTES_CLASSIQUE = ANTES_CLASSIQUES.length;
 
 /* ------------------------------------------------------------------ */
@@ -131,8 +136,8 @@ function construireAntes(p) {
 /** Au-delà de l'ante 4, en mode Infini : la difficulté continue de grimper. */
 function anteInfinie(p, n) {
   const k = n - ANTES_CLASSIQUE + 1;
-  const croissance = 1.7 ** k;
-  const bases = [[25000, 5], [50000, 7], [100000, 15]];
+  const croissance = 1.8 ** k;
+  const bases = [[40000, 5], [70000, 7], [150000, 15]];
   const boss = choisir(p, Object.keys(BOSS));
   return bases.map(([o, r], i) => ({
     nom: i === 2 ? BOSS[boss].nom : `Manche ${3 * n + i + 1}`,
