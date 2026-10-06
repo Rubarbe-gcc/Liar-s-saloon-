@@ -1,0 +1,21 @@
+# Le serveur des parties en ligne d'Insert Coin, sur Render.
+#
+# Vercel coupe les connexions WebSocket au bout de cinq minutes et peut
+# renvoyer une reconnexion vers une autre copie du serveur : une partie en
+# ligne s'y perd. Ici, un seul serveur Node reste allumé et garde les parties.
+#
+# Mise en place : sur render.com, « New » → « Blueprint », choisir ce dépôt.
+# Puis mettre l'adresse obtenue (https://….onrender.com) dans
+# public/shared/serveur.js (SERVEUR_JEUX).
+services:
+  - type: web
+    name: insert-coin-jeux
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server/index.js
+    healthCheckPath: /healthz
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "22"

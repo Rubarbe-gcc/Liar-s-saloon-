@@ -20,8 +20,9 @@
  */
 
 import * as reprise from './reprise.js';
+import { adresseWS, reveillerServeur } from './serveur.js';
 
-const adresse = () => `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/ws`;
+const adresse = () => adresseWS();
 
 /** Un ping toutes les… */
 const BATTEMENT = 15 * 1000;
@@ -47,6 +48,7 @@ const ECHECS_AVANT_ALERTE = 4;
  * }} o
  */
 export function creerConnexion(o) {
+  reveillerServeur();
   let ws = null;
   let voulu = false;
   let delai = DELAI_MIN;

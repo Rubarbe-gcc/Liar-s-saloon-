@@ -236,6 +236,9 @@ function esc(s) {
 import * as succes from '/shared/succes.js';
 /* Une partie en ligne interrompue ? Un bandeau pour y retourner. */
 import { bandeauAccueil } from '/shared/reprise.js';
+/* Le serveur des parties en ligne dort quand personne ne joue : on le réveille. */
+import { reveillerServeur } from '/shared/serveur.js';
+reveillerServeur();
 bandeauAccueil(succes.JEUX);
 
 function majProfil() {
