@@ -255,6 +255,7 @@ export function dessinerCombattant(g, perso, o) {
   /* ---- jambe et bras de derrière ---- */
   membre(hanche, jambes.kr, jambes.fr, 15 * m, ombre(pantalon), 13 * m);
   pied(jambes.fr, jambes.kr, ombre(chaussure));
+  if (L.extras.includes('general')) genouillere(g, jambes.kr, m, true);
   membre(epR, coudeR, mainR, 11 * m, ombre(manche(perso)), 10 * m);
   const gros = L.extras.includes('gants-boxe') ? 11.5 : 7.5;
   poing(mainR, ombre(gant(perso)), gros);
@@ -325,6 +326,7 @@ export function dessinerCombattant(g, perso, o) {
   /* ---- jambe et bras de devant ---- */
   membre(hanche, jambes.ka, jambes.fa, 16 * m, pantalon, 14 * m);
   pied(jambes.fa, jambes.ka, chaussure);
+  if (L.extras.includes('general')) genouillere(g, jambes.ka, m);
   epaulieres(g, perso, epaule, l, t);
   membre(epA, coudeA, mainA, 12 * m, manche(perso), 11 * m);
   if (L.extras.includes('canon')) canon(g, coudeA, mainA, k);
@@ -403,7 +405,14 @@ function eclatsFlottants(g, t) {
   g.restore();
 }
 
-const manche = (p) => (['ironclad', 'stoneback', 'lechaos', 'malvortex', 'shadowkira', 'voidreaper'].includes(p.id) ? p.c.tenue : p.c.peau);
+/** Les genouillères dorées du Général. */
+function genouillere(g, k, m, derriere = false) {
+  g.fillStyle = derriere ? '#a07a20' : '#ffd23f';
+  g.beginPath(); g.ellipse(k.x + 2, k.y, 7.5 * m, 6 * m, 0, 0, Math.PI * 2); g.fill();
+  g.fillStyle = derriere ? '#5a4410' : '#8a5a10';
+  g.beginPath(); g.moveTo(k.x + 8 * m, k.y - 3); g.lineTo(k.x + 15 * m, k.y); g.lineTo(k.x + 8 * m, k.y + 3); g.fill();
+}
+const manche = (p) => (p.figurant || p.look.extras.includes('general') || ['ironclad', 'stoneback', 'lechaos', 'malvortex', 'shadowkira', 'voidreaper'].includes(p.id) ? p.c.tenue : p.c.peau);
 const gant = (p) => (p.look.extras.includes('gants-boxe') ? '#d8102a' : p.look.extras.includes('griffes') ? teinte(p.c.peau, -0.2) : p.id === 'stoneback' ? teinte(p.c.peau, -0.15) : p.c.c1);
 
 /* ------------------------------------------------------------------ */
@@ -472,6 +481,17 @@ export function dessinerTete(g, perso, x, y, o = {}) {
 
   // Les soldats de l'Horloge : un heaume fermé, une fente qui luit, une horloge au front.
   if (L.tete === 'heaume') {
+    const general = L.extras.includes('general');
+    if (general) {
+      // Le long panache rouge, qui flotte derrière le heaume.
+      const v = Math.sin(t / 6) * 3;
+      g.fillStyle = '#a00a20';
+      g.beginPath(); g.moveTo(-2, -24);
+      g.quadraticCurveTo(-26, -34 + v, -50, -10 + v * 2); g.quadraticCurveTo(-40, -6 + v, -30, 4 + v * 2);
+      g.quadraticCurveTo(-22, -12, -8, -14); g.closePath(); g.fill();
+      g.fillStyle = '#d8203a';
+      g.beginPath(); g.moveTo(0, -24); g.quadraticCurveTo(-22, -30 + v, -42, -12 + v * 2); g.quadraticCurveTo(-22, -18, -6, -16); g.closePath(); g.fill();
+    }
     const m = g.createLinearGradient(-14, -18, 14, 18);
     m.addColorStop(0, teinte(k.tenue, 0.55)); m.addColorStop(0.5, teinte(k.tenue, 0.25)); m.addColorStop(1, teinte(k.tenue, -0.25));
     g.fillStyle = m;
@@ -486,6 +506,21 @@ export function dessinerTete(g, perso, x, y, o = {}) {
     // L'horloge au front.
     g.fillStyle = k.ceinture; g.beginPath(); g.arc(4, -12, 4.2, 0, Math.PI * 2); g.fill();
     g.strokeStyle = '#1a1206'; g.lineWidth = 1; g.beginPath(); g.moveTo(4, -12); g.lineTo(4, -15); g.moveTo(4, -12); g.lineTo(6.4, -12); g.stroke();
+    if (general) {
+      // Les bords dorés, les ailes sur les tempes, le cimier d'or.
+      g.strokeStyle = '#ffd23f'; g.lineWidth = 1.4;
+      g.beginPath(); g.moveTo(-15, 14); g.quadraticCurveTo(-18, -20, 2, -19); g.quadraticCurveTo(20, -18, 17, 6); g.lineTo(14, 17); g.stroke();
+      g.fillStyle = '#e8a030';
+      g.beginPath(); g.moveTo(-10, -4); g.lineTo(-30, -20); g.lineTo(-24, -6); g.lineTo(-32, -2); g.lineTo(-12, 4); g.closePath(); g.fill();
+      g.strokeStyle = '#8a5a10'; g.lineWidth = 1; g.stroke();
+      g.fillStyle = '#ffd23f';
+      // Le cimier : une crête d'or dressée sur le sommet du heaume.
+      g.beginPath(); g.moveTo(-12, -14); g.quadraticCurveTo(-8, -34, 6, -36); g.quadraticCurveTo(4, -28, 12, -18); g.quadraticCurveTo(0, -22, -12, -14); g.closePath(); g.fill();
+      g.strokeStyle = '#8a5a10'; g.lineWidth = 1; g.stroke();
+      // La bande d'or sur le front, avec ses rivets.
+      g.fillStyle = '#ffd23f'; g.fillRect(-14, -9, 31, 2.6);
+      g.fillStyle = '#8a5a10'; for (let i = 0; i < 5; i++) { g.beginPath(); g.arc(-11 + i * 6.5, -7.7, 0.9, 0, Math.PI * 2); g.fill(); }
+    }
     // Le plumet des officiers.
     if (L.extras.includes('plumet')) {
       g.fillStyle = k.c1;
@@ -806,6 +841,43 @@ function torse(g, p, { largeur, taille, t, l }) {
     g.stroke();
     if (X.includes('armure') && p.id === 'ironclad') { lueur(g, 2, -32, 5, '#4fd8ff'); g.fillStyle = '#bff3ff'; g.beginPath(); g.arc(2, -32, 4, 0, Math.PI * 2); g.fill(); }
   }
+  // Le Général : la cuirasse d'acier bordée d'or, l'écharpe rouge, la grande horloge, les médailles.
+  if (X.includes('general')) {
+    const cu = g.createLinearGradient(-largeur, -48, largeur, -8);
+    cu.addColorStop(0, '#6a7480'); cu.addColorStop(0.45, '#2e3640'); cu.addColorStop(1, '#14181e');
+    g.fillStyle = cu;
+    g.beginPath(); g.moveTo(-largeur + 1, -47); g.lineTo(largeur - 1, -47); g.lineTo(largeur - 4, -16); g.quadraticCurveTo(0, -3, -largeur + 4, -16); g.closePath(); g.fill();
+    g.strokeStyle = '#ffd23f'; g.lineWidth = 2.2; g.stroke();
+    // Les pectoraux gravés.
+    g.strokeStyle = 'rgba(255,255,255,0.2)'; g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(-largeur + 6, -38); g.quadraticCurveTo(-6, -30, 0, -38); g.quadraticCurveTo(6, -30, largeur - 6, -38); g.moveTo(0, -38); g.lineTo(0, -12); g.stroke();
+    // L'écharpe rouge du commandement, en travers.
+    g.fillStyle = '#b0102a';
+    g.beginPath(); g.moveTo(-largeur + 2, -47); g.lineTo(-largeur + 11, -47); g.lineTo(largeur - 2, -18); g.lineTo(largeur - 6, -12); g.closePath(); g.fill();
+    g.strokeStyle = '#ffd23f'; g.lineWidth = 1; g.stroke();
+    // La grande horloge de l'armée, dont les aiguilles tournent.
+    g.fillStyle = '#120c04'; g.beginPath(); g.arc(1, -29, 10.5, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(1, -29, 9, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#2a1a06'; g.beginPath(); g.arc(1, -29, 7, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#ffd23f'; g.lineWidth = 1;
+    for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; g.beginPath(); g.moveTo(1 + Math.cos(a) * 5, -29 + Math.sin(a) * 5); g.lineTo(1 + Math.cos(a) * 6.6, -29 + Math.sin(a) * 6.6); g.stroke(); }
+    lueur(g, 1, -29, 4, k.c1);
+    g.strokeStyle = '#ffe6a0'; g.lineWidth = 1.4; g.lineCap = 'round';
+    const a1 = t / 30; const a2 = t / 360;
+    g.beginPath(); g.moveTo(1, -29); g.lineTo(1 + Math.cos(a1) * 5.5, -29 + Math.sin(a1) * 5.5); g.moveTo(1, -29); g.lineTo(1 + Math.cos(a2) * 3.6, -29 + Math.sin(a2) * 3.6); g.stroke();
+    // Les médailles.
+    for (let i = 0; i < 3; i++) {
+      const x = -largeur + 7 + i * 5;
+      g.fillStyle = ['#c8102e', '#1a4ad8', '#2a8a4a'][i]; g.fillRect(x - 1.8, -44, 3.6, 6);
+      g.fillStyle = i === 1 ? '#e8e8f0' : '#ffd23f'; g.beginPath(); g.arc(x, -36.5, 2.4, 0, Math.PI * 2); g.fill();
+    }
+    // Les tassettes, sur les hanches.
+    for (const sx of [-1, 1]) {
+      g.fillStyle = '#3a434e';
+      g.beginPath(); g.moveTo(sx * 2, 2); g.lineTo(sx * (taille + 4), 2); g.lineTo(sx * (taille + 6), 20); g.lineTo(sx * 4, 18); g.closePath(); g.fill();
+      g.strokeStyle = '#ffd23f'; g.lineWidth = 1.4; g.stroke();
+    }
+  }
   // L'insigne de l'armée de l'Horloge, sur la poitrine.
   if (X.includes('insigne')) {
     g.fillStyle = '#1a1206'; g.beginPath(); g.arc(2, -32, 7.5, 0, Math.PI * 2); g.fill();
@@ -847,6 +919,21 @@ function epaulieres(g, p, ep, l, t) {
     g.beginPath(); g.ellipse(ep.x + 4, ep.y + 2, 13 * l, 9, rad(-10), 0, Math.PI * 2); g.fill();
     if (X.includes('armure-noire')) { g.fillStyle = '#c80014'; g.beginPath(); g.moveTo(ep.x, ep.y - 4); g.lineTo(ep.x + 6, ep.y - 18); g.lineTo(ep.x + 10, ep.y - 4); g.fill(); }
   }
+  if (X.includes('general')) {
+    for (let i = 2; i >= 0; i--) {
+      const y = ep.y + 3 + i * 7;
+      const gr = g.createLinearGradient(ep.x - 14, y - 10, ep.x + 18, y + 8);
+      gr.addColorStop(0, '#7a8490'); gr.addColorStop(0.5, '#3a434e'); gr.addColorStop(1, '#1a1e24');
+      g.fillStyle = gr;
+      g.beginPath(); g.ellipse(ep.x + 4, y, (18 - i * 2.5) * l, 11 - i * 1.5, rad(-10), Math.PI * 0.95, Math.PI * 2.05); g.closePath(); g.fill();
+      g.strokeStyle = '#ffd23f'; g.lineWidth = 1.6; g.stroke();
+    }
+    g.fillStyle = '#ffd23f';
+    for (let i = 0; i < 3; i++) {
+      const x = ep.x - 8 * l + i * 9 * l;
+      g.beginPath(); g.moveTo(x - 3, ep.y - 5); g.lineTo(x - 2 + i, ep.y - 19 - (i === 1 ? 5 : 0)); g.lineTo(x + 3, ep.y - 5); g.closePath(); g.fill();
+    }
+  }
   if (X.includes('brassards')) { g.fillStyle = '#ffd23f'; g.beginPath(); g.ellipse(ep.x + 6, ep.y + 14, 7, 4, 0, 0, Math.PI * 2); g.fill(); }
   void t;
 }
@@ -869,16 +956,19 @@ function arriere(g, p, { hanche, epaule, cou, t, l, pose }) {
   const k = p.c;
   if (X.includes('cape')) {
     const vent = Math.sin(t / 7) * 6;
-    const grad = g.createLinearGradient(0, epaule.y, 0, hanche.y + 40);
-    grad.addColorStop(0, teinte(k.tenue, 0.1));
-    grad.addColorStop(1, p.id === 'malvortex' ? '#5a0010' : teinte(k.c2, -0.2));
+    const general = X.includes('general');
+    const long = general ? 30 : 0;
+    const grad = g.createLinearGradient(0, epaule.y, 0, hanche.y + 40 + long);
+    grad.addColorStop(0, general ? '#a0102a' : teinte(k.tenue, 0.1));
+    grad.addColorStop(1, p.id === 'malvortex' ? '#5a0010' : general ? '#3a0410' : teinte(k.c2, -0.2));
     g.fillStyle = grad;
     g.beginPath();
     g.moveTo(epaule.x - 14 * l, epaule.y);
-    g.quadraticCurveTo(epaule.x - 40 + vent, hanche.y, epaule.x - 50 + vent * 2, hanche.y + 50);
-    g.lineTo(epaule.x - 10 + vent, hanche.y + 56);
+    g.quadraticCurveTo(epaule.x - 40 - long * 0.6 + vent, hanche.y, epaule.x - 50 - long + vent * 2, hanche.y + 50 + long);
+    g.lineTo(epaule.x - 10 + vent, hanche.y + 56 + long);
     g.quadraticCurveTo(epaule.x - 6, hanche.y, epaule.x + 8, epaule.y);
     g.closePath(); g.fill();
+    if (general) { g.strokeStyle = '#ffd23f'; g.lineWidth = 2.2; g.stroke(); }
   }
   if (X.includes('ailes') || X.includes('ailes-dragon') || X.includes('ailes-lumiere')) {
     const bat = Math.sin(t / 6) * 10 + (pose.rot ? 20 : 0);

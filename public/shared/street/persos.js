@@ -390,7 +390,7 @@ export const PERSOS = [
     indice: 'Battez-le à la tête de son armée (mode Histoire, acte VI)',
     c: { c1: '#e8a030', c2: '#5a3a10', faisceau: '#ffd080', aura: '#e8a030', peau: '#c89a78', cheveux: '#9a9a9a', tenue: '#2a3440', ceinture: '#e8a030' },
     stats: { hp: 10, dmg: 11, def: 9 }, vitesse: 3.8, saut: 12, dmg: 1.05, hpMult: 1.01, defMult: 1.01,
-    look: { corps: 'massif', tete: 'heaume', extras: ['plumet', 'armure', 'cape', 'insigne'] },
+    look: { corps: 'massif', tete: 'heaume', extras: ['general', 'cape'] },
     specA: { nom: 'CHARGE DE LA LÉGION !', ...ruee({ vx: 14, duree: 30, degats: 17, stun: 30, recul: 18, armure: true, portee: 110 }) },
     specB: { nom: 'PLUIE DE LANCES !', ...zone({ ou: 'cible', delai: 26, rayon: 110, hauteur: 260, degats: 6, coups: 3, stun: 30, forme: 'pic' }) },
     ulti: { nom: 'ASSAUT DE LA LÉGION !!', portee: 280, visuel: 'legion' },
