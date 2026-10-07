@@ -1,13 +1,14 @@
 /**
  * STREET COMBAT — l'écran : les menus, le choix des combattants et de
- * l'arène, la campagne, et la boucle du combat (60 images par seconde, le
- * moteur avance à pas fixes, l'écran dessine ce qu'il voit).
+ * l'arène, les modes (Histoire, Tournoi, Tour des défis), et la boucle du
+ * combat (60 images par seconde, le moteur avance à pas fixes, l'écran
+ * dessine ce qu'il voit).
  *
  * Les commandes : le clavier (un ou deux joueurs), les manettes, et les
  * commandes tactiles pour le téléphone.
  */
 
-import { PERSOS, PERSO, ROSTER, BOSS, JAUGE, STATUTS, lireEntree } from '../../../shared/street/persos.js';
+import { PERSOS, PERSO, ROSTER, BOSS, SECRETS, JAUGE, STATUTS, lireEntree, aDebloquer } from '../../../shared/street/persos.js';
 import { creerCombat, pas, evenements, pose, ARENE as A } from '../../../shared/street/combat.js';
 import { dessinerCombattant, dessinerPortrait, rgba, teinte } from './dessin.js';
 import { ARENES, ARENE, fondArene, animerArene } from './arenes.js';
@@ -16,6 +17,8 @@ import { creerHud, dessinerHud } from './hud.js';
 import { jouer as son, estMuet, basculerSon } from './son.js';
 import { installerMusique } from '../../../shared/musique.js';
 import * as succes from '../../../shared/succes.js';
+import { jouerCine, avancerCine, passerCine, dimensionner as dimensionnerCine } from './cine.js';
+import * as HIST from './histoire.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -24,20 +27,29 @@ function ecrire(cle, v) { try { if (v == null) localStorage.removeItem(cle); els
 
 const CLE_DEBLOQUES = 'street.debloques';
 const CLE_RECORDS = 'street.records';
-const CLE_CAMPAGNE = 'street.campagne';
+const CLE_HISTOIRE = 'street.histoire';
+const CLE_TOURNOI = 'street.tournoi';
+const CLE_TOUR = 'street.tour';
 const CLE_NIVEAU = 'street.niveau';
 const NIVEAUX = [['facile', 'Facile'], ['normal', 'Normal'], ['difficile', 'Difficile'], ['impossible', 'Impossible']];
 
-/** La campagne : combien de combats, à quel niveau, et le boss au bout. */
-const CAMPAGNES = {
-  normal: { nom: 'NORMAL', combats: 6, niveaux: ['facile', 'facile', 'normal', 'normal', 'normal', 'difficile'], boss: 'solarius', niveauBoss: 'difficile', couleur: '#36d46a', glyphe: '☀️' },
-  difficile: { nom: 'DIFFICILE', combats: 8, niveaux: ['normal', 'normal', 'normal', 'difficile', 'difficile', 'difficile', 'difficile', 'impossible'], boss: 'malvortex', niveauBoss: 'impossible', couleur: '#ffc83d', glyphe: '😈' },
-  impossible: { nom: 'IMPOSSIBLE', combats: 10, niveaux: ['difficile', 'difficile', 'difficile', 'difficile', 'impossible', 'impossible', 'impossible', 'impossible', 'impossible', 'impossible'], boss: 'lechaos', niveauBoss: 'impossible', couleur: '#ff2a4a', glyphe: '🌌' },
-};
-
 const debloques = () => new Set(lire(CLE_DEBLOQUES, []));
-const disponible = (p) => !p.boss || debloques().has(p.id);
-const records = () => ({ victoires: 0, combats: 0, combo: 0, campagnes: {}, ...lire(CLE_RECORDS, {}) });
+/** Un combattant qu'on peut choisir : de base, ou déjà débloqué. */
+const disponible = (p) => !aDebloquer(p) || debloques().has(p.id);
+/** Débloque un combattant (et son arène). Rend vrai s'il est nouveau. */
+function debloquer(id) {
+  const d = debloques();
+  if (d.has(id)) return false;
+  d.add(id);
+  ecrire(CLE_DEBLOQUES, [...d]);
+  return true;
+}
+/** Où gagner un combattant caché. */
+function indice(p) {
+  if (p.boss) return 'Battez-le dans le mode Histoire';
+  return { histoire: 'Terminez le mode Histoire', tournoi: 'Gagnez le Tournoi en difficile', tour: 'Atteignez le sommet de la Tour des défis' }[p.secret] || '';
+}
+const records = () => ({ victoires: 0, combats: 0, combo: 0, tour: 0, tournois: 0, ...lire(CLE_RECORDS, {}) });
 
 /* ------------------------------------------------------------------ */
 /* Petits outils                                                        */
@@ -118,9 +130,15 @@ function dessinerFondMenu() {
 }
 
 function majMenu() {
-  const camp = lire(CLE_CAMPAGNE, null);
-  $('campagne-info').textContent = camp ? `Reprendre : combat ${camp.etape + 1}/${camp.file.length} (${CAMPAGNES[camp.difficulte].nom.toLowerCase()})` : '';
+  const h = lire(CLE_HISTOIRE, null);
+  $('histoire-info').textContent = h ? (h.chapitre < 0 ? 'Reprendre : le prologue' : `Reprendre : chapitre ${h.chapitre + 1}/${HIST.CHAPITRES.length}`) : '';
+  const t = lire(CLE_TOURNOI, null);
+  $('tournoi-info').textContent = t ? `Reprendre : ${['les quarts', 'les demies', 'la finale'][t.tour]}` : '';
   const r = records();
+  const to = lire(CLE_TOUR, null);
+  $('tour-info').textContent = to ? `Reprendre : étage ${to.etage + 1}` : r.tour ? `Record : étage ${r.tour}` : '';
+  const caches = PERSOS.filter((p) => !disponible(p)).length;
+  $('secrets-info').textContent = caches ? `🔒 ${caches} combattant${caches > 1 ? 's' : ''} à découvrir` : '✨ Tous les combattants sont débloqués !';
   $('records').textContent = r.combats ? `🏆 ${r.victoires} victoire${r.victoires > 1 ? 's' : ''} · meilleur combo ${r.combo}` : '';
   $('b-son-menu').textContent = estMuet() ? '🔇' : '🔊';
   aller('s-menu');
@@ -150,18 +168,29 @@ function ouvrirChoix() {
     versus: ['Votre combattant', 'Votre adversaire'],
     deux: ['Joueur 1 : votre combattant', 'Joueur 2 : votre combattant'],
     entrainement: ['Votre combattant', 'Le mannequin'],
-    campagne: ['Votre combattant pour la campagne'],
+    histoire: ['Le héros de l’histoire'],
+    tournoi: ['Votre combattant pour le tournoi'],
+    tour: ['Votre combattant pour la tour'],
   };
+  const solo = ['histoire', 'tournoi', 'tour'].includes(prep.mode);
   $('choix-titre').textContent = titres[prep.mode][prep.etape - 1];
-  $('choix-ok').textContent = prep.etape === 1 && prep.mode !== 'campagne' ? 'Choisir ›' : 'Combattre !';
-  if (prep.mode === 'campagne') $('choix-ok').textContent = 'En route !';
+  $('choix-ok').textContent = solo ? 'En route !' : prep.etape === 1 ? 'Choisir ›' : 'Combattre !';
   const grille = $('grille-persos');
   grille.innerHTML = '';
   for (const p of PERSOS) {
     const b = document.createElement('button');
     b.className = 'carte-perso';
     b.dataset.id = p.id;
-    if (!disponible(p) || (prep.mode === 'campagne' && p.boss && !disponible(p))) b.classList.add('verrou');
+    // Un combattant caché : une carte « ? », rien de plus.
+    if (!disponible(p)) {
+      b.classList.add('cache');
+      b.innerHTML = '<span class="mystere">?</span>';
+      b.title = `Combattant secret — ${indice(p)}`;
+      grille.append(b);
+      continue;
+    }
+    // L'histoire se vit avec un combattant de base.
+    if (prep.mode === 'histoire' && aDebloquer(p)) b.classList.add('verrou');
     let cv = portraitsGrille.get(p.id);
     if (!cv) {
       cv = document.createElement('canvas');
@@ -174,11 +203,11 @@ function ouvrirChoix() {
     copie.getContext('2d').drawImage(cv, 0, 0);
     b.append(copie);
     b.insertAdjacentHTML('beforeend', `<span>${esc(p.nom)}</span>${p.boss ? '<i class="boss-etiq">BOSS</i>' : ''}`);
-    b.title = disponible(p) ? p.nom : `${p.nom} — battez la campagne ${CAMPAGNES[p.boss].nom.toLowerCase()} pour le débloquer`;
+    b.title = b.classList.contains('verrou') ? `${p.nom} — l’histoire se joue avec un combattant de base` : p.nom;
     grille.append(b);
   }
   prep.choix = prep.etape === 1 ? prep.p1 : (prep.p2 || ROSTER[Math.floor(Math.random() * ROSTER.length)].id);
-  if (!disponible(PERSO[prep.choix])) prep.choix = 'ryuken';
+  if (!disponible(PERSO[prep.choix]) || (prep.mode === 'histoire' && aDebloquer(PERSO[prep.choix]))) prep.choix = 'ryuken';
   marquerChoix();
   aller('s-choix');
 }
@@ -261,7 +290,7 @@ function remplirFiche(p) {
   const verrou = !disponible(p);
   $('fiche-texte').innerHTML = `<h3 class="fiche-nom" style="color:${p.c.c1}">${esc(p.nom)}</h3>
     <p class="fiche-style">${esc(p.style)} — <i>${esc(p.desc)}</i></p>
-    ${verrou ? `<p class="debloque">🔒 Battez la campagne ${CAMPAGNES[p.boss].nom.toLowerCase()} pour le débloquer.</p>` : ''}
+
     <div class="stats">
       <span>VIE</span><i><b style="width:${(p.stats.hp / 15) * 100}%"></b></i>
       <span>FORCE</span><i><b style="width:${(p.stats.dmg / 15) * 100}%"></b></i>
@@ -297,7 +326,10 @@ function validerChoix() {
   const p = PERSO[prep.choix];
   if (!disponible(p)) return;
   son('valide');
-  if (prep.mode === 'campagne') { lancerCampagne(prep.choix); return; }
+  if (prep.mode === 'histoire' && aDebloquer(p)) return;
+  if (prep.mode === 'histoire') { lancerHistoire(prep.choix); return; }
+  if (prep.mode === 'tournoi') { lancerTournoi(prep.choix); return; }
+  if (prep.mode === 'tour') { lancerTour(prep.choix); return; }
   if (prep.etape === 1) {
     prep.p1 = prep.choix;
     prep.etape = 2;
@@ -334,60 +366,275 @@ function ouvrirArenes() {
 }
 
 /* ------------------------------------------------------------------ */
-/* La campagne                                                          */
+/* Les difficultés (Histoire, Tournoi)                                  */
 /* ------------------------------------------------------------------ */
 
-function ouvrirDifficultes() {
-  const r = records();
-  $('difficultes').innerHTML = Object.entries(CAMPAGNES).map(([id, c]) => {
-    const boss = PERSO[c.boss];
-    return `<button class="diff" data-diff="${id}" style="--c:${c.couleur}">
-      <span class="boss-ic">${c.glyphe}</span><b>${c.nom}</b>
-      <small>${c.combats} combats, puis <strong>${esc(boss.nom)}</strong>, ${esc(boss.desc.toLowerCase())}.</small>
-      ${r.campagnes[id] ? `<small class="fait">✔ Terminée — ${esc(boss.nom)} débloqué</small>` : ''}
-    </button>`;
-  }).join('');
+const DIFFICULTES = {
+  histoire: [
+    { id: 'normal', nom: 'NORMAL', couleur: '#36d46a', glyphe: '📖', texte: 'L’histoire, à un rythme raisonnable.' },
+    { id: 'difficile', nom: 'DIFFICILE', couleur: '#ff2a4a', glyphe: '🔥', texte: 'Les combattants corrompus ne pardonnent rien.' },
+  ],
+  tournoi: [
+    { id: 'facile', nom: 'FACILE', couleur: '#36d46a', glyphe: '🥉', texte: 'Huit combattants, trois victoires pour la coupe.' },
+    { id: 'normal', nom: 'NORMAL', couleur: '#36b4ff', glyphe: '🥈', texte: 'Les favoris ne se laissent pas faire.' },
+    { id: 'difficile', nom: 'DIFFICILE', couleur: '#ffc83d', glyphe: '🏆', texte: 'Un champion invaincu vous attend en finale…' },
+  ],
+};
+
+function ouvrirDifficultes(mode) {
+  prep.modeDiff = mode;
+  $('difficulte-titre').textContent = mode === 'histoire' ? 'Mode Histoire' : 'Tournoi';
+  $('difficulte-sous').textContent = mode === 'histoire'
+    ? 'La Fracture : un prologue, huit chapitres, des boss à vaincre — et à débloquer.'
+    : 'Huit combattants, un tableau, une seule coupe. Perdez un match, et c’est fini.';
+  const onyx = debloques().has(SECRETS.tournoi);
+  $('difficultes').innerHTML = DIFFICULTES[mode].map((d) => `<button class="diff" data-diff="${d.id}" style="--c:${d.couleur}">
+      <span class="boss-ic">${d.glyphe}</span><b>${d.nom}</b><small>${esc(d.texte)}</small>
+      ${mode === 'tournoi' && d.id === 'difficile' && onyx ? '<small class="fait">✔ Champion battu</small>' : ''}
+    </button>`).join('');
   aller('s-difficulte');
 }
 
-function lancerCampagne(perso) {
-  const d = CAMPAGNES[prep.difficulte];
-  const autres = ROSTER.filter((p) => p.id !== perso).map((p) => p.id).sort(() => Math.random() - 0.5);
-  const file = [];
-  while (file.length < d.combats) file.push(autres[file.length % autres.length]);
-  file.push(d.boss);
-  const normales = ARENES.filter((a) => !a.boss).map((a) => a.id).sort(() => Math.random() - 0.5);
-  const arenes = file.map((_, k) => normales[k % normales.length]);
-  arenes[arenes.length - 1] = ARENES.find((a) => a.boss === d.boss).id;
-  const niveaux = [...d.niveaux, d.niveauBoss];
-  ecrire(CLE_CAMPAGNE, { difficulte: prep.difficulte, perso, file, arenes, niveaux, etape: 0 });
-  montrerEtape();
+/** Une cinématique, en plein écran. */
+function cinematique(etapes, hero) {
+  aller('s-cine');
+  dimensionnerCine();
+  return jouerCine(etapes, { hero, debloquer });
 }
 
-function montrerEtape() {
-  const camp = lire(CLE_CAMPAGNE, null);
-  if (!camp) { majMenu(); return; }
-  const adv = PERSO[camp.file[camp.etape]];
-  const moi = PERSO[camp.perso];
-  const boss = camp.etape === camp.file.length - 1;
-  $('etape').innerHTML = `<h2>${boss ? '⚠️ LE BOSS ⚠️' : `Combat ${camp.etape + 1} / ${camp.file.length}`}</h2>
-    <div class="etape-route">${camp.file.map((_, k) => `<span class="${k < camp.etape ? 'fait' : k === camp.etape ? 'ici' : ''}${k === camp.file.length - 1 ? ' boss' : ''}">${k === camp.file.length - 1 ? '💀' : k + 1}</span>`).join('')}</div>
-    <canvas id="etape-vs" width="1040" height="480"></canvas>
-    <p class="sous">${esc(moi.nom)} contre <b style="color:${adv.c.c1}">${esc(adv.nom)}</b> — ${esc(ARENE[camp.arenes[camp.etape]].nom)} · ordinateur ${esc(camp.niveaux[camp.etape])}</p>
+/* ------------------------------------------------------------------ */
+/* Le mode Histoire                                                     */
+/* ------------------------------------------------------------------ */
+
+function lancerHistoire(hero) {
+  ecrire(CLE_HISTOIRE, { hero, chapitre: -1, difficulte: prep.difficulte || 'normal' });
+  jouerChapitre();
+}
+
+/** Remplace un combattant par un autre dans une cinématique (le héros ne se combat pas lui-même). */
+const remplacer = (etapes, de, par) => (de === par ? etapes : etapes.map((e) => {
+  const x = { ...e };
+  for (const k of ['entre', 'dit', 'pose', 'sort']) if (x[k] === de) x[k] = par;
+  return x;
+}));
+
+async function jouerChapitre() {
+  const h = lire(CLE_HISTOIRE, null);
+  if (!h) { majMenu(); return; }
+  if (h.chapitre < 0) {
+    await cinematique(HIST.PROLOGUE, h.hero);
+    h.chapitre = 0;
+    ecrire(CLE_HISTOIRE, h);
+  }
+  if (h.chapitre >= HIST.CHAPITRES.length) {
+    await cinematique(HIST.EPILOGUE, h.hero);
+    ecrire(CLE_HISTOIRE, null);
+    succes.debloquer('street-campagne');
+    majMenu();
+    toast('📖 Histoire terminée ! Le Tournoi et la Tour des défis vous attendent.', 4000);
+    return;
+  }
+  const ch = HIST.CHAPITRES[h.chapitre];
+  const adv = ch.combat.adv === h.hero ? ch.combat.remplacant : ch.combat.adv;
+  await cinematique([{ decor: ch.arene }, { titre: ch.titre, sous: ch.sous, sur: 'LA FRACTURE' }, ...remplacer(ch.avant, ch.combat.adv, adv)], h.hero);
+  combatHistoire(h, ch, adv);
+}
+
+function combatHistoire(h, ch, adv) {
+  demarrerCombat({
+    p1: h.hero, p2: adv, arene: ch.arene, ia: { 1: ch.combat.niveau[h.difficulte] || 'normal' }, mode: 'histoire',
+    texteFin: (gagne) => (gagne ? `<p class="sous">${esc(ch.titre)} — ${esc(ch.sous)}</p>` : '<p class="sous">L’histoire n’est pas finie. Relevez-vous !</p>'),
+    suite: async () => {
+      if (adv === 'lechaos') succes.debloquer('street-chaos');
+      const apres = [{ decor: ch.arene }, { entre: 'hero', cote: 'g', comment: 'place' }, { entre: adv, cote: 'd', comment: 'place', p: 'touche' }, ...remplacer(ch.apres, ch.combat.adv, adv)];
+      await cinematique(apres, h.hero);
+      h.chapitre += 1;
+      ecrire(CLE_HISTOIRE, h);
+      jouerChapitre();
+    },
+    reessayer: () => combatHistoire(h, ch, adv),
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* Le Tournoi : huit combattants, trois tours                           */
+/* ------------------------------------------------------------------ */
+
+const NIVEAUX_TOURNOI = { facile: ['facile', 'facile', 'normal'], normal: ['normal', 'normal', 'difficile'], difficile: ['difficile', 'difficile', 'difficile'] };
+const melange = (l) => { const t = [...l]; for (let i = t.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [t[i], t[j]] = [t[j], t[i]]; } return t; };
+
+function lancerTournoi(hero) {
+  const diff = prep.difficulte || 'normal';
+  const pool = melange(PERSOS.filter((p) => disponible(p) && p.id !== hero && p.id !== SECRETS.tournoi).map((p) => p.id));
+  const tableau = [hero, ...pool.slice(0, 7)];
+  // En difficile, le champion invaincu est de l'autre côté du tableau.
+  if (diff === 'difficile') tableau[7] = SECRETS.tournoi;
+  ecrire(CLE_TOURNOI, { hero, diff, tours: [tableau], tour: 0 });
+  montrerTableau();
+}
+
+/** Le champion reste masqué tant qu'il n'est pas débloqué, et qu'on ne l'affronte pas. */
+const masque = (id, t) => id === SECRETS.tournoi && !debloques().has(id) && !(t.tour === 2 && t.tours[2]?.includes(id));
+
+function montrerTableau() {
+  const t = lire(CLE_TOURNOI, null);
+  if (!t) { majMenu(); return; }
+  const noms = ['QUARTS', 'DEMIES', 'FINALE', 'COUPE'];
+  // Les tours à venir sont des cases vides.
+  const colonnes = [8, 4, 2, 1].map((n, k) => t.tours[k] || Array(n).fill(null));
+  const colonne = (liste, k) => `<div class="tab-col${k === 3 ? ' titre-col' : ''}"><h4>${noms[k]}</h4>${liste.map((id, i) => {
+    if (!id) return `<div class="tab-perso vide">${k === 3 ? '🏆' : '…'}</div>`;
+    const p = PERSO[id];
+    const cache = masque(id, t);
+    const elimine = t.tours[k + 1] && !t.tours[k + 1].includes(id);
+    const moi = id === t.hero;
+    return `<div class="tab-perso${moi ? ' moi' : ''}${elimine ? ' elimine' : ''}${i % 2 === 0 && k < 3 ? ' haut' : ''}" style="--c:${cache ? '#555' : p.c.c1}">
+      ${cache ? '<span class="mini mystere">?</span>' : `<canvas class="mini" data-portrait="${id}" width="64" height="64"></canvas>`}<b>${cache ? 'CHAMPION ???' : esc(p.nom)}</b></div>`;
+  }).join('')}</div>`;
+  const adv = t.tours[t.tour][1];
+  $('etape').innerHTML = `<h2>🏆 Tournoi — ${t.diff}</h2>
+    <div class="tableau">${colonnes.map(colonne).join('')}</div>
+    <p class="sous">${t.tour === 2 ? 'La finale !' : t.tour === 1 ? 'Les demi-finales.' : 'Les quarts de finale.'} Contre <b>${masque(adv, t) ? '???' : esc(PERSO[adv].nom)}</b> · ordinateur ${NIVEAUX_TOURNOI[t.diff][t.tour]}</p>
     <div class="ligne-boutons"><button class="btn" id="b-etape-quitter">Abandonner</button><button class="btn rouge" id="b-etape-go">⚔️ Combattre !</button></div>`;
+  $('etape').querySelectorAll('[data-portrait]').forEach((cv) => dessinerPortrait(cv.getContext('2d'), PERSO[cv.dataset.portrait], 64, { t: 8 }));
   ouvrir('ov-etape');
-  dessinerVs($('etape-vs'), moi, adv);
   son('annonce');
-  $('b-etape-go').onclick = () => {
+  $('b-etape-go').onclick = async () => {
     fermer('ov-etape');
-    demarrerCombat({ p1: camp.perso, p2: adv.id, arene: camp.arenes[camp.etape], ia: { 1: camp.niveaux[camp.etape] }, mode: 'campagne' });
+    const finaleChampion = t.tour === 2 && adv === SECRETS.tournoi;
+    if (finaleChampion) await cinematique(HIST.TOURNOI_FINALE, t.hero);
+    combatTournoi(t, adv, finaleChampion);
   };
   $('b-etape-quitter').onclick = () => {
-    if (!confirm('Abandonner la campagne ?')) return;
-    ecrire(CLE_CAMPAGNE, null);
+    if (!confirm('Abandonner le tournoi ?')) return;
+    ecrire(CLE_TOURNOI, null);
     fermer('ov-etape');
     majMenu();
   };
+}
+
+function combatTournoi(t, adv, finaleChampion) {
+  demarrerCombat({
+    p1: t.hero, p2: adv, arene: finaleChampion || t.tour === 2 ? 'ring' : 'hasard', ia: { 1: NIVEAUX_TOURNOI[t.diff][t.tour] }, mode: 'tournoi',
+    texteFin: (gagne) => (gagne ? '' : '<p class="sous">Éliminé du tournoi…</p>'),
+    suite: async () => {
+      // Les autres matchs du tour : le champion gagne toujours les siens.
+      const liste = t.tours[t.tour];
+      const gagnants = [t.hero];
+      for (let i = 2; i < liste.length; i += 2) {
+        const [a, b] = [liste[i], liste[i + 1]];
+        gagnants.push(a === SECRETS.tournoi ? a : b === SECRETS.tournoi ? b : Math.random() < 0.5 ? a : b);
+      }
+      t.tours.push(gagnants);
+      t.tour += 1;
+      if (t.tour < 3) { ecrire(CLE_TOURNOI, t); montrerTableau(); return; }
+      // La coupe !
+      ecrire(CLE_TOURNOI, null);
+      const r = records();
+      r.tournois += 1;
+      ecrire(CLE_RECORDS, r);
+      const champion = t.diff === 'difficile';
+      if (champion) succes.debloquer('street-tournoi');
+      await cinematique([{ decor: 'ring' }, { entre: 'hero', cote: 'c', x: 500, comment: 'place', p: 'victoire' },
+        { titre: '🏆 VAINQUEUR DU TOURNOI 🏆', sous: `${PERSO[t.hero].nom} soulève la coupe !` },
+        ...(champion ? [{ debloque: SECRETS.tournoi }] : [])], t.hero);
+      majMenu();
+    },
+    reessayer: () => { ecrire(CLE_TOURNOI, null); prep.difficulte = t.diff; lancerTournoi(t.hero); },
+    abandon: () => ecrire(CLE_TOURNOI, null),
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* La Tour des défis : dix combats d'affilée, puis Némésis              */
+/* ------------------------------------------------------------------ */
+
+const ETAGES = 10;
+const NIVEAUX_TOUR = ['facile', 'facile', 'normal', 'normal', 'normal', 'difficile', 'difficile', 'difficile', 'impossible', 'impossible'];
+/** Après chaque victoire, on récupère une partie de sa vie. */
+const REPOS_TOUR = 0.4;
+
+function lancerTour(hero) {
+  // Les combattants de base d'abord ; les boss et les secrets déjà débloqués gardent les deux derniers étages.
+  const base = melange(ROSTER.filter((p) => p.id !== hero).map((p) => p.id));
+  const forts = melange(PERSOS.filter((p) => aDebloquer(p) && disponible(p) && p.id !== hero && p.id !== SECRETS.tour).map((p) => p.id));
+  const file = Array.from({ length: ETAGES }, (_, k) => (k >= ETAGES - 2 && forts.length ? forts[(k - (ETAGES - 2)) % forts.length] : base[k % base.length]));
+  const normales = ARENES.filter((a) => !a.boss).map((a) => a.id);
+  const arenes = file.map(() => normales[Math.floor(Math.random() * normales.length)]);
+  ecrire(CLE_TOUR, { hero, file, arenes, etage: 0, vie: null });
+  montrerTour();
+}
+
+function montrerTour() {
+  const t = lire(CLE_TOUR, null);
+  if (!t) { majMenu(); return; }
+  const hero = PERSO[t.hero];
+  const hpMax = Math.round(150 * hero.hpMult);
+  const vie = t.vie ?? hpMax;
+  const boss = t.etage >= ETAGES;
+  const adv = boss ? null : PERSO[t.file[t.etage]];
+  const nemesis = debloques().has(SECRETS.tour);
+  const etages = [];
+  for (let k = ETAGES; k >= 0; k--) {
+    const id = k === ETAGES ? SECRETS.tour : t.file[k];
+    const cache = k === ETAGES && !nemesis;
+    etages.push(`<div class="etage${k < t.etage ? ' fait' : k === t.etage ? ' ici' : ''}${k === ETAGES ? ' boss' : ''}">
+      <span class="num">${k === ETAGES ? '👑' : k + 1}</span><b>${cache ? '???' : esc(PERSO[id].nom)}</b>${k === t.etage ? '<i>◀ vous</i>' : ''}</div>`);
+  }
+  $('etape').innerHTML = `<h2>🗼 Tour des défis</h2>
+    <div class="tour-corps"><div class="tour">${etages.join('')}</div>
+      <div class="tour-info"><canvas id="tour-portrait" width="160" height="160"></canvas>
+        <b>${esc(hero.nom)}</b>
+        <div class="tour-vie"><i style="width:${(vie / hpMax) * 100}%"></i></div><small>${Math.round(vie)} / ${hpMax} PV</small>
+        <p class="sous">${boss ? 'Le sommet. Le maître de la tour vous attend.' : `Étage ${t.etage + 1} : <b style="color:${adv.c.c1}">${esc(adv.nom)}</b> · un round · ordinateur ${NIVEAUX_TOUR[t.etage]}`}</p>
+        <p class="sous" style="font-size:.8rem">Votre vie passe d’un combat à l’autre (+${REPOS_TOUR * 100} % après chaque victoire).</p>
+      </div></div>
+    <div class="ligne-boutons"><button class="btn" id="b-etape-quitter">Abandonner</button><button class="btn rouge" id="b-etape-go">⚔️ ${boss ? 'Affronter le maître' : 'Combattre !'}</button></div>`;
+  dessinerPortrait($('tour-portrait').getContext('2d'), hero, 160, { t: 8 });
+  ouvrir('ov-etape');
+  son('annonce');
+  $('b-etape-go').onclick = async () => {
+    fermer('ov-etape');
+    if (boss) await cinematique(HIST.TOUR_BOSS, t.hero);
+    combatTour(t, boss);
+  };
+  $('b-etape-quitter').onclick = () => {
+    if (!confirm('Abandonner la tour ?')) return;
+    ecrire(CLE_TOUR, null);
+    fermer('ov-etape');
+    majMenu();
+  };
+}
+
+function combatTour(t, boss) {
+  const hero = PERSO[t.hero];
+  const hpMax = Math.round(150 * hero.hpMult);
+  demarrerCombat({
+    p1: t.hero, p2: boss ? SECRETS.tour : t.file[t.etage], arene: boss ? 'sommet' : t.arenes[t.etage], mode: 'tour',
+    ia: { 1: boss ? 'difficile' : NIVEAUX_TOUR[t.etage] },
+    // Les étages se jouent en un round, avec la vie qui reste ; le maître, en deux, à pleine vie.
+    victoires: boss ? 2 : 1, vie: boss ? [] : [t.vie ?? hpMax, null],
+    texteFin: (gagne) => (gagne ? '' : `<p class="sous">Tombé à l’étage ${t.etage + 1}.</p>`),
+    suite: async (gagne, fin) => {
+      const r = records();
+      r.tour = Math.max(r.tour, t.etage + 1);
+      ecrire(CLE_RECORDS, r);
+      if (boss) {
+        ecrire(CLE_TOUR, null);
+        succes.debloquer('street-tour');
+        await cinematique([{ decor: 'sommet' }, { entre: 'hero', cote: 'c', x: 500, comment: 'place', p: 'victoire' },
+          { titre: '🗼 SOMMET ATTEINT 🗼', sous: 'Onze combats, onze victoires.' }, { debloque: SECRETS.tour }], t.hero);
+        majMenu();
+        return;
+      }
+      t.vie = Math.min(hpMax, fin.hpHero + hpMax * REPOS_TOUR);
+      t.etage += 1;
+      ecrire(CLE_TOUR, t);
+      montrerTour();
+    },
+    reessayer: () => { const r = records(); r.tour = Math.max(r.tour, t.etage); ecrire(CLE_RECORDS, r); lancerTour(t.hero); },
+    abandon: () => { const r = records(); r.tour = Math.max(r.tour, t.etage); ecrire(CLE_RECORDS, r); ecrire(CLE_TOUR, null); },
+  });
 }
 
 function dessinerVs(cv, a, b) {
@@ -426,9 +673,10 @@ const hpAvant = [0, 0];
 
 function demarrerCombat(o) {
   config = o;
-  const arene = o.arene === 'hasard' || !o.arene ? ARENES.filter((a) => !a.boss)[Math.floor(Math.random() * 11)].id : o.arene;
+  const normales = ARENES.filter((a) => !a.boss);
+  const arene = o.arene === 'hasard' || !o.arene ? normales[Math.floor(Math.random() * normales.length)].id : o.arene;
   config.areneId = arene;
-  combat = creerCombat({ p1: o.p1, p2: o.p2, ia: o.ia || {}, entrainement: o.mode === 'entrainement', graine: Date.now() });
+  combat = creerCombat({ p1: o.p1, p2: o.p2, ia: o.ia || {}, entrainement: o.mode === 'entrainement', graine: Date.now(), victoires: o.victoires || 2, vie: o.vie || [] });
   fx = FX.creerEffets();
   hud = creerHud();
   stats = { comboMax: [0, 0], ultiKo: false, perfect: false };
@@ -581,31 +829,13 @@ function montrerFin() {
   let titre = config.mode === 'deux' ? `JOUEUR ${c.vainqueur + 1} GAGNE !` : humainGagne ? 'VICTOIRE !' : 'DÉFAITE…';
   let boutons = '<button class="btn" id="b-fin-menu">Menu</button><button class="btn" id="b-fin-choix">Changer de combattant</button><button class="btn rouge" id="b-fin-revanche">Revanche !</button>';
   let extra = '';
-  if (config.mode === 'campagne') {
-    const camp = lire(CLE_CAMPAGNE, null);
-    if (humainGagne) {
-      camp.etape += 1;
-      if (camp.etape >= camp.file.length) {
-        // La campagne est gagnée : le boss rejoint le roster.
-        const d = CAMPAGNES[camp.difficulte];
-        const deb = debloques();
-        const nouveau = !deb.has(d.boss);
-        deb.add(d.boss);
-        ecrire(CLE_DEBLOQUES, [...deb]);
-        r.campagnes[camp.difficulte] = true;
-        ecrire(CLE_CAMPAGNE, null);
-        succes.debloquer('street-campagne');
-        if (d.boss === 'lechaos') succes.debloquer('street-chaos');
-        titre = 'CAMPAGNE GAGNÉE !';
-        extra = `<p class="debloque">${nouveau ? '🔓 Nouveau combattant débloqué' : '🏆 Boss vaincu'} : <b>${esc(PERSO[d.boss].nom)}</b> ${nouveau ? '— et son arène !' : ''}</p>`;
-        boutons = '<button class="btn or" id="b-fin-menu">Menu</button>';
-      } else {
-        ecrire(CLE_CAMPAGNE, camp);
-        boutons = '<button class="btn" id="b-fin-menu">Menu</button><button class="btn rouge" id="b-fin-suite">Combat suivant ›</button>';
-      }
-    } else {
-      boutons = '<button class="btn" id="b-fin-menu">Menu</button><button class="btn rouge" id="b-fin-retente">Réessayer</button>';
-    }
+  // Histoire, tournoi, tour : le mode décide de la suite.
+  if (config.suite) {
+    titre = humainGagne ? 'VICTOIRE !' : 'DÉFAITE…';
+    extra = config.texteFin ? config.texteFin(humainGagne, c) : '';
+    boutons = humainGagne
+      ? '<button class="btn rouge" id="b-fin-suite">Continuer ›</button>'
+      : `<button class="btn" id="b-fin-menu">Menu</button><button class="btn rouge" id="b-fin-retente">${config.mode === 'histoire' ? 'Réessayer' : config.mode === 'tournoi' ? 'Recommencer le tournoi' : 'Recommencer la tour'}</button>`;
   }
   ecrire(CLE_RECORDS, r);
   $('fin').innerHTML = `<h2 class="fin-titre ${humainGagne ? 'victoire' : 'defaite'}">${titre}</h2>
@@ -623,11 +853,13 @@ function montrerFin() {
   g.fillStyle = fond; g.fillRect(0, 0, cv.width, cv.height);
   dessinerCombattant(g, p, { x: cv.width / 2, y: cv.height * 0.97, dir: 1, pose: 'victoire', t: 10, echelle: 2.2, aura: 1 });
   const go = (f) => () => { fermer('ov-fin'); f(); };
-  $('b-fin-menu').onclick = go(majMenu);
+  if ($('b-fin-menu')) $('b-fin-menu').onclick = go(majMenu);
   if ($('b-fin-choix')) $('b-fin-choix').onclick = go(() => commencerMode(config.mode));
   if ($('b-fin-revanche')) $('b-fin-revanche').onclick = go(() => demarrerCombat(config));
-  if ($('b-fin-suite')) $('b-fin-suite').onclick = go(montrerEtape);
-  if ($('b-fin-retente')) $('b-fin-retente').onclick = go(montrerEtape);
+  const fin = { c, hpHero: c.joueurs[0].hp };
+  if ($('b-fin-menu') && config.suite && !humainGagne) $('b-fin-menu').onclick = go(() => { config.abandon?.(); majMenu(); });
+  if ($('b-fin-suite')) $('b-fin-suite').onclick = go(() => config.suite(true, fin));
+  if ($('b-fin-retente')) $('b-fin-retente').onclick = go(() => config.reessayer());
 }
 
 /* ------------------------------------------------------------------ */
@@ -734,10 +966,21 @@ function commandesHtml() {
 /* ------------------------------------------------------------------ */
 
 function brancher() {
-  $('b-campagne').addEventListener('click', () => {
+  $('b-histoire').addEventListener('click', () => {
     son('choix');
-    if (lire(CLE_CAMPAGNE, null)) montrerEtape(); else ouvrirDifficultes();
+    if (lire(CLE_HISTOIRE, null)) jouerChapitre(); else ouvrirDifficultes('histoire');
   });
+  $('b-tournoi').addEventListener('click', () => {
+    son('choix');
+    if (lire(CLE_TOURNOI, null)) montrerTableau(); else ouvrirDifficultes('tournoi');
+  });
+  $('b-tour').addEventListener('click', () => {
+    son('choix');
+    if (lire(CLE_TOUR, null)) montrerTour(); else commencerMode('tour');
+  });
+  // La cinématique : un toucher avance, « Passer » saute.
+  $('s-cine').addEventListener('click', (e) => { if (!e.target.closest('#cine-passer')) avancerCine(); });
+  $('cine-passer').addEventListener('click', () => passerCine());
   $('b-versus').addEventListener('click', () => { son('choix'); commencerMode('versus'); });
   $('b-deux').addEventListener('click', () => { son('choix'); commencerMode('deux'); });
   $('b-entrainement').addEventListener('click', () => { son('choix'); commencerMode('entrainement'); });
@@ -754,7 +997,7 @@ function brancher() {
     if (!d) return;
     son('valide');
     prep.difficulte = d.dataset.diff;
-    commencerMode('campagne');
+    commencerMode(prep.modeDiff);
   });
 
   $('grille-persos').addEventListener('click', (e) => {
@@ -775,7 +1018,7 @@ function brancher() {
   });
   $('choix-retour').addEventListener('click', () => {
     if (prep.etape === 2) { prep.etape = 1; ouvrirChoix(); return; }
-    if (prep.mode === 'campagne') ouvrirDifficultes(); else majMenu();
+    if (prep.mode === 'histoire' || prep.mode === 'tournoi') ouvrirDifficultes(prep.mode); else majMenu();
   });
 
   $('niveaux-ia').addEventListener('click', (e) => {
@@ -805,6 +1048,11 @@ function brancher() {
 
   addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
+    if ($('s-cine').classList.contains('is-active')) {
+      if (k === 'enter' || k === ' ') { e.preventDefault(); avancerCine(); }
+      if (k === 'escape') passerCine();
+      return;
+    }
     if (k === 'escape' && (!$('ov-coups').hidden || !$('ov-commandes').hidden)) { fermer('ov-coups'); fermer('ov-commandes'); return; }
     if ($('s-combat').classList.contains('is-active')) {
       if (k === 'escape' || k === 'p') {
@@ -818,7 +1066,10 @@ function brancher() {
   });
   addEventListener('keyup', (e) => touches.delete(e.key.toLowerCase()));
   addEventListener('blur', () => touches.clear());
-  addEventListener('resize', () => { if ($('s-combat').classList.contains('is-active')) dimensionner(); });
+  addEventListener('resize', () => {
+    if ($('s-combat').classList.contains('is-active')) dimensionner();
+    if ($('s-cine').classList.contains('is-active')) dimensionnerCine();
+  });
   document.addEventListener('visibilitychange', () => {
     if (document.hidden && combat && $('s-combat').classList.contains('is-active') && !finMontree) { enPause = true; ouvrir('ov-pause'); }
   });
@@ -839,6 +1090,8 @@ window.__street = {
   demarrerCombat, etat: () => combat, effets: () => fx,
   /** Fait avancer le combat de n images, touches tenues (pour vérifier l'affichage sans attendre l'écran). */
   figer(v = true) { enPause = v; },
+  cine: (etapes, hero) => cinematique(etapes, hero),
+  histoire: HIST,
   avancer(n, tenues = []) { for (const k of tenues) touches.add(k); for (let i = 0; i < n; i++) pasDeCombat(); for (const k of tenues) touches.delete(k); dessiner(); },
 };
-void STATUTS; void BOSS;
+void STATUTS; void BOSS; void SECRETS;

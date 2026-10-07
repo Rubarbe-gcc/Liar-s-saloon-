@@ -5,15 +5,18 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
 
 **Les jeux**
 
-- **STREET COMBAT** — le jeu de combat : 16 combattants et 3 boss à débloquer
-  en campagne (Solarius, Malvortex, Le Chaos), chacun avec deux compétences
-  à lui (projectiles, rayons, ruées, téléportations, frappes du ciel, brûlure,
-  poison, gel…), sa saisie, trois combos (👊 👊 🦶 et deux manipulations) et
-  son ultime en cinématique. Contre l'ordinateur (4 niveaux), à deux au
-  clavier ou à la manette, en entraînement, ou en campagne ; commandes
-  tactiles sur téléphone. Moteur dans `public/shared/street/` (testé sans
-  écran), dessin des combattants et des 14 arènes dans
-  `public/games/street-combat/js/`.
+- **STREET COMBAT** — le jeu de combat : 16 combattants, 3 boss et 3
+  personnages secrets (cachés jusqu'à ce qu'on les gagne), chacun avec deux
+  compétences à lui (projectiles, rayons, ruées, téléportations, frappes du ciel,
+  brûlure, poison, gel…), sa saisie, trois combos (👊 👊 🦶 et deux
+  manipulations) et son ultime en cinématique. Un **mode Histoire** (« La
+  Fracture » : prologue, huit chapitres, cinématiques et dialogues, les boss et
+  Kaïros à débloquer), un **Tournoi** à huit (Onyx en finale en difficile), une
+  **Tour des défis** (dix combats d'affilée, la vie qui se garde, puis
+  Némésis), contre l'ordinateur (4 niveaux), à deux au clavier ou à la
+  manette, l'entraînement ; commandes tactiles sur téléphone. Moteur dans
+  `public/shared/street/` (testé sans écran), dessin, arènes, effets et
+  cinématiques dans `public/games/street-combat/js/`.
 - **FIESTA** — le jeu de plateau à mini-jeux, dans l'esprit de Wii Party : 2 à
   4 joueurs sur le même téléphone, ou **en ligne** chacun sur le sien (les
   mini-jeux s'y jouent tous en même temps), avec ou sans l'ordinateur. Un

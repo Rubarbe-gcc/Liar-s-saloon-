@@ -82,8 +82,10 @@ export const SUCCES = [
   s('street-combo', 'street', '💥', 'Combo dévastateur', 'Enchaîner un combo de 8 coups.'),
   s('street-ulti', 'street', '🌟', 'Coup de grâce', 'Finir un adversaire avec un ultime.'),
   s('street-perfect', 'street', '✨', 'Perfect !', 'Gagner un round sans perdre un point de vie.'),
-  s('street-campagne', 'street', '👑', 'Champion de la rue', 'Terminer une campagne.'),
-  s('street-chaos', 'street', '🌌', 'Là où tout finit', 'Vaincre Le Chaos en campagne impossible.'),
+  s('street-campagne', 'street', '👑', 'La Fracture refermée', 'Terminer le mode Histoire de STREET COMBAT.'),
+  s('street-chaos', 'street', '🌌', 'Là où tout finit', 'Vaincre Le Chaos dans le mode Histoire.'),
+  s('street-tournoi', 'street', '🏆', 'Champion invaincu', 'Gagner le Tournoi en difficile.'),
+  s('street-tour', 'street', '🗼', 'Au sommet', 'Gravir la Tour des défis jusqu’au bout.'),
   s('brasier-quete', 'brasier', '📜', 'Quête accomplie', 'Accomplir une quête dans une partie Quête.'),
   s('brasier-anomalie', 'brasier', '🌀', 'Maître du chaos', 'Finir dans les quatre premiers d’une partie Anomalie.'),
 

@@ -173,7 +173,7 @@ button { font: inherit; color: inherit; }
 .fin-titre { font-family: var(--titre); font-size: clamp(2.6rem, 10vw, 4.4rem); letter-spacing: .05em; margin: 0; transform: skewX(-10deg); }
 .fin-titre.victoire { color: var(--or); text-shadow: 0 0 24px rgba(255,200,61,.7), 4px 4px 0 #5a2000; }
 .fin-titre.defaite { color: var(--rouge); text-shadow: 4px 4px 0 #2a0008; }
-.fin canvas, .etape canvas { width: 100%; max-width: 520px; aspect-ratio: 13 / 6; display: block; margin: 8px auto; }
+.fin #fin-portrait, .etape #etape-vs { width: 100%; max-width: 520px; aspect-ratio: 13 / 6; display: block; margin: 8px auto; }
 .fin-stats { display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; color: var(--pale); font-weight: 700; margin: 8px 0; }
 .fin-stats b { color: #fff; font-size: 1.2rem; display: block; }
 .debloque { margin: 10px 0; padding: 12px; border-radius: 8px; background: linear-gradient(90deg, rgba(255,200,61,.25), rgba(255,42,74,.25)); font-weight: 800; }
@@ -209,3 +209,78 @@ kbd { display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4
     color: var(--pale); font-size: .75rem; font-weight: 700; opacity: .7; }
 }
 @media (prefers-reduced-motion: reduce) { .btn, .carte-perso, .carte-arene { transition: none; } }
+
+/* Le menu à six modes */
+.btn.violet { background: linear-gradient(180deg, #a05aff, #5a1ab0); box-shadow: inset 0 0 0 2px rgba(255,255,255,.2), 0 4px 0 #2a0a5a, 0 0 24px rgba(160,90,255,.3); }
+.boutons-menu .btn.grand { padding: 18px; font-size: 1.5rem; }
+.deux-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.deux-col .btn { padding: 12px 8px; font-size: 1rem; }
+.secrets-info { margin: 2px 0 0; font-size: .8rem; font-weight: 800; color: #c8a0ff; }
+
+/* Les combattants cachés */
+.carte-perso.cache { cursor: help; background: repeating-linear-gradient(45deg, #1a1028 0 8px, #140a20 8px 16px); }
+.carte-perso.cache .mystere, .mini.mystere { position: absolute; inset: 0; display: grid; place-items: center; font-family: var(--titre); font-size: 2.4rem;
+  color: #6a5a8a; text-shadow: 0 0 12px rgba(160,90,255,.5); background: none; padding: 0; }
+
+/* La cinématique */
+.ecran-cine { padding: 0; background: #000; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; user-select: none; }
+#cine-canvas { display: block; }
+.cine-passer { position: absolute; top: calc(10px + var(--st)); right: calc(10px + var(--sr)); z-index: 5; opacity: .75; }
+.cine-titre { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  background: radial-gradient(ellipse at center, rgba(0,0,0,.55), rgba(0,0,0,.9)); text-align: center; padding: 20px; }
+.cine-titre small { font-weight: 900; letter-spacing: .3em; color: var(--pale); font-size: .8rem; }
+.cine-titre b { font-family: var(--titre); font-size: clamp(2.6rem, 9vw, 5rem); letter-spacing: .05em; color: var(--or); transform: skewX(-8deg);
+  text-shadow: 0 0 30px rgba(255,200,61,.6), 4px 4px 0 #5a2000; }
+.cine-titre span { font-size: clamp(1rem, 3vw, 1.4rem); font-weight: 800; font-style: italic; max-width: 640px; }
+.cine-titre i { margin-top: 18px; font-size: .75rem; color: var(--pale); opacity: .7; }
+.cine-titre.entre b { animation: titre .9s cubic-bezier(.2,1.4,.4,1) both; }
+.cine-titre.entre span { animation: titre .9s .25s cubic-bezier(.2,1.4,.4,1) both; }
+@keyframes titre { from { opacity: 0; transform: skewX(-8deg) scale(1.6); filter: blur(6px); } }
+.cine-boite { --c: #b9a8d6; position: absolute; left: 50%; bottom: calc(14px + var(--sb)); transform: translateX(-50%); z-index: 4; width: min(860px, calc(100% - 20px));
+  display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 10px; background: linear-gradient(180deg, rgba(20,10,34,.94), rgba(8,4,15,.96));
+  box-shadow: inset 0 0 0 2px var(--c), 0 10px 30px rgba(0,0,0,.6); animation: entre-boite .25s ease both; }
+@keyframes entre-boite { from { opacity: 0; transform: translateX(-50%) translateY(10px); } }
+.cine-boite canvas { width: 86px; height: 86px; flex: none; border-radius: 6px; box-shadow: 0 0 0 2px var(--c); }
+.cine-paroles { flex: 1; min-height: 70px; }
+.cine-paroles b { font-family: var(--titre); letter-spacing: .05em; font-size: 1.15rem; }
+.cine-paroles p { margin: 4px 0 0; font-size: clamp(.95rem, 2.6vw, 1.15rem); line-height: 1.4; font-weight: 600; }
+.cine-boite.narration .cine-paroles p { font-style: italic; color: #e8dcff; }
+.cine-suite { position: absolute; right: 12px; bottom: 6px; color: var(--c); animation: battement .8s ease-in-out infinite; }
+@keyframes battement { 50% { transform: translateY(3px); opacity: .5; } }
+.cine-debloque { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  background: radial-gradient(circle, rgba(60,20,80,.85), rgba(0,0,0,.95)); text-align: center; }
+.cine-debloque small { font-weight: 900; letter-spacing: .25em; color: var(--or); animation: battement 1s ease-in-out infinite; }
+.cine-debloque canvas { width: min(260px, 60vw); height: auto; aspect-ratio: 1; border-radius: 12px; box-shadow: 0 0 40px rgba(255,200,61,.5); animation: titre .8s both; }
+.cine-debloque b { font-family: var(--titre); font-size: clamp(2.4rem, 8vw, 4rem); letter-spacing: .05em; transform: skewX(-8deg); text-shadow: 3px 3px 0 #000; }
+.cine-debloque span { color: var(--pale); font-weight: 800; }
+
+/* Le tableau du tournoi */
+.tableau { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
+.tab-col { display: flex; flex-direction: column; justify-content: space-around; gap: 6px; }
+.tab-col h4 { margin: 0 0 4px; font-family: var(--titre); font-weight: 400; letter-spacing: .1em; color: var(--pale); }
+.tab-perso { --c: #fff; position: relative; display: flex; align-items: center; gap: 8px; padding: 4px 8px 4px 4px; border-radius: 6px; background: rgba(255,255,255,.06);
+  box-shadow: inset 3px 0 0 var(--c); text-align: left; font-size: .8rem; }
+.tab-perso.haut { margin-top: 4px; }
+.tab-perso .mini { position: relative; width: 34px; height: 34px; border-radius: 4px; flex: none; display: block; }
+.tab-perso.mini, .tab-perso span.mini { font-size: 1.2rem; }
+.tab-perso.moi { background: rgba(255,200,61,.18); box-shadow: inset 3px 0 0 var(--or), 0 0 0 1px var(--or); }
+.tab-perso.elimine { opacity: .35; text-decoration: line-through; }
+.tab-perso.vide { opacity: .35; justify-content: center; min-height: 42px; }
+.tab-perso b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tab-col.titre-col .tab-perso { box-shadow: inset 0 0 0 2px var(--or), 0 0 18px rgba(255,200,61,.4); }
+@media (max-width: 560px) { .tab-perso { flex-direction: column; gap: 2px; padding: 4px; font-size: .62rem; text-align: center; } .tab-perso b { white-space: normal; } }
+
+/* La tour */
+.tour-corps { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; text-align: left; }
+.tour { display: flex; flex-direction: column; gap: 3px; }
+.etage { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border-radius: 5px; background: rgba(255,255,255,.05); font-size: .82rem; }
+.etage .num { width: 26px; text-align: center; font-family: var(--titre); color: var(--pale); }
+.etage.fait { opacity: .4; }
+.etage.ici { background: rgba(255,200,61,.2); box-shadow: inset 0 0 0 1px var(--or); }
+.etage.boss { background: linear-gradient(90deg, rgba(192,216,255,.25), rgba(90,106,168,.2)); }
+.etage i { margin-left: auto; color: var(--or); font-style: normal; font-weight: 800; font-size: .75rem; }
+.tour-info { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+.tour-info canvas { width: 110px; height: 110px; border-radius: 8px; }
+.tour-vie { width: 100%; height: 12px; border-radius: 6px; background: rgba(255,255,255,.1); overflow: hidden; }
+.tour-vie i { display: block; height: 100%; background: linear-gradient(90deg, #2ab84a, #c8ff7a); }
+@media (max-width: 560px) { .tour-corps { grid-template-columns: 1fr; } .tour-info { order: -1; } }

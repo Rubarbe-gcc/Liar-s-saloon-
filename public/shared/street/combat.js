@@ -27,6 +27,7 @@ import { PERSO, JAUGE, ULTI_DEGATS, STATUTS } from './persos.js';
 export const ARENE = { L: 1000, H: 600, SOL: 470, BORD: 46 };
 const GRAVITE = 0.65;
 const ROUND_S = 99;
+/** Les rounds à gagner, par défaut (un combat peut en demander moins : la Tour des défis). */
 const VICTOIRES = 2;
 const PUSH = 58;
 /** Un appui reste valable quelques images : on peut l'enfoncer un peu en avance (pendant l'impact). */
@@ -92,9 +93,11 @@ function nouveauJoueur(id, n) {
 }
 
 /**
- * @param {{ p1: string, p2: string, ia?: { 0?: string, 1?: string }, entrainement?: boolean, graine?: any }} o
+ * @param {{ p1: string, p2: string, ia?: { 0?: string, 1?: string }, entrainement?: boolean, graine?: any,
+ *           victoires?: number, vie?: [number|null, number|null] }} o
+ *   victoires : les rounds à gagner ; vie : la vie de départ de chacun (la Tour des défis la garde d'un combat à l'autre).
  */
-export function creerCombat({ p1, p2, ia = {}, entrainement = false, graine = Date.now() } = {}) {
+export function creerCombat({ p1, p2, ia = {}, entrainement = false, graine = Date.now(), victoires = VICTOIRES, vie = [] } = {}) {
   const c = {
     v: 1, f: 0, alea: graineDe(graine), entrainement,
     joueurs: [nouveauJoueur(p1, 0), nouveauJoueur(p2, 1)],
@@ -103,6 +106,8 @@ export function creerCombat({ p1, p2, ia = {}, entrainement = false, graine = Da
     phase: 'intro', phaseT: 0, gel: 0, ralenti: 0, cine: null, vainqueur: null, gagnantRound: null,
   };
   c.joueurs.forEach((j, k) => { if (ia[k]) j.ia = { niveau: NIVEAUX_IA[ia[k]] ? ia[k] : 'normal', t: 0, plan: null, combo: null }; });
+  c.joueurs.forEach((j, k) => { if (vie[k]) j.hp = Math.max(1, Math.min(j.hpMax, Math.round(vie[k]))); });
+  c.victoiresRequises = Math.max(1, victoires);
   if (entrainement) { c.phase = 'combat'; c.temps = Infinity; }
   return c;
 }
@@ -921,7 +926,7 @@ function finDeRound(c) {
     evt(c, { type: 'victoire-round', joueur: g.n });
   }
   if (c.phaseT < 200) return;
-  const champion = c.joueurs.find((j) => j.victoires >= VICTOIRES);
+  const champion = c.joueurs.find((j) => j.victoires >= (c.victoiresRequises || VICTOIRES));
   if (champion) {
     c.phase = 'fin';
     c.vainqueur = champion.n;

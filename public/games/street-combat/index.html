@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#08040f">
-<meta name="description" content="STREET COMBAT — le jeu de combat. 16 combattants et 3 boss, des compétences uniques, des combos, des ultimes cinématiques, une campagne, et un mode deux joueurs.">
+<meta name="description" content="STREET COMBAT — le jeu de combat. 16 combattants, 3 boss et 3 personnages secrets, des compétences uniques, des combos, des ultimes cinématiques, un mode Histoire, un Tournoi, une Tour des défis et un mode deux joueurs.">
 <title>Street Combat</title>
 <link rel="icon" href="/games/street-combat/icons/icon-192.png">
 <link rel="manifest" href="/games/street-combat/manifest.webmanifest">
@@ -23,13 +23,18 @@
   <canvas class="fond-menu" id="fond-menu" aria-hidden="true"></canvas>
   <div class="menu">
     <h1 class="logo"><span class="l1">STREET</span><span class="l2">COMBAT</span></h1>
-    <p class="slogan">16 combattants · 3 boss · combos · ultimes</p>
+    <p class="slogan">Histoire · Tournoi · Tour des défis · combos · ultimes</p>
     <div class="boutons-menu">
-      <button class="btn rouge" id="b-campagne">⚔️ Campagne<small id="campagne-info"></small></button>
-      <button class="btn or" id="b-versus">🤖 Contre l’ordinateur</button>
-      <button class="btn bleu" id="b-deux">🎮 Deux joueurs</button>
+      <button class="btn rouge grand" id="b-histoire">📖 Mode Histoire<small id="histoire-info"></small></button>
+      <div class="deux-col">
+        <button class="btn or" id="b-tournoi">🏆 Tournoi<small id="tournoi-info"></small></button>
+        <button class="btn violet" id="b-tour">🗼 Tour des défis<small id="tour-info"></small></button>
+        <button class="btn bleu" id="b-versus">🤖 Contre l’ordi</button>
+        <button class="btn bleu" id="b-deux">🎮 Deux joueurs</button>
+      </div>
       <button class="btn" id="b-entrainement">🥋 Entraînement</button>
     </div>
+    <p class="secrets-info" id="secrets-info"></p>
     <div class="menu-bas">
       <a class="btn petit" href="/">‹ Arcade</a>
       <button class="btn petit" id="b-commandes">⌨️ Commandes</button>
@@ -39,12 +44,12 @@
   </div>
 </section>
 
-<!-- ======================= CAMPAGNE : DIFFICULTÉ ======================= -->
+<!-- ======================= LA DIFFICULTÉ ======================= -->
 <section class="ecran" id="s-difficulte">
   <div class="panneau">
     <button class="rond retour" data-va="s-menu" aria-label="Retour">‹</button>
-    <h2>Campagne</h2>
-    <p class="sous">Une suite de combats, puis le boss. Battez-le pour le débloquer.</p>
+    <h2 id="difficulte-titre">Mode Histoire</h2>
+    <p class="sous" id="difficulte-sous"></p>
     <div class="difficultes" id="difficultes"></div>
   </div>
 </section>
@@ -79,6 +84,19 @@
     </div>
     <div class="grille-arenes" id="grille-arenes"></div>
   </div>
+</section>
+
+<!-- ========================= CINÉMATIQUE ========================= -->
+<section class="ecran ecran-cine" id="s-cine">
+  <canvas id="cine-canvas" aria-hidden="true"></canvas>
+  <div class="cine-titre" id="cine-titre" hidden><small id="cine-titre-sur"></small><b id="cine-titre-texte"></b><span id="cine-titre-sous"></span><i>Touchez pour continuer</i></div>
+  <div class="cine-boite" id="cine-boite" hidden>
+    <canvas id="cine-portrait" width="160" height="160"></canvas>
+    <div class="cine-paroles"><b id="cine-nom"></b><p id="cine-texte"></p></div>
+    <span class="cine-suite">▼</span>
+  </div>
+  <div class="cine-debloque" id="cine-debloque" hidden></div>
+  <button class="btn petit cine-passer" id="cine-passer">Passer ⏭</button>
 </section>
 
 <!-- ============================ COMBAT ============================ -->

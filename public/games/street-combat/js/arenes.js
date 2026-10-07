@@ -27,6 +27,9 @@ export const ARENES = [
   { id: 'cathedrale', nom: 'CATHÉDRALE SOLAIRE', ciel: ['#3a2a10', '#8a6a28', '#d8b860', '#fff0b4'], sol: '#e6d6a0', sol2: '#c8b478', deco: '#ffc800', deco2: '#ffffb4', boss: 'solarius' },
   { id: 'trone', nom: 'TRÔNE INFERNAL', ciel: ['#050000', '#140000', '#2a0004', '#500008'], sol: '#140000', sol2: '#3c0006', deco: '#b40014', deco2: '#ff2800', boss: 'malvortex' },
   { id: 'zero', nom: 'DIMENSION ZÉRO', ciel: ['#000000', '#020005', '#08000c', '#1a0208'], sol: '#140200', sol2: '#500800', deco: '#7800c8', deco2: '#c81400', boss: 'lechaos' },
+  { id: 'horloge', nom: 'HORS DU TEMPS', ciel: ['#02080c', '#06202a', '#0c3a44', '#14505a'], sol: '#1a3a40', sol2: '#0a2228', deco: '#4fe0d0', deco2: '#ffd23f', boss: 'kairos' },
+  { id: 'ring', nom: 'GRAND RING', ciel: ['#05030a', '#0e0818', '#1a0e24', '#24102a'], sol: '#2a2a6a', sol2: '#1a1a4a', deco: '#ffd23f', deco2: '#d8102a', boss: 'onyx' },
+  { id: 'sommet', nom: 'SOMMET DE LA TOUR', ciel: ['#03040e', '#0a1030', '#1a2a5a', '#3a4a7a'], sol: '#4a4a5a', sol2: '#2a2a36', deco: '#c0d8ff', deco2: '#ffffff', boss: 'nemesis' },
 ];
 export const ARENE = Object.fromEntries(ARENES.map((a) => [a.id, a]));
 
@@ -107,7 +110,76 @@ const ciel_etoile = (g, R, n, h = SOL) => {
   }
 };
 
+/** Un engrenage. */
+function engrenage(g, x, y, r, dents, c) {
+  g.fillStyle = c;
+  g.beginPath();
+  for (let i = 0; i < dents * 2; i++) {
+    const a = (i / (dents * 2)) * Math.PI * 2;
+    const rr = i % 2 ? r : r * 1.15;
+    g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+  }
+  g.closePath(); g.fill();
+  g.globalCompositeOperation = 'destination-out';
+  g.beginPath(); g.arc(x, y, r * 0.45, 0, Math.PI * 2); g.fill();
+  g.globalCompositeOperation = 'source-over';
+}
+
 const DECORS = {
+  horloge(g, a, R) {
+    ciel_etoile(g, R, 80, SOL);
+    // De grands engrenages dans la brume.
+    engrenage(g, 140, 180, 110, 14, 'rgba(79,224,208,0.12)');
+    engrenage(g, 860, 120, 80, 12, 'rgba(255,210,63,0.12)');
+    engrenage(g, 760, 360, 60, 10, 'rgba(79,224,208,0.15)');
+    // L'horloge géante, au fond.
+    g.strokeStyle = 'rgba(255,210,63,0.5)'; g.lineWidth = 8;
+    g.beginPath(); g.arc(L / 2, 220, 150, 0, Math.PI * 2); g.stroke();
+    g.fillStyle = 'rgba(6,32,42,0.6)'; g.fill();
+    g.strokeStyle = 'rgba(255,210,63,0.6)'; g.lineWidth = 3;
+    for (let i = 0; i < 12; i++) { const an = (i / 12) * Math.PI * 2; g.beginPath(); g.moveTo(L / 2 + Math.cos(an) * 120, 220 + Math.sin(an) * 120); g.lineTo(L / 2 + Math.cos(an) * 140, 220 + Math.sin(an) * 140); g.stroke(); }
+    // Les marches de pierre flottantes.
+    g.fillStyle = '#0e2a30';
+    for (let i = 0; i < 6; i++) g.fillRect(40 + i * 160, 400 - (i % 3) * 30, 90, 14);
+  },
+  ring(g, a, R) {
+    // La foule, dans le noir.
+    for (let rang = 0; rang < 4; rang++) {
+      for (let i = 0; i < 40; i++) {
+        const x = i * 26 + (rang % 2) * 13; const y = 250 + rang * 32;
+        g.fillStyle = `rgba(${40 + rang * 12},${30 + rang * 8},${60 + rang * 10},1)`;
+        g.beginPath(); g.arc(x, y, 11, 0, Math.PI * 2); g.fill();
+        g.fillRect(x - 13, y + 8, 26, 30);
+      }
+    }
+    // L'écran géant et les banderoles.
+    g.fillStyle = '#0a0a14'; g.fillRect(360, 60, 280, 120);
+    g.strokeStyle = '#ffd23f'; g.lineWidth = 4; g.strokeRect(360, 60, 280, 120);
+    g.save(); g.font = '900 46px Impact, sans-serif'; g.textAlign = 'center'; g.fillStyle = '#ffd23f'; g.shadowColor = '#ffd23f'; g.shadowBlur = 18;
+    g.fillText('CHAMPION', 500, 135); g.restore();
+    // Les cordes du ring.
+    for (let i = 0; i < 3; i++) {
+      g.strokeStyle = ['#d8102a', '#f0f0f0', '#1a4ad8'][i]; g.lineWidth = 5;
+      g.beginPath(); g.moveTo(0, SOL - 40 - i * 32); g.lineTo(L, SOL - 40 - i * 32); g.stroke();
+    }
+    g.fillStyle = '#c8c8d8'; g.fillRect(20, SOL - 140, 16, 140); g.fillRect(L - 36, SOL - 140, 16, 140);
+  },
+  sommet(g, a, R) {
+    ciel_etoile(g, R, 200, 300);
+    soleil(g, 800, 120, 46, '#eef4ff', 3);
+    // Les nuages, en contrebas.
+    for (let i = 0; i < 14; i++) {
+      const x = R() * L; const y = 330 + R() * 90;
+      g.fillStyle = rgba('#c8d4f0', 0.35 + R() * 0.2);
+      for (let k = 0; k < 4; k++) { g.beginPath(); g.arc(x + k * 28, y + Math.sin(k) * 6, 26 + R() * 14, 0, Math.PI * 2); g.fill(); }
+    }
+    // Les créneaux de la tour.
+    g.fillStyle = '#3a3a4a';
+    g.fillRect(0, SOL - 40, L, 40);
+    for (let x = 0; x < L; x += 70) g.fillRect(x, SOL - 70, 40, 34);
+    g.fillStyle = 'rgba(192,216,255,0.25)';
+    for (let x = 0; x < L; x += 70) g.fillRect(x, SOL - 70, 40, 4);
+  },
   dojo(g, a, R) {
     soleil(g, 700, 250, 70, '#ffcf6a', 3.2);
     montagnes(g, 400, 160, '#3a1a0c', R, 70);
@@ -402,6 +474,31 @@ export function animerArene(g, a, t) {
         g.fillStyle = gr; g.beginPath(); g.moveTo(x - 50, 80); g.lineTo(x + 50, 80); g.lineTo(x + 180, SOL); g.lineTo(x + 20, SOL); g.fill();
       }
       g.restore();
+      break;
+    case 'horloge':
+      // Des grains de sable qui remontent le temps.
+      for (let i = 0; i < 40; i++) {
+        const x = (R() * L + Math.sin(t / 40 + i) * 20) % L; const v = (t * (0.4 + R() * 0.5) + R() * H) % H;
+        g.fillStyle = rgba(i % 3 ? '#4fe0d0' : '#ffd23f', 0.6 * (1 - v / H)); g.fillRect(x, H - v, 2, 2);
+      }
+      break;
+    case 'ring':
+      // Les projecteurs qui balaient la foule, les flashs.
+      g.save(); g.globalCompositeOperation = 'lighter';
+      for (const [x0, vit] of [[200, 1], [800, -1.3]]) {
+        const cible = L / 2 + Math.sin(t / 60 * vit) * 300;
+        const gr = g.createLinearGradient(x0, 0, cible, SOL);
+        gr.addColorStop(0, 'rgba(255,248,200,0.3)'); gr.addColorStop(1, 'rgba(255,248,200,0.02)');
+        g.fillStyle = gr; g.beginPath(); g.moveTo(x0 - 14, 0); g.lineTo(x0 + 14, 0); g.lineTo(cible + 80, SOL); g.lineTo(cible - 80, SOL); g.fill();
+      }
+      for (let i = 0; i < 8; i++) if ((t + i * 13) % 47 < 2) { g.fillStyle = 'rgba(255,255,255,0.8)'; g.beginPath(); g.arc(30 + i * 125, 250 + (i % 4) * 30, 6, 0, Math.PI * 2); g.fill(); }
+      g.restore();
+      break;
+    case 'sommet':
+      for (let i = 0; i < 20; i++) {
+        const x = (R() * L + t * (1 + R() * 2)) % L; const y = 100 + R() * 330;
+        g.strokeStyle = 'rgba(220,230,255,0.25)'; g.lineWidth = 1; g.beginPath(); g.moveTo(x, y); g.lineTo(x - 40, y); g.stroke();
+      }
       break;
     case 'zero': {
       // Des fissures de lumière qui s'ouvrent dans le vide.

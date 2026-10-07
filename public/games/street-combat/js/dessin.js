@@ -252,7 +252,8 @@ export function dessinerCombattant(g, perso, o) {
   membre(hanche, jambes.kr, jambes.fr, 15 * m, ombre(pantalon), 13 * m);
   pied(jambes.fr, jambes.kr, ombre(chaussure));
   membre(epR, coudeR, mainR, 11 * m, ombre(manche(perso)), 10 * m);
-  poing(mainR, ombre(gant(perso)));
+  const gros = L.extras.includes('gants-boxe') ? 11.5 : 7.5;
+  poing(mainR, ombre(gant(perso)), gros);
   armeArriere(g, perso, mainR, coudeR, o, t);
 
   /* ---- le buste ---- */
@@ -262,9 +263,12 @@ export function dessinerCombattant(g, perso, o) {
   g.translate(hanche.x, hanche.y);
   g.rotate(rad(pose.b));
   const gradB = g.createLinearGradient(-largeur, 0, largeur, 0);
-  gradB.addColorStop(0, sombre(k.tenue));
-  gradB.addColorStop(0.5, k.tenue);
-  gradB.addColorStop(1, ombre(k.tenue));
+  // Torse nu (le boxeur) : la peau, et les muscles.
+  const nu = L.extras.includes('torse-nu');
+  const haut = nu ? k.peau : k.tenue;
+  gradB.addColorStop(0, sombre(haut));
+  gradB.addColorStop(0.5, haut);
+  gradB.addColorStop(1, ombre(haut));
   g.fillStyle = gradB;
   g.beginPath();
   g.moveTo(-taille, 4);
@@ -274,11 +278,22 @@ export function dessinerCombattant(g, perso, o) {
   g.quadraticCurveTo(-largeur - 3, -26, -taille, 4);
   g.fill();
   torse(g, perso, { largeur, taille, t, l });
+  if (nu) {
+    g.strokeStyle = teinte(k.peau, -0.3); g.lineWidth = 1.5;
+    g.beginPath(); g.moveTo(0, -44); g.lineTo(0, -12); g.moveTo(-9, -36); g.quadraticCurveTo(0, -31, 9, -36);
+    g.moveTo(-7, -26); g.lineTo(7, -26); g.moveTo(-6, -18); g.lineTo(6, -18); g.stroke();
+  }
   // La ceinture.
   g.fillStyle = k.ceinture;
   g.beginPath(); g.roundRect(-taille - 1, -6, (taille + 1) * 2, 9, 3); g.fill();
   g.fillStyle = teinte(k.ceinture, -0.25);
   g.beginPath(); g.moveTo(taille - 4, 2); g.lineTo(taille + 4, 14); g.lineTo(taille - 1, 14); g.closePath(); g.fill();
+  if (L.extras.includes('ceinture-champion')) {
+    g.fillStyle = '#ffd23f';
+    g.beginPath(); g.ellipse(0, -2, 11, 8, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#8a6400'; g.lineWidth = 1.5; g.stroke();
+    g.fillStyle = '#d8102a'; g.beginPath(); g.arc(0, -2, 3.5, 0, Math.PI * 2); g.fill();
+  }
   g.restore();
 
   // Jupe, robe, haori : par-dessus les jambes.
@@ -308,7 +323,7 @@ export function dessinerCombattant(g, perso, o) {
   epaulieres(g, perso, epaule, l, t);
   membre(epA, coudeA, mainA, 12 * m, manche(perso), 11 * m);
   if (L.extras.includes('canon')) canon(g, coudeA, mainA, k);
-  poing(mainA, gant(perso));
+  poing(mainA, gant(perso), gros);
   armeAvant(g, perso, mainA, coudeA, o, t);
   devant(g, perso, { hanche, epaule, mainA, mainR, t, l, m });
 
@@ -318,7 +333,7 @@ export function dessinerCombattant(g, perso, o) {
 }
 
 const manche = (p) => (['ironclad', 'stoneback', 'lechaos', 'malvortex', 'shadowkira', 'voidreaper'].includes(p.id) ? p.c.tenue : p.c.peau);
-const gant = (p) => (p.look.extras.includes('griffes') ? teinte(p.c.peau, -0.2) : p.id === 'stoneback' ? teinte(p.c.peau, -0.15) : p.c.c1);
+const gant = (p) => (p.look.extras.includes('gants-boxe') ? '#d8102a' : p.look.extras.includes('griffes') ? teinte(p.c.peau, -0.2) : p.id === 'stoneback' ? teinte(p.c.peau, -0.15) : p.c.c1);
 
 /* ------------------------------------------------------------------ */
 /* La tête                                                             */
@@ -360,6 +375,26 @@ export function dessinerTete(g, perso, x, y, o = {}) {
   // Le faucheur : un crâne sous une capuche en lambeaux.
   if (L.tete === 'crane') {
     crane(g, k, o);
+    g.restore();
+    return;
+  }
+  // Némésis : un masque de miroir, sans visage.
+  if (L.tete === 'miroir') {
+    const m = g.createLinearGradient(-14, -16, 16, 16);
+    m.addColorStop(0, '#ffffff'); m.addColorStop(0.35, '#b8cdf0'); m.addColorStop(0.55, '#f4f8ff'); m.addColorStop(1, '#5a6aa8');
+    g.fillStyle = m;
+    g.beginPath(); g.ellipse(1, -1, 15, 17, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,0.9)'; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(-8, -12); g.lineTo(2, 8); g.moveTo(-2, -15); g.lineTo(7, 2); g.stroke();
+    g.strokeStyle = '#3a4a7a'; g.lineWidth = 1.2;
+    g.beginPath(); g.ellipse(1, -1, 15, 17, 0, 0, Math.PI * 2); g.stroke();
+    if (!o.ko) { lueur(g, 9, -2, 4, k.c2); g.fillStyle = '#ffffff'; g.fillRect(4, -3, 11, 2); }
+    // Une couronne d'éclats.
+    for (let i = 0; i < 5; i++) {
+      const a = rad(-150 + i * 30);
+      g.fillStyle = i % 2 ? '#e6f2ff' : '#a8c4e8';
+      g.beginPath(); g.moveTo(Math.cos(a) * 15, -1 + Math.sin(a) * 17); g.lineTo(Math.cos(a) * 26, -1 + Math.sin(a) * 28); g.lineTo(Math.cos(a + 0.12) * 16, -1 + Math.sin(a + 0.12) * 18); g.fill();
+    }
     g.restore();
     return;
   }
@@ -407,6 +442,16 @@ export function dessinerTete(g, perso, x, y, o = {}) {
   g.beginPath();
   if (o.touche) { g.ellipse(9, 9, 3, 2.4, 0, 0, Math.PI * 2); } else { g.moveTo(5, 9); g.lineTo(12, 8); }
   g.stroke();
+
+  // Une longue barbe blanche.
+  if (L.extras.includes('barbe')) {
+    g.fillStyle = k.cheveux;
+    g.beginPath();
+    g.moveTo(-6, 6); g.quadraticCurveTo(6, 4, 16, 6);
+    g.quadraticCurveTo(14, 26, 4 + Math.sin(t / 9) * 2, 38); g.quadraticCurveTo(-2, 24, -6, 6); g.fill();
+    g.strokeStyle = teinte(k.cheveux, -0.2); g.lineWidth = 1;
+    g.beginPath(); g.moveTo(5, 12); g.lineTo(5, 28); g.moveTo(10, 10); g.lineTo(9, 24); g.stroke();
+  }
 
   // Le ninja : un masque sur le bas du visage.
   if (L.tete === 'ninja') {
@@ -504,6 +549,16 @@ function coiffure(g, p, t) {
         const h = 14 + (i === 2 ? 10 : i % 2 ? 4 : 7);
         g.beginPath(); g.moveTo(-12 + i * 6, -13); g.lineTo(-9 + i * 6, -13 - h); g.lineTo(-6 + i * 6, -13); g.fill();
       }
+      break;
+    }
+    case 'rase': {
+      // Le crâne rasé, qui brille ; une cicatrice.
+      g.fillStyle = 'rgba(255,255,255,0.25)';
+      g.beginPath(); g.ellipse(-3, -11, 7, 3, -0.3, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = teinte(k.peau, -0.4); g.lineWidth = 1.4;
+      g.beginPath(); g.moveTo(9, -10); g.lineTo(13, -4); g.stroke();
+      g.fillStyle = k.cheveux;
+      g.beginPath(); g.ellipse(9, 13, 6, 2.5, 0, 0, Math.PI); g.fill();
       break;
     }
     case 'ninja': {
@@ -774,6 +829,24 @@ function arriere(g, p, { hanche, epaule, cou, t, l, pose }) {
     g.quadraticCurveTo(cou.x - 28, cou.y + 12, cou.x - 4, cou.y + 8);
     g.fill();
   }
+  if (X.includes('horloge')) {
+    const cx = epaule.x - 14;
+    const cy = epaule.y - 26;
+    g.save();
+    g.shadowColor = k.c1; g.shadowBlur = 14;
+    g.strokeStyle = '#ffd23f'; g.lineWidth = 3;
+    g.beginPath(); g.arc(cx, cy, 36, 0, Math.PI * 2); g.stroke();
+    g.shadowBlur = 0;
+    g.fillStyle = rgba(k.c2, 0.55);
+    g.beginPath(); g.arc(cx, cy, 34, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = rgba(k.c1, 0.9); g.lineWidth = 2;
+    for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; g.beginPath(); g.moveTo(cx + Math.cos(a) * 28, cy + Math.sin(a) * 28); g.lineTo(cx + Math.cos(a) * (i % 3 ? 31 : 33), cy + Math.sin(a) * (i % 3 ? 31 : 33)); g.stroke(); }
+    // Les aiguilles tournent.
+    g.strokeStyle = '#ffd23f'; g.lineCap = 'round';
+    g.lineWidth = 3; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(t / 40) * 18, cy + Math.sin(t / 40) * 18); g.stroke();
+    g.lineWidth = 2; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(t / 6) * 26, cy + Math.sin(t / 6) * 26); g.stroke();
+    g.restore();
+  }
   if (X.includes('aura-noire')) {
     g.save(); g.globalCompositeOperation = 'source-over';
     for (let i = 0; i < 6; i++) {
@@ -789,6 +862,18 @@ function arriere(g, p, { hanche, epaule, cou, t, l, pose }) {
 function devant(g, p, { hanche, mainA, mainR, t }) {
   const X = p.look.extras;
   const k = p.c;
+  if (X.includes('eclats')) {
+    for (let i = 0; i < 5; i++) {
+      const a = t / 20 + (i * Math.PI * 2) / 5;
+      const x = Math.cos(a) * 44;
+      const y = hanche.y - 50 + Math.sin(a * 1.2) * 46;
+      g.save(); g.translate(x, y); g.rotate(a);
+      g.fillStyle = i % 2 ? '#ffffff' : '#a8c4e8';
+      g.shadowColor = '#c0d8ff'; g.shadowBlur = 8;
+      g.beginPath(); g.moveTo(0, -7); g.lineTo(3.5, 0); g.lineTo(0, 7); g.lineTo(-3.5, 0); g.closePath(); g.fill();
+      g.restore();
+    }
+  }
   if (X.includes('orbes')) {
     for (let i = 0; i < 3; i++) {
       const a = t / 14 + (i * Math.PI * 2) / 3;

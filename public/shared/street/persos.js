@@ -8,6 +8,11 @@
  *   • l'enchaînement 👊 👊 🦶, dont le dernier coup est sa signature ;
  *   • deux techniques à manipulation (↓ → 👊…), sans jauge.
  *
+ * Certains combattants sont à débloquer : les trois boss du mode Histoire
+ * (`boss`), et trois personnages secrets (`secret`), cachés dans la
+ * sélection tant qu'on ne les a pas gagnés : Kaïros à la fin de l'Histoire,
+ * Onyx au Tournoi en difficile, Némésis au sommet de la Tour des défis.
+ *
  * Les compétences sont composées de quelques briques, que le moteur
  * (combat.js) sait jouer : projectile, faisceau, ruée, zone, attraction,
  * téléportation, soin. Les nombres sont en images (60 par seconde) et en
@@ -279,7 +284,7 @@ export const PERSOS = [
     ],
   }),
 
-  /* ---- les boss de campagne, débloqués en les battant ---- */
+  /* ---- les boss, débloqués en les battant dans le mode Histoire ---- */
   P({
     id: 'solarius', nom: 'SOLARIUS', style: 'Gardien de la Lumière', desc: 'La lumière qui consume les ténèbres', boss: 'normal',
     c: { c1: '#ffdc3c', c2: '#ffa000', faisceau: '#ffffb4', aura: '#ffc800', peau: '#f0e6c8', cheveux: '#ffffb4', tenue: '#dcc88c', ceinture: '#ffc800' },
@@ -325,11 +330,62 @@ export const PERSOS = [
       { nom: 'EFFACEMENT', entree: 'DBP', coup: { type: 'teleport', derriere: true, degats: 12, stun: 26, recul: 12, duree: 16 } },
     ],
   }),
+
+  /* ---- les personnages secrets ---- */
+  P({
+    id: 'kairos', nom: 'KAÏROS', style: 'Seigneur du Temps', desc: 'Il a déjà vécu chaque seconde de ta vie', secret: 'histoire',
+    c: { c1: '#4fe0d0', c2: '#0a5a64', faisceau: '#a8fff2', aura: '#40d8c8', peau: '#e0d0b8', cheveux: '#f4ecd8', tenue: '#14263a', ceinture: '#ffd23f' },
+    stats: { hp: 14, dmg: 14, def: 13 }, vitesse: 4.7, saut: 16, dmg: 1.5, hpMult: 1.4, defMult: 1.22,
+    look: { corps: 'normal', tete: 'longs', extras: ['horloge', 'barbe', 'robe', 'cape'] },
+    specA: { nom: 'FLÈCHE DU TEMPS !', ...proj({ vitesse: 16, rayon: 16, degats: 14, forme: 'aiguille', effet: 'lenteur', duree: 60 }) },
+    specB: { nom: 'ARRÊT DU TEMPS !', ...zone({ ou: 'cible', delai: 12, rayon: 120, hauteur: 300, degats: 7, stun: 66, effet: 'gel', forme: 'horloge', duree: 30 }) },
+    ulti: { nom: 'CHRONO-APOCALYPSE !!', portee: 300, visuel: 'chrono' },
+    saisie: { nom: 'BOUCLE TEMPORELLE', seq: [['TIC !', 10, 6], ['TAC !', 10, 6], ['RETOUR !', 14, 8], ['AVANCE RAPIDE !', 18, 10], ['FIN DU TEMPS !', 24, 14]] },
+    combos: [
+      { nom: 'AIGUILLES', entree: 'PPK', coup: ruee({ vx: 9, duree: 22, coups: 3, degats: 6, stun: 22, recul: 8 }) },
+      { nom: 'SABLIER', entree: 'DFP', coup: proj({ vitesse: 8, rayon: 18, degats: 10, duree: 90, forme: 'sablier', vy: -9, gravite: 0.35, effet: 'lenteur' }) },
+      { nom: 'RETOUR EN ARRIÈRE', entree: 'BBP', coup: { type: 'soin', soin: 12, duree: 40 } },
+    ],
+  }),
+  P({
+    id: 'onyx', nom: 'ONYX', style: 'Champion Invaincu', desc: 'Cent combats, cent K.O.', secret: 'tournoi',
+    c: { c1: '#ffd23f', c2: '#8a6400', faisceau: '#ffe680', aura: '#ffc800', peau: '#5a3826', cheveux: '#141414', tenue: '#c8102e', ceinture: '#ffd23f' },
+    stats: { hp: 14, dmg: 15, def: 12 }, vitesse: 4.6, saut: 12, dmg: 1.5, hpMult: 1.42, defMult: 1.2,
+    look: { corps: 'massif', tete: 'rase', extras: ['gants-boxe', 'ceinture-champion', 'torse-nu'] },
+    specA: { nom: 'POING SUPERSONIQUE !', ...proj({ vitesse: 18, rayon: 22, degats: 16, forme: 'poing', duree: 50 }) },
+    specB: { nom: 'UPPERCUT DU CHAMPION !', ...ruee({ vx: 5, vy: -14, duree: 30, degats: 19, stun: 34, recul: 6, lance: true, armure: true }) },
+    ulti: { nom: 'K.O. LÉGENDAIRE !!', portee: 220, visuel: 'ring' },
+    saisie: { nom: 'CORPS-À-CORPS', seq: [['JAB !', 8, 5], ['JAB !', 8, 5], ['CROCHET !', 12, 8], ['UPPERCUT !', 16, 10], ['K.O. !', 22, 14]] },
+    combos: [
+      { nom: 'RAFALE DE JABS', entree: 'PPK', coup: ruee({ vx: 6, duree: 24, coups: 4, degats: 5, stun: 20, recul: 6 }) },
+      { nom: 'CROCHET FOUDROYANT', entree: 'FFP', coup: ruee({ vx: 12, duree: 16, degats: 13, stun: 28, recul: 20 }) },
+      { nom: 'SÉISME DU RING', entree: 'DDK', coup: zone({ ou: 'soi', delai: 8, rayon: 170, hauteur: 60, degats: 9, stun: 36, forme: 'seisme', solSeulement: true }) },
+    ],
+  }),
+  P({
+    id: 'nemesis', nom: 'NÉMÉSIS', style: 'Le Reflet', desc: 'Il est tout ce que tu as combattu', secret: 'tour',
+    c: { c1: '#e6f2ff', c2: '#5a6aa8', faisceau: '#ffffff', aura: '#c0d8ff', peau: '#a8c4e8', cheveux: '#ffffff', tenue: '#24304e', ceinture: '#e6f2ff' },
+    stats: { hp: 15, dmg: 15, def: 15 }, vitesse: 5.0, saut: 16, dmg: 1.58, hpMult: 1.5, defMult: 1.28,
+    look: { corps: 'normal', tete: 'miroir', extras: ['eclats', 'armure'] },
+    specA: { nom: 'PRISME !', ...faisceau({ portee: 700, epaisseur: 30, degats: 16, stun: 26, couleur: '#ffffff', prisme: true }) },
+    specB: { nom: 'MIROIR BRISÉ !', ...proj({ vitesse: 13, rayon: 12, degats: 5, nb: 5, eventail: true, forme: 'eclat' }) },
+    ulti: { nom: 'MILLE REFLETS !!', portee: 300, visuel: 'miroirs' },
+    saisie: { nom: 'REFLET MORTEL', seq: [['REFLET !', 10, 6], ['DOUBLE !', 12, 7], ['TRIPLE !', 14, 8], ['BRISURE !', 18, 11], ['MIROIR FINAL !', 24, 15]] },
+    combos: [
+      { nom: 'REFLET FUGACE', entree: 'PPK', coup: ruee({ vx: 15, duree: 16, degats: 13, stun: 28, recul: 8, traverse: true, invincible: 12 }) },
+      { nom: 'MIROIR', entree: 'BBP', coup: { type: 'garde', duree: 40, renvoi: true } },
+      { nom: 'DOUBLE', entree: 'DBP', coup: { type: 'teleport', derriere: true, degats: 12, stun: 26, recul: 12, duree: 16 } },
+    ],
+  }),
 ];
 
 export const PERSO = Object.fromEntries(PERSOS.map((p) => [p.id, p]));
-export const ROSTER = PERSOS.filter((p) => !p.boss);
+export const ROSTER = PERSOS.filter((p) => !p.boss && !p.secret);
 export const BOSS = { normal: 'solarius', difficile: 'malvortex', impossible: 'lechaos' };
+/** Les personnages secrets, et où les gagner. */
+export const SECRETS = { histoire: 'kairos', tournoi: 'onyx', tour: 'nemesis' };
+/** Un combattant à débloquer (boss ou secret). */
+export const aDebloquer = (p) => !!(p.boss || p.secret);
 
 /** Ce que coûte chaque coup en jauge (la jauge va de 0 à 100, en trois segments). */
 export const JAUGE = { specB: 34, specA: 67, ulti: 100 };

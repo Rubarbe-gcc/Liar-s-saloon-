@@ -180,6 +180,42 @@ export function dessinerProjectiles(g, c, t) {
           halo(g, 0, 0, r * 1.8, k.faisceau, 0.6);
         });
         break;
+      case 'aiguille':
+        lumiere(g, () => {
+          g.scale(dir, 1);
+          halo(g, 0, 0, 34, k.c1, 0.6);
+          g.fillStyle = '#ffd23f';
+          g.beginPath(); g.moveTo(-40, -3); g.lineTo(18, -6); g.lineTo(34, 0); g.lineTo(18, 6); g.lineTo(-40, 3); g.fill();
+          g.fillStyle = '#ffffff'; g.beginPath(); g.arc(-40, 0, 5, 0, TAU); g.fill();
+        });
+        break;
+      case 'sablier':
+        g.rotate(t / 8);
+        lumiere(g, () => halo(g, 0, 0, 30, k.c1, 0.5));
+        g.fillStyle = '#ffd23f'; g.fillRect(-12, -16, 24, 4); g.fillRect(-12, 12, 24, 4);
+        g.fillStyle = rgba('#e8f8ff', 0.8);
+        g.beginPath(); g.moveTo(-10, -12); g.lineTo(10, -12); g.lineTo(2, 0); g.lineTo(10, 12); g.lineTo(-10, 12); g.lineTo(-2, 0); g.closePath(); g.fill();
+        g.fillStyle = '#e8c070'; g.beginPath(); g.moveTo(-6, 12); g.lineTo(6, 12); g.lineTo(0, 5); g.fill();
+        break;
+      case 'poing':
+        lumiere(g, () => {
+          g.scale(dir, 1);
+          for (let i = 1; i < 5; i++) halo(g, -i * 16, 0, r * (1.4 - i * 0.2), '#ffe680', 0.5 - i * 0.1);
+          halo(g, 0, 0, r * 2.2, '#ffd23f', 0.8);
+          g.strokeStyle = rgba('#ffffff', 0.8); g.lineWidth = 3;
+          for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(-10 - i * 12, 0, r + i * 6, -1, 1); g.stroke(); }
+        });
+        g.scale(dir, 1);
+        g.fillStyle = '#d8102a'; g.beginPath(); g.ellipse(2, 0, r * 0.75, r * 0.65, 0, 0, TAU); g.fill();
+        g.fillStyle = 'rgba(255,255,255,0.35)'; g.beginPath(); g.ellipse(-2, -5, r * 0.3, r * 0.2, 0, 0, TAU); g.fill();
+        break;
+      case 'eclat':
+        g.rotate(t / 4);
+        lumiere(g, () => halo(g, 0, 0, r * 2.2, '#c0d8ff', 0.6));
+        g.fillStyle = '#ffffff';
+        g.beginPath(); g.moveTo(0, -r); g.lineTo(r * 0.5, 0); g.lineTo(0, r); g.lineTo(-r * 0.5, 0); g.closePath(); g.fill();
+        g.strokeStyle = '#7a8ac8'; g.lineWidth = 1; g.stroke();
+        break;
       case 'lame': case 'lance':
         lumiere(g, () => {
           g.scale(dir, 1);
@@ -358,6 +394,23 @@ export function dessinerZones(g, c, t) {
           etoile(g, x + (hasardFixe(i) - 0.5) * d.rayon * 2, v - 40, 8, '#ffffff', v / 20);
         }
         break;
+      case 'horloge': {
+        const p = Math.min(1, actif / 8);
+        g.fillStyle = rgba('#b8f4ec', 0.12 * fin); g.fillRect(0, 0, L, H);
+        g.save(); g.translate(x, SOL - 110);
+        lumiere(g, () => halo(g, 0, 0, d.rayon * 1.3, k.c1, 0.4));
+        g.strokeStyle = rgba('#ffd23f', 0.9); g.lineWidth = 4;
+        g.beginPath(); g.arc(0, 0, d.rayon * p, 0, TAU); g.stroke();
+        g.strokeStyle = rgba(k.c1, 0.8); g.lineWidth = 2;
+        for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; g.beginPath(); g.moveTo(Math.cos(a) * d.rayon * 0.82 * p, Math.sin(a) * d.rayon * 0.82 * p); g.lineTo(Math.cos(a) * d.rayon * 0.95 * p, Math.sin(a) * d.rayon * 0.95 * p); g.stroke(); }
+        // Les aiguilles se figent.
+        const fige = Math.max(0, 1 - actif / 14);
+        g.strokeStyle = '#ffd23f'; g.lineWidth = 5; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(-1.4 + fige * 6) * d.rayon * 0.5, Math.sin(-1.4 + fige * 6) * d.rayon * 0.5); g.stroke();
+        g.lineWidth = 3; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(0.3 + fige * 20) * d.rayon * 0.75, Math.sin(0.3 + fige * 20) * d.rayon * 0.75); g.stroke();
+        g.restore();
+        break;
+      }
       case 'fissure':
         lumiere(g, () => { eclair(g, x - d.rayon, SOL - 20, x + d.rayon, SOL - 160, rgba('#ff50ff', 0.9), 5, 8, z.t); halo(g, x, SOL - 90, d.rayon * 1.3, '#c814ff', 0.5); });
         break;
@@ -397,6 +450,10 @@ export function dessinerFaisceaux(g, fx, c) {
         halo(g, 0, 0, ep * 1.6, couleur, p);
         halo(g, long, 0, ep * 1.4, couleur, 0.8 * p);
         if (d.attire || d.drain) for (let i = 0; i < 5; i++) { const xx = long - ((f.t * 12 + i * 60) % long); halo(g, xx, Math.sin(f.t / 3 + i) * ep * 0.4, 10, '#ffffff', 0.7 * p); }
+        if (d.prisme) {
+          const arc = ['#ff4a4a', '#ffb02a', '#ffe84a', '#4aff7a', '#4ac8ff', '#a05aff'];
+          arc.forEach((c, i) => { g.fillStyle = rgba(c, 0.55 * p); g.fillRect(long * 0.15, -ep + (i * ep * 2) / arc.length, long * 0.85, (ep * 2) / arc.length); });
+        }
       }
     });
     g.restore();
@@ -487,7 +544,7 @@ export function dessinerPortraitUlti(g, fx) {
   if (!P.image) {
     const cv = document.createElement('canvas');
     cv.width = cv.height = 300;
-    dessinerPortrait(cv.getContext('2d'), perso, 300, { pose: 'victoire', aura: 1, t: 10 });
+    dessinerPortrait(cv.getContext('2d'), perso, 300, { pose: 'repos', aura: 1, t: 10 });
     P.image = cv;
   }
   const t = P.t;
@@ -788,6 +845,68 @@ const ULTIS = {
     });
     g.fillStyle = '#fff'; g.beginPath(); g.ellipse(L / 2, 120, 50, 22, 0, 0, TAU); g.fill();
     g.fillStyle = '#c80014'; g.beginPath(); g.ellipse(L / 2, 120, 14, 20, 0, 0, TAU); g.fill();
+  },
+  /* KAÏROS : le temps s'arrête, l'horloge géante sonne l'heure. */
+  chrono(g, t, A, D, k) {
+    g.fillStyle = `rgba(20,40,50,${Math.min(0.55, t / 40)})`; g.fillRect(0, 0, L, H);
+    const cx = L / 2; const cy = 250; const R = 200 * Math.min(1, t / 30);
+    lumiere(g, () => halo(g, cx, cy, R * 1.3, k.c1, 0.35));
+    g.strokeStyle = '#ffd23f'; g.lineWidth = 6;
+    g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.stroke();
+    g.fillStyle = 'rgba(10,40,50,0.5)'; g.fill();
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * TAU - Math.PI / 2;
+      texteContour(g, ['XII', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'][i], cx + Math.cos(a) * R * 0.82, cy + Math.sin(a) * R * 0.82, 20, '#ffd23f', '#0a2a30');
+    }
+    // Les aiguilles s'emballent, puis s'arrêtent net sur minuit.
+    const v = t < 60 ? t * t / 40 : 0;
+    const ah = t < 60 ? v / 12 : -Math.PI / 2;
+    const am = t < 60 ? v : -Math.PI / 2;
+    g.strokeStyle = '#ffffff'; g.lineCap = 'round';
+    g.lineWidth = 10; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(ah) * R * 0.5, cy + Math.sin(ah) * R * 0.5); g.stroke();
+    g.lineWidth = 6; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(am) * R * 0.78, cy + Math.sin(am) * R * 0.78); g.stroke();
+    if (t > 60) lumiere(g, () => { for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU + t / 20; g.strokeStyle = rgba(k.faisceau, 0.8); g.lineWidth = 4; g.beginPath(); g.moveTo(cx, cy); g.lineTo(D.x + Math.cos(a) * 40, D.y + Math.sin(a) * 40); g.stroke(); } halo(g, D.x, D.y, 90, k.c1, 0.9); });
+  },
+  /* ONYX : les projecteurs, la foule, le coup du K.O. */
+  ring(g, t, A, D, k) {
+    g.fillStyle = `rgba(0,0,0,${Math.min(0.7, t / 30)})`; g.fillRect(0, 0, L, H);
+    lumiere(g, () => {
+      for (const [x, s] of [[150, 1], [850, -1]]) {
+        const gr = g.createLinearGradient(x, 0, D.x, SOL);
+        gr.addColorStop(0, 'rgba(255,248,200,0.5)'); gr.addColorStop(1, 'rgba(255,248,200,0.05)');
+        g.fillStyle = gr; g.beginPath(); g.moveTo(x - 20 * s, 0); g.lineTo(x + 20 * s, 0); g.lineTo(D.x + 90, SOL); g.lineTo(D.x - 90, SOL); g.fill();
+      }
+      // Les flashs des photographes.
+      for (let i = 0; i < 6; i++) if ((t + i * 7) % 23 < 2) halo(g, 60 + i * 170, 120 + (i % 2) * 60, 30, '#ffffff', 0.9);
+    });
+    // La rafale de poings dorés.
+    for (let i = 0; i < 12; i++) {
+      const q = t - 20 - i * 3;
+      if (q < 0 || q > 12) continue;
+      const y = D.y - 60 + (hasardFixe(i) - 0.5) * 120;
+      lumiere(g, () => halo(g, D.x - A.dir * (60 - q * 5), y, 26, '#ffd23f', 0.8));
+      g.fillStyle = '#d8102a'; g.beginPath(); g.arc(D.x - A.dir * (60 - q * 5), y, 12, 0, TAU); g.fill();
+    }
+    if (t > 62) { texteContour(g, 'K.O. !', L / 2, 170, 100 + Math.max(0, 80 - t), '#ffd23f', '#5a0010', 'center', true); }
+  },
+  /* NÉMÉSIS : mille miroirs, mille reflets qui frappent. */
+  miroirs(g, t, A, D, k) {
+    g.fillStyle = `rgba(10,15,40,${Math.min(0.6, t / 40)})`; g.fillRect(0, 0, L, H);
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * TAU + t / 40;
+      const rr = 260 - Math.min(1, t / 60) * 120;
+      const x = D.x + Math.cos(a) * rr;
+      const y = D.y + Math.sin(a) * rr * 0.55;
+      g.save(); g.translate(x, y); g.rotate(a + Math.PI / 2);
+      const m = g.createLinearGradient(-20, -40, 20, 40);
+      m.addColorStop(0, '#ffffff'); m.addColorStop(0.5, '#a8c4e8'); m.addColorStop(1, '#5a6aa8');
+      g.fillStyle = m; g.globalAlpha = 0.85;
+      g.beginPath(); g.moveTo(0, -42); g.lineTo(18, -10); g.lineTo(10, 40); g.lineTo(-12, 34); g.lineTo(-18, -12); g.closePath(); g.fill();
+      g.restore();
+      // Chaque miroir lance son reflet.
+      if (t > 40 && (t + i * 3) % 18 < 3) lumiere(g, () => { g.strokeStyle = rgba('#ffffff', 0.9); g.lineWidth = 3; g.beginPath(); g.moveTo(x, y); g.lineTo(D.x, D.y); g.stroke(); });
+    }
+    if (t > 66) lumiere(g, () => halo(g, D.x, D.y, (t - 66) * 10, k.c1, Math.max(0, 1 - (t - 66) / 40)));
   },
   /* LE CHAOS : tout finit ici. */
   'omega-collapse'(g, t, A, D, k) {

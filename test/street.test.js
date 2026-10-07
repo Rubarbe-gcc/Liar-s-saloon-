@@ -7,7 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import * as C from '../public/shared/street/combat.js';
-import { PERSOS, PERSO, ROSTER, BOSS, JAUGE } from '../public/shared/street/persos.js';
+import { PERSOS, PERSO, ROSTER, BOSS, SECRETS, JAUGE } from '../public/shared/street/persos.js';
 
 /** Un combat d'entraînement, déjà lancé, les deux combattants face à face. */
 function duel(p1 = 'ryuken', p2 = 'ryuken', ecart = 90) {
@@ -29,10 +29,12 @@ function jouer(c, n, e1 = {}, e2 = {}) {
 /** Les entrées d'une séquence : une étape par image, puis rien. */
 const suite = (etapes) => (k) => etapes[k] || {};
 
-test('le roster : 16 combattants et 3 boss, chacun avec ses compétences, son ultime et ses combos', () => {
+test('le roster : 16 combattants, 3 boss et 3 secrets, chacun avec ses compétences, son ultime et ses combos', () => {
   assert.equal(ROSTER.length, 16);
-  assert.equal(PERSOS.length, 19);
+  assert.equal(PERSOS.length, 22);
   assert.deepEqual(Object.values(BOSS).sort(), ['lechaos', 'malvortex', 'solarius']);
+  assert.deepEqual(Object.values(SECRETS).sort(), ['kairos', 'nemesis', 'onyx']);
+  for (const id of Object.values(SECRETS)) assert.ok(PERSO[id].secret && !ROSTER.includes(PERSO[id]), id);
   const visuels = new Set();
   for (const p of PERSOS) {
     assert.ok(p.nom && p.style && p.desc && p.c.c1 && p.look, p.id);
@@ -46,7 +48,7 @@ test('le roster : 16 combattants et 3 boss, chacun avec ses compétences, son ul
     // Deux techniques d'un même combattant n'ont jamais la même manipulation.
     assert.equal(new Set(p.combos.map((x) => x.entree)).size, 3, p.id);
   }
-  assert.equal(visuels.size, 19, 'un ultime unique par combattant');
+  assert.equal(visuels.size, 22, 'un ultime unique par combattant');
 });
 
 test('les coups de base : un poing touche, la garde le bloque', () => {
@@ -216,4 +218,16 @@ test('l’entraînement : on ne meurt pas, la jauge se recharge', () => {
   assert.equal(c.phase, 'combat');
   assert.ok(c.joueurs[1].hp > 1);
   assert.ok(c.joueurs[0].sp > 30);
+});
+
+test('un combat en un seul round, avec la vie gardée du combat d’avant (la Tour des défis)', () => {
+  const c = C.creerCombat({ p1: 'ryuken', p2: 'blazero', victoires: 1, vie: [60, null], graine: 2 });
+  assert.equal(c.joueurs[0].hp, 60);
+  assert.equal(c.joueurs[1].hp, c.joueurs[1].hpMax);
+  jouer(c, 100);
+  c.joueurs[1].hp = 0;
+  jouer(c, 400);
+  assert.equal(c.phase, 'fin');
+  assert.equal(c.vainqueur, 0);
+  assert.equal(c.round, 1);
 });
