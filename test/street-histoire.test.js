@@ -48,11 +48,13 @@ test('le scénario : dix actes, des combats, des vagues de soldats et des scène
       if (e.choix) assert.ok(e.choix.length >= 2 && e.choix.every((c) => c.texte), `${sc.id} : un choix`);
     }
     if (sc.combat) {
-      assert.ok(PERSO[sc.combat.adv], `${sc.id} : ${sc.combat.adv}`);
+      assert.ok(sc.combat.adv === 'hero' || PERSO[sc.combat.adv], `${sc.id} : ${sc.combat.adv}`);
       if (sc.combat.issue) assert.ok(sc.apresDefaite, `${sc.id} : et si on perd ?`);
       // On incarne quelqu’un d’autre : un vrai combattant ; un corrompu : jamais un soldat de l’Horloge.
       if (sc.combat.joueur) assert.ok(PERSOS.includes(PERSO[sc.combat.joueur]), `${sc.id} : ${sc.combat.joueur}`);
-      if (sc.combat.corrompu) assert.ok(!PERSO[sc.combat.adv].figurant && !sc.combat.serie, sc.id);
+      if (sc.combat.corrompu) assert.ok(!PERSO[sc.combat.adv]?.figurant && !sc.combat.serie, sc.id);
+      // Affronter son propre héros : seulement en incarnant quelqu’un d’autre.
+      if (sc.combat.adv === 'hero') assert.ok(sc.combat.joueur, sc.id);
       for (const d of ['normal', 'difficile']) assert.ok(NIVEAUX.includes(sc.combat.niveau[d]), `${sc.id} : niveau ${d}`);
     }
   }
@@ -97,13 +99,13 @@ test('les déblocages : les boss en les battant, Vorn, Sablia, Éclipse en route
   assert.ok(croises.includes(BOSS.difficile) && croises.includes('vorn'));
   // La dernière scène : l'épilogue, après Kaïros.
   assert.equal(SCENES.at(-1).id, 'epilogue');
-  assert.equal(SCENES.at(-2).combat.adv, SECRETS.histoire);
+  assert.equal(SCENES.filter((sc) => sc.combat).at(-1).combat.adv, SECRETS.histoire, 'le dernier combat : Kaïros');
 });
 
 test('la doublure : quel que soit le héros, personne ne se croise lui-même', () => {
   const acteurs = new Set();
   for (const sc of SCENES) {
-    if (sc.combat) acteurs.add(sc.combat.adv);
+    if (sc.combat && sc.combat.adv !== 'hero') acteurs.add(sc.combat.adv);
     for (const l of listes(sc)) for (const e of toutes(l)) for (const k of ['entre', 'dit']) if (e[k] && e[k] !== 'hero') acteurs.add(e[k]);
   }
   assert.ok(!acteurs.has(DOUBLURE), 'la doublure ne joue aucun rôle à elle');

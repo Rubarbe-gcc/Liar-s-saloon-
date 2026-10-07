@@ -529,7 +529,8 @@ function ouvrirJournal(k) {
 const condition = (sc, h) => !sc.si || (sc.si.startsWith('!') ? !h.drapeaux[sc.si.slice(1)] : !!h.drapeaux[sc.si]);
 /** Le héros ne se croise pas lui-même : sa doublure joue son rôle. */
 const rolesDe = (hero) => (hero === HIST.DOUBLURE ? {} : { [hero]: HIST.DOUBLURE });
-const role = (h, id) => rolesDe(h.hero)[id] || id;
+/** Qui joue ce rôle ('hero' : le héros de la partie, qu'on peut aussi affronter). */
+const role = (h, id) => (id === 'hero' ? h.hero : rolesDe(h.hero)[id] || id);
 const nomsDe = (texte, h) => texte.replace(/\{(\w+)\}/g, (m, id) => (id === 'hero' ? PERSO[h.hero].nom : PERSO[role(h, id)]?.nom || m));
 
 function cineHistoire(etapes, h, drapeaux) {

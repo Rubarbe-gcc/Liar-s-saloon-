@@ -1139,6 +1139,8 @@ function armeAvant(g, p, main, coude, o, t) {
     g.fillStyle = '#ffd23f'; g.fillRect(-2, -6, 5, 12);
     g.restore();
   }
+  // Au repos, l'épée du Général pointe vers le sol, devant lui ; à l'attaque, elle suit le bras.
+  if (X.includes('epee-general')) epeeGeneral(g, main, attaque ? a : rad(72), attaque, k, t);
   if (X.includes('griffes')) {
     g.save(); g.translate(main.x, main.y); g.rotate(a);
     g.fillStyle = '#fff2d8';
@@ -1146,6 +1148,49 @@ function armeAvant(g, p, main, coude, o, t) {
     g.restore();
   }
   void t;
+}
+
+/** L'épée du Général : une large lame d'acier gravée, une garde d'or, un pommeau-horloge. */
+function epeeGeneral(g, main, a, attaque, k, t) {
+  g.save();
+  g.translate(main.x, main.y);
+  g.rotate(a);
+  // La lame : large à la base, une gouttière au centre, une pointe effilée.
+  if (attaque) { g.shadowColor = k.c1; g.shadowBlur = 18; }
+  const lame = g.createLinearGradient(0, -7, 0, 7);
+  lame.addColorStop(0, '#f4f8ff'); lame.addColorStop(0.45, '#b8c4d4'); lame.addColorStop(0.55, '#8a96a8'); lame.addColorStop(1, '#dce4f0');
+  g.fillStyle = lame;
+  g.beginPath(); g.moveTo(12, -6.5); g.lineTo(92, -4.5); g.lineTo(108, 0); g.lineTo(92, 4.5); g.lineTo(12, 6.5); g.closePath(); g.fill();
+  g.shadowBlur = 0;
+  g.strokeStyle = 'rgba(40,50,64,0.8)'; g.lineWidth = 0.8; g.stroke();
+  g.strokeStyle = 'rgba(60,70,90,0.7)'; g.lineWidth = 1.6;
+  g.beginPath(); g.moveTo(14, 0); g.lineTo(84, 0); g.stroke();
+  // Les gravures d'or près de la garde : les graduations d'une horloge.
+  g.strokeStyle = '#ffd23f'; g.lineWidth = 1;
+  for (let i = 0; i < 5; i++) { g.beginPath(); g.moveTo(16 + i * 5, -4); g.lineTo(16 + i * 5, i % 2 ? -1.5 : -2.5); g.moveTo(16 + i * 5, 4); g.lineTo(16 + i * 5, i % 2 ? 1.5 : 2.5); g.stroke(); }
+  // Le tranchant qui brille quand il frappe.
+  if (attaque) {
+    g.save(); g.globalCompositeOperation = 'lighter';
+    g.strokeStyle = rgba(k.c1, 0.9); g.lineWidth = 2;
+    g.beginPath(); g.moveTo(14, -6); g.lineTo(92, -4.2); g.lineTo(106, 0); g.stroke();
+    g.restore();
+  }
+  // La garde d'or, aux quillons recourbés, et sa pierre rouge.
+  g.fillStyle = '#ffd23f';
+  g.beginPath(); g.moveTo(8, -3); g.lineTo(11, -13); g.quadraticCurveTo(15, -17, 17, -13); g.lineTo(13, -3); g.lineTo(13, 3); g.lineTo(17, 13); g.quadraticCurveTo(15, 17, 11, 13); g.lineTo(8, 3); g.closePath(); g.fill();
+  g.strokeStyle = '#8a5a10'; g.lineWidth = 1; g.stroke();
+  g.fillStyle = '#c8102e'; g.beginPath(); g.arc(10.5, 0, 2.6, 0, Math.PI * 2); g.fill();
+  g.fillStyle = 'rgba(255,255,255,0.6)'; g.beginPath(); g.arc(9.8, -0.8, 0.9, 0, Math.PI * 2); g.fill();
+  // La poignée de cuir, filée d'or.
+  g.fillStyle = '#3a2210'; g.fillRect(-12, -2.8, 20, 5.6);
+  g.strokeStyle = '#ffd23f'; g.lineWidth = 0.9;
+  for (let x = -10; x < 8; x += 3.5) { g.beginPath(); g.moveTo(x, -2.8); g.lineTo(x + 2, 2.8); g.stroke(); }
+  // Le pommeau : une petite horloge d'or.
+  g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(-14, 0, 5, 0, Math.PI * 2); g.fill();
+  g.fillStyle = '#2a1a06'; g.beginPath(); g.arc(-14, 0, 3.2, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = '#ffe6a0'; g.lineWidth = 0.9;
+  g.beginPath(); g.moveTo(-14, 0); g.lineTo(-14 + Math.cos(t / 20) * 2.6, Math.sin(t / 20) * 2.6); g.stroke();
+  g.restore();
 }
 
 function statutsVisibles(g, statuts, t, hanche) {
