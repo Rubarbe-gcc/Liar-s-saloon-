@@ -655,7 +655,8 @@ function dessinerCreateur() {
 function ecouterHeros() {
   createur.def.nom = $('createur-nom').value;
   const h = construireHeros(createur.def);
-  dire(`Je suis ${h.nom}. La Fracture n'a qu'à bien se tenir !`, h.voix);
+  // On l'entend même si les voix sont coupées : c'est demandé.
+  dire(`Je suis ${h.nom}. La Fracture n'a qu'à bien se tenir !`, h.voix, {}, { force: true });
 }
 
 function validerCreateur() {

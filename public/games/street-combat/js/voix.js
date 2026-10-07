@@ -16,8 +16,9 @@
 
 import { estMuet } from './son.js';
 
-const CLE = 'street.voix';
-let actives = (() => { try { return localStorage.getItem(CLE) !== 'non'; } catch { return true; } })();
+// Les voix des navigateurs restent robotiques : elles sont coupées tant qu'on ne les active pas.
+const CLE = 'street.voix.v2';
+let actives = (() => { try { return localStorage.getItem(CLE) === 'oui'; } catch { return false; } })();
 export const voixActives = () => actives;
 export function basculerVoix() {
   actives = !actives;
@@ -167,9 +168,9 @@ export function reglage(m, voix, { corrompu = false } = {}) {
 /* ------------------------------------------------------------------ */
 
 /** Dit une réplique avec la voix et l'état (corrompu…) donnés. Coupe ce qui se disait. */
-export function dire(texte, voix, etat = {}) {
+export function dire(texte, voix, etat = {}, { force = false } = {}) {
   taire();
-  if (!actives || estMuet() || !texte) return;
+  if ((!actives && !force) || estMuet() || !texte) return;
   const morceaux = intonations(texte);
   if (!morceaux.length) return;
   if (!synth || !voixFr.length) return;
