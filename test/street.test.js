@@ -54,7 +54,8 @@ test('le roster : 16 combattants, 3 boss et 3 secrets, chacun avec ses compéten
 test('les coups de base : un poing touche, la garde le bloque', () => {
   let c = duel();
   jouer(c, 20, suite([{ P: true }]));
-  assert.equal(c.joueurs[1].hp, c.joueurs[1].hpMax - 6);
+  // Le poing : 6 de base, multiplié par la force de Ryuken.
+  assert.equal(c.joueurs[1].hp, c.joueurs[1].hpMax - Math.round(6 * PERSO.ryuken.dmg / PERSO.ryuken.defMult));
   assert.ok(c.joueurs[0].sp > 0, 'frapper remplit la jauge');
 
   c = duel();

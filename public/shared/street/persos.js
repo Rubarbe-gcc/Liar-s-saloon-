@@ -46,7 +46,7 @@ export const PERSOS = [
   P({
     id: 'ryuken', nom: 'RYU-KEN', style: 'Arts Martiaux', desc: 'Maître du Poing de Tonnerre',
     c: { c1: '#3296ff', c2: '#0050c8', faisceau: '#3296ff', aura: '#50a0ff', peau: '#dcb996', cheveux: '#141414', tenue: '#f0f0f0', ceinture: '#c80000' },
-    stats: { hp: 10, dmg: 10, def: 8 }, vitesse: 4.5, saut: 14, dmg: 1.0, hpMult: 1.0, defMult: 1.0,
+    stats: { hp: 12, dmg: 12, def: 9 }, vitesse: 4.5, saut: 14, dmg: 1.2, hpMult: 1.2, defMult: 1,
     look: { corps: 'normal', tete: 'bandeau', extras: ['bandeau-long'] },
     specA: { nom: 'HADOKEN !', ...proj({ vitesse: 10, rayon: 24, degats: 15, forme: 'boule' }) },
     specB: { nom: 'SHORYUKEN !', ...ruee({ vx: 4, vy: -15, duree: 34, degats: 18, stun: 34, recul: 6, invincible: 10, lance: true }) },
@@ -61,7 +61,7 @@ export const PERSOS = [
   P({
     id: 'blazero', nom: 'BLAZERO', style: 'Maître du Feu', desc: 'Le Démon des Flammes',
     c: { c1: '#ff500a', c2: '#c81e00', faisceau: '#ff6400', aura: '#ff5000', peau: '#c8501e', cheveux: '#ff3c00', tenue: '#280000', ceinture: '#ff6400' },
-    stats: { hp: 8, dmg: 13, def: 5 }, vitesse: 4.2, saut: 13, dmg: 1.25, hpMult: 0.88, defMult: 0.9,
+    stats: { hp: 9, dmg: 13, def: 8 }, vitesse: 4.2, saut: 13, dmg: 1.28, hpMult: 0.9, defMult: 0.9,
     look: { corps: 'normal', tete: 'pics', extras: ['flammes'] },
     specA: { nom: 'FLAMME !', ...proj({ vitesse: 13, rayon: 22, degats: 12, effet: 'brulure', forme: 'flamme' }) },
     specB: { nom: 'INFERNO !', ...zone({ ou: 'devant', distance: 150, delai: 10, rayon: 80, hauteur: 260, degats: 16, effet: 'brulure', forme: 'feu', duree: 40, coups: 3 }) },
@@ -76,7 +76,7 @@ export const PERSOS = [
   P({
     id: 'frostbyte', nom: 'FROSTBYTE', style: 'Cryomancien', desc: 'Seigneur de la Glace',
     c: { c1: '#00c8ff', c2: '#0078c8', faisceau: '#00d2ff', aura: '#00b4ff', peau: '#b4dcf0', cheveux: '#c8f0ff', tenue: '#b4e6ff', ceinture: '#0064c8' },
-    stats: { hp: 9, dmg: 10, def: 10 }, vitesse: 3.6, saut: 15, dmg: 1.05, hpMult: 0.95, defMult: 1.05,
+    stats: { hp: 10, dmg: 12, def: 10 }, vitesse: 3.6, saut: 15, dmg: 1.15, hpMult: 1.04, defMult: 1.05,
     look: { corps: 'normal', tete: 'cristaux', extras: ['epaulettes-glace'] },
     specA: { nom: 'ICE BEAM !', ...faisceau({ degats: 13, effet: 'gel', couleur: '#8fe6ff' }) },
     specB: { nom: 'BLIZZARD !', ...zone({ ou: 'cible', delai: 18, rayon: 120, hauteur: 200, degats: 9, coups: 3, duree: 60, effet: 'gel', forme: 'blizzard' }) },
@@ -91,7 +91,7 @@ export const PERSOS = [
   P({
     id: 'shadowkira', nom: 'SHADOW KIRA', style: "Assassin de l'Ombre", desc: 'Fantôme du Néant',
     c: { c1: '#b43cff', c2: '#6400b4', faisceau: '#b400ff', aura: '#9600c8', peau: '#b896c8', cheveux: '#3a0a5a', tenue: '#0f001e', ceinture: '#9600c8' },
-    stats: { hp: 7, dmg: 10, def: 7 }, vitesse: 5.6, saut: 16, dmg: 0.95, hpMult: 0.82, defMult: 0.92,
+    stats: { hp: 10, dmg: 12, def: 8 }, vitesse: 5.6, saut: 16, dmg: 1.19, hpMult: 1.03, defMult: 0.92,
     look: { corps: 'fin', tete: 'ninja', extras: ['echarpe'] },
     specA: { nom: 'DARK WAVE !', ...proj({ vitesse: 9, rayon: 26, degats: 13, forme: 'onde', rase: true }) },
     specB: { nom: 'SHADOW RUSH !', type: 'teleport', derriere: true, degats: 16, stun: 30, recul: 10, duree: 24 },
@@ -106,7 +106,7 @@ export const PERSOS = [
   P({
     id: 'thunderox', nom: 'THUNDEROX', style: "Guerrier de l'Éclair", desc: 'Berserk du Tonnerre',
     c: { c1: '#ffc800', c2: '#c87800', faisceau: '#ffdc00', aura: '#ffc800', peau: '#a05a14', cheveux: '#ffb400', tenue: '#3c2800', ceinture: '#ffa000' },
-    stats: { hp: 12, dmg: 13, def: 7 }, vitesse: 3.7, saut: 12, dmg: 1.3, hpMult: 1.15, defMult: 0.95,
+    stats: { hp: 11, dmg: 13, def: 9 }, vitesse: 3.7, saut: 12, dmg: 1.28, hpMult: 1.13, defMult: 0.95,
     look: { corps: 'massif', tete: 'crete', extras: ['eclairs', 'brassards'] },
     specA: { nom: 'THUNDER !!', ...zone({ ou: 'cible', delai: 34, rayon: 50, hauteur: 600, degats: 18, stun: 34, forme: 'eclair' }) },
     specB: { nom: 'BOLT CRUSH !', ...ruee({ vx: 14, duree: 22, degats: 17, stun: 30, recul: 18, armure: true }) },
@@ -121,7 +121,7 @@ export const PERSOS = [
   P({
     id: 'ironclad', nom: 'IRONCLAD', style: 'Cyborg Soldat', desc: 'Machine de Guerre',
     c: { c1: '#b4b4c8', c2: '#646482', faisceau: '#c8c8ff', aura: '#b4b4dc', peau: '#8c91a0', cheveux: '#3c3c50', tenue: '#505064', ceinture: '#c8c8dc' },
-    stats: { hp: 15, dmg: 10, def: 14 }, vitesse: 3.0, saut: 10, dmg: 1.1, hpMult: 1.35, defMult: 1.2,
+    stats: { hp: 10, dmg: 9, def: 11 }, vitesse: 3.0, saut: 10, dmg: 0.85, hpMult: 1.04, defMult: 1.2,
     look: { corps: 'massif', tete: 'visiere', extras: ['armure', 'canon'] },
     specA: { nom: 'LASER BLAST !', ...faisceau({ portee: 760, epaisseur: 22, degats: 15, stun: 22, couleur: '#ff3a3a' }) },
     specB: { nom: 'MISSILE !', ...proj({ vitesse: 7, rayon: 16, degats: 16, duree: 140, forme: 'missile', tete: 0.35, vy: -6 }) },
@@ -136,7 +136,7 @@ export const PERSOS = [
   P({
     id: 'serpenta', nom: 'SERPENTA', style: 'Venin & Agilité', desc: 'Danseuse Empoisonnée',
     c: { c1: '#3cdc64', c2: '#008c28', faisceau: '#50ff50', aura: '#28c850', peau: '#28a046', cheveux: '#00c850', tenue: '#003c14', ceinture: '#00c850' },
-    stats: { hp: 8, dmg: 9, def: 6 }, vitesse: 5.2, saut: 14, dmg: 0.95, hpMult: 0.85, defMult: 0.88,
+    stats: { hp: 10, dmg: 11, def: 8 }, vitesse: 5.2, saut: 14, dmg: 1.07, hpMult: 0.96, defMult: 0.88,
     look: { corps: 'fin', tete: 'longs', extras: ['queue', 'ecailles'] },
     specA: { nom: 'VENOM SHOT !', ...proj({ vitesse: 12, rayon: 16, degats: 9, effet: 'poison', forme: 'goutte', nb: 2, intervalle: 10 }) },
     specB: { nom: 'POISON WAVE !', ...zone({ ou: 'devant', distance: 170, delai: 8, rayon: 130, hauteur: 40, degats: 6, coups: 4, duree: 90, effet: 'poison', forme: 'flaque', solSeulement: true }) },
@@ -151,7 +151,7 @@ export const PERSOS = [
   P({
     id: 'gravox', nom: 'GRAVOX', style: 'Maître de la Gravité', desc: 'Seigneur des Forces Cosmiques',
     c: { c1: '#a050ff', c2: '#5000b4', faisceau: '#b464ff', aura: '#8c3cf0', peau: '#46286e', cheveux: '#c878ff', tenue: '#1e0a3c', ceinture: '#a050ff' },
-    stats: { hp: 13, dmg: 14, def: 11 }, vitesse: 3.2, saut: 11, dmg: 1.35, hpMult: 1.25, defMult: 1.1,
+    stats: { hp: 11, dmg: 12, def: 10 }, vitesse: 3.2, saut: 11, dmg: 1.2, hpMult: 1.11, defMult: 1.1,
     look: { corps: 'massif', tete: 'halo', extras: ['orbes'] },
     specA: { nom: 'GRAVITY PULL !', ...faisceau({ portee: 560, epaisseur: 60, degats: 8, stun: 30, attire: 0.75, couleur: '#b464ff' }) },
     specB: { nom: 'CRUSH FIELD !', ...zone({ ou: 'cible', delai: 16, rayon: 110, hauteur: 300, degats: 16, stun: 36, effet: 'lenteur', forme: 'champ', ecrase: true }) },
@@ -166,7 +166,7 @@ export const PERSOS = [
   P({
     id: 'lunara', nom: 'LUNARA', style: 'Magie de la Lune', desc: 'Prêtresse de la Nuit Éternelle',
     c: { c1: '#b4dcff', c2: '#5082c8', faisceau: '#c8e6ff', aura: '#a0c8ff', peau: '#c8d2f0', cheveux: '#dcebff', tenue: '#141e46', ceinture: '#b4dcff' },
-    stats: { hp: 8, dmg: 11, def: 7 }, vitesse: 5.0, saut: 18, dmg: 1.12, hpMult: 0.88, defMult: 0.94,
+    stats: { hp: 9, dmg: 12, def: 8 }, vitesse: 5.0, saut: 18, dmg: 1.16, hpMult: 0.91, defMult: 0.94,
     look: { corps: 'fin', tete: 'longs', extras: ['diademe-lune', 'robe'] },
     specA: { nom: 'CRESCENT BEAM !', ...proj({ vitesse: 12, rayon: 30, degats: 14, forme: 'croissant', ondule: 40 }) },
     specB: { nom: 'MOONFALL !', ...zone({ ou: 'cible', delai: 40, rayon: 75, hauteur: 600, degats: 20, stun: 36, forme: 'lune' }) },
@@ -181,7 +181,7 @@ export const PERSOS = [
   P({
     id: 'pyroclaw', nom: 'PYROCLAW', style: 'Bête Dragon de Guerre', desc: 'La Bête Enchaînée',
     c: { c1: '#ff3c00', c2: '#b40000', faisceau: '#ff7800', aura: '#ff5000', peau: '#a03214', cheveux: '#ff1e00', tenue: '#500f00', ceinture: '#ff5000' },
-    stats: { hp: 14, dmg: 15, def: 6 }, vitesse: 4.8, saut: 13, dmg: 1.45, hpMult: 1.1, defMult: 0.85,
+    stats: { hp: 10, dmg: 13, def: 8 }, vitesse: 4.8, saut: 13, dmg: 1.32, hpMult: 1, defMult: 0.85,
     look: { corps: 'massif', tete: 'cornes', extras: ['griffes', 'queue-dragon', 'ailes-dragon'] },
     specA: { nom: 'DRAGON BREATH !', ...faisceau({ portee: 260, epaisseur: 90, degats: 5, coups: 4, stun: 20, recul: 3, effet: 'brulure', couleur: '#ff7800', cone: true, duree: 44 }) },
     specB: { nom: 'CLAW REND !', ...ruee({ vx: 10, vy: -8, duree: 28, coups: 3, degats: 7, stun: 22, recul: 8, plonge: true }) },
@@ -196,7 +196,7 @@ export const PERSOS = [
   P({
     id: 'wraithblade', nom: 'WRAITHBLADE', style: 'Samouraï Spectral', desc: 'Lame Entre Deux Mondes',
     c: { c1: '#00dcb4', c2: '#007864', faisceau: '#00ffc8', aura: '#00c8a0', peau: '#1e2832', cheveux: '#00f0c8', tenue: '#0a141e', ceinture: '#00c8a0' },
-    stats: { hp: 9, dmg: 12, def: 9 }, vitesse: 5.4, saut: 15, dmg: 1.2, hpMult: 0.9, defMult: 1.08,
+    stats: { hp: 10, dmg: 13, def: 10 }, vitesse: 5.4, saut: 15, dmg: 1.28, hpMult: 0.96, defMult: 1.08,
     look: { corps: 'fin', tete: 'chignon', extras: ['katana', 'yeux-luisants', 'haori'] },
     specA: { nom: 'SOUL SLASH !', ...proj({ vitesse: 15, rayon: 34, degats: 14, forme: 'lame-geante', traverse: true, duree: 60 }) },
     specB: { nom: 'PHANTOM STEP !', ...ruee({ vx: 18, duree: 18, degats: 15, stun: 28, recul: 6, traverse: true, invincible: 18 }) },
@@ -211,7 +211,7 @@ export const PERSOS = [
   P({
     id: 'celestia', nom: 'CELESTIA', style: 'Magie Céleste', desc: 'Guerrière des Étoiles',
     c: { c1: '#ff96ff', c2: '#c850dc', faisceau: '#ffb4ff', aura: '#f064f0', peau: '#dca0dc', cheveux: '#ffc8ff', tenue: '#f0c8ff', ceinture: '#ff64ff' },
-    stats: { hp: 9, dmg: 10, def: 8 }, vitesse: 4.4, saut: 17, dmg: 1.08, hpMult: 0.92, defMult: 1.0,
+    stats: { hp: 10, dmg: 12, def: 9 }, vitesse: 4.4, saut: 17, dmg: 1.18, hpMult: 1.01, defMult: 1,
     look: { corps: 'fin', tete: 'couettes', extras: ['etoiles', 'jupe'] },
     specA: { nom: 'STARDUST !', ...proj({ vitesse: 11, rayon: 14, degats: 6, nb: 3, eventail: true, forme: 'etoile' }) },
     specB: { nom: 'NOVA STRIKE !', ...zone({ ou: 'soi', delai: 12, rayon: 140, hauteur: 220, degats: 15, stun: 32, recul: 16, forme: 'nova' }) },
@@ -226,7 +226,7 @@ export const PERSOS = [
   P({
     id: 'stoneback', nom: 'STONEBACK', style: 'Golem de Guerre', desc: 'Forteresse Vivante',
     c: { c1: '#8c6e50', c2: '#503c28', faisceau: '#b48c50', aura: '#a0783c', peau: '#785f41', cheveux: '#5a4632', tenue: '#463723', ceinture: '#8c6e50' },
-    stats: { hp: 15, dmg: 12, def: 15 }, vitesse: 2.5, saut: 8, dmg: 1.2, hpMult: 1.5, defMult: 1.35,
+    stats: { hp: 12, dmg: 9, def: 13 }, vitesse: 2.5, saut: 8, dmg: 0.94, hpMult: 1.18, defMult: 1.35,
     look: { corps: 'geant', tete: 'rocher', extras: ['mousse', 'fissures'] },
     specA: { nom: 'ROCK SLAM !', ...proj({ vitesse: 8, rayon: 30, degats: 18, stun: 34, forme: 'rocher', vy: -11, gravite: 0.4, duree: 120 }) },
     specB: { nom: 'QUAKE FIST !', ...zone({ ou: 'devant', distance: 160, delai: 10, rayon: 190, hauteur: 70, degats: 15, stun: 46, forme: 'seisme', solSeulement: true }) },
@@ -241,7 +241,7 @@ export const PERSOS = [
   P({
     id: 'stormwing', nom: 'STORMWING', style: 'Maître des Tempêtes', desc: "L'Aigle de Tempête",
     c: { c1: '#64c8ff', c2: '#2878c8', faisceau: '#8cdcff', aura: '#50b4ff', peau: '#3c64a0', cheveux: '#a0e6ff', tenue: '#143c78', ceinture: '#64c8ff' },
-    stats: { hp: 9, dmg: 11, def: 8 }, vitesse: 6.0, saut: 19, dmg: 1.15, hpMult: 0.88, defMult: 0.96,
+    stats: { hp: 10, dmg: 14, def: 9 }, vitesse: 6.0, saut: 19, dmg: 1.36, hpMult: 1.04, defMult: 0.96,
     look: { corps: 'fin', tete: 'plumes', extras: ['ailes', 'echarpe'] },
     specA: { nom: 'WIND BLADE !', ...proj({ vitesse: 17, rayon: 20, degats: 11, forme: 'vent', duree: 60 }) },
     specB: { nom: 'TORNADO RUSH !', ...ruee({ vx: 9, vy: -3, duree: 36, coups: 4, degats: 5, stun: 20, recul: 4, emporte: true, tourne: true }) },
@@ -256,7 +256,7 @@ export const PERSOS = [
   P({
     id: 'voidreaper', nom: 'VOIDREAPER', style: 'Faucheur Dimensionnel', desc: 'Messager de la Fin',
     c: { c1: '#9a1ee0', c2: '#28003c', faisceau: '#8c00c8', aura: '#6400a0', peau: '#1e0032', cheveux: '#7800b4', tenue: '#0f0019', ceinture: '#640096' },
-    stats: { hp: 10, dmg: 13, def: 9 }, vitesse: 4.6, saut: 14, dmg: 1.28, hpMult: 0.95, defMult: 1.02,
+    stats: { hp: 8, dmg: 11, def: 9 }, vitesse: 4.6, saut: 14, dmg: 1.06, hpMult: 0.79, defMult: 1.02,
     look: { corps: 'normal', tete: 'crane', extras: ['faux', 'cape'] },
     specA: { nom: 'SOUL DRAIN !', ...faisceau({ portee: 480, epaisseur: 26, degats: 12, stun: 24, drain: 0.6, couleur: '#c06bff' }) },
     specB: { nom: 'VOID SCYTHE !', ...ruee({ vx: 6, duree: 24, degats: 18, stun: 30, recul: 14, portee: 170 }) },
@@ -271,7 +271,7 @@ export const PERSOS = [
   P({
     id: 'aquathorn', nom: 'AQUATHORN', style: 'Chevalier des Profondeurs', desc: "L'Ombre des Profondeurs",
     c: { c1: '#00a0dc', c2: '#00508c', faisceau: '#00c8ff', aura: '#008cc8', peau: '#14466e', cheveux: '#00c8f0', tenue: '#0a2846', ceinture: '#00a0dc' },
-    stats: { hp: 11, dmg: 11, def: 11 }, vitesse: 4.0, saut: 13, dmg: 1.18, hpMult: 1.05, defMult: 1.08,
+    stats: { hp: 10, dmg: 11, def: 10 }, vitesse: 4.0, saut: 13, dmg: 1.07, hpMult: 0.96, defMult: 1.08,
     look: { corps: 'normal', tete: 'casque', extras: ['trident', 'nageoires'] },
     specA: { nom: 'WATER JET !', ...faisceau({ portee: 560, epaisseur: 40, degats: 12, stun: 26, recul: 24, couleur: '#4fd8ff' }) },
     specB: { nom: 'ABYSS SPIKE !', ...zone({ ou: 'cible', delai: 24, rayon: 50, hauteur: 200, degats: 17, stun: 34, forme: 'pic', lance: true }) },
@@ -288,7 +288,7 @@ export const PERSOS = [
   P({
     id: 'solarius', nom: 'SOLARIUS', style: 'Gardien de la Lumière', desc: 'La lumière qui consume les ténèbres', boss: 'normal',
     c: { c1: '#ffdc3c', c2: '#ffa000', faisceau: '#ffffb4', aura: '#ffc800', peau: '#f0e6c8', cheveux: '#ffffb4', tenue: '#dcc88c', ceinture: '#ffc800' },
-    stats: { hp: 10, dmg: 11, def: 10 }, vitesse: 4.4, saut: 16, dmg: 1.14, hpMult: 1.02, defMult: 1.0,
+    stats: { hp: 10, dmg: 11, def: 10 }, vitesse: 4.4, saut: 16, dmg: 1.08, hpMult: 0.97, defMult: 1.1,
     look: { corps: 'normal', tete: 'halo', extras: ['ailes-lumiere', 'armure-or', 'epee'] },
     specA: { nom: 'LANCE DE LUMIÈRE !', ...proj({ vitesse: 16, rayon: 18, degats: 13, forme: 'lance', traverse: true, duree: 50 }) },
     specB: { nom: 'JUGEMENT SOLAIRE !', ...zone({ ou: 'cible', delai: 38, rayon: 70, hauteur: 600, degats: 16, stun: 30, forme: 'rayon-ciel' }) },
@@ -303,7 +303,7 @@ export const PERSOS = [
   P({
     id: 'malvortex', nom: 'MALVORTEX', style: 'Seigneur des Abysses', desc: "Né des profondeurs de l'enfer", boss: 'difficile',
     c: { c1: '#d01428', c2: '#50000a', faisceau: '#ff2828', aura: '#a00000', peau: '#0a0005', cheveux: '#c80014', tenue: '#050003', ceinture: '#b40000' },
-    stats: { hp: 15, dmg: 15, def: 14 }, vitesse: 4.9, saut: 15, dmg: 1.7, hpMult: 1.5, defMult: 1.28,
+    stats: { hp: 10, dmg: 9, def: 9 }, vitesse: 4.9, saut: 15, dmg: 0.94, hpMult: 0.95, defMult: 1,
     look: { corps: 'massif', tete: 'cornes', extras: ['armure-noire', 'oeil-rouge', 'cape'] },
     specA: { nom: 'LANCE INFERNALE !', ...proj({ vitesse: 14, rayon: 22, degats: 16, forme: 'lance', effet: 'brulure', duree: 70 }) },
     specB: { nom: 'ŒIL DU DÉMON !', ...faisceau({ portee: 700, epaisseur: 30, degats: 17, stun: 30, couleur: '#ff1a1a', depuisOeil: true }) },
@@ -318,7 +318,7 @@ export const PERSOS = [
   P({
     id: 'lechaos', nom: 'LE CHAOS', style: 'Dieu de la Destruction', desc: "Là où il passe, l'existence s'efface", boss: 'impossible',
     c: { c1: '#c814ff', c2: '#50008c', faisceau: '#ff50ff', aura: '#a000dc', peau: '#05000f', cheveux: '#dcb4ff', tenue: '#000000', ceinture: '#ffc800' },
-    stats: { hp: 15, dmg: 15, def: 15 }, vitesse: 4.8, saut: 17, dmg: 1.65, hpMult: 1.55, defMult: 1.3,
+    stats: { hp: 11, dmg: 12, def: 10 }, vitesse: 4.8, saut: 17, dmg: 1.22, hpMult: 1.14, defMult: 1.1,
     look: { corps: 'geant', tete: 'couronne-etoiles', extras: ['fissures-energie', 'aura-noire'] },
     specA: { nom: 'SINGULARITÉ NOIRE !', ...proj({ vitesse: 6, rayon: 34, degats: 16, duree: 130, forme: 'trou-noir', attire: 1.6 }) },
     specB: { nom: "LAME D'ENTROPIE !", ...ruee({ vx: 12, duree: 22, degats: 19, stun: 32, recul: 16, portee: 190, traverse: true }) },
@@ -335,7 +335,7 @@ export const PERSOS = [
   P({
     id: 'kairos', nom: 'KAÏROS', style: 'Seigneur du Temps', desc: 'Il a déjà vécu chaque seconde de ta vie', secret: 'histoire',
     c: { c1: '#4fe0d0', c2: '#0a5a64', faisceau: '#a8fff2', aura: '#40d8c8', peau: '#e0d0b8', cheveux: '#f4ecd8', tenue: '#14263a', ceinture: '#ffd23f' },
-    stats: { hp: 14, dmg: 14, def: 13 }, vitesse: 4.7, saut: 16, dmg: 1.5, hpMult: 1.4, defMult: 1.22,
+    stats: { hp: 11, dmg: 12, def: 10 }, vitesse: 4.7, saut: 16, dmg: 1.18, hpMult: 1.1, defMult: 1.1,
     look: { corps: 'normal', tete: 'longs', extras: ['horloge', 'barbe', 'robe', 'cape'] },
     specA: { nom: 'FLÈCHE DU TEMPS !', ...proj({ vitesse: 16, rayon: 16, degats: 14, forme: 'aiguille', effet: 'lenteur', duree: 60 }) },
     specB: { nom: 'ARRÊT DU TEMPS !', ...zone({ ou: 'cible', delai: 12, rayon: 120, hauteur: 300, degats: 7, stun: 66, effet: 'gel', forme: 'horloge', duree: 30 }) },
@@ -350,7 +350,7 @@ export const PERSOS = [
   P({
     id: 'onyx', nom: 'ONYX', style: 'Champion Invaincu', desc: 'Cent combats, cent K.O.', secret: 'tournoi',
     c: { c1: '#ffd23f', c2: '#8a6400', faisceau: '#ffe680', aura: '#ffc800', peau: '#5a3826', cheveux: '#141414', tenue: '#c8102e', ceinture: '#ffd23f' },
-    stats: { hp: 14, dmg: 15, def: 12 }, vitesse: 4.6, saut: 12, dmg: 1.5, hpMult: 1.42, defMult: 1.2,
+    stats: { hp: 12, dmg: 12, def: 10 }, vitesse: 4.6, saut: 12, dmg: 1.22, hpMult: 1.16, defMult: 1.1,
     look: { corps: 'massif', tete: 'rase', extras: ['gants-boxe', 'ceinture-champion', 'torse-nu'] },
     specA: { nom: 'POING SUPERSONIQUE !', ...proj({ vitesse: 18, rayon: 22, degats: 16, forme: 'poing', duree: 50 }) },
     specB: { nom: 'UPPERCUT DU CHAMPION !', ...ruee({ vx: 5, vy: -14, duree: 30, degats: 19, stun: 34, recul: 6, lance: true, armure: true }) },
@@ -365,7 +365,7 @@ export const PERSOS = [
   P({
     id: 'nemesis', nom: 'NÉMÉSIS', style: 'Le Reflet', desc: 'Il est tout ce que tu as combattu', secret: 'tour',
     c: { c1: '#e6f2ff', c2: '#5a6aa8', faisceau: '#ffffff', aura: '#c0d8ff', peau: '#a8c4e8', cheveux: '#ffffff', tenue: '#24304e', ceinture: '#e6f2ff' },
-    stats: { hp: 15, dmg: 15, def: 15 }, vitesse: 5.0, saut: 16, dmg: 1.58, hpMult: 1.5, defMult: 1.28,
+    stats: { hp: 12, dmg: 13, def: 10 }, vitesse: 5.0, saut: 16, dmg: 1.26, hpMult: 1.2, defMult: 1.1,
     look: { corps: 'normal', tete: 'miroir', extras: ['eclats', 'armure'] },
     specA: { nom: 'PRISME !', ...faisceau({ portee: 700, epaisseur: 30, degats: 16, stun: 26, couleur: '#ffffff', prisme: true }) },
     specB: { nom: 'MIROIR BRISÉ !', ...proj({ vitesse: 13, rayon: 12, degats: 5, nb: 5, eventail: true, forme: 'eclat' }) },
