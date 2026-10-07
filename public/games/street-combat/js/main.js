@@ -558,6 +558,8 @@ function etapesApres(sc, gagne) {
     { decor: sc.arene },
     { entre: cb.joueur || 'hero', cote: 'g', comment: 'place', p: gagne ? 'repos' : 'touche' },
     { entre: cb.adv, cote: 'd', comment: 'place', p: gagne ? 'touche' : 'victoire', corrompu: !!cb.corrompu },
+    // Le petit film des grands boss.
+    ...(gagne && sc.finale ? sc.finale : []),
     ...(gagne && cb.corrompu ? [{ purifie: cb.adv }] : []),
     ...((gagne ? sc.apres : sc.apresDefaite) || []),
   ];
@@ -857,9 +859,7 @@ function combatTournoi(t, adv, finaleChampion) {
       ecrire(CLE_RECORDS, r);
       const champion = t.diff === 'difficile';
       if (champion) succes.debloquer('street-tournoi');
-      await cinematique([{ decor: 'ring' }, { entre: 'hero', cote: 'c', x: 500, comment: 'place', p: 'victoire' },
-        { titre: '🏆 VAINQUEUR DU TOURNOI 🏆', sous: `${PERSO[t.hero].nom} soulève la coupe !` },
-        ...(champion ? [{ debloque: SECRETS.tournoi }] : [])], t.hero);
+      await cinematique(HIST.victoireTournoi(champion), t.hero);
       majMenu();
     },
     reessayer: () => { ecrire(CLE_TOURNOI, null); prep.difficulte = t.diff; lancerTournoi(t.hero); },
@@ -944,8 +944,7 @@ function combatTour(t, boss) {
       if (boss) {
         ecrire(CLE_TOUR, null);
         succes.debloquer('street-tour');
-        await cinematique([{ decor: 'sommet' }, { entre: 'hero', cote: 'c', x: 500, comment: 'place', p: 'victoire' },
-          { titre: '🗼 SOMMET ATTEINT 🗼', sous: 'Onze combats, onze victoires.' }, { debloque: SECRETS.tour }], t.hero);
+        await cinematique(HIST.TOUR_VICTOIRE, t.hero);
         majMenu();
         return;
       }

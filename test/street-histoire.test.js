@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 
 import { PERSO, PERSOS, ROSTER, BOSS, SECRETS, FIGURANTS } from '../public/shared/street/persos.js';
-import { ACTES, SCENES, DOUBLURE, TOUR_BOSS, TOURNOI_FINALE } from '../public/games/street-combat/js/histoire.js';
+import { ACTES, SCENES, DOUBLURE, TOUR_BOSS, TOURNOI_FINALE, TOUR_VICTOIRE, victoireTournoi } from '../public/games/street-combat/js/histoire.js';
 
 const ARENES = new Set([...readFileSync(new URL('../public/games/street-combat/js/arenes.js', import.meta.url), 'utf8').matchAll(/\{ id: '(\w+)', nom:/g)].map((m) => m[1]));
 const NIVEAUX = ['facile', 'normal', 'difficile', 'impossible'];
@@ -21,7 +21,7 @@ function* toutes(etapes = []) {
     if (e.si) { yield* toutes(e.alors); yield* toutes(e.sinon); }
   }
 }
-const listes = (sc) => [sc.etapes, sc.apres, sc.apresDefaite].filter(Boolean);
+const listes = (sc) => [sc.etapes, sc.finale, sc.apres, sc.apresDefaite].filter(Boolean);
 
 test('le scénario : dix actes, des combats, des vagues de soldats et des scènes sans combat, des lieux et des combattants qui existent', () => {
   assert.equal(ACTES.length, 10);
@@ -34,9 +34,11 @@ test('le scénario : dix actes, des combats, des vagues de soldats et des scène
   assert.ok(vagues.length >= 5);
   assert.ok(SCENES.filter((s) => s.combat?.joueur).length >= 4, 'des combats où l’on incarne un autre combattant');
   assert.ok(SCENES.filter((s) => s.combat?.corrompu).length >= 10, 'des corrompus à libérer');
+  // Les grands boss ont leur petit film de fin.
+  for (const id of ['solarius', 'vorn', 'malvortex', 'lechaos', 'kairos']) assert.ok(SCENES.some((s) => s.combat?.adv === id && !s.combat.issue && s.finale?.length >= 10), `le film de ${id}`);
   for (const s of vagues) { assert.equal(s.combat.adv, s.combat.serie[0], s.id); for (const id of s.combat.serie) assert.ok(PERSO[id]?.figurant, `${s.id} : ${id}`); }
   assert.equal(new Set(SCENES.map((s) => s.id)).size, SCENES.length, 'des identifiants uniques');
-  for (const sc of [...SCENES, { id: 'tour', etapes: TOUR_BOSS }, { id: 'tournoi', etapes: TOURNOI_FINALE }]) {
+  for (const sc of [...SCENES, { id: 'tour', etapes: TOUR_BOSS }, { id: 'tournoi', etapes: TOURNOI_FINALE }, { id: 'tour-fin', etapes: TOUR_VICTOIRE }, { id: 'coupe', etapes: victoireTournoi(true) }, { id: 'coupe2', etapes: victoireTournoi(false) }]) {
     if (sc.arene) assert.ok(ARENES.has(sc.arene), `${sc.id} : arène ${sc.arene}`);
     if (sc.acte !== undefined) assert.ok(ACTES[sc.acte], sc.id);
     for (const l of listes(sc)) for (const e of toutes(l)) {
@@ -44,6 +46,8 @@ test('le scénario : dix actes, des combats, des vagues de soldats et des scène
         if (e[k] !== undefined) assert.ok(e[k] === 'hero' || PERSO[e[k]], `${sc.id} : ${k} ${e[k]}`);
       }
       if (e.decor) assert.ok(ARENES.has(e.decor), `${sc.id} : décor ${e.decor}`);
+      for (const d of e.decors || []) assert.ok(ARENES.has(d), `${sc.id} : souvenir ${d}`);
+      for (const k of ['auraSur', 'retire']) for (const id of [e[k]].flat().filter(Boolean)) assert.ok(id === 'hero' || PERSO[id], `${sc.id} : ${k} ${id}`);
       if (e.dit) assert.ok(e.texte, `${sc.id} : une réplique sans texte`);
       if (e.choix) assert.ok(e.choix.length >= 2 && e.choix.every((c) => c.texte), `${sc.id} : un choix`);
     }

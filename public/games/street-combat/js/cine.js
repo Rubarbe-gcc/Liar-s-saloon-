@@ -21,6 +21,18 @@
  *   { choix: [{ texte, drapeau, suite: [...] }], question }   le joueur décide
  *   { si: 'drapeau'|'!drapeau', alors: [...], sinon: [...] }  selon ses choix d'avant
  *   { marque: 'drapeau' }                               lève un drapeau
+ *
+ * Pour les grands moments (les fins de boss) :
+ *   { camera: { zoom, x, y, duree, attendre } }         la caméra zoome, se déplace (sans attendre, par défaut)
+ *   { ralenti: 0.3 }                                    tout ralentit (1 : vitesse normale)
+ *   { bandes: 90 }                                      des bandes de cinéma plus larges (46 : normales)
+ *   { auraSur: id, v: 1 }                               une aura autour de lui (entre: … aura: 1 aussi)
+ *   { retire: [ids] }                                   ils disparaissent d'un coup
+ *   { calme: true }                                     tous les effets s'arrêtent
+ *   { titre, film: true }                               un titre façon générique de film
+ *   auto: n (sur narre, dit, titre)                     passe tout seul au bout de n images
+ *   effets : onde, debris, horloge-brisee, rayons, pilier, braises, eclairs, confettis,
+ *            fondu-blanc, fracture-ferme, souvenirs (decors: [...]) — avec x, y, c (couleur), n
  *   { debloque: id }                                    un combattant rejoint le roster
  *   { croise: id, indice }                              on le rencontre… on le débloquera plus tard
  *
@@ -39,6 +51,10 @@ const L = 1000;
 const H = 600;
 const SOL = 470;
 const POS = { g: 300, d: 700, gg: 160, dd: 840, c: 500 };
+const TAU = Math.PI * 2;
+/** Un hasard qui donne toujours la même chose pour le même n. */
+const hf = (n) => { const x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); };
+const CAMERA = { z: 1, x: L / 2, y: H / 2 };
 
 let scene = null;
 
@@ -52,6 +68,7 @@ export function jouerCine(etapes, { hero, roles = {}, drapeaux = {}, debloquer =
     scene = {
       etapes: [...etapes], i: 0, hero, roles, drapeaux, debloquer, croiser, fini,
       decor: 'dojo', acteurs: new Map(), effets: [], t: 0, attente: null, secousse: 0, rapide: false, fondu: null,
+      cam: { ...CAMERA, anim: null }, vitesse: 1, bandes: 46, bandesCible: 46,
     };
     for (const id of ['cine-boite', 'cine-titre', 'cine-debloque', 'cine-choix']) $(id).hidden = true;
     $('cine-lieu').hidden = true;
@@ -85,6 +102,19 @@ function suivante() {
     return;
   }
   if (e.vide) { S.acteurs.clear(); suivante(); return; }
+  if (e.camera) {
+    const c = e.camera;
+    const duree = S.rapide ? 1 : c.duree || 40;
+    S.cam.anim = { de: { z: S.cam.z, x: S.cam.x, y: S.cam.y }, a: { z: c.zoom ?? 1, x: c.x ?? L / 2, y: c.y ?? H / 2 }, t: 0, duree };
+    if (c.attendre && !S.rapide) { S.attente = { fin: S.t + duree }; return; }
+    suivante();
+    return;
+  }
+  if (e.ralenti !== undefined) { S.vitesse = S.rapide ? 1 : e.ralenti; suivante(); return; }
+  if (e.bandes !== undefined) { S.bandesCible = e.bandes; suivante(); return; }
+  if (e.auraSur) { const a = S.acteurs.get(qui(e.auraSur)); if (a) a.aura = e.v ?? 1; suivante(); return; }
+  if (e.retire) { for (const id of e.retire) S.acteurs.delete(qui(id)); suivante(); return; }
+  if (e.calme) { S.effets = S.effets.filter((x) => x.nom === 'fondu-blanc'); suivante(); return; }
   if (e.marque) { S.drapeaux[e.marque] = true; suivante(); return; }
   if (e.pose) { const a = S.acteurs.get(qui(e.pose)); if (a) a.pose = e.p; suivante(); return; }
   if (e.si) { S.etapes.splice(S.i, 0, ...((vrai(e.si, S.drapeaux) ? e.alors : e.sinon) || [])); suivante(); return; }
@@ -115,7 +145,10 @@ function suivante() {
   if (S.rapide) { appliquer(e); suivante(); return; }
   if (e.attendre) { S.attente = { fin: S.t + e.attendre }; return; }
   if (e.effet) {
-    S.effets.push({ nom: e.effet, t: 0, duree: e.duree || 70, x: e.x });
+    if (e.effet === 'fracture-ferme') S.effets = S.effets.filter((x) => x.nom !== 'fracture');
+    S.effets.push({ ...e, nom: e.effet, t: 0, duree: e.duree || 70 });
+    if (['onde', 'debris', 'horloge-brisee', 'fracture-ferme'].includes(e.effet)) son('ulti');
+    if (e.effet === 'confettis') son('victoire');
     if (e.effet === 'eclair' || e.effet === 'flash') son('impact-lourd');
     if (e.effet === 'fracture') son('ulti');
     if (e.effet === 'secousse') { S.secousse = 14; son('boum'); }
@@ -141,7 +174,7 @@ function suivante() {
     return;
   }
   if (e.titre) { montrerTitre(e); return; }
-  if (e.narre) { parler(null, e.narre); return; }
+  if (e.narre) { parler(null, e.narre, e); return; }
   if (e.dit) {
     const a = S.acteurs.get(qui(e.dit));
     if (a && e.p) a.pose = e.p;
@@ -158,7 +191,7 @@ function nouvelActeur(e) {
   const x = e.x ?? POS[cote];
   const dir = e.dir ?? (x < L / 2 ? 1 : -1);
   const comment = e.comment || 'marche';
-  const a = { id, x, y: SOL, dir, pose: e.p || 'repos', alpha: 1, t: 0, comment, cible: x, entree: 0, ombre: !!e.ombre, corrompu: !!e.corrompu };
+  const a = { id, x, y: SOL, dir, pose: e.p || 'repos', alpha: 1, t: 0, comment, cible: x, entree: 0, ombre: !!e.ombre, corrompu: !!e.corrompu, aura: e.aura || 0 };
   if (comment === 'marche') { a.x = x < L / 2 ? -80 : L + 80; a.pose = 'marche'; }
   if (comment === 'saut') { a.depart = x < L / 2 ? -80 : L + 80; }
   if (comment === 'chute') a.y = -200;
@@ -175,6 +208,7 @@ function appliquer(e) {
   if (e.sort) S.acteurs.delete(qui(e.sort));
   if (e.dit) { const a = S.acteurs.get(qui(e.dit)); if (a && e.p) a.pose = e.p; }
   if (e.effet && ['gel', 'nuit', 'aube', 'fracture'].includes(e.effet)) S.effets.push({ nom: e.effet, t: 99, duree: 1 });
+  if (e.effet === 'fracture-ferme') S.effets = S.effets.filter((x) => x.nom !== 'fracture');
 }
 
 function terminer(comment) {
@@ -207,6 +241,9 @@ export function passerCine() {
   if (!S || S.attente?.choix) return;
   S.rapide = true;
   S.fondu = null;
+  S.vitesse = 1;
+  S.cam = { ...CAMERA, anim: null };
+  S.bandesCible = 46;
   if (S.attente?.tap && !$('cine-debloque').hidden) return;
   // Celui qui entrait ou sortait arrive tout de suite.
   for (const a of S.acteurs.values()) {
@@ -256,7 +293,7 @@ function parler(w, texte, e = {}) {
   }
   S.ecrit = { texte: remplir(texte), n: 0, qui: w ? qui(w) : null };
   $('cine-texte').textContent = '';
-  S.attente = { tap: true };
+  S.attente = { tap: true, auto: e.auto ? S.t + e.auto : undefined };
 }
 
 function montrerTitre(e) {
@@ -266,9 +303,10 @@ function montrerTitre(e) {
   $('cine-titre-sous').textContent = remplir(e.sous || '');
   const c = $('cine-titre');
   c.hidden = false;
+  c.classList.toggle('film', !!e.film);
   c.classList.remove('entre'); void c.offsetWidth; c.classList.add('entre');
-  son('annonce');
-  S.attente = { tap: true };
+  son(e.film ? 'victoire' : 'annonce');
+  S.attente = { tap: true, auto: e.auto ? S.t + e.auto : undefined };
 }
 
 let lieuT = 0;
@@ -358,8 +396,18 @@ function avancer(S) {
     if (S.fondu.t === 22) { S.decor = S.fondu.decor; S.acteurs.clear(); S.effets = []; }
     if (S.fondu.t >= 44) { S.fondu = null; S.attente = null; suivante(); }
   }
+  // La caméra glisse vers sa cible ; les bandes s'élargissent ou se resserrent.
+  if (S.cam.anim) {
+    const an = S.cam.anim;
+    an.t += 1;
+    const p = Math.min(1, an.t / an.duree);
+    const e = p * p * (3 - 2 * p);
+    S.cam.z = an.de.z + (an.a.z - an.de.z) * e; S.cam.x = an.de.x + (an.a.x - an.de.x) * e; S.cam.y = an.de.y + (an.a.y - an.de.y) * e;
+    if (p >= 1) S.cam.anim = null;
+  }
+  S.bandes += (S.bandesCible - S.bandes) * 0.08;
   for (const a of S.acteurs.values()) {
-    a.t += 1;
+    a.t += S.vitesse;
     if (a.sortie) {
       a.entree += 1;
       if (a.sortie === 'marche') { a.pose = 'marche'; a.dir = a.x < L / 2 ? -1 : 1; a.x += a.dir * 9; }
@@ -375,11 +423,12 @@ function avancer(S) {
     else { a.alpha = p; if (p >= 1) a.entree = 1; }
     if (a.entree === 1) a.pose = a.poseFinale;
   }
-  for (const f of S.effets) f.t += 1;
+  for (const f of S.effets) f.t += S.vitesse;
   S.effets = S.effets.filter((f) => f.t < f.duree || f.nom === 'gel' || f.nom === 'nuit' || f.nom === 'aube' || f.nom === 'fracture');
   S.secousse *= 0.88;
   // Ce qu'on attend est fini : la suite.
   const at = S.attente;
+  if (at && at.tap && at.auto !== undefined && S.t >= at.auto && !(S.ecrit && S.ecrit.n < S.ecrit.texte.length)) { avancerCine(); return; }
   if (at && !at.tap && !at.choix && !at.fondu) {
     const fini = (at.fin !== undefined && S.t >= at.fin) || (at.acteur && at.acteur.entree >= 1) || (at.sortie && !S.acteurs.has(at.sortie.id));
     if (fini) { S.attente = null; suivante(); }
@@ -392,6 +441,8 @@ function dessiner(S) {
   const e = cv.width / L;
   g.setTransform(e, 0, 0, e, 0, 0);
   g.save();
+  const cam = S.cam;
+  if (cam.z !== 1 || cam.x !== L / 2 || cam.y !== H / 2) { g.translate(L / 2, H / 2); g.scale(cam.z, cam.z); g.translate(-cam.x, -cam.y); }
   if (S.secousse > 0.3) g.translate((Math.random() - 0.5) * S.secousse, (Math.random() - 0.5) * S.secousse);
   const arene = ARENE[S.decor] || ARENE.dojo;
   g.drawImage(fondArene(arene), 0, 0, L, H);
@@ -402,7 +453,7 @@ function dessiner(S) {
     const parle = S.ecrit && S.ecrit.qui === a.id && S.ecrit.n < S.ecrit.texte.length;
     dessinerCombattant(g, PERSO[a.id], {
       x: a.x, y: a.y, dir: a.dir, pose: a.pose, t: a.t + (parle ? Math.floor(S.t / 4) : 0), p: 1, alpha: a.alpha,
-      aura: a.comment === 'apparait' && a.entree < 1 ? 1 - a.alpha : 0, echelle: 1.15, enLAir: a.y < SOL - 2, ombre: a.ombre, corrompu: a.corrompu,
+      aura: Math.max(a.aura || 0, a.comment === 'apparait' && a.entree < 1 ? 1 - a.alpha : 0), echelle: 1.15, enLAir: a.y < SOL - 2, ombre: a.ombre, corrompu: a.corrompu,
     });
     if ((a.comment === 'teleport' || a.comment === 'apparait') && a.alpha < 1 && !a.sortie) {
       g.save(); g.globalCompositeOperation = 'lighter';
@@ -414,14 +465,98 @@ function dessiner(S) {
   }
   for (const f of S.effets) effetDevant(g, f, S);
   g.restore();
+  for (const f of S.effets) if (f.nom === 'fondu-blanc') { const m = f.duree / 2; g.fillStyle = `rgba(255,255,255,${Math.max(0, 1 - Math.abs(f.t - m) / m)})`; g.fillRect(0, 0, L, H); }
   if (S.fondu) { g.fillStyle = `rgba(0,0,0,${1 - Math.abs(S.fondu.t - 22) / 22})`; g.fillRect(0, 0, L, H); }
   // Les bandes de cinéma.
   g.fillStyle = '#000';
-  g.fillRect(0, 0, L, 46); g.fillRect(0, H - 46, L, 46);
+  g.fillRect(0, 0, L, S.bandes); g.fillRect(0, H - S.bandes, L, S.bandes);
 }
+
+/** Entrée et sortie en douceur d'un effet (0 → 1 → 0). */
+const vie = (f, entree = 20, sortie = 30) => Math.max(0, Math.min(1, f.t / entree, (f.duree - f.t) / sortie));
 
 /** Les effets derrière les combattants (le ciel qui se fend, la nuit, l'aube). */
 function effetFond(g, f, S) {
+  if (f.nom === 'rayons') {
+    // Des rayons de lumière qui tournent lentement.
+    const a = vie(f, 30, 40);
+    g.save(); g.globalCompositeOperation = 'lighter'; g.translate(f.x ?? L / 2, f.y ?? 80);
+    for (let i = 0; i < 14; i++) {
+      const an = (i / 14) * TAU + f.t / 140;
+      g.fillStyle = rgba(f.c || '#ffffff', 0.13 * a);
+      g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 1300, an, an + 0.11); g.closePath(); g.fill();
+    }
+    const h = g.createRadialGradient(0, 0, 0, 0, 0, 160);
+    h.addColorStop(0, rgba(f.c || '#ffffff', 0.6 * a)); h.addColorStop(1, rgba(f.c || '#ffffff', 0));
+    g.fillStyle = h; g.beginPath(); g.arc(0, 0, 160, 0, TAU); g.fill();
+    g.restore();
+  }
+  if (f.nom === 'horloge-brisee') {
+    // L'horloge géante : elle se fend, ses aiguilles s'affolent puis s'envolent.
+    const p = Math.min(1, f.t / f.duree);
+    const cx = L / 2; const cy = 175; const r = 150;
+    g.save(); g.globalAlpha = vie(f, 20, 30);
+    g.fillStyle = 'rgba(6,32,42,0.75)'; g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.fill();
+    g.strokeStyle = '#ffd23f'; g.lineWidth = 10; g.stroke();
+    g.lineWidth = 4;
+    for (let i = 0; i < 12; i++) { const an = (i / 12) * TAU; g.beginPath(); g.moveTo(cx + Math.cos(an) * (r - 26), cy + Math.sin(an) * (r - 26)); g.lineTo(cx + Math.cos(an) * (r - 8), cy + Math.sin(an) * (r - 8)); g.stroke(); }
+    const va = (f.t * f.t) / 300;
+    const vol = Math.max(0, p - 0.5) * 900;
+    g.lineCap = 'round';
+    for (const [an, long, ep, sens] of [[va, r - 30, 9, -1], [va / 12, r - 60, 12, 1]]) {
+      g.save(); g.translate(cx + sens * vol, cy - vol * 0.4); g.rotate(an + vol / 60);
+      g.strokeStyle = '#ffe6a0'; g.lineWidth = ep; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, -long); g.stroke();
+      g.restore();
+    }
+    // Les fissures, de plus en plus longues, qui brillent.
+    g.globalCompositeOperation = 'lighter';
+    g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.shadowColor = '#4fe0d0'; g.shadowBlur = 16;
+    for (let i = 0; i < 8; i++) {
+      const an = i * 0.8 + 0.3; const lg = r * Math.min(1, p * 1.8);
+      g.beginPath(); g.moveTo(cx, cy);
+      for (let k = 1; k <= 5; k++) { const d = (lg * k) / 5; g.lineTo(cx + Math.cos(an + (hf(i * 9 + k) - 0.5) * 0.4) * d, cy + Math.sin(an + (hf(i * 7 + k) - 0.5) * 0.4) * d); }
+      g.stroke();
+    }
+    g.restore();
+  }
+  if (f.nom === 'souvenirs') {
+    // Les souvenirs de l'aventure, comme des photos, qui défilent dans le ciel.
+    const decors = f.decors || [];
+    const w = 230; const h = 138; const pas = w + 34;
+    const v = (decors.length * pas + L) / f.duree;
+    g.save(); g.globalAlpha = vie(f, 30, 30) * 0.9;
+    decors.forEach((id, i) => {
+      const x = L + 20 - f.t * v + i * pas;
+      if (x < -w - 20 || x > L + 20) return;
+      g.save(); g.translate(x, 108 + Math.sin(i * 1.7) * 16); g.rotate(Math.sin(i * 2.1) * 0.07);
+      g.fillStyle = '#f4ecd8'; g.fillRect(-7, -7, w + 14, h + 14);
+      g.drawImage(fondArene(ARENE[id] || ARENE.dojo), 0, 0, w, h);
+      g.fillStyle = 'rgba(255,220,160,0.22)'; g.fillRect(0, 0, w, h);
+      g.restore();
+    });
+    g.restore();
+  }
+  if (f.nom === 'fracture-ferme') {
+    // La Fracture se referme : la blessure du ciel rétrécit, puis une immense lumière.
+    const p = Math.min(1, f.t / f.duree);
+    const reste = Math.max(0, 1 - p * 1.4);
+    g.save(); g.globalCompositeOperation = 'lighter';
+    if (reste > 0) {
+      g.strokeStyle = rgba('#ff50ff', 0.9); g.lineWidth = 6 * reste + 1; g.shadowColor = '#c814ff'; g.shadowBlur = 30;
+      const pts = [[500, 40], [470, 90], [530, 140], [480, 200], [540, 250], [500, 300]];
+      const milieu = 170;
+      g.beginPath();
+      pts.forEach(([x, y], i) => { const yy = milieu + (y - milieu) * reste; if (i) g.lineTo(500 + (x - 500) * reste, yy); else g.moveTo(500 + (x - 500) * reste, yy); });
+      g.stroke();
+    }
+    const eclat = Math.max(0, p - 0.55) / 0.45;
+    if (eclat > 0) {
+      const gr = g.createRadialGradient(500, 170, 0, 500, 170, 700 * eclat);
+      gr.addColorStop(0, rgba('#ffffff', 1 - eclat * 0.6)); gr.addColorStop(0.4, rgba('#ffe6ff', 0.5 * (1 - eclat))); gr.addColorStop(1, rgba('#ffffff', 0));
+      g.fillStyle = gr; g.fillRect(0, 0, L, H);
+    }
+    g.restore();
+  }
   if (f.nom === 'fracture') {
     const p = Math.min(1, f.t / 50);
     g.save(); g.globalCompositeOperation = 'lighter';
@@ -447,6 +582,91 @@ function effetFond(g, f, S) {
 /** Les effets devant (l'éclair, le flash, le temps figé). */
 function effetDevant(g, f, S) {
   const v = 1 - f.t / f.duree;
+  if (f.nom === 'onde') {
+    // L'onde de choc : des anneaux qui s'élargissent, un éclair blanc.
+    const x = f.x ?? L / 2; const y = f.y ?? 380;
+    g.save(); g.globalCompositeOperation = 'lighter';
+    for (let k = 0; k < 3; k++) {
+      const q = f.t - k * 8;
+      if (q < 0) continue;
+      g.strokeStyle = rgba(k === 1 ? '#ffffff' : f.c || '#ffffff', Math.max(0, 1 - q / f.duree) * 0.9);
+      g.lineWidth = Math.max(1, 14 - q / 4);
+      g.beginPath(); g.ellipse(x, y, q * 14, q * 8, 0, 0, TAU); g.stroke();
+    }
+    g.restore();
+    if (f.t < 8) { g.fillStyle = rgba('#ffffff', 0.7 * (1 - f.t / 8)); g.fillRect(-L, -H, L * 3, H * 3); }
+  }
+  if (f.nom === 'debris') {
+    // Des débris qui tombent en tournoyant (des morceaux d'horloge, de trône, de miroir…).
+    const n = f.n || 30;
+    g.save(); g.globalAlpha = vie(f, 1, 30);
+    for (let i = 0; i < n; i++) {
+      const t = f.t - hf(i + 3) * 40;
+      if (t < 0) continue;
+      const x0 = (f.x ?? L / 2) + (hf(i) - 0.5) * (f.large ?? 500);
+      const y0 = (f.y ?? 160) + (hf(i + 1) - 0.5) * 100;
+      const vx = (hf(i + 2) - 0.5) * 6;
+      const vy = -3 - hf(i + 4) * 4;
+      const x = x0 + vx * t; const y = y0 + vy * t + 0.18 * t * t;
+      if (y > H + 30) continue;
+      const taille = 5 + hf(i + 5) * 12;
+      g.save(); g.translate(x, y); g.rotate(t / (8 + hf(i + 6) * 10) * (i % 2 ? 1 : -1));
+      g.fillStyle = i % 4 === 0 ? '#ffffff' : f.c || '#ffd23f';
+      g.beginPath(); g.moveTo(0, -taille); g.lineTo(taille * 0.8, taille * 0.4); g.lineTo(-taille * 0.6, taille * 0.7); g.closePath(); g.fill();
+      g.restore();
+    }
+    g.restore();
+  }
+  if (f.nom === 'pilier') {
+    // Un pilier de lumière qui monte du combattant jusqu'au ciel.
+    const a = vie(f, 20, 40);
+    const x = f.x ?? L / 2; const larg = 50 + Math.sin(f.t / 5) * 8;
+    g.save(); g.globalCompositeOperation = 'lighter';
+    const gr = g.createLinearGradient(x - larg, 0, x + larg, 0);
+    gr.addColorStop(0, rgba(f.c || '#ffffff', 0)); gr.addColorStop(0.5, rgba(f.c || '#ffffff', 0.75 * a)); gr.addColorStop(1, rgba(f.c || '#ffffff', 0));
+    g.fillStyle = gr; g.fillRect(x - larg, -H, larg * 2, SOL + H);
+    for (let i = 0; i < 18; i++) {
+      const y = SOL - ((f.t * (3 + hf(i) * 4) + hf(i + 2) * 600) % 600);
+      g.fillStyle = rgba('#ffffff', a * 0.8); g.fillRect(x + (hf(i + 1) - 0.5) * larg * 1.6, y, 2.5, 7);
+    }
+    g.restore();
+  }
+  if (f.nom === 'braises' || f.nom === 'confettis') {
+    const a = vie(f, 30, 40);
+    const n = f.n || 70;
+    g.save();
+    if (f.nom === 'braises') g.globalCompositeOperation = 'lighter';
+    for (let i = 0; i < n; i++) {
+      if (f.nom === 'braises') {
+        // Des braises (ou des secondes d'or) qui montent.
+        const x = hf(i) * L + Math.sin(f.t / 30 + i) * 30;
+        const y = H - ((f.t * (1.4 + hf(i + 9) * 2) + hf(i + 3) * H) % (H + 40));
+        g.fillStyle = rgba(f.c || '#ff7a1a', a * (0.4 + hf(i + 5) * 0.5));
+        g.beginPath(); g.arc(x, y, 1.5 + hf(i + 7) * 2.5, 0, TAU); g.fill();
+      } else {
+        // Des confettis qui tombent.
+        const x = hf(i) * L + Math.sin(f.t / 20 + i) * 20;
+        const y = -20 + ((f.t * (1.6 + hf(i + 9) * 1.6) + hf(i + 3) * H) % (H + 40));
+        g.save(); g.translate(x, y); g.rotate(f.t / 10 + i);
+        g.fillStyle = rgba(['#ff3a4a', '#ffd23f', '#3a8aff', '#36d46a', '#ff5ab4', '#ffffff'][i % 6], a);
+        g.fillRect(-4, -2, 8, 4 * Math.abs(Math.sin(f.t / 8 + i)) + 1);
+        g.restore();
+      }
+    }
+    g.restore();
+  }
+  if (f.nom === 'eclairs' && Math.floor(f.t) % 14 < 3) {
+    // Des éclairs qui tombent au hasard.
+    const k = Math.floor(f.t / 14);
+    const x = 80 + hf(k * 7) * (L - 160);
+    g.save(); g.globalCompositeOperation = 'lighter';
+    g.strokeStyle = f.c || '#ffffff'; g.lineWidth = 4; g.shadowColor = f.c || '#c8c8ff'; g.shadowBlur = 24;
+    g.beginPath(); g.moveTo(x + 30, 0);
+    for (let y = 0; y < SOL; y += 50) g.lineTo(x + (hf(k + y) - 0.5) * 80, y);
+    g.lineTo(x, SOL); g.stroke();
+    g.fillStyle = rgba(f.c || '#ffffff', 0.18); g.fillRect(-L, -H, L * 3, H * 3);
+    g.restore();
+  }
   if (f.nom === 'flash') { g.fillStyle = `rgba(255,255,255,${Math.max(0, v)})`; g.fillRect(0, 0, L, H); }
   if (f.nom === 'purif') {
     // L'éclat jaillit de sa poitrine, monte et se brise ; une onde violette, puis blanche.

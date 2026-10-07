@@ -366,3 +366,13 @@ kbd { display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4
 /* Ce que dit le vainqueur */
 .cri { margin: 4px auto 2px; max-width: 520px; font-family: var(--titre); font-size: clamp(1.1rem, 3.4vw, 1.5rem); letter-spacing: .03em; color: var(--c);
   text-shadow: 2px 2px 0 #000; transform: skewX(-6deg); animation: titre .7s .2s cubic-bezier(.2,1.4,.4,1) both; }
+
+/* Les titres façon générique de film (fins de boss) */
+.cine-titre.film { background: radial-gradient(ellipse at center, rgba(0,0,0,.25), rgba(0,0,0,.75)); }
+.cine-titre.film b { color: #fff; font-size: clamp(2rem, 7vw, 4.2rem); letter-spacing: .14em; transform: none; text-shadow: 0 0 40px rgba(255,255,255,.55), 0 0 2px #fff; }
+.cine-titre.film b::before, .cine-titre.film b::after { content: ''; display: block; width: 60%; height: 1px; margin: 10px auto; background: linear-gradient(90deg, transparent, rgba(255,255,255,.8), transparent); }
+.cine-titre.film span { font-style: normal; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; font-size: clamp(.8rem, 2.2vw, 1rem); color: var(--pale); }
+.cine-titre.film i { display: none; }
+.cine-titre.film.entre b { animation: film 2.2s ease both; }
+.cine-titre.film.entre span { animation: film 2.2s .8s ease both; }
+@keyframes film { from { opacity: 0; letter-spacing: .5em; filter: blur(8px); } }

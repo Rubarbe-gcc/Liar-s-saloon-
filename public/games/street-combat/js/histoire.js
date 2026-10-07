@@ -45,6 +45,25 @@ export const ACTES = [
   { num: 'ACTE X', nom: 'HORS DU TEMPS' },
 ];
 
+/*
+ * Les fins de boss : un petit film, joué juste après le K.O., avant les
+ * dialogues. Le héros est à gauche (x 300), le boss à droite (x 700).
+ */
+
+/** Le coup final : ralenti, zoom sur le vaincu, onde de choc. */
+const coupFinal = (x, c, texte) => [
+  { bandes: 92 },
+  { ralenti: 0.25 },
+  { camera: { zoom: 1.9, x, y: 360, duree: 50 } },
+  { narre: texte, auto: 120 },
+  { effet: 'onde', x, y: 380, c, duree: 70, attendre: false },
+  { effet: 'secousse', duree: 50 },
+  { ralenti: 1 },
+  { camera: { zoom: 1, duree: 40 } },
+];
+/** Le titre de fin, façon générique de film. */
+const titreFin = (titre, sous, calme = true) => [...(calme ? [{ calme: true }] : []), { bandes: 46 }, { titre, sous, film: true, auto: 240 }];
+
 /** Quand le héros tient déjà un rôle de l'histoire, c'est lui qui le joue à sa place. */
 export const DOUBLURE = 'stoneback';
 
@@ -960,6 +979,17 @@ export const SCENES = [
       adv: 'vorn', niveau: { normal: 'difficile', difficile: 'difficile' },
       bonus: { si: 'vorn_message', vieAdv: 0.85, texte: '📜 Le doute ralentit sa lame' },
     },
+    finale: [
+      ...coupFinal(700, '#e8a030', 'Le choc des lames résonne sur toute la plaine…'),
+      { camera: { zoom: 1.7, x: 700, y: 400, duree: 50 } },
+      { narre: 'L’épée du Général lui échappe des mains et se plante dans les cendres.', auto: 150 },
+      { camera: { zoom: 1, duree: 40 } },
+      { effet: 'braises', c: '#ffd23f', n: 90, duree: 700, attendre: false },
+      { effet: 'rayons', x: 500, y: 40, c: '#ffd080', duree: 640, attendre: false },
+      { narre: 'Sur toute la plaine, dix mille soldats s’arrêtent en même temps. Plus un bruit. Plus un tic-tac.', auto: 220 },
+      { narre: 'Pour la première fois depuis cent ans, l’Armée de l’Horloge ne reçoit plus aucun ordre.', auto: 200 },
+      ...titreFin('L’ARMÉE DE L’HORLOGE EST TOMBÉE', 'Le Général met un genou à terre', false),
+    ],
     apres: [
       { dit: 'vorn', texte: 'Battu… Battu à la tête de dix mille hommes.', p: 'touche' },
       { narre: 'Sur toute la plaine, les soldats s’arrêtent. Puis, un à un, ils se défont en poussière dorée. Des milliers de secondes s’envolent vers le ciel… et retournent chez elles.' },
@@ -1013,6 +1043,18 @@ export const SCENES = [
       { dit: 'hero', texte: 'Alors regarde bien.', p: 'garde' },
     ],
     combat: { adv: 'solarius', niveau: { normal: 'normal', difficile: 'difficile' } },
+    finale: [
+      ...coupFinal(700, '#ffe680', 'Le dernier coup traverse la lumière elle-même.'),
+      { effet: 'rayons', x: 500, y: 60, c: '#ffe680', duree: 340, attendre: false },
+      { auraSur: 'hero', v: 1 },
+      { narre: 'Un à un, les vitraux de la cathédrale s’illuminent. La lumière ne juge plus : elle s’incline.', auto: 200 },
+      { effet: 'pilier', x: 300, c: '#ffe680', duree: 220, attendre: false },
+      { camera: { zoom: 1.5, x: 300, y: 330, duree: 60 } },
+      { narre: 'Et pour la première fois, c’est {hero} qui brille.', auto: 160 },
+      { camera: { zoom: 1, duree: 40, attendre: true } },
+      { auraSur: 'hero', v: 0 },
+      ...titreFin('JUGEMENT RENDU', 'La lumière a choisi son champion'),
+    ],
     apres: [
       { dit: 'solarius', texte: 'Tu portes la lumière en toi. Prends aussi la mienne.', p: 'repos' },
       { debloque: 'solarius' },
@@ -1068,6 +1110,19 @@ export const SCENES = [
       { dit: 'malvortex', texte: 'La refermer ? Pauvre fou. Elle n’est pas à moi, elle est à LUI. Et derrière elle, quelque chose a faim.', p: 'lance' },
     ],
     combat: { adv: 'malvortex', niveau: { normal: 'difficile', difficile: 'impossible' } },
+    finale: [
+      ...coupFinal(700, '#ff2800', 'Le seigneur des abysses encaisse le coup de trop.'),
+      { effet: 'eclairs', c: '#ff3a2a', duree: 320, attendre: false },
+      { effet: 'braises', c: '#ff4a1a', n: 100, duree: 440, attendre: false },
+      { narre: 'Le trône infernal se fend de haut en bas. Les chaînes se brisent. Pour la première fois en mille ans, l’enfer tremble.', auto: 220 },
+      { effet: 'debris', c: '#7a1a10', n: 40, y: 120, duree: 220, attendre: false },
+      { effet: 'secousse', duree: 60 },
+      { camera: { zoom: 1.6, x: 300, y: 340, duree: 60 } },
+      { effet: 'pilier', x: 300, c: '#ffd23f', duree: 220, attendre: false },
+      { narre: 'Au milieu des flammes, {hero} n’a pas reculé d’un pas.', auto: 170 },
+      { camera: { zoom: 1, duree: 40, attendre: true } },
+      ...titreFin('LE SEIGNEUR DES ABYSSES EST TOMBÉ', 'L’enfer a trouvé son maître'),
+    ],
     apres: [
       { dit: 'malvortex', texte: 'Impossible… battu par un… Pfff.', p: 'touche' },
       { debloque: 'malvortex' },
@@ -1184,6 +1239,22 @@ export const SCENES = [
       adv: 'lechaos', niveau: { normal: 'difficile', difficile: 'impossible' },
       bonus: { si: 'kira_pardon', vieAdv: 0.75, texte: '🗡️ {shadowkira} l’a frappé dans le dos' },
     },
+    finale: [
+      ...coupFinal(700, '#c814ff', 'Le coup final frappe le cœur du néant.'),
+      { auraSur: 'lechaos', v: 1 },
+      { effet: 'eclairs', c: '#c814ff', duree: 280, attendre: false },
+      { camera: { zoom: 2.1, x: 700, y: 330, duree: 70 } },
+      { narre: 'Le Chaos hurle. Un cri sans fin, qui déchire le néant d’un bout à l’autre.', auto: 180 },
+      { effet: 'debris', c: '#c814ff', n: 50, x: 700, y: 330, large: 200, duree: 220, attendre: false },
+      { effet: 'onde', x: 700, y: 330, c: '#ff50ff', duree: 90, attendre: false },
+      { effet: 'secousse', duree: 60 },
+      { camera: { zoom: 1, duree: 50 } },
+      { effet: 'fondu-blanc', duree: 120, attendre: false },
+      { attendre: 60 },
+      { auraSur: 'lechaos', v: 0 },
+      { attendre: 60 },
+      ...titreFin('LE CHAOS EST VAINCU', 'Mais dans le néant, quelque chose retient son souffle…'),
+    ],
     apres: [
       { dit: 'lechaos', texte: 'IMPOSSIBLE… MAÎTRE… AIDEZ-MOI…', p: 'touche' },
       { debloque: 'lechaos' },
@@ -1442,6 +1513,44 @@ export const SCENES = [
       { dit: 'kairos', texte: 'Oui. Toi, à genoux.', p: 'lance' },
     ],
     combat: { adv: 'kairos', niveau: { normal: 'difficile', difficile: 'impossible' } },
+    finale: [
+      { bandes: 92 },
+      { ralenti: 0.2 },
+      { camera: { zoom: 2.2, x: 700, y: 350, duree: 60 } },
+      { narre: 'Mille ans de combats. Mille fins écrites d’avance. Et ce dernier coup… que personne n’avait prévu.', auto: 170 },
+      { effet: 'onde', x: 700, y: 360, c: '#4fe0d0', duree: 80, attendre: false },
+      { effet: 'secousse', duree: 60 },
+      { ralenti: 1 },
+      { camera: { zoom: 1, duree: 50 } },
+      { effet: 'horloge-brisee', duree: 280, attendre: false },
+      { attendre: 70 },
+      { effet: 'debris', c: '#ffd23f', n: 50, duree: 260, attendre: false },
+      { effet: 'secousse', duree: 50 },
+      { narre: 'Au-dessus d’eux, l’horloge géante se fend. Ses aiguilles volent en éclats. Mille ans de secondes volées s’échappent d’un coup.', auto: 210 },
+      { effet: 'souvenirs', decors: ['neon', 'dojo', 'jungle', 'station', 'volcan', 'ring', 'ruines', 'foret', 'citadelle', 'desert', 'abysses', 'celeste', 'cathedrale', 'trone', 'zero'], duree: 440, attendre: false },
+      { narre: 'Et dans la lumière défilent les souvenirs : chaque combat, chaque chute, chaque ami retrouvé.', auto: 200 },
+      { entre: 'celestia', x: 50, comment: 'apparait', aura: 1, dir: 1 },
+      { entre: 'ironclad', x: 140, comment: 'apparait', aura: 1, dir: 1 },
+      { entre: 'sablia', x: 215, comment: 'apparait', aura: 1, dir: 1 },
+      { entre: 'ryuken', x: 390, comment: 'apparait', aura: 1, dir: 1 },
+      { entre: 'vorn', x: 480, comment: 'apparait', aura: 1, dir: 1 },
+      { si: 'blazero_allie', alors: [{ entre: 'blazero', x: 565, comment: 'apparait', aura: 1, dir: 1 }] },
+      { si: 'kira_pardon', alors: [{ entre: 'shadowkira', x: 860, comment: 'apparait', aura: 1, dir: -1 }] },
+      { entre: 'eclipse', x: 940, comment: 'apparait', aura: 1, dir: -1 },
+      { dit: 'ryuken', texte: 'On est là, {hero}. Tous.', auto: 140 },
+      { auraSur: 'hero', v: 1 },
+      { effet: 'pilier', x: 300, c: '#ffffff', duree: 320, attendre: false },
+      { narre: 'Chacun pose sa force sur les épaules de {hero}. Leurs auras se mêlent, montent vers le ciel… et frappent la Fracture en plein cœur.', auto: 230 },
+      { effet: 'rayons', x: 500, y: 170, c: '#ffffff', duree: 320, attendre: false },
+      { effet: 'fracture-ferme', duree: 170 },
+      { effet: 'secousse', duree: 60 },
+      { effet: 'fondu-blanc', duree: 140, attendre: false },
+      { attendre: 70 },
+      { retire: ['celestia', 'ironclad', 'sablia', 'ryuken', 'vorn', 'blazero', 'shadowkira', 'eclipse'] },
+      { auraSur: 'hero', v: 0 },
+      { attendre: 70 },
+      ...titreFin('LA FRACTURE EST REFERMÉE', 'Le temps reprend son cours'),
+    ],
     apres: [
       { dit: 'kairos', texte: 'Tu… as changé… l’avenir…', p: 'touche' },
       { effet: 'flash', duree: 40 },
@@ -1549,6 +1658,57 @@ export const TOUR_BOSS = [
   { dit: 'hero', texte: 'Qui es-tu ?', p: 'garde' },
   { dit: 'nemesis', texte: 'Je suis ton reflet. Tout ce que tu as combattu. Et ce soir… je suis toi, en mieux.', p: 'lance' },
 ];
+
+/** La fin de la Tour des défis : Némésis se brise en mille éclats de miroir… et se relève. */
+export const TOUR_VICTOIRE = [
+  { decor: 'sommet' },
+  { entre: 'hero', cote: 'g', comment: 'place' },
+  { entre: 'nemesis', cote: 'd', comment: 'place', p: 'touche' },
+  ...coupFinal(700, '#e6f2ff', 'Le reflet encaisse le coup… et se fige.'),
+  { effet: 'debris', c: '#e6f2ff', n: 60, x: 700, y: 300, large: 200, duree: 260, attendre: false },
+  { retire: ['nemesis'] },
+  { narre: 'Némésis se brise en mille éclats de miroir. Dans chacun d’eux, {hero} se voit… et, pour la première fois, ne voit que soi.', auto: 230 },
+  { effet: 'rayons', x: 500, y: 40, duree: 340, attendre: false },
+  { effet: 'pilier', x: 300, c: '#c0d8ff', duree: 280, attendre: false },
+  { auraSur: 'hero', v: 1 },
+  { pose: 'hero', p: 'victoire' },
+  { camera: { zoom: 1.5, x: 300, y: 330, duree: 60, attendre: true } },
+  { camera: { zoom: 1, duree: 40 } },
+  ...titreFin('🗼 SOMMET ATTEINT 🗼', 'Onze combats, onze victoires', false),
+  { calme: true },
+  { auraSur: 'hero', v: 0 },
+  { entre: 'nemesis', cote: 'd', comment: 'apparait' },
+  { dit: 'nemesis', texte: 'Les éclats se sont rassemblés. Je suis toujours ton reflet… mais plus ton ennemi. Laisse-moi me battre à tes côtés.' },
+  { debloque: 'nemesis' },
+];
+
+/** La fin du Tournoi : le champion au tapis, ou simplement la coupe. */
+export const victoireTournoi = (champion) => (champion ? [
+  { decor: 'ring' },
+  { entre: 'hero', cote: 'g', comment: 'place' },
+  { entre: 'onyx', cote: 'd', comment: 'place', p: 'touche' },
+  ...coupFinal(700, '#ffd23f', 'Le dernier coup part. Toute la salle se lève.'),
+  { pose: 'onyx', p: 'ko' },
+  { effet: 'secousse', duree: 40 },
+  { narre: 'Le champion invaincu… est au tapis.', auto: 140 },
+  { narre: 'Un… deux… trois… L’arbitre compte. La foule retient son souffle… DIX !', auto: 200 },
+  { effet: 'confettis', duree: 600, attendre: false },
+  { effet: 'rayons', x: 300, y: 0, c: '#ffd23f', duree: 560, attendre: false },
+  { pose: 'hero', p: 'victoire' },
+  { auraSur: 'hero', v: 1 },
+  { camera: { zoom: 1.5, x: 300, y: 330, duree: 60 } },
+  ...titreFin('🏆 NOUVEAU CHAMPION 🏆', '{hero} soulève la coupe !', false),
+  { camera: { zoom: 1, duree: 30 } },
+  { pose: 'onyx', p: 'repos' },
+  { dit: 'onyx', texte: 'Cent combats, et un seul K.O. Le tien. Je veux ma revanche… dans ton équipe.' },
+  { debloque: 'onyx' },
+] : [
+  { decor: 'ring' },
+  { entre: 'hero', cote: 'c', comment: 'place', p: 'victoire', aura: 1 },
+  { effet: 'confettis', duree: 420, attendre: false },
+  { effet: 'rayons', x: 500, y: 0, c: '#ffd23f', duree: 400, attendre: false },
+  { titre: '🏆 VAINQUEUR DU TOURNOI 🏆', sous: '{hero} soulève la coupe !', film: true },
+]);
 
 /** La cinématique du Tournoi en difficile, avant la finale contre le champion. */
 export const TOURNOI_FINALE = [
