@@ -27,6 +27,7 @@ export const JEUX = {
   skullking: { nom: 'Skull King', glyphe: '💀', url: '/games/skull-king/' },
   baltrou: { nom: 'Baltrou', glyphe: '🃏', url: '/games/baltrou/' },
   fiesta: { nom: 'Fiesta', glyphe: '🎉', url: '/games/fiesta/' },
+  street: { nom: 'Street Combat', glyphe: '🥊', url: '/games/street-combat/' },
   echo: { nom: 'ÉCHO', glyphe: '🎤', url: '/games/echo/' },
 };
 /** Les jeux qu'il faut avoir ouverts pour le succès « Touche-à-tout ». */
@@ -77,6 +78,12 @@ export const SUCCES = [
   s('fiesta-eclair', 'fiesta', '🤠', 'La gâchette la plus rapide', 'Tirer en moins de 250 ms en moyenne au Duel au Soleil.'),
   s('fiesta-heros', 'fiesta', '🦸', 'Seul contre tous', 'Gagner un mini-jeu « 1 contre tous » en étant le joueur seul.'),
   s('fiesta-double-six', 'fiesta', '🎲', 'Double six', 'Arrêter ses deux dés sur 6.'),
+  s('street-victoire', 'street', '🥊', 'Premier sang', 'Gagner un combat contre l’ordinateur à STREET COMBAT.'),
+  s('street-combo', 'street', '💥', 'Combo dévastateur', 'Enchaîner un combo de 8 coups.'),
+  s('street-ulti', 'street', '🌟', 'Coup de grâce', 'Finir un adversaire avec un ultime.'),
+  s('street-perfect', 'street', '✨', 'Perfect !', 'Gagner un round sans perdre un point de vie.'),
+  s('street-campagne', 'street', '👑', 'Champion de la rue', 'Terminer une campagne.'),
+  s('street-chaos', 'street', '🌌', 'Là où tout finit', 'Vaincre Le Chaos en campagne impossible.'),
   s('brasier-quete', 'brasier', '📜', 'Quête accomplie', 'Accomplir une quête dans une partie Quête.'),
   s('brasier-anomalie', 'brasier', '🌀', 'Maître du chaos', 'Finir dans les quatre premiers d’une partie Anomalie.'),
 

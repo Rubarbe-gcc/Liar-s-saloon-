@@ -107,6 +107,18 @@ export const THEMES = {
       [3, _, 5, 7, _, 8], [7, _, 11, 14, _, 11], [12, _, 10, 7, _, 3], [2, _, -1, -5, _, _],
     ],
   },
+  /* Une salle d'arcade de baston : rapide, mineur, une basse qui cogne et une mélodie de guitare. */
+  street: {
+    bpm: 148, pas: 8, ton: 110, volume: 0.06,
+    onde: 'sawtooth', tenue: 1.2, filtre: 2100, nappe: 0.25,
+    accords: [[0, 3, 7], [0, 3, 7], [-4, 0, 3], [-2, 2, 5], [0, 3, 7], [0, 3, 7], [-5, -2, 2], [-2, 2, 5]],
+    basse: [0, 0, 2, 0, 0, 2, 0, 1],
+    batterie: 'k.sk.ksh',
+    melodie: [
+      [12, _, 12, 15, _, 12, 10, _], [12, _, _, 7, _, 10, _, _], [8, _, 8, 12, _, 15, 12, _], [14, _, 12, 10, _, 7, _, _],
+      [12, 15, 17, 15, 12, _, 10, 12], [15, _, 19, _, 17, 15, 12, _], [14, _, 10, _, 7, 10, 14, _], [17, _, 15, _, 14, _, 10, _],
+    ],
+  },
 };
 
 const hz = (ton, demiTons) => ton * 2 ** (demiTons / 12);

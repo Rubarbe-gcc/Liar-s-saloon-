@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v69';
+const VERSION = 'v70';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -141,6 +141,18 @@ const SHELL = [
   '/shared/baltrou/jokers.js',
   '/shared/baltrou/partie.js',
   '/shared/baltrou/arcanes.js',
+  '/games/street-combat/',
+  '/games/street-combat/manifest.webmanifest',
+  '/games/street-combat/css/street.css',
+  '/games/street-combat/js/main.js',
+  '/games/street-combat/js/dessin.js',
+  '/games/street-combat/js/arenes.js',
+  '/games/street-combat/js/effets.js',
+  '/games/street-combat/js/hud.js',
+  '/games/street-combat/js/son.js',
+  '/games/street-combat/icons/icon-192.png',
+  '/shared/street/persos.js',
+  '/shared/street/combat.js',
   '/games/fiesta/',
   '/games/fiesta/manifest.webmanifest',
   '/games/fiesta/css/fiesta.css',

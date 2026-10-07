@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#08040f">
+<meta name="description" content="STREET COMBAT — le jeu de combat. 16 combattants et 3 boss, des compétences uniques, des combos, des ultimes cinématiques, une campagne, et un mode deux joueurs.">
+<title>Street Combat</title>
+<link rel="icon" href="/games/street-combat/icons/icon-192.png">
+<link rel="manifest" href="/games/street-combat/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/games/street-combat/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Street Combat">
+<link rel="stylesheet" href="/games/street-combat/css/street.css">
+<script src="/maj.js" defer></script>
+</head>
+<body>
+
+<!-- ============================ MENU ============================ -->
+<section class="ecran is-active" id="s-menu">
+  <canvas class="fond-menu" id="fond-menu" aria-hidden="true"></canvas>
+  <div class="menu">
+    <h1 class="logo"><span class="l1">STREET</span><span class="l2">COMBAT</span></h1>
+    <p class="slogan">16 combattants · 3 boss · combos · ultimes</p>
+    <div class="boutons-menu">
+      <button class="btn rouge" id="b-campagne">⚔️ Campagne<small id="campagne-info"></small></button>
+      <button class="btn or" id="b-versus">🤖 Contre l’ordinateur</button>
+      <button class="btn bleu" id="b-deux">🎮 Deux joueurs</button>
+      <button class="btn" id="b-entrainement">🥋 Entraînement</button>
+    </div>
+    <div class="menu-bas">
+      <a class="btn petit" href="/">‹ Arcade</a>
+      <button class="btn petit" id="b-commandes">⌨️ Commandes</button>
+      <button class="btn petit" id="b-son-menu">🔊</button>
+    </div>
+    <p class="records" id="records"></p>
+  </div>
+</section>
+
+<!-- ======================= CAMPAGNE : DIFFICULTÉ ======================= -->
+<section class="ecran" id="s-difficulte">
+  <div class="panneau">
+    <button class="rond retour" data-va="s-menu" aria-label="Retour">‹</button>
+    <h2>Campagne</h2>
+    <p class="sous">Une suite de combats, puis le boss. Battez-le pour le débloquer.</p>
+    <div class="difficultes" id="difficultes"></div>
+  </div>
+</section>
+
+<!-- ======================= CHOIX DU COMBATTANT ======================= -->
+<section class="ecran" id="s-choix">
+  <div class="choix">
+    <header class="choix-tete">
+      <button class="rond retour" id="choix-retour" aria-label="Retour">‹</button>
+      <h2 id="choix-titre">Choisissez votre combattant</h2>
+      <button class="btn petit" id="choix-hasard">🎲 Au hasard</button>
+    </header>
+    <div class="choix-corps">
+      <div class="grille-persos" id="grille-persos"></div>
+      <aside class="fiche" id="fiche">
+        <canvas id="fiche-apercu" width="420" height="300"></canvas>
+        <div class="fiche-texte" id="fiche-texte"></div>
+        <button class="btn rouge btn-large" id="choix-ok">Combattre !</button>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= CHOIX DE L'ARÈNE ======================= -->
+<section class="ecran" id="s-arenes">
+  <div class="panneau large">
+    <button class="rond retour" id="arenes-retour" aria-label="Retour">‹</button>
+    <h2>L’arène</h2>
+    <div class="reglage-ia" id="reglage-ia">
+      <span>Ordinateur</span>
+      <div class="segments" id="niveaux-ia"></div>
+    </div>
+    <div class="grille-arenes" id="grille-arenes"></div>
+  </div>
+</section>
+
+<!-- ============================ COMBAT ============================ -->
+<section class="ecran ecran-combat" id="s-combat">
+  <div class="scene" id="scene">
+    <canvas id="canvas" aria-label="Le combat"></canvas>
+    <button class="rond petit pause" id="b-pause" aria-label="Pause">❚❚</button>
+  </div>
+  <div class="tactile" id="tactile" hidden>
+    <div class="manette-dir" id="manette-dir"><div class="manette-base"></div><div class="manette-bouton" id="manette-bouton"></div></div>
+    <div class="manette-boutons" id="manette-boutons">
+      <button data-b="U" class="tb ulti">ULTI</button>
+      <button data-b="A" class="tb spe">A</button>
+      <button data-b="B" class="tb spe">B</button>
+      <button data-b="G" class="tb">✊</button>
+      <button data-b="P" class="tb gros">👊</button>
+      <button data-b="K" class="tb gros">🦶</button>
+    </div>
+  </div>
+</section>
+
+<!-- ======================== SUPERPOSITIONS ====================== -->
+<div class="ov" id="ov-pause" hidden>
+  <div class="feuille">
+    <h2>Pause</h2>
+    <div class="pile">
+      <button class="btn or" data-ferme="ov-pause" id="b-reprendre">▶ Reprendre</button>
+      <button class="btn" id="b-coups-pause">📜 Liste des coups</button>
+      <button class="btn" id="b-son">🔊 Son</button>
+      <button class="btn rouge" id="b-quitter">Quitter le combat</button>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ov-fin" hidden><div class="feuille large" id="fin"></div></div>
+<div class="ov" id="ov-etape" hidden><div class="feuille large etape" id="etape"></div></div>
+
+<div class="ov" id="ov-coups" hidden>
+  <div class="feuille large">
+    <button class="rond fermer" data-ferme="ov-coups">✕</button>
+    <div id="coups"></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-commandes" hidden>
+  <div class="feuille large">
+    <button class="rond fermer" data-ferme="ov-commandes">✕</button>
+    <h2>Commandes</h2>
+    <div class="commandes" id="commandes"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script type="module" src="/games/street-combat/js/main.js"></script>
+</body>
+</html>
