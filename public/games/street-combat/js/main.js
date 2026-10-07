@@ -746,6 +746,8 @@ function brancher() {
   sonBouton($('b-son-menu')); sonBouton($('b-son'));
   document.querySelectorAll('[data-va]').forEach((b) => b.addEventListener('click', () => (b.dataset.va === 's-menu' ? majMenu() : aller(b.dataset.va))));
   document.addEventListener('click', (e) => { const f = e.target.closest('[data-ferme]'); if (f) fermer(f.dataset.ferme); });
+  // La liste des coups et les commandes se ferment aussi d'un toucher à côté, ou avec Échap.
+  for (const id of ['ov-coups', 'ov-commandes']) $(id).addEventListener('click', (e) => { if (e.target.id === id) fermer(id); });
 
   $('difficultes').addEventListener('click', (e) => {
     const d = e.target.closest('[data-diff]');
@@ -803,6 +805,7 @@ function brancher() {
 
   addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
+    if (k === 'escape' && (!$('ov-coups').hidden || !$('ov-commandes').hidden)) { fermer('ov-coups'); fermer('ov-commandes'); return; }
     if ($('s-combat').classList.contains('is-active')) {
       if (k === 'escape' || k === 'p') {
         enPause = !enPause;
