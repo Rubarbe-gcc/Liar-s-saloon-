@@ -101,7 +101,7 @@ function poseDe(nom, t, p = 0) {
  * Dessine un combattant.
  * @param {CanvasRenderingContext2D} g
  * @param {object} perso    la fiche (persos.js)
- * @param {object} o        { x, y, dir, pose, t, p (progression du coup 0..1), echelle, alpha, aura, statuts, eclat, ombre }
+ * @param {object} o        { x, y, dir, pose, t, p (progression du coup 0..1), echelle, alpha, aura, statuts, eclat, ombre, corrompu }
  */
 /*
  * L'éclat d'un coup et la teinte du gel ne doivent colorer que le
@@ -216,6 +216,8 @@ export function dessinerCombattant(g, perso, o) {
     g.beginPath(); g.ellipse(0, -80, r * 0.7, r, 0, 0, Math.PI * 2); g.fill();
     g.restore();
   }
+  // Corrompu par la Fracture : des flammes violettes et noires qui montent derrière lui.
+  if (o.corrompu) corruptionDerriere(g, t);
 
   const membre = (a, b, c, ep, couleur, ep2 = ep * 0.86) => {
     g.lineCap = 'round';
@@ -280,6 +282,7 @@ export function dessinerCombattant(g, perso, o) {
   g.quadraticCurveTo(-largeur - 3, -26, -taille, 4);
   g.fill();
   torse(g, perso, { largeur, taille, t, l });
+  if (o.corrompu) corruptionTorse(g, t, largeur);
   if (nu) {
     g.strokeStyle = teinte(k.peau, -0.3); g.lineWidth = 1.5;
     g.beginPath(); g.moveTo(0, -44); g.lineTo(0, -12); g.moveTo(-9, -36); g.quadraticCurveTo(0, -31, 9, -36);
@@ -317,7 +320,7 @@ export function dessinerCombattant(g, perso, o) {
   g.strokeStyle = L.tete === 'ninja' ? teinte(k.c2, -0.55) : k.peau;
   g.lineWidth = 9 * m;
   g.beginPath(); g.moveTo(cou.x, cou.y); g.lineTo(tete.x, tete.y + 8); g.stroke();
-  dessinerTete(g, perso, tete.x, tete.y, { t, regard: o.pose, touche: ['touche', 'vol', 'ko', 'sol'].includes(o.pose), ko: o.pose === 'ko', rot: pose.b + (pose.tt || 0), m });
+  dessinerTete(g, perso, tete.x, tete.y, { t, regard: o.pose, touche: ['touche', 'vol', 'ko', 'sol'].includes(o.pose), ko: o.pose === 'ko', rot: pose.b + (pose.tt || 0), m, corrompu: o.corrompu });
 
   /* ---- jambe et bras de devant ---- */
   membre(hanche, jambes.ka, jambes.fa, 16 * m, pantalon, 14 * m);
@@ -331,6 +334,72 @@ export function dessinerCombattant(g, perso, o) {
 
   // Les statuts : du feu, du venin, du givre.
   if (o.statuts) statutsVisibles(g, o.statuts, t, hanche);
+  if (o.corrompu) eclatsFlottants(g, t);
+  g.restore();
+}
+
+/* ------------------------------------------------------------------ */
+/* La corruption de la Fracture                                        */
+/* ------------------------------------------------------------------ */
+
+const VIOLET = '#c814ff';
+
+/** Derrière lui : un halo malade, des flammes violettes et noires. */
+function corruptionDerriere(g, t) {
+  g.save();
+  const r = 104 + Math.sin(t / 4) * 10;
+  // Une ombre noire d'abord, puis la lueur.
+  const noir = g.createRadialGradient(0, -80, 10, 0, -80, r);
+  noir.addColorStop(0, 'rgba(20,0,30,0.35)'); noir.addColorStop(1, 'rgba(20,0,30,0)');
+  g.fillStyle = noir; g.beginPath(); g.ellipse(0, -80, r * 0.8, r, 0, 0, Math.PI * 2); g.fill();
+  g.globalCompositeOperation = 'lighter';
+  const gr = g.createRadialGradient(0, -80, 10, 0, -80, r);
+  gr.addColorStop(0, 'rgba(200,20,255,0.3)'); gr.addColorStop(0.6, 'rgba(120,0,200,0.16)'); gr.addColorStop(1, 'rgba(80,0,140,0)');
+  g.fillStyle = gr; g.beginPath(); g.ellipse(0, -80, r * 0.75, r, 0, 0, Math.PI * 2); g.fill();
+  for (let i = 0; i < 7; i++) {
+    const x = -38 + i * 12.5 + Math.sin(t / 7 + i) * 4;
+    const h = 60 + ((t * 1.6 + i * 23) % 56);
+    const base = -6 - (i % 3) * 22;
+    g.fillStyle = i % 2 ? 'rgba(255,60,255,0.26)' : 'rgba(140,20,230,0.32)';
+    g.beginPath(); g.moveTo(x - 9, base);
+    g.quadraticCurveTo(x - 6 + Math.sin(t / 5 + i) * 6, base - h * 0.6, x + Math.sin(t / 4 + i) * 8, base - h);
+    g.quadraticCurveTo(x + 6, base - h * 0.5, x + 9, base); g.fill();
+  }
+  g.restore();
+}
+
+/** Sur la poitrine : l'éclat planté, et les veines violettes qui en partent. */
+function corruptionTorse(g, t, largeur) {
+  const p = 0.6 + Math.sin(t / 6) * 0.4;
+  g.save();
+  g.globalCompositeOperation = 'lighter';
+  g.strokeStyle = `rgba(255,80,255,${0.5 + p * 0.4})`; g.lineWidth = 1.7; g.lineCap = 'round';
+  g.shadowColor = VIOLET; g.shadowBlur = 8;
+  const veines = [[[-6, -36], [-12, -40], [-17, -47]], [[8, -28], [13, -21], [largeur - 4, -15]], [[0, -24], [-6, -14], [-11, 0]], [[3, -36], [10, -44], [6, -52]], [[-5, -28], [-largeur + 5, -24]]];
+  for (const v of veines) { g.beginPath(); g.moveTo(1, -31); for (const [x, y] of v) g.lineTo(x, y); g.stroke(); }
+  const halo = g.createRadialGradient(1, -31, 0, 1, -31, 18);
+  halo.addColorStop(0, `rgba(255,120,255,${0.8 * p})`); halo.addColorStop(1, 'rgba(200,20,255,0)');
+  g.shadowBlur = 0;
+  g.fillStyle = halo; g.beginPath(); g.arc(1, -31, 18, 0, Math.PI * 2); g.fill();
+  g.restore();
+  g.fillStyle = '#e070ff'; g.strokeStyle = '#ffe6ff'; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(1, -41); g.lineTo(6, -31); g.lineTo(1, -21); g.lineTo(-4, -31); g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = 'rgba(255,255,255,0.7)';
+  g.beginPath(); g.moveTo(0, -38); g.lineTo(2, -32); g.lineTo(-1, -32); g.closePath(); g.fill();
+}
+
+/** Autour de lui : de petits éclats qui tournent. */
+function eclatsFlottants(g, t) {
+  g.save();
+  g.globalCompositeOperation = 'lighter';
+  for (let i = 0; i < 5; i++) {
+    const a = t / 22 + (i / 5) * Math.PI * 2;
+    const x = Math.cos(a) * 46;
+    const y = -86 + Math.sin(a) * 60;
+    const devant = Math.sin(a) > 0;
+    g.fillStyle = rgba(devant ? '#ff7aff' : '#9a30ff', devant ? 0.9 : 0.5);
+    g.beginPath(); g.moveTo(x, y - 6); g.lineTo(x + 3, y); g.lineTo(x, y + 6); g.lineTo(x - 3, y); g.closePath(); g.fill();
+  }
   g.restore();
 }
 
@@ -410,7 +479,7 @@ export function dessinerTete(g, perso, x, y, o = {}) {
     g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 1.2; g.stroke();
     // La fente des yeux.
     g.fillStyle = '#05080a'; g.fillRect(-2, -5, 18, 5);
-    if (!o.ko) { lueur(g, 8, -2.5, 4, k.c1); g.fillStyle = rgba(k.c1, 0.95); g.fillRect(0, -4, 14, 2.4); }
+    if (!o.ko) { const c = o.corrompu ? '#ff40ff' : k.c1; lueur(g, 8, -2.5, 4, c); g.fillStyle = rgba(c, 0.95); g.fillRect(0, -4, 14, 2.4); }
     // Les grilles de la bouche.
     g.strokeStyle = teinte(k.tenue, -0.4); g.lineWidth = 1.2;
     for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(3 + i * 3.5, 4); g.lineTo(3 + i * 3.5, 12); g.stroke(); }
@@ -443,12 +512,12 @@ export function dessinerTete(g, perso, x, y, o = {}) {
   g.beginPath(); g.ellipse(5, 8, 9, 7, 0, 0, Math.PI * 2); g.fill();
 
   // Les yeux.
-  const luisants = L.extras.includes('yeux-luisants') || L.tete === 'capuche';
-  if (L.extras.includes('oeil-rouge')) {
+  const luisants = o.corrompu || L.extras.includes('yeux-luisants') || L.tete === 'capuche';
+  if (L.extras.includes('oeil-rouge') && !o.corrompu) {
     lueur(g, 7, -2, 6, '#ff2020');
     g.fillStyle = '#ffdddd'; g.beginPath(); g.ellipse(7, -2, 4, 2.4, 0, 0, Math.PI * 2); g.fill();
   } else if (luisants) {
-    const c = L.tete === 'capuche' && !L.extras.includes('yeux-luisants') ? k.c1 : k.c1;
+    const c = o.corrompu ? '#ff40ff' : k.c1;
     lueur(g, 3, -2, 5, c); lueur(g, 11, -2, 5, c);
     g.fillStyle = '#ffffff';
     g.beginPath(); g.ellipse(3, -2, 3, 1.6, 0, 0, Math.PI * 2); g.ellipse(11, -2, 3, 1.6, 0, 0, Math.PI * 2); g.fill();
@@ -1033,7 +1102,7 @@ export function dessinerPortrait(g, perso, taille, o = {}) {
   const car = CARRURES[perso.look.corps] || CARRURES.normal;
   dessinerCombattant(g, perso, {
     x: taille * 0.5, y: taille * 2.02, dir: o.dir || 1, pose: o.pose || 'repos', t: o.t || 0,
-    echelle: e * 1.15 / car.h, sansOmbre: true, aura: o.aura, ombre: o.ombre,
+    echelle: e * 1.15 / car.h, sansOmbre: true, aura: o.aura, ombre: o.ombre, corrompu: o.corrompu,
   });
   g.restore();
 }

@@ -25,6 +25,7 @@
  *
  * Une scène : { id, acte, titre, sous, arene, etapes, combat?, apres?, apresDefaite?, si? }
  *   combat : { adv, serie?: [ids] (plusieurs adversaires d'affilée, un round chacun),
+ *              joueur?: id (on incarne quelqu'un d'autre que son héros), corrompu?: (l'adversaire porte un éclat),
  *              niveau: { normal, difficile }, victoires?, vie?: [héros, adversaire] (part de la vie),
  *              issue?: 'libre' (perdre n'arrête pas l'histoire), regle?, bonus?: { si, vieAdv, texte } }
  *   si : la scène ne se joue que si ce drapeau est levé ('!drapeau' : s'il ne l'est pas).
@@ -90,7 +91,7 @@ export const SCENES = [
       { dit: 'hero', texte: 'Tes yeux… L’éclat t’a corrompu, {blazero}.', p: 'garde' },
       { dit: 'blazero', texte: 'Corrompu ? Je ne me suis jamais senti aussi VIVANT ! Viens, que je te fasse fondre !', p: 'lance' },
     ],
-    combat: { adv: 'blazero', niveau: { normal: 'facile', difficile: 'normal' } },
+    combat: { adv: 'blazero', corrompu: true, niveau: { normal: 'facile', difficile: 'normal' } },
     apres: [
       { entre: 'ryuken', cote: 'gg', comment: 'place', p: 'touche' },
       { dit: 'blazero', texte: 'Argh… ma tête… Qu’est-ce que j’ai fait ?', p: 'touche' },
@@ -180,7 +181,7 @@ export const SCENES = [
       { dit: 'hero', texte: '{serpenta}, tu as touché un éclat. Donne-le-moi, et tout redeviendra normal.' },
       { dit: 'serpenta', texte: 'Normal ? Il m’a offert un venin qui ne pardonne pas. Je n’ai jamais été aussi rapide… Goûte-le donc !', p: 'garde' },
     ],
-    combat: { adv: 'serpenta', niveau: { normal: 'facile', difficile: 'normal' } },
+    combat: { adv: 'serpenta', corrompu: true, niveau: { normal: 'facile', difficile: 'normal' } },
     apres: [
       { entre: 'celestia', cote: 'gg', comment: 'place' },
       { dit: 'serpenta', texte: 'Je… je voyais un homme. Avec une horloge dans le dos.', p: 'touche' },
@@ -201,7 +202,7 @@ export const SCENES = [
       { dit: 'hero', texte: '{ironclad} ! C’est moi ! On a gagné le tournoi par équipes ensemble, tu te souviens ?' },
       { dit: 'ironclad', texte: 'DONNÉES… CORROMPUES. NOUVELLE DIRECTIVE : SERVIR… L’HORLOGE.', p: 'garde' },
     ],
-    combat: { adv: 'ironclad', niveau: { normal: 'normal', difficile: 'difficile' } },
+    combat: { adv: 'ironclad', corrompu: true, niveau: { normal: 'normal', difficile: 'difficile' } },
     apres: [
       { entre: 'celestia', cote: 'gg', comment: 'place' },
       { effet: 'flash', duree: 20 },
@@ -229,7 +230,7 @@ export const SCENES = [
       { dit: 'ironclad', texte: 'L’éclat l’a libéré. Et rendu fou. Il ne nous laissera pas approcher.' },
       { dit: 'hero', texte: 'Alors on va le calmer. Doucement… ou pas.', p: 'garde' },
     ],
-    combat: { adv: 'pyroclaw', niveau: { normal: 'normal', difficile: 'difficile' } },
+    combat: { adv: 'pyroclaw', corrompu: true, niveau: { normal: 'normal', difficile: 'difficile' } },
     apres: [
       { entre: 'ironclad', cote: 'gg', comment: 'place' },
       { dit: 'pyroclaw', texte: 'Grr… Pardon… La pierre… elle criait si fort…', p: 'touche' },
@@ -406,7 +407,7 @@ export const SCENES = [
       { dit: 'onyx', texte: 'Ah, celui-là, il a touché un de tes cailloux. Vas-y, petit. Montre-moi ce que tu vaux.', p: 'repos' },
       { sort: 'onyx', comment: 'marche' },
     ],
-    combat: { adv: 'gravox', niveau: { normal: 'normal', difficile: 'difficile' } },
+    combat: { adv: 'gravox', corrompu: true, niveau: { normal: 'normal', difficile: 'difficile' } },
     apres: [
       { dit: 'gravox', texte: 'Le poids… il s’en va enfin… Merci.', p: 'touche' },
       { entre: 'onyx', cote: 'dd', comment: 'marche', dir: -1 },
@@ -433,7 +434,7 @@ export const SCENES = [
       { dit: 'hero', texte: 'La lune… ou l’éclat que tu portes autour du cou ?', p: 'garde' },
       { dit: 'lunara', texte: 'Quelle différence ? Ils chantent la même chanson.', p: 'lance' },
     ],
-    combat: { adv: 'lunara', niveau: { normal: 'normal', difficile: 'difficile' } },
+    combat: { adv: 'lunara', corrompu: true, niveau: { normal: 'normal', difficile: 'difficile' } },
     apres: [
       { dit: 'lunara', texte: 'Le chant s’est tu… Enfin, le silence.', p: 'touche' },
       { dit: 'lunara', texte: 'Écoute-moi bien. Dans ma transe, j’ai vu celui qui a ouvert la Fracture. Un maître du temps.', p: 'repos' },
@@ -540,6 +541,32 @@ export const SCENES = [
   },
 
   /* ====================== ACTE IV : LA CITADELLE DE SABLE ====================== */
+  {
+    id: 'evasion', acte: 3, titre: 'PENDANT CE TEMPS…', sous: 'Dans les cachots de l’Horloge', arene: 'citadelle',
+    etapes: [
+      { lieu: 'CITADELLE DE L’HORLOGE — LES CACHOTS' },
+      { narre: 'Pendant ce temps, loin de là, au fond d’une cellule, quelqu’un compte les jours sur le mur.' },
+      { entre: 'ryuken', cote: 'g', comment: 'place', p: 'repos' },
+      { entre: 'soldat', cote: 'd', comment: 'place' },
+      { dit: 'ryuken', texte: 'Hé, le tas de boulons ! Tu sais ce que mon maître disait des prisons ?' },
+      { dit: 'soldat', texte: 'Silence, prisonnier.' },
+      { dit: 'ryuken', texte: '« Une porte n’est qu’un mur qui a oublié qu’il pouvait s’ouvrir. » Et moi, je viens de m’en souvenir !', p: 'garde' },
+      { effet: 'secousse', duree: 30 },
+      { narre: 'D’un coup de pied, la porte de la cellule s’envole.' },
+    ],
+    combat: { adv: 'soldat', joueur: 'ryuken', niveau: { normal: 'facile', difficile: 'normal' }, victoires: 1, regle: 'Un round pour s’évader' },
+    apres: [
+      { dit: 'ryuken', texte: 'Ha ! Et de un ! Maintenant, la sortie…', p: 'victoire' },
+      { sort: 'soldat', comment: 'teleport' },
+      { entre: 'sablia', cote: 'd', comment: 'apparait' },
+      { dit: 'sablia', texte: 'Pas si vite.' },
+      { narre: 'Le sable monte jusqu’aux genoux de {ryuken}, puis jusqu’à sa taille. Il ne peut plus bouger.' },
+      { dit: 'ryuken', texte: 'D’accord, d’accord ! Je retourne dans ma cellule…', p: 'touche' },
+      { dit: 'sablia', texte: 'Ton ami viendra te chercher. Kaïros l’a prévu. Il prévoit tout.', p: 'repos' },
+      { dit: 'ryuken', texte: 'Alors en attendant… tu sais lire ? Les journées sont longues, ici.' },
+      { dit: 'sablia', texte: '… Je reviendrai avec un livre.', p: 'repos' },
+    ],
+  },
   {
     id: 'traversee', acte: 3, titre: 'INTERLUDE', sous: 'La traversée du désert', arene: 'desert',
     etapes: [
@@ -692,7 +719,7 @@ export const SCENES = [
       { dit: 'frostbyte', texte: 'L’éclat m’a montré la vérité : le temps est une maladie. Je vais tout geler. Pour toujours.' },
       { dit: 'hero', texte: 'Ça, c’est la voix de Kaïros. Pas la tienne.', p: 'garde' },
     ],
-    combat: { adv: 'frostbyte', niveau: { normal: 'normal', difficile: 'difficile' } },
+    combat: { adv: 'frostbyte', corrompu: true, niveau: { normal: 'normal', difficile: 'difficile' } },
     apres: [
       { dit: 'frostbyte', texte: 'Il fait… froid. Pour la première fois depuis des jours, j’ai froid.', p: 'touche' },
       { dit: 'frostbyte', texte: 'Il m’a parlé, tu sais. Kaïros. Il essaie encore et encore, depuis des siècles. Il cherche « le guerrier parfait ».' },
@@ -711,12 +738,44 @@ export const SCENES = [
       { dit: 'stormwing', texte: 'L’éclat m’a promis le ciel entier. Plus personne ne volera au-dessus de moi.' },
       { dit: 'hero', texte: 'Redescends sur terre. Littéralement.', p: 'garde' },
     ],
-    combat: { adv: 'stormwing', niveau: { normal: 'normal', difficile: 'difficile' } },
+    combat: { adv: 'stormwing', corrompu: true, niveau: { normal: 'normal', difficile: 'difficile' } },
     apres: [
       { dit: 'stormwing', texte: 'Mes ailes… elles ne tremblent plus.', p: 'touche' },
       { dit: 'stormwing', texte: 'Là-haut, j’ai vu un homme marcher sur les nuages. Il comptait les secondes à voix haute. Il disait : « Celui-ci… peut-être celui-ci. »' },
       { dit: 'hero', texte: 'Kaïros. Il nous regarde tous.' },
       { dit: 'stormwing', texte: 'Pire : il prend des notes.', p: 'repos' },
+    ],
+  },
+  {
+    id: 'ironclad-tempete', acte: 4, si: 'route_glace', titre: 'PENDANT CE TEMPS…', sous: 'De l’autre côté du monde', arene: 'desert',
+    etapes: [
+      { lieu: 'DÉSERT MAUDIT — L’ŒIL DE LA TEMPÊTE' },
+      { narre: 'Pendant ce temps, à 4 000 kilomètres de là…' },
+      { entre: 'ironclad', cote: 'g', comment: 'marche' },
+      { entre: 'stormwing', cote: 'd', comment: 'apparait' },
+      { dit: 'stormwing', texte: 'Une machine ? Kaïros m’envoie des jouets, maintenant ? Ici, c’est MON ciel !' },
+      { dit: 'ironclad', texte: 'Je ne suis pas un jouet. Je suis un ami de {hero}. Et je viens te ramener.', p: 'garde' },
+    ],
+    combat: { adv: 'stormwing', joueur: 'ironclad', corrompu: true, niveau: { normal: 'normal', difficile: 'difficile' } },
+    apres: [
+      { dit: 'stormwing', texte: 'Mes ailes… elles ne tremblent plus. Merci, machine. Je veux dire… ami.', p: 'touche' },
+      { dit: 'ironclad', texte: 'Éclat récupéré. Direction : l’océan. J’espère que {hero} a eu autant de chance.', p: 'victoire' },
+    ],
+  },
+  {
+    id: 'ironclad-toundra', acte: 4, si: '!route_glace', titre: 'PENDANT CE TEMPS…', sous: 'De l’autre côté du monde', arene: 'toundra',
+    etapes: [
+      { lieu: 'TOUNDRA GLACÉE — MOINS 52 DEGRÉS' },
+      { narre: 'Pendant ce temps, à 4 000 kilomètres de là…' },
+      { entre: 'ironclad', cote: 'g', comment: 'marche' },
+      { entre: 'frostbyte', cote: 'd', comment: 'apparait' },
+      { dit: 'frostbyte', texte: 'Une machine ? Parfait. Le froid ne te fera pas souffrir… pendant que je te gèle pour toujours.' },
+      { dit: 'ironclad', texte: 'Je ne suis pas un jouet. Je suis un ami de {hero}. Et je viens te ramener.', p: 'garde' },
+    ],
+    combat: { adv: 'frostbyte', joueur: 'ironclad', corrompu: true, niveau: { normal: 'normal', difficile: 'difficile' } },
+    apres: [
+      { dit: 'frostbyte', texte: 'Il fait froid… J’ai froid. Merci, machine. Je veux dire… ami.', p: 'touche' },
+      { dit: 'ironclad', texte: 'Éclat récupéré. Direction : l’océan. J’espère que {hero} a eu autant de chance.', p: 'victoire' },
     ],
   },
   {
@@ -732,7 +791,7 @@ export const SCENES = [
       { dit: 'aquathorn', texte: 'Kaïros m’a promis que l’océan recouvrirait le monde. Je n’ai qu’à garder ses éclats au frais.' },
       { dit: 'hero', texte: 'Le voyage m’a épuisé… mais pas assez pour te laisser faire.', p: 'garde' },
     ],
-    combat: { adv: 'aquathorn', niveau: { normal: 'normal', difficile: 'difficile' }, vie: [0.75, 1], regle: 'Vous arrivez épuisé du voyage' },
+    combat: { adv: 'aquathorn', corrompu: true, niveau: { normal: 'normal', difficile: 'difficile' }, vie: [0.75, 1], regle: 'Vous arrivez épuisé du voyage' },
     apres: [
       { entre: 'ironclad', cote: 'gg', comment: 'place' },
       { dit: 'aquathorn', texte: 'L’eau… elle redevient claire.', p: 'touche' },
@@ -755,7 +814,7 @@ export const SCENES = [
       { dit: 'hero', texte: '{thunderox}, la cité va s’écraser ! Il y a des gens, ici !', p: 'garde' },
       { dit: 'thunderox', texte: 'ALORS ILS TOMBERONT AVEC MOI !', p: 'lance' },
     ],
-    combat: { adv: 'thunderox', niveau: { normal: 'normal', difficile: 'difficile' } },
+    combat: { adv: 'thunderox', corrompu: true, niveau: { normal: 'normal', difficile: 'difficile' } },
     apres: [
       { entre: 'celestia', cote: 'gg', comment: 'place' },
       { dit: 'thunderox', texte: 'J’ai… j’ai failli tous les tuer…', p: 'touche' },
@@ -1146,7 +1205,7 @@ export const SCENES = [
       { dit: 'sablia', texte: 'Mensonges. Je suis la gardienne du sablier. Je n’ai jamais trahi mon maître.', p: 'garde' },
       { dit: 'hero', texte: 'Pas encore. Mais tu vas le faire. Pour la deuxième fois.', p: 'garde' },
     ],
-    combat: { adv: 'sablia', niveau: { normal: 'difficile', difficile: 'difficile' }, regle: 'Elle a rejoint votre camp une fois… Kaïros l’a reprise' },
+    combat: { adv: 'sablia', corrompu: true, niveau: { normal: 'difficile', difficile: 'difficile' }, regle: 'Elle a rejoint votre camp une fois… Kaïros l’a reprise' },
     apres: [
       { dit: 'sablia', texte: 'Ce sable… dans ta poche. Il chante une chanson que je connais.', p: 'touche' },
       { narre: '{hero} ouvre la main. Les six éclats brillent. Et le sable de Sablia se met à couler… dans l’autre sens.' },
@@ -1181,7 +1240,7 @@ export const SCENES = [
         ],
       },
     ],
-    combat: { adv: 'eclipse', niveau: { normal: 'difficile', difficile: 'difficile' } },
+    combat: { adv: 'eclipse', corrompu: true, niveau: { normal: 'difficile', difficile: 'difficile' } },
     apres: [
       { dit: 'eclipse', texte: 'Pourquoi… Pourquoi j’ai envie de pleurer ?', p: 'touche' },
       {
@@ -1199,6 +1258,25 @@ export const SCENES = [
       },
       { debloque: 'eclipse' },
       { dit: 'eclipse', texte: 'Kaïros est au sommet de son horloge, hors du temps. Je connais le chemin. Je vous y conduirai.' },
+    ],
+  },
+  {
+    id: 'memoire-vorn', acte: 8, titre: 'PENDANT CE TEMPS…', sous: 'Le sable et le Général', arene: 'citadelle',
+    etapes: [
+      { lieu: 'CITADELLE DE L’HORLOGE — LA SALLE DES CARTES' },
+      { narre: 'Pendant que {hero} affrontait Éclipse, Sablia est retournée à la citadelle. Seule.' },
+      { entre: 'sablia', cote: 'g', comment: 'apparait' },
+      { entre: 'vorn', cote: 'd', comment: 'place', p: 'garde' },
+      { dit: 'vorn', texte: 'Sablia. Le maître dit que tu as trahi. Je ne comprends pas. Pour moi, tu n’as rien fait.' },
+      { dit: 'sablia', texte: 'Pas encore, Général. Mais toi aussi, tu vas le faire. Tu l’as déjà fait… dans une semaine qui n’existe plus.' },
+      { dit: 'vorn', texte: 'Des énigmes. Je déteste les énigmes. En garde.', p: 'lance' },
+    ],
+    combat: { adv: 'vorn', joueur: 'sablia', corrompu: true, niveau: { normal: 'normal', difficile: 'difficile' } },
+    apres: [
+      { dit: 'vorn', texte: 'Ce sable… il me montre… une plaine. Des secondes qui s’envolent. Un combattant qui me tend la main.', p: 'touche' },
+      { dit: 'sablia', texte: 'Tu te souviens, maintenant.', p: 'repos' },
+      { dit: 'vorn', texte: 'Je me souviens. Et j’ai honte. Une deuxième fois.' },
+      { dit: 'sablia', texte: 'Alors viens réparer ça. Une deuxième fois.' },
     ],
   },
   {
@@ -1234,12 +1312,33 @@ export const SCENES = [
       { sort: 'vorn', comment: 'marche' },
     ],
     combat: {
-      adv: 'sentinelle', serie: ['sentinelle', 'chasseur', 'soldat', 'sentinelle'], niveau: { normal: 'normal', difficile: 'difficile' },
-      regle: 'Quatre gardes d’affilée · un round chacun · votre vie passe de l’un à l’autre',
+      adv: 'sentinelle', serie: ['sentinelle', 'chasseur', 'sentinelle'], niveau: { normal: 'normal', difficile: 'difficile' },
+      regle: 'Trois gardes d’affilée · un round chacun · votre vie passe de l’un à l’autre',
     },
     apres: [
       { narre: 'La dernière marche. Au-dessus, le cadran de l’horloge, immense. Et devant, quelqu’un qui attend.' },
       { sort: 'sentinelle', comment: 'teleport' },
+    ],
+  },
+  {
+    id: 'arriere-garde', acte: 9, titre: 'PENDANT CE TEMPS…', sous: 'Le Général tient sa promesse', arene: 'horloge',
+    etapes: [
+      { lieu: 'HORS DU TEMPS — AU PIED DES MARCHES' },
+      { narre: 'Pendant ce temps, au pied de l’escalier, le Général Vorn fait face à ce qui reste de son ancienne armée.' },
+      { entre: 'vorn', cote: 'g', comment: 'place', p: 'garde' },
+      { entre: 'soldat', cote: 'd', comment: 'marche' },
+      { dit: 'vorn', texte: 'Je vous ai entraînés. Je vous ai menés. Je vous dois au moins ça : vous rendre le repos.' },
+      { dit: 'vorn', texte: 'Personne ne monte cet escalier tant que je suis debout !', p: 'lance' },
+    ],
+    combat: {
+      adv: 'soldat', serie: ['soldat', 'chasseur', 'sentinelle'], joueur: 'vorn', niveau: { normal: 'normal', difficile: 'difficile' },
+      regle: 'Trois soldats d’affilée · un round chacun · votre vie passe de l’un à l’autre',
+    },
+    apres: [
+      { narre: 'Le dernier soldat se défait en poussière dorée. Vorn s’appuie sur sa lance, à bout de souffle.' },
+      { sort: 'soldat', comment: 'teleport' },
+      { dit: 'vorn', texte: 'Reposez-vous, soldats. Vos secondes rentrent chez elles.', p: 'repos' },
+      { dit: 'vorn', texte: 'À toi de jouer, {hero}. Fais-le tomber.' },
     ],
   },
   {

@@ -10,8 +10,10 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
   compétences à lui (projectiles, rayons, ruées, téléportations, frappes du ciel,
   brûlure, poison, gel…), sa saisie, trois combos (👊 👊 🦶 et deux
   manipulations) et son ultime en cinématique. Un **mode Histoire** (« La
-  Fracture » : dix actes, une quarantaine de scènes, cinématiques, dialogues et
-  choix qui changent la suite, des vagues de soldats de l'Armée de l'Horloge,
+  Fracture » : on crée son propre héros — nom, allure, couleurs, école de
+  combat —, dix actes, une cinquantaine de scènes, cinématiques, dialogues et
+  choix qui changent la suite, des combattants corrompus par la Fracture à
+  libérer, des scènes où l’on incarne d’autres combattants, des vagues de soldats de l'Armée de l'Horloge,
   des combattants qu'on croise avant de les débloquer ; trois sauvegardes et un
   journal pour revoir les scènes), un **Tournoi** à huit (Onyx en finale en difficile), une
   **Tour des défis** (dix combats d'affilée, la vie qui se garde, puis

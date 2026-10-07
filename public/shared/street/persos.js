@@ -39,6 +39,8 @@ const proj = (o) => ({ type: 'projectile', vitesse: 11, rayon: 20, degats: 13, s
 const faisceau = (o) => ({ type: 'faisceau', portee: 620, epaisseur: 34, degats: 14, stun: 24, recul: 10, duree: 34, ...o });
 const ruee = (o) => ({ type: 'ruee', vx: 12, vy: 0, duree: 26, degats: 15, stun: 26, recul: 11, coups: 1, portee: 95, ...o });
 const zone = (o) => ({ type: 'zone', ou: 'cible', delai: 30, rayon: 70, hauteur: 220, degats: 16, stun: 30, recul: 6, duree: 24, forme: 'pilier', ...o });
+/** Les briques, pour composer d'autres combattants (le héros qu'on crée, par exemple). */
+export const BRIQUES = { proj, faisceau, ruee, zone };
 
 /* ---------------------------------------------------------------- */
 /* Le roster                                                          */

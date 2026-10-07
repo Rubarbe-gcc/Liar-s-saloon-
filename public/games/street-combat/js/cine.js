@@ -10,10 +10,11 @@
  *   { titre: 'CHAPITRE 1', sous: '…', sur: '…' }        un carton
  *   { lieu: 'NÉON CITY — 23 h 47' }                     le lieu, en haut à gauche (sans attendre)
  *   { narre: '…' }                                      une voix off
- *   { entre: 'hero'|id, cote: 'g'|'d'|'c'|'gg'|'dd', comment: 'marche'|'saut'|'chute'|'apparait'|'teleport'|'place', p, ombre }
+ *   { entre: 'hero'|id, cote: 'g'|'d'|'c'|'gg'|'dd', comment: 'marche'|'saut'|'chute'|'apparait'|'teleport'|'place', p, ombre, corrompu }
  *   { dit: 'hero'|id, texte: '…', p, nom, ombre }       une réplique (nom : « ??? » pour un inconnu)
  *   { pose: 'hero'|id, p: 'garde' }                     change une pose
  *   { devoile: id }                                     une silhouette se révèle
+ *   { purifie: id }                                     l'éclat de la Fracture sort de lui : il redevient lui-même
  *   { effet: 'fracture'|'eclair'|'flash'|'secousse'|'gel'|'aube'|'nuit', duree }
  *   { sort: 'hero'|id, comment: 'teleport'|'marche' }  quelqu'un s'en va
  *   { attendre: 40 }                                    une pause (en images)
@@ -97,6 +98,16 @@ function suivante() {
     S.attente = { fin: S.t + 30 };
     return;
   }
+  if (e.purifie) {
+    const a = S.acteurs.get(qui(e.purifie));
+    if (!a || !a.corrompu) { suivante(); return; }
+    a.corrompu = false;
+    if (S.rapide) { suivante(); return; }
+    S.effets.push({ nom: 'purif', t: 0, duree: 60, x: a.x, y: a.y - 95 });
+    son('ulti');
+    S.attente = { fin: S.t + 50 };
+    return;
+  }
   if (e.choix) { montrerChoix(e); return; }
   if (e.debloque) { montrerCarte(e.debloque, 'debloque'); return; }
   if (e.croise) { montrerCarte(e.croise, 'croise', e.indice); return; }
@@ -147,7 +158,7 @@ function nouvelActeur(e) {
   const x = e.x ?? POS[cote];
   const dir = e.dir ?? (x < L / 2 ? 1 : -1);
   const comment = e.comment || 'marche';
-  const a = { id, x, y: SOL, dir, pose: e.p || 'repos', alpha: 1, t: 0, comment, cible: x, entree: 0, ombre: !!e.ombre };
+  const a = { id, x, y: SOL, dir, pose: e.p || 'repos', alpha: 1, t: 0, comment, cible: x, entree: 0, ombre: !!e.ombre, corrompu: !!e.corrompu };
   if (comment === 'marche') { a.x = x < L / 2 ? -80 : L + 80; a.pose = 'marche'; }
   if (comment === 'saut') { a.depart = x < L / 2 ? -80 : L + 80; }
   if (comment === 'chute') a.y = -200;
@@ -234,7 +245,7 @@ function parler(w, texte, e = {}) {
     const ombre = e.ombre ?? a?.ombre ?? false;
     const g = pc.getContext('2d');
     g.clearRect(0, 0, pc.width, pc.height);
-    dessinerPortrait(g, p, pc.width, { t: 8, dir: 1, ombre });
+    dessinerPortrait(g, p, pc.width, { t: 8, dir: 1, ombre, corrompu: !ombre && a?.corrompu });
     nom.textContent = e.nom || (ombre ? '???' : p.nom);
     const c = ombre ? '#a898c8' : p.c.c1;
     nom.style.color = c;
@@ -391,7 +402,7 @@ function dessiner(S) {
     const parle = S.ecrit && S.ecrit.qui === a.id && S.ecrit.n < S.ecrit.texte.length;
     dessinerCombattant(g, PERSO[a.id], {
       x: a.x, y: a.y, dir: a.dir, pose: a.pose, t: a.t + (parle ? Math.floor(S.t / 4) : 0), p: 1, alpha: a.alpha,
-      aura: a.comment === 'apparait' && a.entree < 1 ? 1 - a.alpha : 0, echelle: 1.15, enLAir: a.y < SOL - 2, ombre: a.ombre,
+      aura: a.comment === 'apparait' && a.entree < 1 ? 1 - a.alpha : 0, echelle: 1.15, enLAir: a.y < SOL - 2, ombre: a.ombre, corrompu: a.corrompu,
     });
     if ((a.comment === 'teleport' || a.comment === 'apparait') && a.alpha < 1 && !a.sortie) {
       g.save(); g.globalCompositeOperation = 'lighter';
@@ -437,6 +448,23 @@ function effetFond(g, f, S) {
 function effetDevant(g, f, S) {
   const v = 1 - f.t / f.duree;
   if (f.nom === 'flash') { g.fillStyle = `rgba(255,255,255,${Math.max(0, v)})`; g.fillRect(0, 0, L, H); }
+  if (f.nom === 'purif') {
+    // L'éclat jaillit de sa poitrine, monte et se brise ; une onde violette, puis blanche.
+    const p = f.t / f.duree;
+    g.save(); g.globalCompositeOperation = 'lighter';
+    for (const [r, c] of [[p * 260, '#c814ff'], [p * 180, '#ffffff']]) {
+      g.strokeStyle = rgba(c, Math.max(0, 1 - p)); g.lineWidth = 8 * (1 - p) + 1;
+      g.beginPath(); g.ellipse(f.x, f.y, r, r * 0.6, 0, 0, Math.PI * 2); g.stroke();
+    }
+    const y = f.y - p * 220;
+    const gr = g.createRadialGradient(f.x, y, 0, f.x, y, 40);
+    gr.addColorStop(0, rgba('#ff9aff', 1 - p)); gr.addColorStop(1, rgba('#c814ff', 0));
+    g.fillStyle = gr; g.beginPath(); g.arc(f.x, y, 40, 0, Math.PI * 2); g.fill();
+    if (p < 0.7) { g.fillStyle = '#f0a0ff'; g.beginPath(); g.moveTo(f.x, y - 14); g.lineTo(f.x + 7, y); g.lineTo(f.x, y + 14); g.lineTo(f.x - 7, y); g.closePath(); g.fill(); }
+    else for (let i = 0; i < 8; i++) { const a = (i / 8) * Math.PI * 2; const d = (p - 0.7) * 300; g.fillStyle = rgba('#f0a0ff', 1 - p); g.fillRect(f.x + Math.cos(a) * d, y + Math.sin(a) * d, 4, 4); }
+    g.restore();
+    if (f.t < 8) { g.fillStyle = `rgba(255,230,255,${0.6 * (1 - f.t / 8)})`; g.fillRect(0, 0, L, H); }
+  }
   if (f.nom === 'eclair' && f.t < 20) {
     g.save(); g.globalCompositeOperation = 'lighter';
     g.strokeStyle = '#ffffff'; g.lineWidth = 5; g.shadowColor = '#c8c8ff'; g.shadowBlur = 24;

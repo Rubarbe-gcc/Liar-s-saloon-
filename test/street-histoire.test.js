@@ -32,6 +32,8 @@ test('le scénario : dix actes, des combats, des vagues de soldats et des scène
   // Les vagues : que des soldats de l’Horloge.
   const vagues = SCENES.filter((s) => s.combat?.serie);
   assert.ok(vagues.length >= 5);
+  assert.ok(SCENES.filter((s) => s.combat?.joueur).length >= 4, 'des combats où l’on incarne un autre combattant');
+  assert.ok(SCENES.filter((s) => s.combat?.corrompu).length >= 10, 'des corrompus à libérer');
   for (const s of vagues) { assert.equal(s.combat.adv, s.combat.serie[0], s.id); for (const id of s.combat.serie) assert.ok(PERSO[id]?.figurant, `${s.id} : ${id}`); }
   assert.equal(new Set(SCENES.map((s) => s.id)).size, SCENES.length, 'des identifiants uniques');
   for (const sc of [...SCENES, { id: 'tour', etapes: TOUR_BOSS }, { id: 'tournoi', etapes: TOURNOI_FINALE }]) {
@@ -48,6 +50,9 @@ test('le scénario : dix actes, des combats, des vagues de soldats et des scène
     if (sc.combat) {
       assert.ok(PERSO[sc.combat.adv], `${sc.id} : ${sc.combat.adv}`);
       if (sc.combat.issue) assert.ok(sc.apresDefaite, `${sc.id} : et si on perd ?`);
+      // On incarne quelqu’un d’autre : un vrai combattant ; un corrompu : jamais un soldat de l’Horloge.
+      if (sc.combat.joueur) assert.ok(PERSOS.includes(PERSO[sc.combat.joueur]), `${sc.id} : ${sc.combat.joueur}`);
+      if (sc.combat.corrompu) assert.ok(!PERSO[sc.combat.adv].figurant && !sc.combat.serie, sc.id);
       for (const d of ['normal', 'difficile']) assert.ok(NIVEAUX.includes(sc.combat.niveau[d]), `${sc.id} : niveau ${d}`);
     }
   }

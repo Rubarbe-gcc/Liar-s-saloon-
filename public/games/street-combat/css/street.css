@@ -333,3 +333,32 @@ kbd { display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4
 .ligne-journal { border: 0; cursor: pointer; text-align: left; padding: 8px 10px; border-radius: 6px; background: rgba(255,255,255,.05); color: #fff; font: inherit; }
 .ligne-journal:hover { background: rgba(255,255,255,.12); }
 .ligne-journal b { color: var(--pale); margin-right: 6px; font-size: .8rem; letter-spacing: .08em; }
+
+/* Le créateur de héros */
+.createur-corps { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(260px, 380px) minmax(0, 1fr); gap: 14px; }
+.createur-apercu { display: flex; flex-direction: column; gap: 10px; }
+.createur-apercu canvas { width: 100%; height: auto; aspect-ratio: 420 / 380; border-radius: 10px; box-shadow: inset 0 0 0 2px rgba(255,255,255,.1); }
+.createur-nom { display: flex; align-items: center; gap: 8px; }
+.createur-nom span { font-weight: 900; letter-spacing: .2em; font-size: .75rem; color: var(--pale); }
+.createur-nom input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 6px; border: 0; background: rgba(255,255,255,.08); color: #fff;
+  font-family: var(--titre); font-size: 1.4rem; letter-spacing: .06em; text-transform: uppercase; box-shadow: inset 0 0 0 2px rgba(255,255,255,.15); }
+.createur-nom input:focus { outline: none; box-shadow: inset 0 0 0 2px var(--or); }
+.createur-coups { margin: 0; font-size: .85rem; line-height: 1.4; color: var(--pale); }
+.createur-coups span { color: var(--or); font-weight: 800; }
+.createur-options { overflow-y: auto; padding-right: 4px; text-align: left; }
+.createur-options h4 { margin: 12px 0 6px; font-family: var(--titre); font-weight: 400; letter-spacing: .08em; color: var(--or); font-size: 1.05rem; }
+.createur-options h4:first-child { margin-top: 0; }
+.createur-options h4 small { font-family: var(--ui); color: var(--pale); font-size: .75rem; }
+.ecoles { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.ecole-carte { border: 0; cursor: pointer; padding: 8px 10px; border-radius: 8px; text-align: left; color: #fff; background: rgba(255,255,255,.06); font: inherit; }
+.ecole-carte b { display: block; font-family: var(--titre); font-weight: 400; letter-spacing: .05em; font-size: 1.05rem; }
+.ecole-carte small { display: block; margin-top: 2px; color: var(--pale); font-size: .72rem; line-height: 1.3; }
+.ecole-carte.on { background: rgba(255,200,61,.16); box-shadow: inset 0 0 0 2px var(--or); }
+.puces { display: flex; flex-wrap: wrap; gap: 6px; }
+.puce { border: 0; cursor: pointer; padding: 7px 12px; border-radius: 999px; background: rgba(255,255,255,.07); color: #fff; font: inherit; font-weight: 700; font-size: .85rem; }
+.puce.on { background: var(--or); color: #2a1600; }
+.teintes { display: flex; flex-wrap: wrap; gap: 8px; }
+.teinte { width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer; background: var(--c); box-shadow: inset 0 0 0 2px rgba(255,255,255,.25); }
+.teinte.on { box-shadow: 0 0 0 3px #08040f, 0 0 0 5px var(--or); transform: scale(1.08); }
+.slot-texte .ecole { font-style: normal; font-size: .75rem; font-weight: 800; color: var(--pale); margin-left: 4px; }
+@media (max-width: 760px) { .createur-corps { grid-template-columns: 1fr; } .createur-apercu canvas { max-height: 34vh; object-fit: contain; } }

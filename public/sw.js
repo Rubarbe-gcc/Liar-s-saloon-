@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v77';
+const VERSION = 'v78';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -155,6 +155,7 @@ const SHELL = [
   '/games/street-combat/icons/icon-192.png',
   '/shared/street/persos.js',
   '/shared/street/combat.js',
+  '/shared/street/heros.js',
   '/games/fiesta/',
   '/games/fiesta/manifest.webmanifest',
   '/games/fiesta/css/fiesta.css',

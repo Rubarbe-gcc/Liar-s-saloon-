@@ -55,6 +55,26 @@
   </div>
 </section>
 
+<!-- ======================= LE CRÉATEUR DE HÉROS ======================= -->
+<section class="ecran" id="s-createur">
+  <div class="choix createur">
+    <header class="choix-tete">
+      <button class="rond retour" id="createur-retour" aria-label="Retour">‹</button>
+      <h2 id="createur-titre">Créez votre héros</h2>
+      <button class="btn petit" id="createur-hasard">🎲 Au hasard</button>
+    </header>
+    <div class="createur-corps">
+      <aside class="createur-apercu">
+        <canvas id="createur-canvas" width="420" height="380"></canvas>
+        <label class="createur-nom"><span>NOM</span><input id="createur-nom" maxlength="14" autocomplete="off" spellcheck="false"></label>
+        <p class="createur-coups" id="createur-coups"></p>
+        <button class="btn rouge btn-large" id="createur-ok">Commencer l’histoire ›</button>
+      </aside>
+      <div class="createur-options" id="createur-options"></div>
+    </div>
+  </div>
+</section>
+
 <!-- ======================= LA DIFFICULTÉ ======================= -->
 <section class="ecran" id="s-difficulte">
   <div class="panneau">

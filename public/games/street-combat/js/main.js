@@ -19,6 +19,7 @@ import { installerMusique } from '../../../shared/musique.js';
 import * as succes from '../../../shared/succes.js';
 import { jouerCine, avancerCine, passerCine, quitterCine, choisirCine, dimensionner as dimensionnerCine } from './cine.js';
 import * as HIST from './histoire.js';
+import { CORPS, TETES, PEAUX, ENERGIES, TENUES, CHEVEUX, ACCESSOIRES, MAX_ACCESSOIRES, ECOLES, defautHeros, herosAuHasard, construireHeros } from '../../../shared/street/heros.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -69,7 +70,8 @@ function aller(id) {
   if (id !== 's-combat') arreterBoucle();
   animMenu.actif = id === 's-menu';
   animFiche.actif = id === 's-choix';
-  if (animMenu.actif || animFiche.actif) relancerDecor();
+  animCreateur.actif = id === 's-createur';
+  if (animMenu.actif || animFiche.actif || animCreateur.actif) relancerDecor();
 }
 const ouvrir = (id) => { $(id).hidden = false; };
 const fermer = (id) => { $(id).hidden = true; };
@@ -89,6 +91,7 @@ function toast(msg, ms = 2400) {
 
 const animMenu = { actif: true, a: null, b: null, t: 0 };
 const animFiche = { actif: false };
+const animCreateur = { actif: false, t: 0 };
 let decorRaf = 0;
 
 function relancerDecor() {
@@ -97,7 +100,8 @@ function relancerDecor() {
     decorRaf = 0;
     if (animMenu.actif) dessinerFondMenu();
     if (animFiche.actif) dessinerFiche();
-    if (animMenu.actif || animFiche.actif) decorRaf = requestAnimationFrame(boucle);
+    if (animCreateur.actif) dessinerCreateur();
+    if (animMenu.actif || animFiche.actif || animCreateur.actif) decorRaf = requestAnimationFrame(boucle);
   };
   decorRaf = requestAnimationFrame(boucle);
 }
@@ -442,7 +446,7 @@ function sauvegardes() {
     if (!l.some(Boolean) && PERSO[vieille.hero]) { l[0] = nouvellePartie(vieille.hero, vieille.difficulte || 'normal'); ecrire(CLE_SAUVEGARDES, l); }
     ecrire(CLE_HISTOIRE, null);
   }
-  return Array.from({ length: EMPLACEMENTS }, (_, k) => (l[k] && PERSO[l[k].hero] ? l[k] : null));
+  return Array.from({ length: EMPLACEMENTS }, (_, k) => (l[k] && (l[k].createur || PERSO[l[k].hero]) ? l[k] : null));
 }
 
 function sauver(discret = false) {
@@ -459,6 +463,12 @@ function sauver(discret = false) {
 }
 
 const sceneDe = (h) => HIST.SCENES[Math.min(h.scene, HIST.SCENES.length - 1)];
+/** La fiche du héros d'une partie (un héros créé n'est pas dans PERSO : on l'y inscrit pour jouer). */
+const ficheDe = (h) => (h.createur ? construireHeros(h.createur) : PERSO[h.hero]);
+function inscrireHeros(h) {
+  if (h.createur) PERSO.heros = construireHeros(h.createur);
+  return PERSO[h.hero];
+}
 const duree = (ms) => { const m = Math.round(ms / 60000); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`; };
 const quand = (t) => new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ' à ' + new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 
@@ -466,14 +476,14 @@ function ouvrirSauvegardes() {
   const l = sauvegardes();
   $('slots').innerHTML = l.map((h, k) => {
     if (!h) return `<button class="slot vide" data-nouvelle="${k}"><small>EMPLACEMENT ${k + 1}</small><b>＋ Nouvelle partie</b><span>Choisissez votre héros et votre difficulté</span></button>`;
-    const p = PERSO[h.hero];
+    const p = ficheDe(h);
     const sc = sceneDe(h);
     const progres = h.fini ? 100 : Math.round((h.scene / HIST.SCENES.length) * 100);
     return `<div class="slot" style="--c:${p.c.c1}">
-      <canvas data-portrait="${p.id}" width="120" height="120"></canvas>
+      <canvas data-slot="${k}" width="120" height="120"></canvas>
       <div class="slot-texte">
         <small>EMPLACEMENT ${k + 1} · ${h.difficulte === 'difficile' ? '🔥 DIFFICILE' : '📖 NORMAL'}</small>
-        <b style="color:${p.c.c1}">${esc(p.nom)}</b>
+        <b style="color:${p.c.c1}">${esc(p.nom)}</b>${h.createur ? ` <i class="ecole">${esc(ECOLES[h.createur.ecole]?.nom || '')}</i>` : ''}
         <span>${h.fini ? '✔ Histoire terminée' : `${HIST.ACTES[sc.acte].num} — ${esc(sc.titre)} : ${esc(sc.sous)}`}</span>
         <div class="slot-barre"><i style="width:${progres}%"></i></div>
         <small>${progres} % · ${h.victoires} victoire${h.victoires > 1 ? 's' : ''} · ${duree(h.temps)} de jeu · ${quand(h.maj)}</small>
@@ -481,11 +491,12 @@ function ouvrirSauvegardes() {
       <div class="slot-boutons">
         ${h.fini ? '' : `<button class="btn rouge petit" data-continuer="${k}">▶ Continuer</button>`}
         <button class="btn petit" data-journal="${k}">📜 Journal</button>
+        ${h.createur ? `<button class="btn petit" data-modifier="${k}">✏️ Héros</button>` : ''}
         <button class="btn petit" data-efface="${k}" title="Effacer">🗑️</button>
       </div>
     </div>`;
   }).join('');
-  $('slots').querySelectorAll('[data-portrait]').forEach((cv) => dessinerPortrait(cv.getContext('2d'), PERSO[cv.dataset.portrait], 120, { t: 8 }));
+  $('slots').querySelectorAll('canvas[data-slot]').forEach((cv) => dessinerPortrait(cv.getContext('2d'), ficheDe(l[Number(cv.dataset.slot)]), 120, { t: 8 }));
   aller('s-sauvegardes');
 }
 
@@ -493,10 +504,11 @@ function ouvrirSauvegardes() {
 function ouvrirJournal(k) {
   const h = sauvegardes()[k];
   if (!h) return;
+  inscrireHeros(h);
   const vues = HIST.SCENES.map((sc, i) => [sc, i]).filter(([sc, i]) => (h.fini || i < h.scene) && condition(sc, h));
   let acte = -1;
   $('etape').innerHTML = `<button class="rond fermer" data-ferme="ov-etape">✕</button><h2>📜 Journal</h2>
-    <p class="sous">${esc(PERSO[h.hero].nom)} · revoir une scène (sans rien changer à la partie)</p>
+    <p class="sous">${esc(ficheDe(h).nom)} · revoir une scène (sans rien changer à la partie)</p>
     <div class="journal">${vues.length ? vues.map(([sc, i]) => {
       const tete = sc.acte !== acte ? `<h4>${HIST.ACTES[sc.acte].num} — ${HIST.ACTES[sc.acte].nom}</h4>` : '';
       acte = sc.acte;
@@ -506,8 +518,8 @@ function ouvrirJournal(k) {
   $('etape').querySelectorAll('[data-revoir]').forEach((b) => b.addEventListener('click', async () => {
     const sc = HIST.SCENES[Number(b.dataset.revoir)];
     fermer('ov-etape');
-    const apres = sc.combat ? [{ decor: sc.arene, fondu: true }, { entre: 'hero', cote: 'g', comment: 'place' }, { entre: sc.combat.adv, cote: 'd', comment: 'place', p: 'touche' }, ...(sc.apres || [])] : [];
-    await cineHistoire([...entreeScene(sc), ...sc.etapes, ...apres], h, { ...h.drapeaux });
+    const apres = sc.combat ? [{ decor: sc.arene, fondu: true }, ...etapesApres(sc, true).slice(1)] : [];
+    await cineHistoire([...entreeScene(sc), ...etapesAvant(sc), ...apres], h, { ...h.drapeaux });
     ouvrirSauvegardes();
   }));
 }
@@ -526,6 +538,30 @@ function cineHistoire(etapes, h, drapeaux) {
   return jouerCine(etapes, { hero: h.hero, roles: rolesDe(h.hero), drapeaux, debloquer, croiser, quittable: true });
 }
 
+/** Les combattants corrompus par la Fracture le montrent, dans les cinématiques aussi. */
+function corrompre(etapes, id) {
+  return etapes.map((e) => {
+    const x = { ...e };
+    if (x.entre === id) x.corrompu = true;
+    if (x.alors) x.alors = corrompre(x.alors, id);
+    if (x.sinon) x.sinon = corrompre(x.sinon, id);
+    if (x.choix) x.choix = x.choix.map((c) => ({ ...c, suite: corrompre(c.suite || [], id) }));
+    return x;
+  });
+}
+const etapesAvant = (sc) => (sc.combat?.corrompu ? corrompre(sc.etapes, sc.combat.adv) : sc.etapes);
+/** Après le combat : les deux combattants en place ; vaincu, le corrompu rend son éclat. */
+function etapesApres(sc, gagne) {
+  const cb = sc.combat;
+  return [
+    { decor: sc.arene },
+    { entre: cb.joueur || 'hero', cote: 'g', comment: 'place', p: gagne ? 'repos' : 'touche' },
+    { entre: cb.adv, cote: 'd', comment: 'place', p: gagne ? 'touche' : 'victoire', corrompu: !!cb.corrompu },
+    ...(gagne && cb.corrompu ? [{ purifie: cb.adv }] : []),
+    ...((gagne ? sc.apres : sc.apresDefaite) || []),
+  ];
+}
+
 /** Le début d'une scène : le décor, l'acte (au début de chaque acte), le titre. */
 function entreeScene(sc) {
   const a = HIST.ACTES[sc.acte];
@@ -533,8 +569,11 @@ function entreeScene(sc) {
   return [{ decor: sc.arene }, ...(premiere ? [{ titre: a.num, sous: a.nom, sur: 'LA FRACTURE' }] : []), { titre: sc.titre, sous: sc.sous, sur: `${a.num} — ${a.nom}` }];
 }
 
-function nouvelleHistoire(hero) {
-  partie = { slot: prep.slot ?? 0, h: nouvellePartie(hero, prep.difficulte || 'normal'), depuis: Date.now() };
+function nouvelleHistoire(hero, createur = null) {
+  const h = nouvellePartie(hero, prep.difficulte || 'normal');
+  if (createur) h.createur = createur;
+  partie = { slot: prep.slot ?? 0, h, depuis: Date.now() };
+  inscrireHeros(h);
   sauver(true);
   jouerScene();
 }
@@ -543,7 +582,71 @@ function continuerHistoire(k) {
   const h = sauvegardes()[k];
   if (!h) return;
   partie = { slot: k, h, depuis: Date.now() };
+  inscrireHeros(h);
   jouerScene();
+}
+
+/* ---- le créateur de héros ---- */
+
+const createur = { def: null, mode: 'nouveau', slot: 0 };
+
+function ouvrirCreateur(def = defautHeros(), mode = 'nouveau', slot = 0) {
+  createur.def = { ...defautHeros(), ...def, accessoires: [...(def.accessoires || [])] };
+  createur.mode = mode;
+  createur.slot = slot;
+  $('createur-titre').textContent = mode === 'nouveau' ? 'Créez votre héros' : 'Votre héros';
+  $('createur-ok').textContent = mode === 'nouveau' ? 'Commencer l’histoire ›' : 'Enregistrer ✔';
+  $('createur-nom').value = createur.def.nom;
+  majCreateur();
+  aller('s-createur');
+}
+
+function majCreateur() {
+  const d = createur.def;
+  const puces = (champ, liste, multi = false) => liste.map(([id, nom]) => {
+    const on = multi ? d[champ].includes(id) : d[champ] === id;
+    return `<button class="puce${on ? ' on' : ''}" data-champ="${champ}" data-val="${id}">${esc(nom)}</button>`;
+  }).join('');
+  const teintes = (champ, liste) => liste.map((c) => `<button class="teinte${d[champ] === c ? ' on' : ''}" data-champ="${champ}" data-val="${c}" style="--c:${c}" aria-label="${c}"></button>`).join('');
+  $('createur-options').innerHTML = `
+    <h4>École de combat</h4>
+    <div class="ecoles">${Object.entries(ECOLES).map(([id, e]) => `<button class="ecole-carte${d.ecole === id ? ' on' : ''}" data-champ="ecole" data-val="${id}"><b>${esc(e.nom)}</b><small>${esc(e.texte)}</small></button>`).join('')}</div>
+    <h4>Carrure</h4><div class="puces">${puces('corps', CORPS)}</div>
+    <h4>Coiffure</h4><div class="puces">${puces('tete', TETES)}</div>
+    <h4>Peau</h4><div class="teintes">${teintes('peau', PEAUX)}</div>
+    <h4>Énergie</h4><div class="teintes">${Object.entries(ENERGIES).map(([id, e]) => `<button class="teinte${d.energie === id ? ' on' : ''}" data-champ="energie" data-val="${id}" style="--c:${e.c1}" aria-label="${id}"></button>`).join('')}</div>
+    <h4>Tenue</h4><div class="teintes">${teintes('tenue', TENUES)}</div>
+    <h4>Cheveux</h4><div class="teintes">${teintes('cheveux', CHEVEUX)}</div>
+    <h4>Accessoires <small>(${d.accessoires.length}/${MAX_ACCESSOIRES})</small></h4><div class="puces">${puces('accessoires', ACCESSOIRES, true)}</div>`;
+  const p = construireHeros(d);
+  $('createur-coups').innerHTML = `<b style="color:${p.c.c1}">${esc(ECOLES[d.ecole].nom)}</b> · ${esc(p.specB.nom)} · ${esc(p.specA.nom)} · <span>ULTIME : ${esc(p.ulti.nom)}</span>`;
+  animCreateur.t = 0;
+}
+
+function dessinerCreateur() {
+  const cv = $('createur-canvas');
+  const g = cv.getContext('2d');
+  const p = construireHeros(createur.def);
+  const t = (animCreateur.t += 1);
+  const fond = g.createLinearGradient(0, 0, 0, cv.height);
+  fond.addColorStop(0, teinte(p.c.c2, -0.55)); fond.addColorStop(1, '#05020a');
+  g.fillStyle = fond; g.fillRect(0, 0, cv.width, cv.height);
+  const h = g.createRadialGradient(cv.width / 2, 220, 10, cv.width / 2, 220, 240);
+  h.addColorStop(0, rgba(p.c.c1, 0.4)); h.addColorStop(1, rgba(p.c.c1, 0));
+  g.fillStyle = h; g.fillRect(0, 0, cv.width, cv.height);
+  const demo = ['repos', 'repos', 'garde', 'poing', 'repos', 'pied', 'repos', 'lance', 'repos', 'victoire', 'victoire'];
+  const posee = demo[Math.floor(t / 45) % demo.length];
+  dessinerCombattant(g, p, { x: cv.width / 2, y: cv.height - 24, dir: 1, pose: posee, t, p: (t % 45) / 20, echelle: 1.75, aura: posee === 'victoire' ? 0.8 : 0.25 });
+}
+
+function validerCreateur() {
+  createur.def.nom = $('createur-nom').value;
+  const def = { ...createur.def, nom: construireHeros(createur.def).nom };
+  son('valide');
+  if (createur.mode === 'nouveau') { nouvelleHistoire('heros', def); return; }
+  const l = sauvegardes();
+  if (l[createur.slot]) { l[createur.slot].createur = def; ecrire(CLE_SAUVEGARDES, l); }
+  ouvrirSauvegardes();
 }
 
 function quitterHistoire() {
@@ -562,7 +665,7 @@ async function jouerScene() {
   if (h.phase === 'avant') {
     // Les choix ne comptent qu'une fois la scène finie (quitter au milieu la fait rejouer).
     const d = { ...h.drapeaux };
-    const r = await cineHistoire([...entreeScene(sc), ...sc.etapes], h, d);
+    const r = await cineHistoire([...entreeScene(sc), ...etapesAvant(sc)], h, d);
     if (r === 'quitte') { quitterHistoire(); return; }
     h.drapeaux = d;
     if (!sc.combat) { h.scene += 1; sauver(); jouerScene(); return; }
@@ -580,8 +683,10 @@ function avantCombat(sc) {
   const adv = role(h, cb.adv);
   const bonus = cb.bonus && condition({ si: cb.bonus.si }, h) ? cb.bonus : null;
   const regles = [cb.regle, bonus && nomsDe(bonus.texte, h)].filter(Boolean);
-  const moi = PERSO[h.hero];
+  const moi = PERSO[cb.joueur ? role(h, cb.joueur) : h.hero];
   const lui = PERSO[adv];
+  if (cb.joueur) regles.unshift(`🎮 Vous incarnez ${moi.nom}`);
+  if (cb.corrompu) regles.push('💜 Corrompu par la Fracture : battez-le pour lui arracher son éclat');
   const contre = cb.serie
     ? cb.serie.map((id) => `<b style="color:${PERSO[id].c.c1}">${esc(PERSO[id].nom)}</b>`).join(', ')
     : `<b style="color:${lui.c.c1}">${esc(lui.nom)}</b>${cb.victoires === 1 ? ' · un round' : ''}`;
@@ -590,7 +695,7 @@ function avantCombat(sc) {
     <p class="sous"><b style="color:${moi.c.c1}">${esc(moi.nom)}</b> contre ${contre} · ordinateur ${cb.niveau[h.difficulte] || 'normal'}</p>
     ${regles.map((r) => `<p class="regle">${esc(r)}</p>`).join('')}
     <div class="ligne-boutons"><button class="btn" id="b-etape-quitter">💾 Sauvegarder et quitter</button><button class="btn rouge" id="b-etape-go">⚔️ Combattre !</button></div>`;
-  dessinerVs($('etape-vs'), moi, lui);
+  dessinerVs($('etape-vs'), moi, lui, !!cb.corrompu);
   ouvrir('ov-etape');
   son('annonce');
   $('b-etape-go').onclick = () => { fermer('ov-etape'); combatHistoire(sc, adv, bonus); };
@@ -611,21 +716,23 @@ function combatHistoire(sc, adv, bonus, k = 0, vieRestante = null) {
   const hpMax = (id) => Math.round(150 * PERSO[id].hpMult);
   const serie = cb.serie ? cb.serie.map((id) => role(h, id)) : null;
   const contre = serie ? serie[k] : adv;
-  const vieHero = vieRestante ?? (cb.vie?.[0] ?? 1) * hpMax(h.hero);
+  const moi = cb.joueur ? role(h, cb.joueur) : h.hero;
+  const vieHero = vieRestante ?? (cb.vie?.[0] ?? 1) * hpMax(moi);
   const vieAdv = serie ? 1 : Math.min(cb.vie?.[1] ?? 1, bonus?.vieAdv ?? 1);
   const libre = cb.issue === 'libre';
   const dernier = !serie || k === serie.length - 1;
   demarrerCombat({
-    p1: h.hero, p2: contre, arene: sc.arene, ia: { 1: cb.niveau[h.difficulte] || 'normal' }, mode: 'histoire',
+    p1: moi, p2: contre, arene: sc.arene, ia: { 1: cb.niveau[h.difficulte] || 'normal' }, mode: 'histoire',
     victoires: serie ? 1 : cb.victoires || 2,
-    vie: [vieHero < hpMax(h.hero) ? vieHero : null, vieAdv < 1 ? vieAdv * hpMax(contre) : null],
+    vie: [vieHero < hpMax(moi) ? vieHero : null, vieAdv < 1 ? vieAdv * hpMax(contre) : null],
+    corrompu: [false, !!cb.corrompu],
     perdable: libre,
     texteFin: (gagne) => (gagne
       ? (dernier ? `<p class="sous">${esc(sc.titre)} — ${esc(sc.sous)}</p>` : `<p class="sous">Adversaire ${k + 1} sur ${serie.length} à terre ! Au suivant : <b>${esc(PERSO[serie[k + 1]].nom)}</b> (+${REPOS_SERIE * 100} % de vie)</p>`)
       : libre ? '<p class="sous">Il était bien trop fort… mais l’histoire continue.</p>'
         : `<p class="sous">L’histoire n’est pas finie. Relevez-vous !${serie ? ' La vague recommence au début.' : ''} <small>(partie sauvegardée)</small></p>`),
     suite: (gagne, fin) => {
-      if (gagne && !dernier) { combatHistoire(sc, adv, bonus, k + 1, Math.min(hpMax(h.hero), fin.hpHero + hpMax(h.hero) * REPOS_SERIE)); return; }
+      if (gagne && !dernier) { combatHistoire(sc, adv, bonus, k + 1, Math.min(hpMax(moi), fin.hpHero + hpMax(moi) * REPOS_SERIE)); return; }
       if (gagne) h.victoires += 1;
       h.phase = gagne ? 'apres' : 'apresDefaite';
       sauver(true);
@@ -639,12 +746,7 @@ function combatHistoire(sc, adv, bonus, k = 0, vieRestante = null) {
 async function apresCombat(sc, gagne) {
   const h = partie.h;
   if (gagne && role(h, sc.combat.adv) === 'lechaos') succes.debloquer('street-chaos');
-  const etapes = [
-    { decor: sc.arene },
-    { entre: 'hero', cote: 'g', comment: 'place', p: gagne ? 'repos' : 'touche' },
-    { entre: sc.combat.adv, cote: 'd', comment: 'place', p: gagne ? 'touche' : 'victoire' },
-    ...((gagne ? sc.apres : sc.apresDefaite) || []),
-  ];
+  const etapes = etapesApres(sc, gagne);
   const d = { ...h.drapeaux };
   const r = await cineHistoire(etapes, h, d);
   if (r === 'quitte') { quitterHistoire(); return; }
@@ -856,16 +958,16 @@ function combatTour(t, boss) {
   });
 }
 
-function dessinerVs(cv, a, b) {
+function dessinerVs(cv, a, b, corrompuB = false) {
   const g = cv.getContext('2d');
   const w = cv.width;
   const h = cv.height;
   g.fillStyle = '#05020a'; g.fillRect(0, 0, w, h);
-  for (const [p, x0, sens] of [[a, 0, 1], [b, w / 2, -1]]) {
+  for (const [p, x0, sens, corrompu] of [[a, 0, 1, false], [b, w / 2, -1, corrompuB]]) {
     const gr = g.createLinearGradient(x0, 0, x0 + w / 2, 0);
     gr.addColorStop(sens > 0 ? 0 : 1, rgba(p.c.c2, 0.9)); gr.addColorStop(sens > 0 ? 1 : 0, rgba(p.c.c2, 0.1));
     g.fillStyle = gr; g.fillRect(x0, 0, w / 2, h);
-    dessinerCombattant(g, p, { x: x0 + w / 4, y: h * 0.98, dir: sens, pose: 'repos', t: 10, echelle: 2.1, aura: 0.7 });
+    dessinerCombattant(g, p, { x: x0 + w / 4, y: h * 0.98, dir: sens, pose: 'repos', t: 10, echelle: 2.1, aura: corrompu ? 0 : 0.7, corrompu });
   }
   g.save();
   g.translate(w / 2, h / 2);
@@ -998,7 +1100,7 @@ function dessiner() {
     dessinerCombattant(g, p, {
       x: j.x, y: j.y, dir: j.dir, pose: pose(j), t: j.anim, p: progres, enLAir: !j.sol, alpha,
       aura: j.etat === 'ulti' ? 1 : j.sp >= 100 ? 0.45 + Math.sin(t / 6) * 0.2 : 0,
-      statuts: Object.keys(j.statuts).length ? j.statuts : null, eclat: eclats[j.n] * 0.8,
+      statuts: Object.keys(j.statuts).length ? j.statuts : null, eclat: eclats[j.n] * 0.8, corrompu: !!config.corrompu?.[j.n],
     });
     // Le bouclier, la parade : un halo.
     if (j.garde || j.armure > 0) {
@@ -1196,6 +1298,7 @@ function brancher() {
     if (b.dataset.nouvelle !== undefined) { prep.slot = Number(b.dataset.nouvelle); ouvrirDifficultes('histoire'); }
     if (b.dataset.continuer !== undefined) continuerHistoire(Number(b.dataset.continuer));
     if (b.dataset.journal !== undefined) ouvrirJournal(Number(b.dataset.journal));
+    if (b.dataset.modifier !== undefined) { const k = Number(b.dataset.modifier); ouvrirCreateur(sauvegardes()[k].createur, 'modifier', k); }
     if (b.dataset.efface !== undefined) {
       const k = Number(b.dataset.efface);
       if (!confirm(`Effacer la sauvegarde de l’emplacement ${k + 1} ?`)) return;
@@ -1206,6 +1309,23 @@ function brancher() {
     }
   });
   $('b-reset').addEventListener('click', reinitialiser);
+  $('createur-options').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-champ]');
+    if (!b) return;
+    const d = createur.def;
+    const { champ, val } = b.dataset;
+    if (champ === 'accessoires') {
+      if (d.accessoires.includes(val)) d.accessoires = d.accessoires.filter((x) => x !== val);
+      else if (d.accessoires.length < MAX_ACCESSOIRES) d.accessoires.push(val);
+      else { toast(`${MAX_ACCESSOIRES} accessoires au plus`); return; }
+    } else d[champ] = val;
+    son('choix');
+    majCreateur();
+  });
+  $('createur-nom').addEventListener('input', (e) => { createur.def.nom = e.target.value; });
+  $('createur-hasard').addEventListener('click', () => { createur.def = herosAuHasard(); $('createur-nom').value = createur.def.nom; son('choix'); majCreateur(); });
+  $('createur-ok').addEventListener('click', validerCreateur);
+  $('createur-retour').addEventListener('click', () => (createur.mode === 'nouveau' ? ouvrirDifficultes('histoire') : ouvrirSauvegardes()));
   $('b-tournoi').addEventListener('click', () => {
     son('choix');
     if (lire(CLE_TOURNOI, null)) montrerTableau(); else ouvrirDifficultes('tournoi');
@@ -1234,6 +1354,7 @@ function brancher() {
     if (!d) return;
     son('valide');
     prep.difficulte = d.dataset.diff;
+    if (prep.modeDiff === 'histoire') { ouvrirCreateur(); return; }
     commencerMode(prep.modeDiff);
   });
 
@@ -1288,6 +1409,7 @@ function brancher() {
   });
 
   addEventListener('keydown', (e) => {
+    if (e.target.closest?.('input, textarea')) return;
     const k = e.key.toLowerCase();
     if ($('s-cine').classList.contains('is-active')) {
       if (k === 'enter' || k === ' ') { e.preventDefault(); avancerCine(); }
