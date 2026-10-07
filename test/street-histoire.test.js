@@ -6,9 +6,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { THEMES } from '../public/shared/musique.js';
 
 import { PERSO, PERSOS, ROSTER, BOSS, SECRETS, FIGURANTS } from '../public/shared/street/persos.js';
-import { ACTES, SCENES, DOUBLURE, TOUR_BOSS, TOURNOI_FINALE, TOUR_VICTOIRE, victoireTournoi } from '../public/games/street-combat/js/histoire.js';
+import { ACTES, SCENES, DOUBLURE, TOUR_BOSS, TOURNOI_FINALE, TOUR_VICTOIRE, victoireTournoi, MUSIQUES, musiqueDe } from '../public/games/street-combat/js/histoire.js';
 
 const ARENES = new Set([...readFileSync(new URL('../public/games/street-combat/js/arenes.js', import.meta.url), 'utf8').matchAll(/\{ id: '(\w+)', nom:/g)].map((m) => m[1]));
 const NIVEAUX = ['facile', 'normal', 'difficile', 'impossible'];
@@ -116,4 +117,16 @@ test('la doublure : quel que soit le héros, personne ne se croise lui-même', (
   assert.ok(ROSTER.some((p) => p.id === DOUBLURE));
   // Les boss et les secrets ne sont jamais le héros de l'histoire : ils peuvent garder leur rôle.
   for (const id of acteurs) assert.ok(PERSO[id], id);
+});
+
+test('la musique : chaque scène a la sienne, et chaque musique existe', () => {
+  const existe = (n) => n === null || n === 'combat' || THEMES[`street-${n}`];
+  for (const id of Object.keys(MUSIQUES)) assert.ok(SCENES.some((sc) => sc.id === id), `musique d’une scène inconnue : ${id}`);
+  for (const sc of SCENES) {
+    for (const quand of sc.combat ? ['avant', 'combat', 'apres'] : ['avant']) assert.ok(existe(musiqueDe(sc, quand)), `${sc.id} ${quand}`);
+    for (const l of listes(sc)) for (const e of toutes(l)) if (e.musique !== undefined) assert.ok(existe(e.musique), `${sc.id} : ${e.musique}`);
+  }
+  // Kaïros : la musique du combat final ; les grands boss, la musique de boss.
+  assert.equal(musiqueDe(SCENES.find((sc) => sc.id === 'horloge'), 'combat'), 'final');
+  assert.equal(musiqueDe(SCENES.find((sc) => sc.id === 'trone'), 'combat'), 'boss');
 });

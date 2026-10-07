@@ -17,9 +17,10 @@ import { creerHud, dessinerHud } from './hud.js';
 import { jouer as son, estMuet, basculerSon } from './son.js';
 import { installerMusique } from '../../../shared/musique.js';
 import * as succes from '../../../shared/succes.js';
-import { jouerCine, avancerCine, passerCine, quitterCine, choisirCine, dimensionner as dimensionnerCine } from './cine.js';
+import { jouerCine, avancerCine, passerCine, quitterCine, choisirCine, musiqueCine, dimensionner as dimensionnerCine } from './cine.js';
 import * as HIST from './histoire.js';
-import { CORPS, TETES, PEAUX, ENERGIES, TENUES, CHEVEUX, ACCESSOIRES, MAX_ACCESSOIRES, ECOLES, defautHeros, herosAuHasard, construireHeros } from '../../../shared/street/heros.js';
+import { dire, crier, taire, voixDe, voixActives, basculerVoix } from './voix.js';
+import { CORPS, TETES, PEAUX, ENERGIES, TENUES, CHEVEUX, ACCESSOIRES, MAX_ACCESSOIRES, ECOLES, GENRES, VOIX_HAUTEUR, defautHeros, herosAuHasard, construireHeros } from '../../../shared/street/heros.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -68,6 +69,7 @@ const records = () => ({ victoires: 0, combats: 0, combo: 0, tour: 0, tournois: 
 function aller(id) {
   document.querySelectorAll('.ecran').forEach((e) => e.classList.toggle('is-active', e.id === id));
   if (id !== 's-combat') arreterBoucle();
+  if (id !== 's-cine' && id !== 's-combat') taire();
   animMenu.actif = id === 's-menu';
   animFiche.actif = id === 's-choix';
   animCreateur.actif = id === 's-createur';
@@ -418,10 +420,10 @@ function ouvrirDifficultes(mode) {
 }
 
 /** Une cinématique, en plein écran. */
-function cinematique(etapes, hero) {
+function cinematique(etapes, hero, musique = 'tension') {
   aller('s-cine');
   dimensionnerCine();
-  return jouerCine(etapes, { hero, debloquer });
+  return jouerCine(etapes, { hero, debloquer, musique });
 }
 
 /* ------------------------------------------------------------------ */
@@ -519,7 +521,7 @@ function ouvrirJournal(k) {
     const sc = HIST.SCENES[Number(b.dataset.revoir)];
     fermer('ov-etape');
     const apres = sc.combat ? [{ decor: sc.arene, fondu: true }, ...etapesApres(sc, true).slice(1)] : [];
-    await cineHistoire([...entreeScene(sc), ...etapesAvant(sc), ...apres], h, { ...h.drapeaux });
+    await cineHistoire([...entreeScene(sc), ...etapesAvant(sc), ...apres], h, { ...h.drapeaux }, HIST.musiqueDe(sc, 'avant'));
     ouvrirSauvegardes();
   }));
 }
@@ -533,10 +535,10 @@ const rolesDe = (hero) => (hero === HIST.DOUBLURE ? {} : { [hero]: HIST.DOUBLURE
 const role = (h, id) => (id === 'hero' ? h.hero : rolesDe(h.hero)[id] || id);
 const nomsDe = (texte, h) => texte.replace(/\{(\w+)\}/g, (m, id) => (id === 'hero' ? PERSO[h.hero].nom : PERSO[role(h, id)]?.nom || m));
 
-function cineHistoire(etapes, h, drapeaux) {
+function cineHistoire(etapes, h, drapeaux, musique) {
   aller('s-cine');
   dimensionnerCine();
-  return jouerCine(etapes, { hero: h.hero, roles: rolesDe(h.hero), drapeaux, debloquer, croiser, quittable: true });
+  return jouerCine(etapes, { hero: h.hero, roles: rolesDe(h.hero), drapeaux, debloquer, croiser, quittable: true, musique });
 }
 
 /** Les combattants corrompus par la Fracture le montrent, dans les cinématiques aussi. */
@@ -559,7 +561,7 @@ function etapesApres(sc, gagne) {
     { entre: cb.joueur || 'hero', cote: 'g', comment: 'place', p: gagne ? 'repos' : 'touche' },
     { entre: cb.adv, cote: 'd', comment: 'place', p: gagne ? 'touche' : 'victoire', corrompu: !!cb.corrompu },
     // Le petit film des grands boss.
-    ...(gagne && sc.finale ? sc.finale : []),
+    ...(gagne && sc.finale ? [...sc.finale, { musique: HIST.musiqueDe(sc, 'apres') }] : []),
     ...(gagne && cb.corrompu ? [{ purifie: cb.adv }] : []),
     ...((gagne ? sc.apres : sc.apresDefaite) || []),
   ];
@@ -614,6 +616,13 @@ function majCreateur() {
   $('createur-options').innerHTML = `
     <h4>École de combat</h4>
     <div class="ecoles">${Object.entries(ECOLES).map(([id, e]) => `<button class="ecole-carte${d.ecole === id ? ' on' : ''}" data-champ="ecole" data-val="${id}"><b>${esc(e.nom)}</b><small>${esc(e.texte)}</small></button>`).join('')}</div>
+    <h4>Genre</h4><div class="puces">${puces('genre', GENRES)}</div>
+    <h4>Voix</h4>
+    <div class="reglages-voix">
+      <label><span>Grave</span><input type="range" data-voix="voixHauteur" min="${VOIX_HAUTEUR[0]}" max="${VOIX_HAUTEUR[1]}" step="0.05" value="${d.voixHauteur}"><span>Aiguë</span></label>
+      <label><span>Masculine</span><input type="range" data-voix="voixTimbre" min="0" max="1" step="0.05" value="${d.voixTimbre ?? (d.genre === 'f' ? 0.8 : 0.2)}"><span>Féminine</span></label>
+      <button class="btn petit" data-ecouter>🔊 Écouter</button>
+    </div>
     <h4>Carrure</h4><div class="puces">${puces('corps', CORPS)}</div>
     <h4>Coiffure</h4><div class="puces">${puces('tete', TETES)}</div>
     <h4>Peau</h4><div class="teintes">${teintes('peau', PEAUX)}</div>
@@ -642,6 +651,13 @@ function dessinerCreateur() {
   dessinerCombattant(g, p, { x: cv.width / 2, y: cv.height - 24, dir: 1, pose: posee, t, p: (t % 45) / 20, echelle: 1.75, aura: posee === 'victoire' ? 0.8 : 0.25 });
 }
 
+/** Le héros dit une phrase, pour qu'on entende sa voix. */
+function ecouterHeros() {
+  createur.def.nom = $('createur-nom').value;
+  const h = construireHeros(createur.def);
+  dire(`Je suis ${h.nom}. La Fracture n'a qu'à bien se tenir !`, h.voix);
+}
+
 function validerCreateur() {
   createur.def.nom = $('createur-nom').value;
   const def = { ...createur.def, nom: construireHeros(createur.def).nom };
@@ -668,7 +684,7 @@ async function jouerScene() {
   if (h.phase === 'avant') {
     // Les choix ne comptent qu'une fois la scène finie (quitter au milieu la fait rejouer).
     const d = { ...h.drapeaux };
-    const r = await cineHistoire([...entreeScene(sc), ...etapesAvant(sc)], h, d);
+    const r = await cineHistoire([...entreeScene(sc), ...etapesAvant(sc)], h, d, HIST.musiqueDe(sc, 'avant'));
     if (r === 'quitte') { quitterHistoire(); return; }
     h.drapeaux = d;
     if (!sc.combat) { h.scene += 1; sauver(); jouerScene(); return; }
@@ -725,7 +741,7 @@ function combatHistoire(sc, adv, bonus, k = 0, vieRestante = null) {
   const libre = cb.issue === 'libre';
   const dernier = !serie || k === serie.length - 1;
   demarrerCombat({
-    p1: moi, p2: contre, arene: sc.arene, ia: { 1: cb.niveau[h.difficulte] || 'normal' }, mode: 'histoire',
+    p1: moi, p2: contre, arene: sc.arene, ia: { 1: cb.niveau[h.difficulte] || 'normal' }, mode: 'histoire', musique: HIST.musiqueDe(sc, 'combat'),
     victoires: serie ? 1 : cb.victoires || 2,
     vie: [vieHero < hpMax(moi) ? vieHero : null, vieAdv < 1 ? vieAdv * hpMax(contre) : null],
     corrompu: [false, !!cb.corrompu],
@@ -751,7 +767,7 @@ async function apresCombat(sc, gagne) {
   if (gagne && role(h, sc.combat.adv) === 'lechaos') succes.debloquer('street-chaos');
   const etapes = etapesApres(sc, gagne);
   const d = { ...h.drapeaux };
-  const r = await cineHistoire(etapes, h, d);
+  const r = await cineHistoire(etapes, h, d, HIST.musiqueDe(sc, 'apres'));
   if (r === 'quitte') { quitterHistoire(); return; }
   h.drapeaux = d;
   h.scene += 1;
@@ -839,7 +855,7 @@ function montrerTableau() {
 
 function combatTournoi(t, adv, finaleChampion) {
   demarrerCombat({
-    p1: t.hero, p2: adv, arene: finaleChampion || t.tour === 2 ? 'ring' : 'hasard', ia: { 1: NIVEAUX_TOURNOI[t.diff][t.tour] }, mode: 'tournoi',
+    p1: t.hero, p2: adv, arene: finaleChampion || t.tour === 2 ? 'ring' : 'hasard', ia: { 1: NIVEAUX_TOURNOI[t.diff][t.tour] }, mode: 'tournoi', musique: finaleChampion ? 'boss' : 'combat',
     texteFin: (gagne) => (gagne ? '' : '<p class="sous">Éliminé du tournoi…</p>'),
     suite: async () => {
       // Les autres matchs du tour : le champion gagne toujours les siens.
@@ -859,7 +875,7 @@ function combatTournoi(t, adv, finaleChampion) {
       ecrire(CLE_RECORDS, r);
       const champion = t.diff === 'difficile';
       if (champion) succes.debloquer('street-tournoi');
-      await cinematique(HIST.victoireTournoi(champion), t.hero);
+      await cinematique(HIST.victoireTournoi(champion), t.hero, 'epique');
       majMenu();
     },
     reessayer: () => { ecrire(CLE_TOURNOI, null); prep.difficulte = t.diff; lancerTournoi(t.hero); },
@@ -932,7 +948,7 @@ function combatTour(t, boss) {
   const hero = PERSO[t.hero];
   const hpMax = Math.round(150 * hero.hpMult);
   demarrerCombat({
-    p1: t.hero, p2: boss ? SECRETS.tour : t.file[t.etage], arene: boss ? 'sommet' : t.arenes[t.etage], mode: 'tour',
+    p1: t.hero, p2: boss ? SECRETS.tour : t.file[t.etage], arene: boss ? 'sommet' : t.arenes[t.etage], mode: 'tour', musique: boss ? 'boss' : 'combat',
     ia: { 1: boss ? 'difficile' : NIVEAUX_TOUR[t.etage] },
     // Les étages se jouent en un round, avec la vie qui reste ; le maître, en deux, à pleine vie.
     victoires: boss ? 2 : 1, vie: boss ? [] : [t.vie ?? hpMax, null],
@@ -944,7 +960,7 @@ function combatTour(t, boss) {
       if (boss) {
         ecrire(CLE_TOUR, null);
         succes.debloquer('street-tour');
-        await cinematique(HIST.TOUR_VICTOIRE, t.hero);
+        await cinematique(HIST.TOUR_VICTOIRE, t.hero, 'epique');
         majMenu();
         return;
       }
@@ -994,6 +1010,7 @@ const hpAvant = [0, 0];
 
 function demarrerCombat(o) {
   config = o;
+  if (o.musique === undefined) o.musique = [o.p1, o.p2].some((id) => PERSO[id]?.boss || PERSO[id]?.secret) ? 'boss' : 'combat';
   const normales = ARENES.filter((a) => !a.boss);
   const arene = o.arene === 'hasard' || !o.arene ? normales[Math.floor(Math.random() * normales.length)].id : o.arene;
   config.areneId = arene;
@@ -1053,7 +1070,8 @@ function pasDeCombat() {
   for (const ev of evenements(combat)) {
     FX.traiter(fx, ev, combat);
     if (ev.type === 'son') son(ev.nom);
-    if (ev.type === 'annonce') son(ev.ko ? 'ko' : 'annonce');
+    if (ev.type === 'annonce') { son(ev.ko ? 'ko' : 'annonce'); annoncer(ev.texte); }
+    if (['ulti', 'special', 'saisie'].includes(ev.type)) cri(ev);
     if (ev.type === 'combo') stats.comboMax[ev.joueur] = Math.max(stats.comboMax[ev.joueur], ev.n);
     if (ev.type === 'ko-coup' && combat.cine?.type === 'ulti') stats.ultiKo = true;
     if (ev.type === 'annonce' && ev.texte === 'PERFECT !') stats.perfect = true;
@@ -1069,6 +1087,22 @@ function pasDeCombat() {
     finMontree = true;
     setTimeout(montrerFin, 1400);
   }
+}
+
+/** L'annonceur : « Round 1 », « Combat ! », « K.O. ! »… */
+const PAROLES_ANNONCE = { 'FIGHT !': 'Combat !', 'K.O. !': 'Ko !', 'PERFECT !': 'Parfait !', 'TEMPS !': 'Temps !' };
+function annoncer(texte) {
+  const t = PAROLES_ANNONCE[texte] || String(texte).replace(/^ROUND (\d+)$/, 'Round $1 !');
+  dire(t, voixDe({ id: 'annonceur' }));
+}
+/** Les combattants crient le nom de leurs techniques (pas plus d'une par seconde chacun). */
+const derniersCris = [0, 0];
+function cri(ev) {
+  const maintenant = performance.now();
+  if (ev.type !== 'ulti' && maintenant - derniersCris[ev.joueur] < 1000) return;
+  derniersCris[ev.joueur] = maintenant;
+  const j = combat.joueurs[ev.joueur];
+  crier(ev.nom, voixDe(PERSO[j.id]));
 }
 
 /* ---- le dessin d'une image ---- */
@@ -1174,6 +1208,7 @@ function montrerFin() {
     <div class="ligne-boutons">${boutons}</div>`;
   ouvrir('ov-fin');
   son(humainGagne ? 'victoire' : 'ko');
+  if (p.cri) setTimeout(() => dire(p.cri, voixDe(p)), 700);
   const cv = $('fin-portrait');
   const g = cv.getContext('2d');
   const fond = g.createLinearGradient(0, 0, cv.width, 0);
@@ -1313,6 +1348,9 @@ function brancher() {
     }
   });
   $('b-reset').addEventListener('click', reinitialiser);
+  const majVoix = () => { for (const id of ['b-voix-menu', 'b-voix']) $(id).textContent = voixActives() ? '🗣️ Voix' : '🤐 Voix coupées'; };
+  for (const id of ['b-voix-menu', 'b-voix']) $(id).addEventListener('click', () => { basculerVoix(); majVoix(); if (voixActives()) dire('Voix activées !', voixDe({ id: 'annonceur' })); });
+  majVoix();
   $('createur-options').addEventListener('click', (e) => {
     const b = e.target.closest('[data-champ]');
     if (!b) return;
@@ -1323,10 +1361,17 @@ function brancher() {
       else if (d.accessoires.length < MAX_ACCESSOIRES) d.accessoires.push(val);
       else { toast(`${MAX_ACCESSOIRES} accessoires au plus`); return; }
     } else d[champ] = val;
+    // Changer de genre accorde la voix (on peut la régler ensuite).
+    if (champ === 'genre') d.voixTimbre = val === 'f' ? Math.max(d.voixTimbre ?? 0, 0.8) : Math.min(d.voixTimbre ?? 1, 0.2);
     son('choix');
     majCreateur();
+    if (champ === 'genre') ecouterHeros();
   });
   $('createur-nom').addEventListener('input', (e) => { createur.def.nom = e.target.value; });
+  // Les réglages de la voix : glisser ne redessine pas tout ; lâcher fait entendre.
+  $('createur-options').addEventListener('input', (e) => { const r = e.target.closest('[data-voix]'); if (r) createur.def[r.dataset.voix] = Number(r.value); });
+  $('createur-options').addEventListener('change', (e) => { if (e.target.closest('[data-voix]')) ecouterHeros(); });
+  $('createur-options').addEventListener('click', (e) => { if (e.target.closest('[data-ecouter]')) ecouterHeros(); });
   $('createur-hasard').addEventListener('click', () => { createur.def = herosAuHasard(); $('createur-nom').value = createur.def.nom; son('choix'); majCreateur(); });
   $('createur-ok').addEventListener('click', validerCreateur);
   $('createur-retour').addEventListener('click', () => (createur.mode === 'nouveau' ? ouvrirDifficultes('histoire') : ouvrirSauvegardes()));
@@ -1444,10 +1489,21 @@ function brancher() {
   brancherTactile();
 }
 
+/** Le thème joué : selon l'écran, la scène de l'histoire, le combat. */
+const theme = (n) => (n === null ? null : !n || n === 'combat' ? 'street' : `street-${n}`);
+function musiqueDuMoment() {
+  const ecran = document.querySelector('.ecran.is-active')?.id;
+  if (ecran === 's-cine') return theme(musiqueCine());
+  // L'écran avant un combat de l'histoire garde la musique de la scène.
+  if (ecran === 's-combat' && config) return theme(config.musique);
+  if (!$('ov-etape').hidden && partie) return theme(musiqueCine());
+  return 'street';
+}
+
 brancher();
 succes.visiter('street');
 majMenu();
-installerMusique('street', { actif: () => !estMuet() });
+installerMusique('street', { actif: () => !estMuet(), theme: musiqueDuMoment });
 
 if ('serviceWorker' in navigator) {
   addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); });
@@ -1460,6 +1516,7 @@ window.__street = {
   figer(v = true) { enPause = v; },
   cine: (etapes, hero) => cinematique(etapes, hero),
   histoire: HIST,
+  musique: () => musiqueDuMoment(),
   avancer(n, tenues = []) { for (const k of tenues) touches.add(k); for (let i = 0; i < n; i++) pasDeCombat(); for (const k of tenues) touches.delete(k); dessiner(); },
 };
 void STATUTS; void BOSS; void SECRETS;

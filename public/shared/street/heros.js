@@ -43,6 +43,10 @@ export const ACCESSOIRES = [
 ];
 export const MAX_ACCESSOIRES = 3;
 
+export const GENRES = [['h', 'Homme'], ['f', 'Femme']];
+/** La voix : une hauteur (grave 0.5 → aigu 1.6) et un timbre (masculin 0 → féminin 1). */
+export const VOIX_HAUTEUR = [0.5, 1.6];
+
 /**
  * Les écoles de combat : un style, des statistiques, deux compétences, un
  * ultime, une saisie et trois combos (l'enchaînement d'abord).
@@ -165,6 +169,7 @@ export const ECOLES = {
 /** Le héros par défaut (avant qu'on change quoi que ce soit). */
 export const defautHeros = () => ({
   nom: 'HÉROS', corps: 'normal', tete: 'bandeau', peau: PEAUX[1], energie: 'rouge', tenue: TENUES[0], cheveux: CHEVEUX[0], accessoires: ['echarpe'], ecole: 'ki',
+  genre: 'h', voixHauteur: 1,
 });
 
 /** Un héros au hasard. */
@@ -175,6 +180,7 @@ export function herosAuHasard(alea = Math.random) {
     nom: un(['KAZE', 'NOVA', 'AKIRA', 'LUNA', 'REX', 'MIRA', 'ZED', 'SORA', 'KAI', 'NYX']),
     corps: un(CORPS)[0], tete: un(TETES)[0], peau: un(PEAUX), energie: un(Object.keys(ENERGIES)),
     tenue: un(TENUES), cheveux: un(CHEVEUX), accessoires: acc, ecole: un(Object.keys(ECOLES)),
+    ...(() => { const genre = alea() < 0.5 ? 'h' : 'f'; return { genre, voixHauteur: Math.round((0.75 + alea() * 0.5) * 100) / 100, voixTimbre: genre === 'f' ? 0.8 : 0.2 }; })(),
   };
 }
 
@@ -193,8 +199,12 @@ export function construireHeros(d, id = 'heros') {
   const poids = { fin: [-0.05, 0.3], normal: [0, 0], massif: [0.06, -0.35] }[corps];
   const stats = { hpMult: Math.round((ecole.hpMult + poids[0]) * 100) / 100, vitesse: Math.round((ecole.vitesse + poids[1]) * 10) / 10 };
   const barre = (x) => Math.max(5, Math.min(15, Math.round(x)));
+  // La voix : le timbre choisit une voix d'homme ou de femme et la colore, la hauteur la monte ou la descend.
+  const timbre = Math.max(0, Math.min(1, Number(def.voixTimbre ?? (def.genre === 'f' ? 0.8 : 0.2))));
+  const hauteur = Math.max(VOIX_HAUTEUR[0], Math.min(VOIX_HAUTEUR[1], Number(def.voixHauteur) || 1));
+  const voix = { genre: timbre >= 0.5 ? 'f' : 'h', hauteur: Math.round(hauteur * (0.85 + timbre * 0.3) * 100) / 100, vitesse: ecole.vitesse > 5 ? 1.1 : ecole.vitesse < 4 ? 0.92 : 1 };
   return {
-    id, nom: nomPropre(def.nom), style: ecole.style, desc: `Le héros de la Fracture — école ${ecole.nom}`, boss: null, heros: true,
+    id, nom: nomPropre(def.nom), genre: def.genre === 'f' ? 'f' : 'h', voix, style: ecole.style, desc: `Le héros de la Fracture — école ${ecole.nom}`, boss: null, heros: true,
     c: { ...energie, peau: def.peau, cheveux: def.cheveux, tenue: def.tenue },
     stats: { hp: barre(stats.hpMult * 10), dmg: barre(ecole.dmg * 10), def: barre(ecole.defMult * 10 - 1) },
     vitesse: stats.vitesse, saut: ecole.saut, dmg: ecole.dmg, hpMult: stats.hpMult, defMult: ecole.defMult,

@@ -52,12 +52,14 @@ export const ACTES = [
 
 /** Le coup final : ralenti, zoom sur le vaincu, onde de choc. */
 const coupFinal = (x, c, texte) => [
+  { musique: null },
   { bandes: 92 },
   { ralenti: 0.25 },
   { camera: { zoom: 1.9, x, y: 360, duree: 50 } },
   { narre: texte, auto: 120 },
   { effet: 'onde', x, y: 380, c, duree: 70, attendre: false },
   { effet: 'secousse', duree: 50 },
+  { musique: 'epique' },
   { ralenti: 1 },
   { camera: { zoom: 1, duree: 40 } },
 ];
@@ -78,9 +80,10 @@ export const SCENES = [
       { entre: 'hero', cote: 'g', comment: 'marche' },
       { entre: 'ryuken', cote: 'd', comment: 'saut', p: 'garde' },
       { dit: 'ryuken', texte: 'Te voilà enfin, {hero} ! Je commençais à croire que tu avais peur de ta revanche.' },
-      { dit: 'hero', texte: 'Peur ? Je suis venu finir ce qu’on a commencé la semaine dernière.', p: 'garde' },
+      { dit: 'hero', texte: 'Peur ? Je suis venu{e} finir ce qu’on a commencé la semaine dernière.', p: 'garde' },
       { dit: 'ryuken', texte: 'Ha ! Alors en garde. Le premier qui touche le sol paie les ramen.' },
       { narre: 'Ils n’ont jamais su qui aurait gagné.' },
+      { musique: 'tension' },
       { effet: 'fracture', attendre: false },
       { effet: 'secousse', duree: 50 },
       { dit: 'ryuken', texte: 'Le ciel… Le ciel se déchire !', p: 'touche' },
@@ -319,6 +322,7 @@ export const SCENES = [
           { dit: 'hero', texte: 'Merci, {blazero}. Pour de vrai.' },
         ],
       },
+      { musique: 'armee' },
       { narre: 'Dehors, un bruit. Régulier. Mécanique. Des centaines de pas, parfaitement en rythme.' },
       { effet: 'secousse', duree: 30 },
       { dit: 'ryuken', texte: 'Qu’est-ce que… ?', p: 'garde' },
@@ -412,7 +416,7 @@ export const SCENES = [
       { narre: 'Des projecteurs. Une foule qui hurle. Et au centre du ring, un colosse aux poings gantés.' },
       { entre: 'onyx', cote: 'd', comment: 'place', p: 'victoire' },
       { entre: 'hero', cote: 'g', comment: 'marche' },
-      { dit: 'onyx', texte: 'Tiens, du sang neuf. T’as l’air perdu, petit.' },
+      { dit: 'onyx', texte: 'Tiens, du sang neuf. T’as l’air perdu{e}, petit{e}.' },
       { dit: 'hero', texte: 'Je cherche la Citadelle de l’Horloge. Et des éclats violets. Tu en as entendu parler ?' },
       { dit: 'onyx', texte: 'Des éclats ? Je n’ai besoin d’aucun caillou, moi. Cent combats. Cent K.O. Avec ces deux poings-là.', p: 'garde' },
       { dit: 'hero', texte: 'Alors affronte-moi. Si je gagne, tu me dis ce que tu sais.', p: 'garde' },
@@ -423,14 +427,14 @@ export const SCENES = [
       { entre: 'gravox', cote: 'd', comment: 'chute', p: 'lance' },
       { dit: 'gravox', texte: 'LA GRAVITÉ M’OBÉIT ! LE RING ENTIER VA S’ÉCRASER !' },
       { entre: 'onyx', cote: 'dd', comment: 'marche', dir: -1 },
-      { dit: 'onyx', texte: 'Ah, celui-là, il a touché un de tes cailloux. Vas-y, petit. Montre-moi ce que tu vaux.', p: 'repos' },
+      { dit: 'onyx', texte: 'Ah, celui-là, il a touché un de tes cailloux. Vas-y, petit{e}. Montre-moi ce que tu vaux.', p: 'repos' },
       { sort: 'onyx', comment: 'marche' },
     ],
     combat: { adv: 'gravox', corrompu: true, niveau: { normal: 'normal', difficile: 'difficile' } },
     apres: [
       { dit: 'gravox', texte: 'Le poids… il s’en va enfin… Merci.', p: 'touche' },
       { entre: 'onyx', cote: 'dd', comment: 'marche', dir: -1 },
-      { dit: 'onyx', texte: 'Pas mal du tout. Je retire « petit ».', p: 'repos' },
+      { dit: 'onyx', texte: 'Pas mal du tout. Je retire « petit{e} ».', p: 'repos' },
       { dit: 'onyx', texte: 'Un conseil gratuit : les corrompus parlent tous d’un temple en ruines, à l’est. Ils y vont comme on va à la messe. Ta citadelle, c’est là qu’on en parle.' },
       { dit: 'onyx', texte: 'Et n’oublie pas : le Tournoi. Je t’y attends.', p: 'victoire' },
       { sort: 'onyx', comment: 'marche' },
@@ -460,7 +464,7 @@ export const SCENES = [
       { dit: 'lunara', texte: 'Il a deux visages. Celui qui avance… et celui qui reflète. Le second te ressemble, {hero}.' },
       { dit: 'hero', texte: 'Celui qui reflète…' },
       { entre: 'nemesis', cote: 'dd', comment: 'apparait', ombre: true, dir: -1 },
-      { dit: 'nemesis', texte: 'Pas encore. Tu n’es pas assez fort pour que je prenne ta place.' },
+      { dit: 'nemesis', texte: 'Pas encore. Tu n’es pas assez fort{e} pour que je prenne ta place.' },
       { dit: 'hero', texte: 'Qui es-tu ?!', p: 'garde' },
       { dit: 'nemesis', texte: 'Continue de grimper. Un jour, tu sauras.' },
       { sort: 'nemesis', comment: 'teleport' },
@@ -531,7 +535,7 @@ export const SCENES = [
     ],
     combat: { adv: 'shadowkira', niveau: { normal: 'normal', difficile: 'difficile' } },
     apres: [
-      { dit: 'shadowkira', texte: '… Tu es trop fort. Il l’avait prévu, tu sais. Il prévoit tout.', p: 'touche' },
+      { dit: 'shadowkira', texte: '… Tu es trop fort{e}. Il l’avait prévu, tu sais. Il prévoit tout.', p: 'touche' },
       { dit: 'hero', texte: 'Qu’est-ce qu’il t’a promis ?' },
       { dit: 'shadowkira', texte: 'Ma sœur. Elle a disparu il y a dix ans. Il m’a juré qu’il pouvait remonter le temps… et la sauver avant.', p: 'repos' },
       { dit: 'shadowkira', texte: 'Kaïros. Le Seigneur du Temps. C’est lui qui a ouvert la Fracture. Sa citadelle est au cœur du désert maudit, là où le sable coule vers le haut.' },
@@ -962,7 +966,7 @@ export const SCENES = [
       { dit: 'vorn', texte: 'Je l’ai vu se jeter devant le canon. C’était un acte de soldat. Le plus noble de toute cette bataille.', p: 'repos' },
       {
         si: 'vorn_honneur',
-        alors: [{ dit: 'vorn', texte: 'Le seul combattant qui m’ait jamais mis un genou à terre. Je savais que ce serait toi.' }],
+        alors: [{ dit: 'vorn', texte: '{h:Le seul combattant|La seule combattante} qui m’ait jamais mis un genou à terre. Je savais que ce serait toi.' }],
         sinon: [{ dit: 'vorn', texte: 'Le fugitif de la citadelle. Cette fois, pas de tempête de sable pour te sauver.' }],
       },
       {
@@ -1106,7 +1110,7 @@ export const SCENES = [
         alors: [{ dit: 'malvortex', texte: 'Toi ! Celui qui m’a fait reculer d’un pas. Je n’ai pensé qu’à toi, depuis.' }],
         sinon: [{ dit: 'malvortex', texte: 'Tiens, l’insecte du volcan. Tu reviens ramper au pied de mon trône ?' }],
       },
-      { dit: 'hero', texte: 'Je suis venu chercher le dernier éclat. Et refermer la Fracture.', p: 'garde' },
+      { dit: 'hero', texte: 'Je suis venu{e} chercher le dernier éclat. Et refermer la Fracture.', p: 'garde' },
       { dit: 'malvortex', texte: 'La refermer ? Pauvre fou. Elle n’est pas à moi, elle est à LUI. Et derrière elle, quelque chose a faim.', p: 'lance' },
     ],
     combat: { adv: 'malvortex', niveau: { normal: 'difficile', difficile: 'impossible' } },
@@ -1258,6 +1262,7 @@ export const SCENES = [
     apres: [
       { dit: 'lechaos', texte: 'IMPOSSIBLE… MAÎTRE… AIDEZ-MOI…', p: 'touche' },
       { debloque: 'lechaos' },
+      { musique: 'mystere' },
       { effet: 'gel', attendre: false },
       { narre: 'Soudain, plus rien ne bouge. Le vent, la poussière, le temps lui-même… s’arrête.' },
       { entre: 'kairos', cote: 'c', comment: 'apparait', dir: -1 },
@@ -1514,6 +1519,7 @@ export const SCENES = [
     ],
     combat: { adv: 'kairos', niveau: { normal: 'difficile', difficile: 'impossible' } },
     finale: [
+      { musique: null },
       { bandes: 92 },
       { ralenti: 0.2 },
       { camera: { zoom: 2.2, x: 700, y: 350, duree: 60 } },
@@ -1522,6 +1528,7 @@ export const SCENES = [
       { effet: 'secousse', duree: 60 },
       { ralenti: 1 },
       { camera: { zoom: 1, duree: 50 } },
+      { musique: 'epique' },
       { effet: 'horloge-brisee', duree: 280, attendre: false },
       { attendre: 70 },
       { effet: 'debris', c: '#ffd23f', n: 50, duree: 260, attendre: false },
@@ -1643,6 +1650,7 @@ export const SCENES = [
       { narre: 'Et tout en haut de la Tour des défis, une silhouette attend. Elle a ton visage.' },
       { dit: 'ryuken', texte: 'Alors, {hero}… Je te dois des ramen, je crois. Mais d’abord : ce round, on le finit ?' },
       { dit: 'hero', texte: 'Le monde me doit bien un bon combat. En garde !', p: 'victoire' },
+      { musique: 'epique' },
       { titre: 'FIN', sous: 'Merci d’avoir joué ! — Onyx vous attend au Tournoi, Némésis au sommet de la Tour.' },
     ],
   },
@@ -1658,6 +1666,58 @@ export const TOUR_BOSS = [
   { dit: 'hero', texte: 'Qui es-tu ?', p: 'garde' },
   { dit: 'nemesis', texte: 'Je suis ton reflet. Tout ce que tu as combattu. Et ce soir… je suis toi, en mieux.', p: 'lance' },
 ];
+
+/*
+ * La musique de chaque scène : [avant le combat, pendant, après].
+ * Sans rien : « calme » pour une scène sans combat ; avec un combat,
+ * « tension » avant, la musique de combat (« boss » contre un boss, « armee »
+ * contre une vague de soldats, « final » contre Kaïros), « calme » après.
+ * Les cinématiques changent aussi de musique en route ({ musique }).
+ * Les noms : calme, tension, mystere, triste, epique, armee, boss, final,
+ * et « combat » (la musique de combat ordinaire).
+ */
+export const MUSIQUES = {
+  volcan: [, , 'tension'],
+  malvortex1: [, , 'tension'],
+  assaut: ['armee', , 'tension'],
+  ring: ['combat'],
+  ruines: ['mystere', , 'mystere'],
+  sablier: ['mystere'],
+  foret: ['mystere'],
+  trahison: [, , 'triste'],
+  evasion: ['calme'],
+  infiltration: ['armee', , 'tension'],
+  cachot: [, , 'triste'],
+  vorn1: ['armee', , 'armee'],
+  cite: [, , 'armee'],
+  entrainement: ['calme', 'combat'],
+  bataille: ['armee', , 'triste'],
+  vorn2: ['armee', , 'epique'],
+  victoire: ['epique'],
+  cathedrale: ['mystere', , 'epique'],
+  trone: [, , 'tension'],
+  tentation: [, 'boss', 'triste'],
+  veille: ['triste'],
+  portail: [, , 'triste'],
+  zero: [, , 'tension'],
+  reveil: ['mystere'],
+  retour: ['triste'],
+  eclipse: [, , 'triste'],
+  rassemblement: ['epique'],
+  garde: ['armee', , 'tension'],
+  'arriere-garde': ['armee', , 'epique'],
+  reflet: ['mystere'],
+  horloge: [, , 'triste'],
+  adieux: ['triste'],
+};
+const BOSS_MUSIQUE = { solarius: 'boss', malvortex: 'boss', lechaos: 'boss', vorn: 'boss', kairos: 'final' };
+/** La musique d'une scène, avant / pendant / après le combat. */
+export function musiqueDe(sc, quand) {
+  const m = MUSIQUES[sc.id] || [];
+  if (quand === 'avant') return m[0] || (sc.combat ? 'tension' : 'calme');
+  if (quand === 'combat') return m[1] || (sc.combat.serie ? 'armee' : BOSS_MUSIQUE[sc.combat.adv] || 'combat');
+  return m[2] || 'calme';
+}
 
 /** La fin de la Tour des défis : Némésis se brise en mille éclats de miroir… et se relève. */
 export const TOUR_VICTOIRE = [
@@ -1719,5 +1779,5 @@ export const TOURNOI_FINALE = [
   { effet: 'secousse', duree: 30 },
   { dit: 'onyx', texte: 'Cent combats. Cent K.O. Tu seras le cent-unième.' },
   { dit: 'hero', texte: 'On dit ça jusqu’au jour où on tombe.', p: 'garde' },
-  { dit: 'onyx', texte: 'Alors viens me faire tomber, petit. Ding ding !', p: 'garde' },
+  { dit: 'onyx', texte: 'Alors viens me faire tomber, petit{e}. Ding ding !', p: 'garde' },
 ];

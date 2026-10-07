@@ -376,3 +376,10 @@ kbd { display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4
 .cine-titre.film.entre b { animation: film 2.2s ease both; }
 .cine-titre.film.entre span { animation: film 2.2s .8s ease both; }
 @keyframes film { from { opacity: 0; letter-spacing: .5em; filter: blur(8px); } }
+
+/* Les réglages de la voix du héros */
+.reglages-voix { display: flex; flex-direction: column; gap: 8px; }
+.reglages-voix label { display: grid; grid-template-columns: 78px 1fr 78px; align-items: center; gap: 8px; font-size: .8rem; font-weight: 700; color: var(--pale); }
+.reglages-voix label span:last-child { text-align: right; }
+.reglages-voix input[type="range"] { width: 100%; accent-color: var(--or); }
+.reglages-voix .btn { align-self: flex-start; }

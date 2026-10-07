@@ -29,6 +29,7 @@
  *   { auraSur: id, v: 1 }                               une aura autour de lui (entre: … aura: 1 aussi)
  *   { retire: [ids] }                                   ils disparaissent d'un coup
  *   { calme: true }                                     tous les effets s'arrêtent
+ *   { musique: 'triste' | null }                        la musique change (null : le silence)
  *   { titre, film: true }                               un titre façon générique de film
  *   auto: n (sur narre, dit, titre)                     passe tout seul au bout de n images
  *   effets : onde, debris, horloge-brisee, rayons, pilier, braises, eclairs, confettis,
@@ -36,7 +37,8 @@
  *   { debloque: id }                                    un combattant rejoint le roster
  *   { croise: id, indice }                              on le rencontre… on le débloquera plus tard
  *
- * 'hero' désigne le combattant du joueur ; « {hero} » dans un texte, son nom.
+ * 'hero' désigne le combattant du joueur ; « {hero} » dans un texte, son nom ;
+ * « {e} » s'accorde à son genre (« fort{e} »), « {h:il|elle} » aussi.
  * Les rôles (`roles`) : qui joue qui, quand le héros tient déjà un rôle ;
  * « {id} » dans un texte donne le nom de celui qui le joue.
  */
@@ -45,6 +47,7 @@ import { PERSO } from '../../../shared/street/persos.js';
 import { dessinerCombattant, dessinerPortrait, rgba } from './dessin.js';
 import { ARENE, fondArene, animerArene } from './arenes.js';
 import { jouer as son } from './son.js';
+import { dire, taire, parleEncore, voixDe, genreDe } from './voix.js';
 
 const $ = (id) => document.getElementById(id);
 const L = 1000;
@@ -62,7 +65,12 @@ let scene = null;
  * Joue une cinématique. Rend une promesse, résolue à la fin ('fin'), ou
  * quand on la quitte ('quitte'). Les choix faits s'écrivent dans `drapeaux`.
  */
-export function jouerCine(etapes, { hero, roles = {}, drapeaux = {}, debloquer = () => {}, croiser = () => {}, quittable = false } = {}) {
+/** La musique du moment (ce que la dernière cinématique a demandé). */
+let musique = 'calme';
+export const musiqueCine = () => musique;
+
+export function jouerCine(etapes, { hero, roles = {}, drapeaux = {}, debloquer = () => {}, croiser = () => {}, quittable = false, musique: m } = {}) {
+  if (m !== undefined) musique = m;
   return new Promise((fini) => {
     if (scene) terminer('quitte');
     scene = {
@@ -81,7 +89,11 @@ export function jouerCine(etapes, { hero, roles = {}, drapeaux = {}, debloquer =
 }
 
 const qui = (w) => (w === 'hero' ? scene.hero : scene.roles[w] || w);
-const remplir = (texte) => texte.replace(/\{(\w+)\}/g, (m, id) => (id === 'hero' ? PERSO[scene.hero]?.nom || 'toi' : PERSO[qui(id)]?.nom || m));
+const feminin = () => genreDe(PERSO[scene.hero]) === 'f';
+const remplir = (texte) => texte
+  .replace(/\{h:([^|}]*)\|([^}]*)\}/g, (m, masc, fem) => (feminin() ? fem : masc))
+  .replace(/\{e\}/g, () => (feminin() ? 'e' : ''))
+  .replace(/\{(\w+)\}/g, (m, id) => (id === 'hero' ? PERSO[scene.hero]?.nom || 'toi' : PERSO[qui(id)]?.nom || m));
 const vrai = (cond, d) => (cond.startsWith('!') ? !d[cond.slice(1)] : !!d[cond]);
 
 /* ------------------------------------------------------------------ */
@@ -102,6 +114,7 @@ function suivante() {
     return;
   }
   if (e.vide) { S.acteurs.clear(); suivante(); return; }
+  if (e.musique !== undefined) { musique = e.musique; suivante(); return; }
   if (e.camera) {
     const c = e.camera;
     const duree = S.rapide ? 1 : c.duree || 40;
@@ -213,6 +226,7 @@ function appliquer(e) {
 
 function terminer(comment) {
   const S = scene;
+  taire();
   scene = null;
   cancelAnimationFrame(raf);
   for (const id of ['cine-boite', 'cine-titre', 'cine-debloque', 'cine-choix', 'cine-lieu']) $(id).hidden = true;
@@ -240,6 +254,7 @@ export function passerCine() {
   const S = scene;
   if (!S || S.attente?.choix) return;
   S.rapide = true;
+  taire();
   S.fondu = null;
   S.vitesse = 1;
   S.cam = { ...CAMERA, anim: null };
@@ -292,6 +307,8 @@ function parler(w, texte, e = {}) {
     boite.style.setProperty('--c', '#b9a8d6');
   }
   S.ecrit = { texte: remplir(texte), n: 0, qui: w ? qui(w) : null };
+  const parleur = w ? S.acteurs.get(qui(w)) : null;
+  dire(S.ecrit.texte, voixDe(w ? PERSO[qui(w)] : { id: 'narrateur' }), { corrompu: !!(parleur?.corrompu || (w && (e.ombre ?? parleur?.ombre))) });
   $('cine-texte').textContent = '';
   S.attente = { tap: true, auto: e.auto ? S.t + e.auto : undefined };
 }
@@ -306,6 +323,7 @@ function montrerTitre(e) {
   c.classList.toggle('film', !!e.film);
   c.classList.remove('entre'); void c.offsetWidth; c.classList.add('entre');
   son(e.film ? 'victoire' : 'annonce');
+  if (e.film) dire(`${remplir(e.titre).replace(/[^\p{L}\p{N}’' -]/gu, ' ')}. ${remplir(e.sous || '')}`, voixDe({ id: 'narrateur' }));
   S.attente = { tap: true, auto: e.auto ? S.t + e.auto : undefined };
 }
 
@@ -428,7 +446,7 @@ function avancer(S) {
   S.secousse *= 0.88;
   // Ce qu'on attend est fini : la suite.
   const at = S.attente;
-  if (at && at.tap && at.auto !== undefined && S.t >= at.auto && !(S.ecrit && S.ecrit.n < S.ecrit.texte.length)) { avancerCine(); return; }
+  if (at && at.tap && at.auto !== undefined && S.t >= at.auto && !(S.ecrit && S.ecrit.n < S.ecrit.texte.length) && !parleEncore()) { avancerCine(); return; }
   if (at && !at.tap && !at.choix && !at.fondu) {
     const fini = (at.fin !== undefined && S.t >= at.fin) || (at.acteur && at.acteur.entree >= 1) || (at.sortie && !S.acteurs.has(at.sortie.id));
     if (fini) { S.attente = null; suivante(); }

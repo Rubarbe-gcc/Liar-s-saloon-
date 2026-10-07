@@ -6,7 +6,9 @@
  * peu de percussion). Rien à télécharger, rien qui manque hors connexion.
  *
  * Le jeu ne pilote rien : il dit seulement, par deux fonctions, si le son est
- * allumé (`actif`) et si le moment s'y prête (`permis`). La musique démarre au
+ * allumé (`actif`) et si le moment s'y prête (`permis`). Un jeu peut aussi
+ * changer de thème selon la scène (`theme`) : la musique passe de l'un à
+ * l'autre en douceur, ou se tait (null). La musique démarre au
  * premier geste du joueur — les navigateurs l'exigent — et se tait toute seule
  * quand l'onglet est caché.
  *
@@ -119,6 +121,105 @@ export const THEMES = {
       [12, 15, 17, 15, 12, _, 10, 12], [15, _, 19, _, 17, 15, 12, _], [14, _, 10, _, 7, 10, 14, _], [17, _, 15, _, 14, _, 10, _],
     ],
   },
+
+  /* ---- STREET COMBAT, le mode Histoire : une musique par ambiance ---- */
+
+  /* Calme : les moments posés, entre amis. Doux, majeur, sans batterie. */
+  'street-calme': {
+    bpm: 80, pas: 8, ton: 196, volume: 0.05,
+    onde: 'triangle', tenue: 2.2, filtre: 1800, nappe: 0.6,
+    accords: [[0, 4, 7], [-3, 0, 4], [-7, -3, 0], [-5, -1, 2], [0, 4, 7], [-3, 0, 4], [-7, -3, 0], [-5, -1, 2]],
+    basse: [0, _, _, _, 2, _, _, _],
+    batterie: '........',
+    melodie: [
+      [7, _, _, 4, _, _, 2, _], [0, _, _, _, _, _, _, _], [5, _, _, 4, _, _, 0, _], [2, _, _, _, -1, _, _, _],
+      [7, _, 9, _, 7, _, 4, _], [4, _, _, _, 0, _, _, _], [5, _, 4, _, 2, _, 0, _], [2, _, _, _, _, _, _, _],
+    ],
+  },
+  /* Tension : un méchant entre, le ciel se fend. Grave, des demi-tons qui grincent, un cœur qui bat. */
+  'street-tension': {
+    bpm: 92, pas: 8, ton: 98, volume: 0.07,
+    onde: 'sawtooth', tenue: 1.6, filtre: 900, nappe: 0.55,
+    accords: [[0, 3, 7], [0, 3, 7], [1, 4, 8], [0, 3, 6], [0, 3, 7], [-1, 3, 6], [1, 4, 8], [0, 3, 6]],
+    basse: [0, _, 0, _, 0, _, 0, 0],
+    batterie: 'k...k.k.',
+    melodie: [
+      [12, _, _, _, 13, _, _, _], [12, _, _, _, _, _, _, _], [13, _, _, _, 16, _, _, _], [15, _, _, _, 12, _, _, _],
+      [12, _, _, _, 13, _, _, _], [11, _, _, _, _, _, _, _], [13, _, 16, _, 17, _, 16, _], [15, _, _, _, 12, _, _, _],
+    ],
+  },
+  /* Mystère : le temps, les reflets. Des gammes par tons, qui flottent. */
+  'street-mystere': {
+    bpm: 70, pas: 8, ton: 164.81, volume: 0.05,
+    onde: 'sine', tenue: 3, filtre: 0, nappe: 0.7,
+    accords: [[0, 4, 8], [2, 6, 10], [0, 4, 8], [-2, 2, 6], [0, 4, 8], [2, 6, 10], [4, 8, 12], [-2, 2, 6]],
+    basse: [0, _, _, _, _, _, _, _],
+    batterie: '........',
+    melodie: [
+      [12, _, _, 16, _, _, _, _], [14, _, _, _, 18, _, _, _], [16, _, _, 12, _, _, _, _], [10, _, _, _, _, _, _, _],
+      [12, _, 16, _, 20, _, _, _], [18, _, _, _, 14, _, _, _], [16, _, _, _, 20, _, _, _], [22, _, _, _, _, _, _, _],
+    ],
+  },
+  /* Triste : les sacrifices, les adieux. Lent, mineur, des notes qui restent. */
+  'street-triste': {
+    bpm: 66, pas: 8, ton: 146.83, volume: 0.055,
+    onde: 'triangle', tenue: 3, filtre: 1400, nappe: 0.7,
+    accords: [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [-2, 2, 5], [0, 3, 7], [-4, 0, 3], [-5, -2, 2], [-5, -1, 2]],
+    basse: [0, _, _, _, _, _, _, _],
+    batterie: '........',
+    melodie: [
+      [7, _, _, _, 8, _, 7, _], [3, _, _, _, _, _, _, _], [10, _, _, _, 12, _, 10, _], [9, _, _, _, 5, _, _, _],
+      [7, _, 8, _, 10, _, 12, _], [15, _, _, _, 12, _, _, _], [10, _, 8, _, 7, _, 5, _], [7, _, _, _, _, _, _, _],
+    ],
+  },
+  /* Épique : les victoires, les alliés réunis. Majeur, une fanfare, une marche. */
+  'street-epique': {
+    bpm: 120, pas: 8, ton: 130.81, volume: 0.07,
+    onde: 'sawtooth', tenue: 1.8, filtre: 2400, nappe: 0.5,
+    accords: [[0, 4, 7], [0, 4, 7], [-5, -1, 2], [-5, -1, 2], [-3, 0, 4], [-3, 0, 4], [-7, -3, 0], [-2, 2, 5]],
+    basse: [0, _, 0, _, 0, _, 2, _],
+    batterie: 'k.skk.s.',
+    melodie: [
+      [12, _, _, _, 16, _, 19, _], [19, _, _, _, 17, _, 16, _], [14, _, _, _, 11, _, 14, _], [19, _, _, _, _, _, _, _],
+      [16, _, _, _, 19, _, 21, _], [24, _, _, _, 21, _, 19, _], [17, _, _, _, 16, _, 12, _], [14, _, _, _, 17, _, 19, _],
+    ],
+  },
+  /* L'armée de l'Horloge : une marche militaire, des caisses claires, un clairon mineur. */
+  'street-armee': {
+    bpm: 108, pas: 8, ton: 110, volume: 0.065,
+    onde: 'square', tenue: 1.0, filtre: 1300, nappe: 0.3,
+    accords: [[0, 3, 7], [0, 3, 7], [-2, 2, 5], [0, 3, 7], [-4, 0, 3], [-2, 2, 5], [-5, -1, 2], [0, 3, 7]],
+    basse: [0, _, 0, _, 0, _, 0, _],
+    batterie: 'k.s.ksss',
+    melodie: [
+      [12, _, 12, 12, 15, _, 12, _], [10, _, _, _, 7, _, _, _], [10, _, 10, 10, 14, _, 10, _], [12, _, _, _, _, _, _, _],
+      [8, _, 8, 8, 12, _, 8, _], [10, _, 10, 10, 14, _, 10, _], [11, _, _, _, 14, _, 17, _], [12, _, _, _, _, _, _, _],
+    ],
+  },
+  /* Combat de boss : rapide, phrygien, une basse qui ne s'arrête jamais. */
+  'street-boss': {
+    bpm: 162, pas: 8, ton: 98, volume: 0.065,
+    onde: 'sawtooth', tenue: 1.1, filtre: 1800, nappe: 0.3,
+    accords: [[0, 3, 7], [1, 4, 8], [0, 3, 7], [1, 4, 8], [-2, 1, 5], [-4, 0, 3], [-5, -2, 1], [-4, -1, 3]],
+    basse: [0, 0, 0, 0, 0, 0, 0, 0],
+    batterie: 'k.skk.sh',
+    melodie: [
+      [12, 13, 12, _, 15, _, 13, 12], [13, _, 16, _, 17, _, 16, _], [12, 13, 12, _, 15, _, 19, _], [20, _, 19, _, 17, _, 16, _],
+      [10, _, 13, _, 17, _, 13, _], [8, _, 12, _, 15, _, 12, _], [7, _, 10, _, 13, _, 17, _], [19, _, _, _, 16, _, 15, _],
+    ],
+  },
+  /* Le combat final, hors du temps : le plus rapide, le plus grand. */
+  'street-final': {
+    bpm: 170, pas: 8, ton: 110, volume: 0.07,
+    onde: 'sawtooth', tenue: 1.3, filtre: 2600, nappe: 0.45,
+    accords: [[0, 3, 7], [-4, 0, 3], [3, 7, 10], [-2, 2, 5], [0, 3, 7], [-4, 0, 3], [-2, 2, 5], [-5, -1, 2]],
+    basse: [0, 0, 2, 0, 0, 2, 0, 1],
+    batterie: 'kssk.ksh',
+    melodie: [
+      [12, _, 15, _, 19, _, 15, _], [20, _, 19, _, 15, _, 12, _], [22, _, 19, _, 15, _, 19, _], [17, _, _, _, 14, _, _, _],
+      [24, _, 22, _, 19, _, 22, _], [20, _, 19, _, 15, _, 12, _], [14, 15, 17, _, 19, _, 22, _], [23, _, _, _, 19, _, _, _],
+    ],
+  },
 };
 
 const hz = (ton, demiTons) => ton * 2 ** (demiTons / 12);
@@ -129,17 +230,33 @@ const hz = (ton, demiTons) => ton * 2 ** (demiTons / 12);
  * @param {object} [o]
  * @param {() => boolean} [o.actif]   le son est-il allumé ?
  * @param {() => boolean} [o.permis]  le moment s'y prête-t-il ? (pas pendant une prise de son)
+ * @param {() => string|null} [o.theme]  le thème du moment (clé de `THEMES`), ou null pour le silence
  */
-export function installerMusique(nom, { actif = () => true, permis = () => true } = {}) {
-  const th = THEMES[nom];
+export function installerMusique(nom, { actif = () => true, permis = () => true, theme = null } = {}) {
+  let th = THEMES[nom];
   if (!th || typeof window === 'undefined') return;
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return;
 
   let ctx = null, sortie = null, bruit = null;
   let geste = false, joue = false, pas = 0, prochain = 0;
-  const duree = 60 / th.bpm / 2;               // un pas = une croche
-  const total = th.accords.length * th.pas;
+  let courant = nom;
+  let duree = 60 / th.bpm / 2;                 // un pas = une croche
+  let total = th.accords.length * th.pas;
+
+  /** Change de thème : la musique baisse, puis repart du début du nouveau. */
+  function changer(n) {
+    courant = n;
+    th = THEMES[n];
+    duree = 60 / th.bpm / 2;
+    total = th.accords.length * th.pas;
+    pas = 0;
+    if (!joue || !ctx) return;
+    sortie.gain.cancelScheduledValues(ctx.currentTime);
+    sortie.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.15);
+    prochain = ctx.currentTime + 0.6;
+    sortie.gain.setTargetAtTime(th.volume, prochain, 0.5);
+  }
 
   function monter() {
     ctx = new AC();
@@ -224,7 +341,9 @@ export function installerMusique(nom, { actif = () => true, permis = () => true 
   }
 
   function battre() {
-    const veut = geste && !document.hidden && actif() && permis();
+    const voulu = theme ? theme() : nom;
+    if (voulu && voulu !== courant && THEMES[voulu]) changer(voulu);
+    const veut = geste && !document.hidden && actif() && permis() && voulu !== null;
     if (!veut) {
       if (joue) {
         joue = false;
