@@ -70,3 +70,11 @@ test('pas de voix robotique : les voix naturelles d’abord, une hauteur proche 
     assert.ok(h >= 0.72 && h <= 1.32, `${p.id} : hauteur ${h}`);
   }
 });
+
+test('une vieille voix (pas naturelle) n’est presque pas déformée', () => {
+  const vieilles = [{ name: 'Microsoft Paul - French (France)', lang: 'fr-FR' }, { name: 'Microsoft Hortense - French (France)', lang: 'fr-FR' }];
+  const r = choisirVoix('f', vieilles);
+  assert.equal(r.naturelle, false);
+  assert.equal(r.correction, 1, 'pas de voix d’un autre genre poussée dans les aigus');
+  assert.equal(choisirVoix('h', [{ name: 'Google français', lang: 'fr-FR' }]).naturelle, true);
+});

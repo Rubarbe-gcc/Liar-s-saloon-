@@ -98,8 +98,9 @@ export function choisirVoix(genre, voix = voixFr) {
   })).sort((a, b) => b.note - a.note);
   const meilleure = notes[0];
   if (!meilleure) return { voix: null, correction: 1 };
+  const naturelle = NATURELLE.test(meilleure.v.name);
   const correction = meilleure.g && meilleure.g !== genre ? (genre === 'f' ? 1.18 : 0.84) : 1;
-  return { voix: meilleure.v, correction };
+  return { voix: meilleure.v, correction, naturelle };
 }
 
 /** La hauteur et la vitesse envoyées à la voix : près du naturel, jamais déformées. */
@@ -172,14 +173,16 @@ export function dire(texte, voix, etat = {}) {
   const morceaux = intonations(texte);
   if (!morceaux.length) return;
   if (!synth || !voixFr.length) return;
-  const { voix: v, correction } = choisirVoix(voix.genre);
+  const { voix: v, correction, naturelle } = choisirVoix(voix.genre);
   for (const m of morceaux) {
     const r = reglage(m, voix, etat);
     const u = new SpeechSynthesisUtterance(m.texte);
     u.lang = v?.lang || 'fr-FR';
     if (v) u.voice = v;
-    u.pitch = hauteurNaturelle(r.hauteur * correction);
-    u.rate = vitesseNaturelle(r.vitesse);
+    // Une vieille voix (pas « naturelle ») se déforme dès qu'on la pousse : on n'y touche presque pas.
+    const doux = naturelle ? 1 : 0.25;
+    u.pitch = 1 + (hauteurNaturelle(r.hauteur * correction) - 1) * doux;
+    u.rate = 1 + (vitesseNaturelle(r.vitesse) - 1) * (naturelle ? 1 : 0.5);
     u.volume = r.volume;
     synth.speak(u);
   }
