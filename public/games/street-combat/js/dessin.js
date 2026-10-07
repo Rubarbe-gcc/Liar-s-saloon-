@@ -101,7 +101,7 @@ function poseDe(nom, t, p = 0) {
  * Dessine un combattant.
  * @param {CanvasRenderingContext2D} g
  * @param {object} perso    la fiche (persos.js)
- * @param {object} o        { x, y, dir, pose, t, p (progression du coup 0..1), echelle, alpha, aura, statuts, eclat }
+ * @param {object} o        { x, y, dir, pose, t, p (progression du coup 0..1), echelle, alpha, aura, statuts, eclat, ombre }
  */
 /*
  * L'éclat d'un coup et la teinte du gel ne doivent colorer que le
@@ -112,7 +112,7 @@ const TAMPON = { l: 440, h: 440, x: 220, y: 380, r: 2 };
 let tampon = null;
 
 export function dessinerCombattant(g, perso, o) {
-  const teinter = !o.__tampon && (o.eclat > 0.02 || (o.statuts && (o.statuts.gel || o.statuts.lenteur)));
+  const teinter = !o.__tampon && (o.ombre || o.eclat > 0.02 || (o.statuts && (o.statuts.gel || o.statuts.lenteur)));
   if (teinter && typeof document !== 'undefined') {
     if (!tampon) {
       tampon = document.createElement('canvas');
@@ -126,6 +126,8 @@ export function dessinerCombattant(g, perso, o) {
     dessinerCombattant(b, perso, { ...o, x: TAMPON.x, y: TAMPON.y, alpha: 1, sansOmbre: true, __tampon: true });
     b.globalCompositeOperation = 'source-atop';
     if (o.statuts?.gel || o.statuts?.lenteur) { b.fillStyle = o.statuts.gel ? 'rgba(140,220,255,0.4)' : 'rgba(170,120,255,0.35)'; b.fillRect(0, 0, TAMPON.l, TAMPON.h); }
+    // Une silhouette : on ne voit que sa forme.
+    if (o.ombre) { b.fillStyle = 'rgba(6,3,14,0.94)'; b.fillRect(0, 0, TAMPON.l, TAMPON.h); }
     if (o.eclat > 0.02) { b.fillStyle = `rgba(255,255,255,${Math.min(1, o.eclat)})`; b.fillRect(0, 0, TAMPON.l, TAMPON.h); }
     b.globalCompositeOperation = 'source-over';
     // L'ombre au sol, puis le combattant teinté.
@@ -394,6 +396,31 @@ export function dessinerTete(g, perso, x, y, o = {}) {
       const a = rad(-150 + i * 30);
       g.fillStyle = i % 2 ? '#e6f2ff' : '#a8c4e8';
       g.beginPath(); g.moveTo(Math.cos(a) * 15, -1 + Math.sin(a) * 17); g.lineTo(Math.cos(a) * 26, -1 + Math.sin(a) * 28); g.lineTo(Math.cos(a + 0.12) * 16, -1 + Math.sin(a + 0.12) * 18); g.fill();
+    }
+    g.restore();
+    return;
+  }
+
+  // Les soldats de l'Horloge : un heaume fermé, une fente qui luit, une horloge au front.
+  if (L.tete === 'heaume') {
+    const m = g.createLinearGradient(-14, -18, 14, 18);
+    m.addColorStop(0, teinte(k.tenue, 0.55)); m.addColorStop(0.5, teinte(k.tenue, 0.25)); m.addColorStop(1, teinte(k.tenue, -0.25));
+    g.fillStyle = m;
+    g.beginPath(); g.moveTo(-15, 14); g.quadraticCurveTo(-18, -20, 2, -19); g.quadraticCurveTo(20, -18, 17, 6); g.lineTo(14, 17); g.lineTo(-10, 18); g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,0.35)'; g.lineWidth = 1.2; g.stroke();
+    // La fente des yeux.
+    g.fillStyle = '#05080a'; g.fillRect(-2, -5, 18, 5);
+    if (!o.ko) { lueur(g, 8, -2.5, 4, k.c1); g.fillStyle = rgba(k.c1, 0.95); g.fillRect(0, -4, 14, 2.4); }
+    // Les grilles de la bouche.
+    g.strokeStyle = teinte(k.tenue, -0.4); g.lineWidth = 1.2;
+    for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(3 + i * 3.5, 4); g.lineTo(3 + i * 3.5, 12); g.stroke(); }
+    // L'horloge au front.
+    g.fillStyle = k.ceinture; g.beginPath(); g.arc(4, -12, 4.2, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#1a1206'; g.lineWidth = 1; g.beginPath(); g.moveTo(4, -12); g.lineTo(4, -15); g.moveTo(4, -12); g.lineTo(6.4, -12); g.stroke();
+    // Le plumet des officiers.
+    if (L.extras.includes('plumet')) {
+      g.fillStyle = k.c1;
+      g.beginPath(); g.moveTo(-2, -18); g.quadraticCurveTo(-16, -40 + Math.sin(t / 6) * 2, -30, -28); g.quadraticCurveTo(-16, -30, -8, -16); g.fill();
     }
     g.restore();
     return;
@@ -710,6 +737,13 @@ function torse(g, p, { largeur, taille, t, l }) {
     g.stroke();
     if (X.includes('armure') && p.id === 'ironclad') { lueur(g, 2, -32, 5, '#4fd8ff'); g.fillStyle = '#bff3ff'; g.beginPath(); g.arc(2, -32, 4, 0, Math.PI * 2); g.fill(); }
   }
+  // L'insigne de l'armée de l'Horloge, sur la poitrine.
+  if (X.includes('insigne')) {
+    g.fillStyle = '#1a1206'; g.beginPath(); g.arc(2, -32, 7.5, 0, Math.PI * 2); g.fill();
+    g.fillStyle = k.ceinture; g.beginPath(); g.arc(2, -32, 6, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#1a1206'; g.lineWidth = 1.4;
+    g.beginPath(); g.moveTo(2, -32); g.lineTo(2, -37); g.moveTo(2, -32); g.lineTo(5.5, -30); g.stroke();
+  }
   if (X.includes('ecailles')) {
     g.strokeStyle = rgba(k.c1, 0.5); g.lineWidth = 1;
     for (let y = -42; y < -6; y += 7) for (let x = -largeur + 6; x < largeur - 4; x += 8) { g.beginPath(); g.arc(x + ((y / 7) % 2) * 4, y, 3.5, 0, Math.PI); g.stroke(); }
@@ -982,6 +1016,8 @@ function statutsVisibles(g, statuts, t, hanche) {
 /** Le portrait d'un combattant (tête et épaules), dans un carré de `taille` pixels. */
 export function dessinerPortrait(g, perso, taille, o = {}) {
   g.save();
+  // Un inconnu : un fond gris, une silhouette.
+  if (o.ombre) perso = { ...perso, c: { ...perso.c, c1: '#8a7aa8', c2: '#2a2238' } };
   const fond = g.createLinearGradient(0, 0, 0, taille);
   fond.addColorStop(0, teinte(perso.c.c2, -0.35));
   fond.addColorStop(1, teinte(perso.c.c1, -0.55));
@@ -997,7 +1033,7 @@ export function dessinerPortrait(g, perso, taille, o = {}) {
   const car = CARRURES[perso.look.corps] || CARRURES.normal;
   dessinerCombattant(g, perso, {
     x: taille * 0.5, y: taille * 2.02, dir: o.dir || 1, pose: o.pose || 'repos', t: o.t || 0,
-    echelle: e * 1.15 / car.h, sansOmbre: true, aura: o.aura,
+    echelle: e * 1.15 / car.h, sansOmbre: true, aura: o.aura, ombre: o.ombre,
   });
   g.restore();
 }

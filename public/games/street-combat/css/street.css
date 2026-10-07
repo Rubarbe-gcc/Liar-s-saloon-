@@ -225,7 +225,8 @@ kbd { display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4
 /* La cinématique */
 .ecran-cine { padding: 0; background: #000; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; user-select: none; }
 #cine-canvas { display: block; }
-.cine-passer { position: absolute; top: calc(10px + var(--st)); right: calc(10px + var(--sr)); z-index: 5; opacity: .75; }
+.cine-haut { position: absolute; top: calc(10px + var(--st)); right: calc(10px + var(--sr)); z-index: 7; display: flex; gap: 8px; }
+.cine-haut .btn { opacity: .75; }
 .cine-titre { position: absolute; inset: 0; z-index: 3; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
   background: radial-gradient(ellipse at center, rgba(0,0,0,.55), rgba(0,0,0,.9)); text-align: center; padding: 20px; }
 .cine-titre small { font-weight: 900; letter-spacing: .3em; color: var(--pale); font-size: .8rem; }
@@ -284,3 +285,51 @@ kbd { display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4
 .tour-vie { width: 100%; height: 12px; border-radius: 6px; background: rgba(255,255,255,.1); overflow: hidden; }
 .tour-vie i { display: block; height: 100%; background: linear-gradient(90deg, #2ab84a, #c8ff7a); }
 @media (max-width: 560px) { .tour-corps { grid-template-columns: 1fr; } .tour-info { order: -1; } }
+
+/* L'histoire : les choix, le lieu, la rencontre */
+.cine-choix { position: absolute; left: 50%; bottom: calc(18px + var(--sb)); transform: translateX(-50%); z-index: 5; width: min(720px, calc(100% - 20px));
+  display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 12px; background: rgba(8,4,15,.92); box-shadow: inset 0 0 0 2px var(--or), 0 10px 40px rgba(0,0,0,.7);
+  animation: entre-choix .3s ease both; cursor: default; }
+@keyframes entre-choix { from { opacity: 0; transform: translateX(-50%) translateY(14px); } }
+.cine-choix p { margin: 0 0 2px; text-align: center; font-family: var(--titre); letter-spacing: .06em; font-size: 1.2rem; color: var(--or); }
+.cine-choix .btn { display: flex; flex-direction: row; align-items: center; justify-content: flex-start; gap: 8px; text-align: left; text-transform: none; font-family: var(--ui); font-weight: 800; font-size: clamp(.95rem, 2.6vw, 1.1rem); letter-spacing: 0; }
+.cine-choix kbd { flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 4px; background: rgba(0,0,0,.35); font-size: .8rem; }
+.cine-lieu { position: absolute; left: calc(14px + var(--sl, 0px)); top: calc(56px + var(--st)); z-index: 3; padding: 6px 14px 6px 12px; border-left: 4px solid var(--or);
+  background: linear-gradient(90deg, rgba(0,0,0,.75), rgba(0,0,0,0)); font-weight: 900; letter-spacing: .18em; font-size: clamp(.7rem, 2vw, .9rem); color: #fff; pointer-events: none; }
+.cine-lieu.entre { animation: lieu 4.2s ease both; }
+@keyframes lieu { 0% { opacity: 0; transform: translateX(-20px); } 12%, 80% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+.cine-debloque.croise { background: radial-gradient(circle, rgba(30,24,50,.88), rgba(0,0,0,.95)); }
+.cine-debloque.croise small { color: #c8b8ff; }
+.cine-debloque.croise canvas { box-shadow: 0 0 40px rgba(160,140,255,.35); }
+.cine-debloque em { margin-top: 6px; max-width: 520px; padding: 0 16px; font-style: normal; font-weight: 800; color: var(--or); }
+.carte-perso.croise canvas { opacity: .95; }
+.carte-perso.croise span { color: #b8a8d8; }
+.sauve { position: fixed; right: calc(14px + var(--sr)); bottom: calc(14px + var(--sb)); z-index: 60; padding: 6px 12px; border-radius: 6px; background: rgba(8,4,15,.85);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.2); font-weight: 800; font-size: .85rem; pointer-events: none; }
+.sauve.entre { animation: sauve 2s ease both; }
+@keyframes sauve { 0% { opacity: 0; transform: translateY(8px); } 15%, 75% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+.regle { margin: 4px auto; display: table; padding: 4px 12px; border-radius: 6px; background: rgba(255,200,61,.12); color: var(--or); font-weight: 800; font-size: .9rem; }
+
+/* Les sauvegardes */
+.slots { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; text-align: left; }
+.slot { --c: #8a7aa8; display: flex; align-items: center; gap: 14px; padding: 12px; border-radius: 12px; border: 0; color: #fff;
+  background: linear-gradient(90deg, rgba(255,255,255,.07), rgba(255,255,255,.02)); box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--c) 55%, transparent); }
+.slot canvas { width: 84px; height: 84px; flex: none; border-radius: 8px; box-shadow: 0 0 0 2px var(--c); }
+.slot-texte { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.slot-texte small { color: var(--pale); font-size: .75rem; font-weight: 700; }
+.slot-texte b { font-family: var(--titre); font-weight: 400; font-size: 1.5rem; letter-spacing: .04em; }
+.slot-texte span { font-weight: 700; font-size: .92rem; }
+.slot-barre { height: 8px; border-radius: 4px; background: rgba(255,255,255,.1); overflow: hidden; }
+.slot-barre i { display: block; height: 100%; background: linear-gradient(90deg, var(--c), #fff); }
+.slot-boutons { display: flex; flex-direction: column; gap: 6px; }
+.slot.vide { cursor: pointer; flex-direction: column; align-items: flex-start; gap: 4px; padding: 18px; border: 2px dashed rgba(255,255,255,.2); box-shadow: none; background: rgba(255,255,255,.03); font: inherit; }
+.slot.vide:hover { background: rgba(255,255,255,.07); }
+.slot.vide small { color: var(--pale); font-weight: 900; letter-spacing: .2em; font-size: .7rem; }
+.slot.vide b { font-family: var(--titre); font-weight: 400; font-size: 1.5rem; color: var(--or); }
+.slot.vide span { color: var(--pale); font-size: .85rem; }
+@media (max-width: 560px) { .slot { flex-wrap: wrap; } .slot canvas { width: 64px; height: 64px; } .slot-boutons { flex-direction: row; width: 100%; } .slot-boutons .btn { flex: 1; } }
+.journal { max-height: 55vh; overflow: auto; text-align: left; display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.journal h4 { margin: 10px 0 2px; font-family: var(--titre); font-weight: 400; letter-spacing: .08em; color: var(--or); }
+.ligne-journal { border: 0; cursor: pointer; text-align: left; padding: 8px 10px; border-radius: 6px; background: rgba(255,255,255,.05); color: #fff; font: inherit; }
+.ligne-journal:hover { background: rgba(255,255,255,.12); }
+.ligne-journal b { color: var(--pale); margin-right: 6px; font-size: .8rem; letter-spacing: .08em; }

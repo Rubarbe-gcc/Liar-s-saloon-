@@ -908,6 +908,90 @@ const ULTIS = {
     }
     if (t > 66) lumiere(g, () => halo(g, D.x, D.y, (t - 66) * 10, k.c1, Math.max(0, 1 - (t - 66) / 40)));
   },
+  /* LE GÉNÉRAL VORN : la légion charge, puis une pluie de lances. */
+  legion(g, t, A, D, k) {
+    g.fillStyle = `rgba(20,14,6,${Math.min(0.55, t / 40)})`; g.fillRect(0, 0, L, H);
+    // Les rangs de soldats, en ombres chinoises, qui avancent.
+    for (let rang = 0; rang < 3; rang++) {
+      const avance = Math.min(1, Math.max(0, (t - rang * 8) / 50));
+      for (let i = 0; i < 9; i++) {
+        const x = A.x - A.dir * (420 - avance * 300) + A.dir * i * 44 - A.dir * rang * 22;
+        const y = SOL - 4 - rang * 10;
+        g.fillStyle = rgba('#120c04', 0.85 - rang * 0.2);
+        g.fillRect(x - 9, y - 58, 18, 40);
+        g.beginPath(); g.arc(x, y - 66, 10, 0, TAU); g.fill();
+        g.fillRect(x - 8, y - 18, 6, 18); g.fillRect(x + 2, y - 18, 6, 18);
+        // La lance, et l'horloge du heaume qui luit.
+        g.strokeStyle = rgba('#d8c8a0', 0.8); g.lineWidth = 2;
+        g.beginPath(); g.moveTo(x + A.dir * 10, y - 20); g.lineTo(x + A.dir * 30, y - 110); g.stroke();
+        lumiere(g, () => halo(g, x + A.dir * 3, y - 68, 7, k.c1, 0.9));
+      }
+    }
+    // La pluie de lances.
+    if (t > 40) {
+      for (let i = 0; i < 16; i++) {
+        const q = (t - 40 - i * 2) / 16;
+        if (q < 0 || q > 1.2) continue;
+        const x = D.x + (hasardFixe(i) - 0.5) * 260;
+        const y = -40 + Math.min(1, q) * (D.y + 40);
+        g.strokeStyle = '#e8d8b0'; g.lineWidth = 3;
+        g.beginPath(); g.moveTo(x - 20, y - 70); g.lineTo(x, y); g.stroke();
+        g.fillStyle = k.c1; g.beginPath(); g.moveTo(x, y + 8); g.lineTo(x - 5, y - 6); g.lineTo(x + 5, y - 6); g.fill();
+        if (q >= 1) lumiere(g, () => halo(g, x, y, 40, k.c1, 1.2 - q));
+      }
+    }
+    if (t > 62) texteContour(g, 'CHARGEZ !', L / 2, 160, 90, k.c1, '#2a1600', 'center', true);
+  },
+  /* SABLIA : le sable remonte le temps, un sablier géant engloutit l'adversaire. */
+  'sablier-infini'(g, t, A, D, k) {
+    g.fillStyle = `rgba(60,36,10,${Math.min(0.45, t / 40)})`; g.fillRect(0, 0, L, H);
+    // Le sable qui tourbillonne.
+    lumiere(g, () => {
+      for (let i = 0; i < 60; i++) {
+        const a = i * 0.7 + t / 10;
+        const rr = 40 + (i % 12) * 16 * (1 - Math.min(1, t / 90));
+        halo(g, D.x + Math.cos(a) * rr * 2, D.y + Math.sin(a) * rr * 0.6, 8, k.c1, 0.5);
+      }
+    });
+    // Le sablier, qui se referme sur lui.
+    const p = Math.min(1, t / 50);
+    const h = 220;
+    g.save(); g.translate(D.x, D.y); g.globalAlpha = 0.9;
+    g.strokeStyle = '#ffe0a0'; g.lineWidth = 6;
+    g.beginPath(); g.moveTo(-90 * p, -h); g.lineTo(90 * p, -h); g.lineTo(8, 0); g.lineTo(90 * p, h * 0.5); g.lineTo(-90 * p, h * 0.5); g.lineTo(-8, 0); g.closePath(); g.stroke();
+    g.fillStyle = rgba(k.c1, 0.35);
+    const sable = Math.min(1, Math.max(0, (t - 30) / 40));
+    g.beginPath(); g.moveTo(-90 * p * (1 - sable), -h * (1 - sable)); g.lineTo(90 * p * (1 - sable), -h * (1 - sable)); g.lineTo(0, 0); g.fill();
+    g.beginPath(); g.moveTo(-90 * p * sable, h * 0.5); g.lineTo(90 * p * sable, h * 0.5); g.lineTo(0, h * 0.5 * (1 - sable)); g.fill();
+    g.restore();
+    if (t > 66) lumiere(g, () => halo(g, D.x, D.y, (t - 66) * 10, '#ffe0a0', Math.max(0, 1 - (t - 66) / 40)));
+  },
+  /* ÉCLIPSE : la lune avale le soleil, et une lame d'orange traverse la nuit. */
+  'eclipse-totale'(g, t, A, D, k) {
+    const nuit = Math.min(0.85, t / 35);
+    g.fillStyle = `rgba(4,0,12,${nuit})`; g.fillRect(0, 0, L, H);
+    const sx = L / 2;
+    const sy = 150;
+    lumiere(g, () => { halo(g, sx, sy, 150, '#ff9a3c', 0.9); halo(g, sx, sy, 70, '#fff0c0', 1); });
+    // La lune qui glisse devant le soleil.
+    const p = Math.min(1, t / 45);
+    g.fillStyle = '#05000a';
+    g.beginPath(); g.arc(sx - 140 + p * 140, sy, 66, 0, TAU); g.fill();
+    if (p >= 1) lumiere(g, () => { g.strokeStyle = rgba('#ffc070', 0.9); g.lineWidth = 4; g.beginPath(); g.arc(sx, sy, 68, 0, TAU); g.stroke(); });
+    // Les lames, dans le noir total.
+    if (t > 46) {
+      lumiere(g, () => {
+        for (let i = 0; i < 6; i++) {
+          const q = t - 46 - i * 3;
+          if (q < 0 || q > 10) continue;
+          const a = hasardFixe(i) * Math.PI - Math.PI / 2;
+          g.strokeStyle = rgba(i % 2 ? '#ff9a3c' : '#ffffff', 1 - q / 10); g.lineWidth = 5;
+          g.beginPath(); g.moveTo(D.x - Math.cos(a) * 200, D.y - Math.sin(a) * 120); g.lineTo(D.x + Math.cos(a) * 200, D.y + Math.sin(a) * 120); g.stroke();
+        }
+      });
+    }
+    if (t > 66) lumiere(g, () => halo(g, D.x, D.y, (t - 66) * 12, k.c1, Math.max(0, 1 - (t - 66) / 40)));
+  },
   /* LE CHAOS : tout finit ici. */
   'omega-collapse'(g, t, A, D, k) {
     g.fillStyle = `rgba(0,0,0,${Math.min(0.85, t / 40)})`; g.fillRect(0, 0, L, H);

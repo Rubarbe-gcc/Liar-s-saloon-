@@ -7,7 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import * as C from '../public/shared/street/combat.js';
-import { PERSOS, PERSO, ROSTER, BOSS, SECRETS, JAUGE } from '../public/shared/street/persos.js';
+import { PERSOS, PERSO, ROSTER, BOSS, SECRETS, FIGURANTS, JAUGE, aDebloquer } from '../public/shared/street/persos.js';
 
 /** Un combat d'entraînement, déjà lancé, les deux combattants face à face. */
 function duel(p1 = 'ryuken', p2 = 'ryuken', ecart = 90) {
@@ -29,18 +29,24 @@ function jouer(c, n, e1 = {}, e2 = {}) {
 /** Les entrées d'une séquence : une étape par image, puis rien. */
 const suite = (etapes) => (k) => etapes[k] || {};
 
-test('le roster : 16 combattants, 3 boss et 3 secrets, chacun avec ses compétences, son ultime et ses combos', () => {
+test('le roster : 16 combattants, 3 boss, 6 secrets et 3 figurants, chacun avec ses compétences, son ultime et ses combos', () => {
   assert.equal(ROSTER.length, 16);
-  assert.equal(PERSOS.length, 22);
+  assert.equal(PERSOS.length, 25);
+  assert.equal(PERSOS.filter((p) => p.secret).length, 6);
+  // Les secrets de l’histoire disent où les gagner.
+  for (const p of PERSOS.filter((x) => x.secret === 'histoire' && x.id !== SECRETS.histoire)) assert.ok(p.indice, p.id);
+  // Les figurants : jamais dans la sélection, jamais à débloquer, mais prêts à se battre.
+  assert.equal(FIGURANTS.length, 3);
+  for (const p of FIGURANTS) { assert.ok(p.figurant && PERSO[p.id] === p && !PERSOS.includes(p) && !aDebloquer(p), p.id); }
   assert.deepEqual(Object.values(BOSS).sort(), ['lechaos', 'malvortex', 'solarius']);
   assert.deepEqual(Object.values(SECRETS).sort(), ['kairos', 'nemesis', 'onyx']);
   for (const id of Object.values(SECRETS)) assert.ok(PERSO[id].secret && !ROSTER.includes(PERSO[id]), id);
   const visuels = new Set();
-  for (const p of PERSOS) {
+  for (const p of [...PERSOS, ...FIGURANTS]) {
     assert.ok(p.nom && p.style && p.desc && p.c.c1 && p.look, p.id);
     for (const s of ['specA', 'specB']) assert.ok(p[s].nom && p[s].type, `${p.id} ${s}`);
     assert.ok(p.ulti.nom && p.ulti.portee > 100, p.id);
-    visuels.add(p.ulti.visuel);
+    if (!p.figurant) visuels.add(p.ulti.visuel);
     assert.ok(p.saisie.seq.length >= 4, p.id);
     assert.equal(p.combos.length, 3, p.id);
     assert.equal(p.combos[0].entree, 'PPK', `${p.id} : l’enchaînement d’abord`);
@@ -48,7 +54,7 @@ test('le roster : 16 combattants, 3 boss et 3 secrets, chacun avec ses compéten
     // Deux techniques d'un même combattant n'ont jamais la même manipulation.
     assert.equal(new Set(p.combos.map((x) => x.entree)).size, 3, p.id);
   }
-  assert.equal(visuels.size, 22, 'un ultime unique par combattant');
+  assert.equal(visuels.size, 25, 'un ultime unique par combattant');
 });
 
 test('les coups de base : un poing touche, la garde le bloque', () => {

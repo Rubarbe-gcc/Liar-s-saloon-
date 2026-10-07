@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#08040f">
-<meta name="description" content="STREET COMBAT — le jeu de combat. 16 combattants, 3 boss et 3 personnages secrets, des compétences uniques, des combos, des ultimes cinématiques, un mode Histoire, un Tournoi, une Tour des défis et un mode deux joueurs.">
+<meta name="description" content="STREET COMBAT — le jeu de combat. 16 combattants, 3 boss et 6 personnages secrets, des compétences uniques, des combos, des ultimes cinématiques, un mode Histoire en dix actes, un Tournoi, une Tour des défis et un mode deux joueurs.">
 <title>Street Combat</title>
 <link rel="icon" href="/games/street-combat/icons/icon-192.png">
 <link rel="manifest" href="/games/street-combat/manifest.webmanifest">
@@ -39,8 +39,19 @@
       <a class="btn petit" href="/">‹ Arcade</a>
       <button class="btn petit" id="b-commandes">⌨️ Commandes</button>
       <button class="btn petit" id="b-son-menu">🔊</button>
+      <button class="btn petit" id="b-reset" title="Remettre à zéro les combattants débloqués et les sauvegardes">♻️ Réinitialiser</button>
     </div>
     <p class="records" id="records"></p>
+  </div>
+</section>
+
+<!-- ======================= LES SAUVEGARDES ======================= -->
+<section class="ecran" id="s-sauvegardes">
+  <div class="panneau">
+    <button class="rond retour" data-va="s-menu" aria-label="Retour">‹</button>
+    <h2>📖 Mode Histoire</h2>
+    <p class="sous">La Fracture — trois emplacements de sauvegarde. La partie se sauvegarde toute seule à chaque scène.</p>
+    <div class="slots" id="slots"></div>
   </div>
 </section>
 
@@ -96,7 +107,9 @@
     <span class="cine-suite">▼</span>
   </div>
   <div class="cine-debloque" id="cine-debloque" hidden></div>
-  <button class="btn petit cine-passer" id="cine-passer">Passer ⏭</button>
+  <div class="cine-choix" id="cine-choix" hidden></div>
+  <div class="cine-lieu" id="cine-lieu" hidden></div>
+  <div class="cine-haut"><button class="btn petit" id="cine-quitter" hidden>💾 Quitter</button><button class="btn petit" id="cine-passer">Passer ⏭</button></div>
 </section>
 
 <!-- ============================ COMBAT ============================ -->
@@ -150,6 +163,7 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
+<div class="sauve" id="sauve" hidden>💾 Sauvegardé</div>
 
 <script type="module" src="/games/street-combat/js/main.js"></script>
 </body>

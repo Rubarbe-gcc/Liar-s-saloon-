@@ -1,21 +1,31 @@
 /**
  * STREET COMBAT — les cinématiques : une scène qui bouge (l'arène, les
  * combattants qui entrent, sautent, apparaissent, des effets), des
- * dialogues avec portrait et texte qui s'écrit, des cartons de chapitre.
+ * dialogues avec portrait et texte qui s'écrit, des cartons de chapitre,
+ * des choix.
  *
  * Une cinématique est une liste d'étapes, jouées l'une après l'autre :
- *   { decor: 'dojo' }                                   change l'arène
+ *   { decor: 'dojo', fondu }                            change l'arène (fondu : au noir, la scène se vide)
+ *   { vide: true }                                      tout le monde sort, d'un coup
  *   { titre: 'CHAPITRE 1', sous: '…', sur: '…' }        un carton
+ *   { lieu: 'NÉON CITY — 23 h 47' }                     le lieu, en haut à gauche (sans attendre)
  *   { narre: '…' }                                      une voix off
- *   { entre: 'hero'|id, cote: 'g'|'d'|'c', comment: 'marche'|'saut'|'chute'|'apparait'|'teleport'|'place', p }
- *   { dit: 'hero'|id, texte: '…', pose }                une réplique
+ *   { entre: 'hero'|id, cote: 'g'|'d'|'c'|'gg'|'dd', comment: 'marche'|'saut'|'chute'|'apparait'|'teleport'|'place', p, ombre }
+ *   { dit: 'hero'|id, texte: '…', p, nom, ombre }       une réplique (nom : « ??? » pour un inconnu)
  *   { pose: 'hero'|id, p: 'garde' }                     change une pose
+ *   { devoile: id }                                     une silhouette se révèle
  *   { effet: 'fracture'|'eclair'|'flash'|'secousse'|'gel'|'aube'|'nuit', duree }
  *   { sort: 'hero'|id, comment: 'teleport'|'marche' }  quelqu'un s'en va
  *   { attendre: 40 }                                    une pause (en images)
+ *   { choix: [{ texte, drapeau, suite: [...] }], question }   le joueur décide
+ *   { si: 'drapeau'|'!drapeau', alors: [...], sinon: [...] }  selon ses choix d'avant
+ *   { marque: 'drapeau' }                               lève un drapeau
  *   { debloque: id }                                    un combattant rejoint le roster
+ *   { croise: id, indice }                              on le rencontre… on le débloquera plus tard
  *
  * 'hero' désigne le combattant du joueur ; « {hero} » dans un texte, son nom.
+ * Les rôles (`roles`) : qui joue qui, quand le héros tient déjà un rôle ;
+ * « {id} » dans un texte donne le nom de celui qui le joue.
  */
 
 import { PERSO } from '../../../shared/street/persos.js';
@@ -27,29 +37,34 @@ const $ = (id) => document.getElementById(id);
 const L = 1000;
 const H = 600;
 const SOL = 470;
-const POS = { g: 300, d: 700, gg: 180, dd: 820, c: 500 };
+const POS = { g: 300, d: 700, gg: 160, dd: 840, c: 500 };
 
 let scene = null;
 
-/** Joue une cinématique. Rend une promesse, résolue à la fin (ou quand on passe). */
-export function jouerCine(etapes, { hero, debloquer = () => {} } = {}) {
+/**
+ * Joue une cinématique. Rend une promesse, résolue à la fin ('fin'), ou
+ * quand on la quitte ('quitte'). Les choix faits s'écrivent dans `drapeaux`.
+ */
+export function jouerCine(etapes, { hero, roles = {}, drapeaux = {}, debloquer = () => {}, croiser = () => {}, quittable = false } = {}) {
   return new Promise((fini) => {
+    if (scene) terminer('quitte');
     scene = {
-      etapes: [...etapes], i: 0, hero, debloquer, fini,
-      decor: 'dojo', acteurs: new Map(), effets: [], t: 0, attente: null, secousse: 0, saute: false,
+      etapes: [...etapes], i: 0, hero, roles, drapeaux, debloquer, croiser, fini,
+      decor: 'dojo', acteurs: new Map(), effets: [], t: 0, attente: null, secousse: 0, rapide: false, fondu: null,
     };
-    $('cine-boite').hidden = true;
-    $('cine-titre').hidden = true;
-    $('cine-debloque').hidden = true;
+    for (const id of ['cine-boite', 'cine-titre', 'cine-debloque', 'cine-choix']) $(id).hidden = true;
+    $('cine-lieu').hidden = true;
+    $('cine-quitter').hidden = !quittable;
     dimensionner();
+    cancelAnimationFrame(raf);
     boucle();
     suivante();
   });
 }
 
-const qui = (w) => (w === 'hero' ? scene.hero : w);
-const nomDe = (w) => (w === 'narrateur' ? '' : PERSO[qui(w)]?.nom || w);
-const remplir = (texte) => texte.replaceAll('{hero}', PERSO[scene.hero]?.nom || 'toi');
+const qui = (w) => (w === 'hero' ? scene.hero : scene.roles[w] || w);
+const remplir = (texte) => texte.replace(/\{(\w+)\}/g, (m, id) => (id === 'hero' ? PERSO[scene.hero]?.nom || 'toi' : PERSO[qui(id)]?.nom || m));
+const vrai = (cond, d) => (cond.startsWith('!') ? !d[cond.slice(1)] : !!d[cond]);
 
 /* ------------------------------------------------------------------ */
 /* Les étapes                                                          */
@@ -58,10 +73,35 @@ const remplir = (texte) => texte.replaceAll('{hero}', PERSO[scene.hero]?.nom || 
 function suivante() {
   const S = scene;
   if (!S) return;
-  if (S.i >= S.etapes.length) { terminer(); return; }
+  if (S.i >= S.etapes.length) { terminer('fin'); return; }
   const e = S.etapes[S.i++];
-  if (e.decor) { S.decor = e.decor; suivante(); return; }
+  if (e.decor) {
+    // Un fondu au noir : on change de lieu, la scène se vide.
+    if (e.fondu && !S.rapide && S.t > 1) { S.fondu = { t: 0, decor: e.decor }; S.attente = { fondu: true }; son('tic'); return; }
+    S.decor = e.decor;
+    if (e.fondu) S.acteurs.clear();
+    suivante();
+    return;
+  }
+  if (e.vide) { S.acteurs.clear(); suivante(); return; }
+  if (e.marque) { S.drapeaux[e.marque] = true; suivante(); return; }
   if (e.pose) { const a = S.acteurs.get(qui(e.pose)); if (a) a.pose = e.p; suivante(); return; }
+  if (e.si) { S.etapes.splice(S.i, 0, ...((vrai(e.si, S.drapeaux) ? e.alors : e.sinon) || [])); suivante(); return; }
+  if (e.lieu) { if (!S.rapide) montrerLieu(e.lieu); suivante(); return; }
+  if (e.devoile) {
+    const a = S.acteurs.get(qui(e.devoile));
+    if (a) a.ombre = false;
+    if (S.rapide) { suivante(); return; }
+    S.effets.push({ nom: 'flash', t: 0, duree: 30 });
+    son('impact-lourd');
+    S.attente = { fin: S.t + 30 };
+    return;
+  }
+  if (e.choix) { montrerChoix(e); return; }
+  if (e.debloque) { montrerCarte(e.debloque, 'debloque'); return; }
+  if (e.croise) { montrerCarte(e.croise, 'croise', e.indice); return; }
+  // En avance rapide : le reste s'applique sans attendre.
+  if (S.rapide) { appliquer(e); suivante(); return; }
   if (e.attendre) { S.attente = { fin: S.t + e.attendre }; return; }
   if (e.effet) {
     S.effets.push({ nom: e.effet, t: 0, duree: e.duree || 70, x: e.x });
@@ -74,21 +114,10 @@ function suivante() {
     return;
   }
   if (e.entre) {
-    const id = qui(e.entre);
-    const cote = e.cote || 'd';
-    const x = e.x ?? POS[cote];
-    const dir = e.dir ?? (x < L / 2 ? 1 : -1);
-    const comment = e.comment || 'marche';
-    const a = { id, x, y: SOL, dir, pose: e.p || 'repos', alpha: 1, t: 0, comment, cible: x, entree: 0 };
-    if (comment === 'marche') { a.x = x < L / 2 ? -80 : L + 80; a.pose = 'marche'; }
-    if (comment === 'saut') { a.depart = x < L / 2 ? -80 : L + 80; }
-    if (comment === 'chute') a.y = -200;
-    if (comment === 'apparait' || comment === 'teleport') a.alpha = 0;
-    if (comment === 'teleport') son('combo');
-    a.poseFinale = e.p || 'repos';
-    S.acteurs.set(id, a);
+    const a = nouvelActeur(e);
+    if (a.comment === 'teleport') son('combo');
     // « place » : il est déjà là, sans entrée.
-    if (comment === 'place') { a.entree = 1; suivante(); return; }
+    if (a.comment === 'place') { a.entree = 1; suivante(); return; }
     S.attente = { acteur: a };
     return;
   }
@@ -105,21 +134,44 @@ function suivante() {
   if (e.dit) {
     const a = S.acteurs.get(qui(e.dit));
     if (a && e.p) a.pose = e.p;
-    parler(e.dit, e.texte);
+    parler(e.dit, e.texte, e);
     return;
   }
-  if (e.debloque) { montrerDebloque(e.debloque); return; }
   suivante();
 }
 
-function terminer() {
+function nouvelActeur(e) {
+  const S = scene;
+  const id = qui(e.entre);
+  const cote = e.cote || 'd';
+  const x = e.x ?? POS[cote];
+  const dir = e.dir ?? (x < L / 2 ? 1 : -1);
+  const comment = e.comment || 'marche';
+  const a = { id, x, y: SOL, dir, pose: e.p || 'repos', alpha: 1, t: 0, comment, cible: x, entree: 0, ombre: !!e.ombre };
+  if (comment === 'marche') { a.x = x < L / 2 ? -80 : L + 80; a.pose = 'marche'; }
+  if (comment === 'saut') { a.depart = x < L / 2 ? -80 : L + 80; }
+  if (comment === 'chute') a.y = -200;
+  if (comment === 'apparait' || comment === 'teleport') a.alpha = 0;
+  a.poseFinale = e.p || 'repos';
+  S.acteurs.set(id, a);
+  return a;
+}
+
+/** En avance rapide : l'état que l'étape aurait laissé. */
+function appliquer(e) {
+  const S = scene;
+  if (e.entre) { const a = nouvelActeur(e); a.x = a.cible; a.y = SOL; a.alpha = 1; a.entree = 1; a.pose = a.poseFinale; }
+  if (e.sort) S.acteurs.delete(qui(e.sort));
+  if (e.dit) { const a = S.acteurs.get(qui(e.dit)); if (a && e.p) a.pose = e.p; }
+  if (e.effet && ['gel', 'nuit', 'aube', 'fracture'].includes(e.effet)) S.effets.push({ nom: e.effet, t: 99, duree: 1 });
+}
+
+function terminer(comment) {
   const S = scene;
   scene = null;
   cancelAnimationFrame(raf);
-  $('cine-boite').hidden = true;
-  $('cine-titre').hidden = true;
-  $('cine-debloque').hidden = true;
-  if (S) S.fini();
+  for (const id of ['cine-boite', 'cine-titre', 'cine-debloque', 'cine-choix', 'cine-lieu']) $(id).hidden = true;
+  if (S) S.fini(comment);
 }
 
 /** Toucher l'écran : finir d'écrire la réplique, ou passer à la suivante. */
@@ -138,14 +190,18 @@ export function avancerCine() {
   }
 }
 
-/** Passer : on saute tout, sauf les combattants débloqués (on les montre quand même). */
+/** Passer : on saute les dialogues, mais pas les choix ni les combattants rencontrés. */
 export function passerCine() {
   const S = scene;
-  if (!S) return;
-  const reste = S.etapes.slice(S.i);
-  const deb = reste.filter((e) => e.debloque);
-  S.etapes = [...reste.filter((e) => e.decor), ...deb];
-  S.i = 0;
+  if (!S || S.attente?.choix) return;
+  S.rapide = true;
+  S.fondu = null;
+  if (S.attente?.tap && !$('cine-debloque').hidden) return;
+  // Celui qui entrait ou sortait arrive tout de suite.
+  for (const a of S.acteurs.values()) {
+    if (a.sortie) S.acteurs.delete(a.id);
+    else { a.x = a.cible; a.y = SOL; a.alpha = 1; a.entree = 1; a.pose = a.poseFinale; }
+  }
   S.attente = null;
   S.ecrit = null;
   $('cine-boite').hidden = true;
@@ -153,7 +209,18 @@ export function passerCine() {
   suivante();
 }
 
-function parler(w, texte) {
+/** Quitter en pleine scène (la partie est sauvegardée au début de la scène). */
+export function quitterCine() {
+  if (scene) terminer('quitte');
+}
+
+/** Choisir une réponse au clavier (1, 2, 3). */
+export function choisirCine(n) {
+  const b = $('cine-choix').querySelectorAll('button')[n];
+  if (b && scene?.attente?.choix) b.click();
+}
+
+function parler(w, texte, e = {}) {
   const S = scene;
   const boite = $('cine-boite');
   boite.hidden = false;
@@ -163,12 +230,15 @@ function parler(w, texte) {
   const nom = $('cine-nom');
   if (w) {
     const p = PERSO[qui(w)];
+    const a = S.acteurs.get(p.id);
+    const ombre = e.ombre ?? a?.ombre ?? false;
     const g = pc.getContext('2d');
     g.clearRect(0, 0, pc.width, pc.height);
-    dessinerPortrait(g, p, pc.width, { t: 8, dir: 1 });
-    nom.textContent = p.nom;
-    nom.style.color = p.c.c1;
-    boite.style.setProperty('--c', p.c.c1);
+    dessinerPortrait(g, p, pc.width, { t: 8, dir: 1, ombre });
+    nom.textContent = e.nom || (ombre ? '???' : p.nom);
+    const c = ombre ? '#a898c8' : p.c.c1;
+    nom.style.color = c;
+    boite.style.setProperty('--c', c);
   } else {
     nom.textContent = '';
     boite.style.setProperty('--c', '#b9a8d6');
@@ -181,8 +251,8 @@ function parler(w, texte) {
 function montrerTitre(e) {
   const S = scene;
   $('cine-titre-sur').textContent = e.sur || '';
-  $('cine-titre-texte').textContent = e.titre;
-  $('cine-titre-sous').textContent = e.sous || '';
+  $('cine-titre-texte').textContent = remplir(e.titre);
+  $('cine-titre-sous').textContent = remplir(e.sous || '');
   const c = $('cine-titre');
   c.hidden = false;
   c.classList.remove('entre'); void c.offsetWidth; c.classList.add('entre');
@@ -190,15 +260,52 @@ function montrerTitre(e) {
   S.attente = { tap: true };
 }
 
-function montrerDebloque(id) {
+let lieuT = 0;
+function montrerLieu(texte) {
+  const l = $('cine-lieu');
+  l.textContent = remplir(texte);
+  l.hidden = false;
+  l.classList.remove('entre'); void l.offsetWidth; l.classList.add('entre');
+  clearTimeout(lieuT);
+  lieuT = setTimeout(() => { l.hidden = true; }, 4200);
+}
+
+function montrerChoix(e) {
   const S = scene;
-  const p = PERSO[id];
-  S.debloquer(id);
+  const boite = $('cine-choix');
+  boite.innerHTML = `${e.question ? `<p>${remplir(e.question)}</p>` : ''}${e.choix.map((c, k) => `<button class="btn${k === 0 ? ' rouge' : ' bleu'}" data-k="${k}"><kbd>${k + 1}</kbd> ${remplir(c.texte)}</button>`).join('')}`;
+  boite.hidden = false;
+  $('cine-boite').hidden = true;
+  son('annonce');
+  S.attente = { choix: true };
+  boite.onclick = (ev) => {
+    const b = ev.target.closest('[data-k]');
+    if (!b || scene !== S) return;
+    ev.stopPropagation();
+    const c = e.choix[Number(b.dataset.k)];
+    if (c.drapeau) S.drapeaux[c.drapeau] = true;
+    boite.hidden = true;
+    son('valide');
+    S.attente = null;
+    S.etapes.splice(S.i, 0, ...(c.suite || []));
+    suivante();
+  };
+}
+
+/** Un combattant débloqué, ou seulement rencontré (on saura où le gagner). */
+function montrerCarte(id, sorte, indice = '') {
+  const S = scene;
+  const p = PERSO[qui(id)];
+  const debloque = sorte === 'debloque';
+  if (debloque) S.debloquer(p.id); else S.croiser(p.id);
   const d = $('cine-debloque');
-  d.innerHTML = `<small>NOUVEAU COMBATTANT DÉBLOQUÉ</small><canvas width="260" height="260"></canvas><b style="color:${p.c.c1}">${p.nom}</b><span>${p.style}</span>`;
-  dessinerPortrait(d.querySelector('canvas').getContext('2d'), p, 260, { aura: 1, t: 10, pose: 'repos' });
+  d.classList.toggle('croise', !debloque);
+  d.innerHTML = debloque
+    ? `<small>NOUVEAU COMBATTANT DÉBLOQUÉ</small><canvas width="260" height="260"></canvas><b style="color:${p.c.c1}">${p.nom}</b><span>${p.style}</span>`
+    : `<small>NOUVELLE RENCONTRE</small><canvas width="260" height="260"></canvas><b style="color:${p.c.c1}">${p.nom}</b><span>${p.style}</span><em>🔒 ${remplir(indice)}</em>`;
+  dessinerPortrait(d.querySelector('canvas').getContext('2d'), p, 260, { aura: debloque ? 1 : 0.4, t: 10, pose: 'repos' });
   d.hidden = false;
-  son('victoire');
+  son(debloque ? 'victoire' : 'annonce');
   S.attente = { tap: true };
 }
 
@@ -234,6 +341,12 @@ function avancer(S) {
     $('cine-texte').textContent = S.ecrit.texte.slice(0, Math.floor(S.ecrit.n));
     if (Math.floor(S.ecrit.n) % 3 === 0) son('tic');
   }
+  // Le fondu au noir : à mi-chemin, on change de lieu.
+  if (S.fondu) {
+    S.fondu.t += 1;
+    if (S.fondu.t === 22) { S.decor = S.fondu.decor; S.acteurs.clear(); S.effets = []; }
+    if (S.fondu.t >= 44) { S.fondu = null; S.attente = null; suivante(); }
+  }
   for (const a of S.acteurs.values()) {
     a.t += 1;
     if (a.sortie) {
@@ -256,7 +369,7 @@ function avancer(S) {
   S.secousse *= 0.88;
   // Ce qu'on attend est fini : la suite.
   const at = S.attente;
-  if (at && !at.tap) {
+  if (at && !at.tap && !at.choix && !at.fondu) {
     const fini = (at.fin !== undefined && S.t >= at.fin) || (at.acteur && at.acteur.entree >= 1) || (at.sortie && !S.acteurs.has(at.sortie.id));
     if (fini) { S.attente = null; suivante(); }
   }
@@ -278,18 +391,19 @@ function dessiner(S) {
     const parle = S.ecrit && S.ecrit.qui === a.id && S.ecrit.n < S.ecrit.texte.length;
     dessinerCombattant(g, PERSO[a.id], {
       x: a.x, y: a.y, dir: a.dir, pose: a.pose, t: a.t + (parle ? Math.floor(S.t / 4) : 0), p: 1, alpha: a.alpha,
-      aura: a.comment === 'apparait' && a.entree < 1 ? 1 - a.alpha : 0, echelle: 1.15, enLAir: a.y < SOL - 2,
+      aura: a.comment === 'apparait' && a.entree < 1 ? 1 - a.alpha : 0, echelle: 1.15, enLAir: a.y < SOL - 2, ombre: a.ombre,
     });
     if ((a.comment === 'teleport' || a.comment === 'apparait') && a.alpha < 1 && !a.sortie) {
       g.save(); g.globalCompositeOperation = 'lighter';
       const gr = g.createRadialGradient(a.x, a.y - 90, 0, a.x, a.y - 90, 140);
-      gr.addColorStop(0, rgba(PERSO[a.id].c.c1, 0.7 * (1 - a.alpha))); gr.addColorStop(1, rgba(PERSO[a.id].c.c1, 0));
+      gr.addColorStop(0, rgba(a.ombre ? '#8a7aa8' : PERSO[a.id].c.c1, 0.7 * (1 - a.alpha))); gr.addColorStop(1, rgba('#000000', 0));
       g.fillStyle = gr; g.beginPath(); g.arc(a.x, a.y - 90, 140, 0, Math.PI * 2); g.fill();
       g.restore();
     }
   }
   for (const f of S.effets) effetDevant(g, f, S);
   g.restore();
+  if (S.fondu) { g.fillStyle = `rgba(0,0,0,${1 - Math.abs(S.fondu.t - 22) / 22})`; g.fillRect(0, 0, L, H); }
   // Les bandes de cinéma.
   g.fillStyle = '#000';
   g.fillRect(0, 0, L, 46); g.fillRect(0, H - 46, L, 46);

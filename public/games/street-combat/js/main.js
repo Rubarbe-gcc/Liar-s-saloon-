@@ -17,7 +17,7 @@ import { creerHud, dessinerHud } from './hud.js';
 import { jouer as son, estMuet, basculerSon } from './son.js';
 import { installerMusique } from '../../../shared/musique.js';
 import * as succes from '../../../shared/succes.js';
-import { jouerCine, avancerCine, passerCine, dimensionner as dimensionnerCine } from './cine.js';
+import { jouerCine, avancerCine, passerCine, quitterCine, choisirCine, dimensionner as dimensionnerCine } from './cine.js';
 import * as HIST from './histoire.js';
 
 const $ = (id) => document.getElementById(id);
@@ -28,6 +28,8 @@ function ecrire(cle, v) { try { if (v == null) localStorage.removeItem(cle); els
 const CLE_DEBLOQUES = 'street.debloques';
 const CLE_RECORDS = 'street.records';
 const CLE_HISTOIRE = 'street.histoire';
+const CLE_SAUVEGARDES = 'street.sauvegardes';
+const CLE_CROISES = 'street.croises';
 const CLE_TOURNOI = 'street.tournoi';
 const CLE_TOUR = 'street.tour';
 const CLE_NIVEAU = 'street.niveau';
@@ -44,8 +46,15 @@ function debloquer(id) {
   ecrire(CLE_DEBLOQUES, [...d]);
   return true;
 }
+/** Les combattants rencontrés dans l'histoire, pas encore débloqués. */
+const croises = () => new Set(lire(CLE_CROISES, []));
+function croiser(id) {
+  const c = croises();
+  if (!c.has(id)) { c.add(id); ecrire(CLE_CROISES, [...c]); }
+}
 /** Où gagner un combattant caché. */
 function indice(p) {
+  if (p.indice) return p.indice;
   if (p.boss) return 'Battez-le dans le mode Histoire';
   return { histoire: 'Terminez le mode Histoire', tournoi: 'Gagnez le Tournoi en difficile', tour: 'Atteignez le sommet de la Tour des défis' }[p.secret] || '';
 }
@@ -130,8 +139,8 @@ function dessinerFondMenu() {
 }
 
 function majMenu() {
-  const h = lire(CLE_HISTOIRE, null);
-  $('histoire-info').textContent = h ? (h.chapitre < 0 ? 'Reprendre : le prologue' : `Reprendre : chapitre ${h.chapitre + 1}/${HIST.CHAPITRES.length}`) : '';
+  const h = sauvegardes().filter((x) => x && !x.fini).sort((a, b) => b.maj - a.maj)[0];
+  $('histoire-info').textContent = h ? `Reprendre : ${HIST.ACTES[sceneDe(h).acte].num} · ${sceneDe(h).sous}` : '';
   const t = lire(CLE_TOURNOI, null);
   $('tournoi-info').textContent = t ? `Reprendre : ${['les quarts', 'les demies', 'la finale'][t.tour]}` : '';
   const r = records();
@@ -184,8 +193,17 @@ function ouvrirChoix() {
     // Un combattant caché : une carte « ? », rien de plus.
     if (!disponible(p)) {
       b.classList.add('cache');
-      b.innerHTML = '<span class="mystere">?</span>';
       b.title = `Combattant secret — ${indice(p)}`;
+      if (croises().has(p.id)) {
+        // Rencontré dans l'histoire : on connaît sa silhouette et son nom.
+        b.classList.add('croise');
+        const cv = document.createElement('canvas');
+        cv.width = cv.height = 160;
+        dessinerPortrait(cv.getContext('2d'), p, 160, { t: 8, ombre: true });
+        b.append(cv);
+        b.insertAdjacentHTML('beforeend', `<span>🔒 ${esc(p.nom)}</span>`);
+        b.title = `${p.nom} — ${indice(p)}`;
+      } else b.innerHTML = '<span class="mystere">?</span>';
       grille.append(b);
       continue;
     }
@@ -327,7 +345,7 @@ function validerChoix() {
   if (!disponible(p)) return;
   son('valide');
   if (prep.mode === 'histoire' && aDebloquer(p)) return;
-  if (prep.mode === 'histoire') { lancerHistoire(prep.choix); return; }
+  if (prep.mode === 'histoire') { nouvelleHistoire(prep.choix); return; }
   if (prep.mode === 'tournoi') { lancerTournoi(prep.choix); return; }
   if (prep.mode === 'tour') { lancerTour(prep.choix); return; }
   if (prep.etape === 1) {
@@ -385,7 +403,7 @@ function ouvrirDifficultes(mode) {
   prep.modeDiff = mode;
   $('difficulte-titre').textContent = mode === 'histoire' ? 'Mode Histoire' : 'Tournoi';
   $('difficulte-sous').textContent = mode === 'histoire'
-    ? 'La Fracture : un prologue, huit chapitres, des boss à vaincre — et à débloquer.'
+    ? 'La Fracture : cinq actes, des alliés, des trahisons, des choix qui comptent — et des boss à débloquer.'
     : 'Huit combattants, un tableau, une seule coupe. Perdez un match, et c’est fini.';
   const onyx = debloques().has(SECRETS.tournoi);
   $('difficultes').innerHTML = DIFFICULTES[mode].map((d) => `<button class="diff" data-diff="${d.id}" style="--c:${d.couleur}">
@@ -406,54 +424,255 @@ function cinematique(etapes, hero) {
 /* Le mode Histoire                                                     */
 /* ------------------------------------------------------------------ */
 
-function lancerHistoire(hero) {
-  ecrire(CLE_HISTOIRE, { hero, chapitre: -1, difficulte: prep.difficulte || 'normal' });
-  jouerChapitre();
-}
+/* ---- les sauvegardes : trois emplacements ---- */
 
-/** Remplace un combattant par un autre dans une cinématique (le héros ne se combat pas lui-même). */
-const remplacer = (etapes, de, par) => (de === par ? etapes : etapes.map((e) => {
-  const x = { ...e };
-  for (const k of ['entre', 'dit', 'pose', 'sort']) if (x[k] === de) x[k] = par;
-  return x;
-}));
+const EMPLACEMENTS = 3;
+/** La partie en cours : { slot, h (ce qui est sauvegardé), depuis (pour le temps de jeu) }. */
+let partie = null;
 
-async function jouerChapitre() {
-  const h = lire(CLE_HISTOIRE, null);
-  if (!h) { majMenu(); return; }
-  if (h.chapitre < 0) {
-    await cinematique(HIST.PROLOGUE, h.hero);
-    h.chapitre = 0;
-    ecrire(CLE_HISTOIRE, h);
-  }
-  if (h.chapitre >= HIST.CHAPITRES.length) {
-    await cinematique(HIST.EPILOGUE, h.hero);
+const nouvellePartie = (hero, difficulte) => ({
+  hero, difficulte, scene: 0, phase: 'avant', drapeaux: {}, temps: 0, victoires: 0, debut: Date.now(), maj: Date.now(), fini: false,
+});
+
+function sauvegardes() {
+  const l = lire(CLE_SAUVEGARDES, null) || [];
+  // L'ancienne histoire (huit chapitres, un seul emplacement) : le héros repart au début de la nouvelle.
+  const vieille = lire(CLE_HISTOIRE, null);
+  if (vieille) {
+    if (!l.some(Boolean) && PERSO[vieille.hero]) { l[0] = nouvellePartie(vieille.hero, vieille.difficulte || 'normal'); ecrire(CLE_SAUVEGARDES, l); }
     ecrire(CLE_HISTOIRE, null);
-    succes.debloquer('street-campagne');
-    majMenu();
-    toast('📖 Histoire terminée ! Le Tournoi et la Tour des défis vous attendent.', 4000);
-    return;
   }
-  const ch = HIST.CHAPITRES[h.chapitre];
-  const adv = ch.combat.adv === h.hero ? ch.combat.remplacant : ch.combat.adv;
-  await cinematique([{ decor: ch.arene }, { titre: ch.titre, sous: ch.sous, sur: 'LA FRACTURE' }, ...remplacer(ch.avant, ch.combat.adv, adv)], h.hero);
-  combatHistoire(h, ch, adv);
+  return Array.from({ length: EMPLACEMENTS }, (_, k) => (l[k] && PERSO[l[k].hero] ? l[k] : null));
 }
 
-function combatHistoire(h, ch, adv) {
+function sauver(discret = false) {
+  if (!partie) return;
+  const l = sauvegardes();
+  const maintenant = Date.now();
+  // Le temps de jeu (une longue absence ne compte pas).
+  partie.h.temps += Math.min(20 * 60000, maintenant - partie.depuis);
+  partie.depuis = maintenant;
+  partie.h.maj = maintenant;
+  l[partie.slot] = partie.h;
+  ecrire(CLE_SAUVEGARDES, l);
+  if (!discret) { const i = $('sauve'); i.hidden = false; i.classList.remove('entre'); void i.offsetWidth; i.classList.add('entre'); }
+}
+
+const sceneDe = (h) => HIST.SCENES[Math.min(h.scene, HIST.SCENES.length - 1)];
+const duree = (ms) => { const m = Math.round(ms / 60000); return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}`; };
+const quand = (t) => new Date(t).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' }) + ' à ' + new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+function ouvrirSauvegardes() {
+  const l = sauvegardes();
+  $('slots').innerHTML = l.map((h, k) => {
+    if (!h) return `<button class="slot vide" data-nouvelle="${k}"><small>EMPLACEMENT ${k + 1}</small><b>＋ Nouvelle partie</b><span>Choisissez votre héros et votre difficulté</span></button>`;
+    const p = PERSO[h.hero];
+    const sc = sceneDe(h);
+    const progres = h.fini ? 100 : Math.round((h.scene / HIST.SCENES.length) * 100);
+    return `<div class="slot" style="--c:${p.c.c1}">
+      <canvas data-portrait="${p.id}" width="120" height="120"></canvas>
+      <div class="slot-texte">
+        <small>EMPLACEMENT ${k + 1} · ${h.difficulte === 'difficile' ? '🔥 DIFFICILE' : '📖 NORMAL'}</small>
+        <b style="color:${p.c.c1}">${esc(p.nom)}</b>
+        <span>${h.fini ? '✔ Histoire terminée' : `${HIST.ACTES[sc.acte].num} — ${esc(sc.titre)} : ${esc(sc.sous)}`}</span>
+        <div class="slot-barre"><i style="width:${progres}%"></i></div>
+        <small>${progres} % · ${h.victoires} victoire${h.victoires > 1 ? 's' : ''} · ${duree(h.temps)} de jeu · ${quand(h.maj)}</small>
+      </div>
+      <div class="slot-boutons">
+        ${h.fini ? '' : `<button class="btn rouge petit" data-continuer="${k}">▶ Continuer</button>`}
+        <button class="btn petit" data-journal="${k}">📜 Journal</button>
+        <button class="btn petit" data-efface="${k}" title="Effacer">🗑️</button>
+      </div>
+    </div>`;
+  }).join('');
+  $('slots').querySelectorAll('[data-portrait]').forEach((cv) => dessinerPortrait(cv.getContext('2d'), PERSO[cv.dataset.portrait], 120, { t: 8 }));
+  aller('s-sauvegardes');
+}
+
+/** Le journal : les scènes déjà vécues, à revoir. */
+function ouvrirJournal(k) {
+  const h = sauvegardes()[k];
+  if (!h) return;
+  const vues = HIST.SCENES.map((sc, i) => [sc, i]).filter(([sc, i]) => (h.fini || i < h.scene) && condition(sc, h));
+  let acte = -1;
+  $('etape').innerHTML = `<button class="rond fermer" data-ferme="ov-etape">✕</button><h2>📜 Journal</h2>
+    <p class="sous">${esc(PERSO[h.hero].nom)} · revoir une scène (sans rien changer à la partie)</p>
+    <div class="journal">${vues.length ? vues.map(([sc, i]) => {
+      const tete = sc.acte !== acte ? `<h4>${HIST.ACTES[sc.acte].num} — ${HIST.ACTES[sc.acte].nom}</h4>` : '';
+      acte = sc.acte;
+      return `${tete}<button class="ligne-journal" data-revoir="${i}"><b>${esc(sc.titre)}</b> ${esc(sc.sous)}${sc.combat ? ' <i>⚔️</i>' : ''}</button>`;
+    }).join('') : '<p class="sous">Rien à revoir pour l’instant.</p>'}</div>`;
+  ouvrir('ov-etape');
+  $('etape').querySelectorAll('[data-revoir]').forEach((b) => b.addEventListener('click', async () => {
+    const sc = HIST.SCENES[Number(b.dataset.revoir)];
+    fermer('ov-etape');
+    const apres = sc.combat ? [{ decor: sc.arene, fondu: true }, { entre: 'hero', cote: 'g', comment: 'place' }, { entre: sc.combat.adv, cote: 'd', comment: 'place', p: 'touche' }, ...(sc.apres || [])] : [];
+    await cineHistoire([...entreeScene(sc), ...sc.etapes, ...apres], h, { ...h.drapeaux });
+    ouvrirSauvegardes();
+  }));
+}
+
+/* ---- le déroulé de l'histoire ---- */
+
+const condition = (sc, h) => !sc.si || (sc.si.startsWith('!') ? !h.drapeaux[sc.si.slice(1)] : !!h.drapeaux[sc.si]);
+/** Le héros ne se croise pas lui-même : sa doublure joue son rôle. */
+const rolesDe = (hero) => (hero === HIST.DOUBLURE ? {} : { [hero]: HIST.DOUBLURE });
+const role = (h, id) => rolesDe(h.hero)[id] || id;
+const nomsDe = (texte, h) => texte.replace(/\{(\w+)\}/g, (m, id) => (id === 'hero' ? PERSO[h.hero].nom : PERSO[role(h, id)]?.nom || m));
+
+function cineHistoire(etapes, h, drapeaux) {
+  aller('s-cine');
+  dimensionnerCine();
+  return jouerCine(etapes, { hero: h.hero, roles: rolesDe(h.hero), drapeaux, debloquer, croiser, quittable: true });
+}
+
+/** Le début d'une scène : le décor, l'acte (au début de chaque acte), le titre. */
+function entreeScene(sc) {
+  const a = HIST.ACTES[sc.acte];
+  const premiere = HIST.SCENES.find((x) => x.acte === sc.acte) === sc;
+  return [{ decor: sc.arene }, ...(premiere ? [{ titre: a.num, sous: a.nom, sur: 'LA FRACTURE' }] : []), { titre: sc.titre, sous: sc.sous, sur: `${a.num} — ${a.nom}` }];
+}
+
+function nouvelleHistoire(hero) {
+  partie = { slot: prep.slot ?? 0, h: nouvellePartie(hero, prep.difficulte || 'normal'), depuis: Date.now() };
+  sauver(true);
+  jouerScene();
+}
+
+function continuerHistoire(k) {
+  const h = sauvegardes()[k];
+  if (!h) return;
+  partie = { slot: k, h, depuis: Date.now() };
+  jouerScene();
+}
+
+function quitterHistoire() {
+  sauver(true);
+  partie = null;
+  majMenu();
+  toast('💾 Partie sauvegardée. À bientôt !');
+}
+
+async function jouerScene() {
+  const h = partie?.h;
+  if (!h) { majMenu(); return; }
+  while (h.scene < HIST.SCENES.length && !condition(HIST.SCENES[h.scene], h)) h.scene += 1;
+  if (h.scene >= HIST.SCENES.length) { finHistoire(); return; }
+  const sc = HIST.SCENES[h.scene];
+  if (h.phase === 'avant') {
+    // Les choix ne comptent qu'une fois la scène finie (quitter au milieu la fait rejouer).
+    const d = { ...h.drapeaux };
+    const r = await cineHistoire([...entreeScene(sc), ...sc.etapes], h, d);
+    if (r === 'quitte') { quitterHistoire(); return; }
+    h.drapeaux = d;
+    if (!sc.combat) { h.scene += 1; sauver(); jouerScene(); return; }
+    h.phase = 'combat';
+    sauver();
+  }
+  if (h.phase === 'combat') { avantCombat(sc); return; }
+  apresCombat(sc, h.phase === 'apres');
+}
+
+/** Avant un combat : qui, à quel niveau, et les règles du jour. */
+function avantCombat(sc) {
+  const h = partie.h;
+  const cb = sc.combat;
+  const adv = role(h, cb.adv);
+  const bonus = cb.bonus && condition({ si: cb.bonus.si }, h) ? cb.bonus : null;
+  const regles = [cb.regle, bonus && nomsDe(bonus.texte, h)].filter(Boolean);
+  const moi = PERSO[h.hero];
+  const lui = PERSO[adv];
+  const contre = cb.serie
+    ? cb.serie.map((id) => `<b style="color:${PERSO[id].c.c1}">${esc(PERSO[id].nom)}</b>`).join(', ')
+    : `<b style="color:${lui.c.c1}">${esc(lui.nom)}</b>${cb.victoires === 1 ? ' · un round' : ''}`;
+  $('etape').innerHTML = `<h2>${esc(sc.titre)}</h2><p class="sous">${esc(sc.sous)}</p>
+    <canvas id="etape-vs" width="1040" height="480"></canvas>
+    <p class="sous"><b style="color:${moi.c.c1}">${esc(moi.nom)}</b> contre ${contre} · ordinateur ${cb.niveau[h.difficulte] || 'normal'}</p>
+    ${regles.map((r) => `<p class="regle">${esc(r)}</p>`).join('')}
+    <div class="ligne-boutons"><button class="btn" id="b-etape-quitter">💾 Sauvegarder et quitter</button><button class="btn rouge" id="b-etape-go">⚔️ Combattre !</button></div>`;
+  dessinerVs($('etape-vs'), moi, lui);
+  ouvrir('ov-etape');
+  son('annonce');
+  $('b-etape-go').onclick = () => { fermer('ov-etape'); combatHistoire(sc, adv, bonus); };
+  $('b-etape-quitter').onclick = () => { fermer('ov-etape'); quitterHistoire(); };
+}
+
+/** Après chaque soldat d'une vague, on récupère un peu de vie. */
+const REPOS_SERIE = 0.2;
+
+/**
+ * Un combat de l'histoire. Une vague (`serie`) : un round contre chacun,
+ * à la suite, la vie du héros passant de l'un à l'autre ; perdre en
+ * cours de route fait recommencer la vague.
+ */
+function combatHistoire(sc, adv, bonus, k = 0, vieRestante = null) {
+  const h = partie.h;
+  const cb = sc.combat;
+  const hpMax = (id) => Math.round(150 * PERSO[id].hpMult);
+  const serie = cb.serie ? cb.serie.map((id) => role(h, id)) : null;
+  const contre = serie ? serie[k] : adv;
+  const vieHero = vieRestante ?? (cb.vie?.[0] ?? 1) * hpMax(h.hero);
+  const vieAdv = serie ? 1 : Math.min(cb.vie?.[1] ?? 1, bonus?.vieAdv ?? 1);
+  const libre = cb.issue === 'libre';
+  const dernier = !serie || k === serie.length - 1;
   demarrerCombat({
-    p1: h.hero, p2: adv, arene: ch.arene, ia: { 1: ch.combat.niveau[h.difficulte] || 'normal' }, mode: 'histoire',
-    texteFin: (gagne) => (gagne ? `<p class="sous">${esc(ch.titre)} — ${esc(ch.sous)}</p>` : '<p class="sous">L’histoire n’est pas finie. Relevez-vous !</p>'),
-    suite: async () => {
-      if (adv === 'lechaos') succes.debloquer('street-chaos');
-      const apres = [{ decor: ch.arene }, { entre: 'hero', cote: 'g', comment: 'place' }, { entre: adv, cote: 'd', comment: 'place', p: 'touche' }, ...remplacer(ch.apres, ch.combat.adv, adv)];
-      await cinematique(apres, h.hero);
-      h.chapitre += 1;
-      ecrire(CLE_HISTOIRE, h);
-      jouerChapitre();
+    p1: h.hero, p2: contre, arene: sc.arene, ia: { 1: cb.niveau[h.difficulte] || 'normal' }, mode: 'histoire',
+    victoires: serie ? 1 : cb.victoires || 2,
+    vie: [vieHero < hpMax(h.hero) ? vieHero : null, vieAdv < 1 ? vieAdv * hpMax(contre) : null],
+    perdable: libre,
+    texteFin: (gagne) => (gagne
+      ? (dernier ? `<p class="sous">${esc(sc.titre)} — ${esc(sc.sous)}</p>` : `<p class="sous">Adversaire ${k + 1} sur ${serie.length} à terre ! Au suivant : <b>${esc(PERSO[serie[k + 1]].nom)}</b> (+${REPOS_SERIE * 100} % de vie)</p>`)
+      : libre ? '<p class="sous">Il était bien trop fort… mais l’histoire continue.</p>'
+        : `<p class="sous">L’histoire n’est pas finie. Relevez-vous !${serie ? ' La vague recommence au début.' : ''} <small>(partie sauvegardée)</small></p>`),
+    suite: (gagne, fin) => {
+      if (gagne && !dernier) { combatHistoire(sc, adv, bonus, k + 1, Math.min(hpMax(h.hero), fin.hpHero + hpMax(h.hero) * REPOS_SERIE)); return; }
+      if (gagne) h.victoires += 1;
+      h.phase = gagne ? 'apres' : 'apresDefaite';
+      sauver(true);
+      apresCombat(sc, gagne);
     },
-    reessayer: () => combatHistoire(h, ch, adv),
+    reessayer: () => combatHistoire(sc, adv, bonus),
+    abandon: () => { sauver(true); partie = null; },
   });
+}
+
+async function apresCombat(sc, gagne) {
+  const h = partie.h;
+  if (gagne && role(h, sc.combat.adv) === 'lechaos') succes.debloquer('street-chaos');
+  const etapes = [
+    { decor: sc.arene },
+    { entre: 'hero', cote: 'g', comment: 'place', p: gagne ? 'repos' : 'touche' },
+    { entre: sc.combat.adv, cote: 'd', comment: 'place', p: gagne ? 'touche' : 'victoire' },
+    ...((gagne ? sc.apres : sc.apresDefaite) || []),
+  ];
+  const d = { ...h.drapeaux };
+  const r = await cineHistoire(etapes, h, d);
+  if (r === 'quitte') { quitterHistoire(); return; }
+  h.drapeaux = d;
+  h.scene += 1;
+  h.phase = 'avant';
+  sauver();
+  jouerScene();
+}
+
+function finHistoire() {
+  const h = partie.h;
+  h.fini = true;
+  sauver(true);
+  partie = null;
+  succes.debloquer('street-campagne');
+  majMenu();
+  toast('📖 Histoire terminée ! Onyx vous attend au Tournoi, Némésis au sommet de la Tour.', 4500);
+}
+
+/** Tout remettre à zéro : combattants débloqués, rencontres, sauvegardes, tournoi et tour en cours. */
+function reinitialiser() {
+  if (!confirm('Tout réinitialiser ?\n\nLes combattants débloqués, les rencontres, les sauvegardes de l’histoire, le tournoi et la tour en cours seront effacés.')) return;
+  for (const cle of [CLE_DEBLOQUES, CLE_CROISES, CLE_SAUVEGARDES, CLE_HISTOIRE, CLE_TOURNOI, CLE_TOUR]) ecrire(cle, null);
+  portraitsGrille.clear();
+  animMenu.a = null;
+  majMenu();
+  toast('♻️ Tout est remis à zéro. Les combattants secrets sont à nouveau cachés.', 3500);
 }
 
 /* ------------------------------------------------------------------ */
@@ -684,6 +903,7 @@ function demarrerCombat(o) {
   enPause = false;
   hpAvant[0] = combat.joueurs[0].hp; hpAvant[1] = combat.joueurs[1].hp;
   touches.clear();
+  $('b-quitter').textContent = o.mode === 'histoire' ? '💾 Sauvegarder et quitter' : 'Quitter le combat';
   $('tactile').hidden = !tactile;
   aller('s-combat');
   dimensionner();
@@ -835,7 +1055,9 @@ function montrerFin() {
     extra = config.texteFin ? config.texteFin(humainGagne, c) : '';
     boutons = humainGagne
       ? '<button class="btn rouge" id="b-fin-suite">Continuer ›</button>'
-      : `<button class="btn" id="b-fin-menu">Menu</button><button class="btn rouge" id="b-fin-retente">${config.mode === 'histoire' ? 'Réessayer' : config.mode === 'tournoi' ? 'Recommencer le tournoi' : 'Recommencer la tour'}</button>`;
+      : config.perdable
+        ? '<button class="btn" id="b-fin-retente">Réessayer</button><button class="btn rouge" id="b-fin-suite">Continuer l’histoire ›</button>'
+        : `<button class="btn" id="b-fin-menu">Menu</button><button class="btn rouge" id="b-fin-retente">${config.mode === 'histoire' ? 'Réessayer' : config.mode === 'tournoi' ? 'Recommencer le tournoi' : 'Recommencer la tour'}</button>`;
   }
   ecrire(CLE_RECORDS, r);
   $('fin').innerHTML = `<h2 class="fin-titre ${humainGagne ? 'victoire' : 'defaite'}">${titre}</h2>
@@ -858,7 +1080,7 @@ function montrerFin() {
   if ($('b-fin-revanche')) $('b-fin-revanche').onclick = go(() => demarrerCombat(config));
   const fin = { c, hpHero: c.joueurs[0].hp };
   if ($('b-fin-menu') && config.suite && !humainGagne) $('b-fin-menu').onclick = go(() => { config.abandon?.(); majMenu(); });
-  if ($('b-fin-suite')) $('b-fin-suite').onclick = go(() => config.suite(true, fin));
+  if ($('b-fin-suite')) $('b-fin-suite').onclick = go(() => config.suite(humainGagne, fin));
   if ($('b-fin-retente')) $('b-fin-retente').onclick = go(() => config.reessayer());
 }
 
@@ -966,10 +1188,24 @@ function commandesHtml() {
 /* ------------------------------------------------------------------ */
 
 function brancher() {
-  $('b-histoire').addEventListener('click', () => {
+  $('b-histoire').addEventListener('click', () => { son('choix'); ouvrirSauvegardes(); });
+  $('slots').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b) return;
     son('choix');
-    if (lire(CLE_HISTOIRE, null)) jouerChapitre(); else ouvrirDifficultes('histoire');
+    if (b.dataset.nouvelle !== undefined) { prep.slot = Number(b.dataset.nouvelle); ouvrirDifficultes('histoire'); }
+    if (b.dataset.continuer !== undefined) continuerHistoire(Number(b.dataset.continuer));
+    if (b.dataset.journal !== undefined) ouvrirJournal(Number(b.dataset.journal));
+    if (b.dataset.efface !== undefined) {
+      const k = Number(b.dataset.efface);
+      if (!confirm(`Effacer la sauvegarde de l’emplacement ${k + 1} ?`)) return;
+      const l = sauvegardes();
+      l[k] = null;
+      ecrire(CLE_SAUVEGARDES, l);
+      ouvrirSauvegardes();
+    }
   });
+  $('b-reset').addEventListener('click', reinitialiser);
   $('b-tournoi').addEventListener('click', () => {
     son('choix');
     if (lire(CLE_TOURNOI, null)) montrerTableau(); else ouvrirDifficultes('tournoi');
@@ -979,8 +1215,9 @@ function brancher() {
     if (lire(CLE_TOUR, null)) montrerTour(); else commencerMode('tour');
   });
   // La cinématique : un toucher avance, « Passer » saute.
-  $('s-cine').addEventListener('click', (e) => { if (!e.target.closest('#cine-passer')) avancerCine(); });
+  $('s-cine').addEventListener('click', (e) => { if (!e.target.closest('#cine-passer, #cine-quitter, #cine-choix')) avancerCine(); });
   $('cine-passer').addEventListener('click', () => passerCine());
+  $('cine-quitter').addEventListener('click', () => quitterCine());
   $('b-versus').addEventListener('click', () => { son('choix'); commencerMode('versus'); });
   $('b-deux').addEventListener('click', () => { son('choix'); commencerMode('deux'); });
   $('b-entrainement').addEventListener('click', () => { son('choix'); commencerMode('entrainement'); });
@@ -1003,7 +1240,7 @@ function brancher() {
   $('grille-persos').addEventListener('click', (e) => {
     const b = e.target.closest('.carte-perso');
     if (!b) return;
-    if (b.classList.contains('verrou')) { toast(b.title); return; }
+    if (b.classList.contains('verrou') || b.classList.contains('cache')) { toast(b.title); return; }
     if (prep.choix === b.dataset.id) { validerChoix(); return; }
     prep.choix = b.dataset.id;
     son('choix');
@@ -1044,12 +1281,17 @@ function brancher() {
     $('coups').innerHTML = ids.map((id) => `<h2 style="color:${PERSO[id].c.c1}">${esc(PERSO[id].nom)}</h2>${listeCoupsHtml(PERSO[id])}`).join('');
     ouvrir('ov-coups');
   });
-  $('b-quitter').addEventListener('click', () => { fermer('ov-pause'); enPause = false; combat = null; majMenu(); });
+  $('b-quitter').addEventListener('click', () => {
+    fermer('ov-pause'); enPause = false; combat = null;
+    if (config?.mode === 'histoire' && partie) { quitterHistoire(); return; }
+    majMenu();
+  });
 
   addEventListener('keydown', (e) => {
     const k = e.key.toLowerCase();
     if ($('s-cine').classList.contains('is-active')) {
       if (k === 'enter' || k === ' ') { e.preventDefault(); avancerCine(); }
+      if (['1', '2', '3'].includes(k)) choisirCine(Number(k) - 1);
       if (k === 'escape') passerCine();
       return;
     }

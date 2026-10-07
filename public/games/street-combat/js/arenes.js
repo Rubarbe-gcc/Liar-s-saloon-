@@ -30,6 +30,7 @@ export const ARENES = [
   { id: 'horloge', nom: 'HORS DU TEMPS', ciel: ['#02080c', '#06202a', '#0c3a44', '#14505a'], sol: '#1a3a40', sol2: '#0a2228', deco: '#4fe0d0', deco2: '#ffd23f', boss: 'kairos' },
   { id: 'ring', nom: 'GRAND RING', ciel: ['#05030a', '#0e0818', '#1a0e24', '#24102a'], sol: '#2a2a6a', sol2: '#1a1a4a', deco: '#ffd23f', deco2: '#d8102a', boss: 'onyx' },
   { id: 'sommet', nom: 'SOMMET DE LA TOUR', ciel: ['#03040e', '#0a1030', '#1a2a5a', '#3a4a7a'], sol: '#4a4a5a', sol2: '#2a2a36', deco: '#c0d8ff', deco2: '#ffffff', boss: 'nemesis' },
+  { id: 'citadelle', nom: 'CITADELLE DE L’HORLOGE', ciel: ['#1a0804', '#4a1a0a', '#a04a14', '#e89040'], sol: '#4a3420', sol2: '#2a1c10', deco: '#e8a030', deco2: '#ffd23f', boss: 'vorn' },
 ];
 export const ARENE = Object.fromEntries(ARENES.map((a) => [a.id, a]));
 
@@ -323,6 +324,32 @@ const DECORS = {
       g.fillStyle = '#ffd23f'; g.beginPath(); g.moveTo(x - 46, y - 80); g.lineTo(x, y - 140); g.lineTo(x + 46, y - 80); g.fill();
     }
   },
+  citadelle(g, a, R) {
+    soleil(g, 780, 300, 90, '#ffb050', 2.4);
+    // Les remparts de la citadelle, au loin, et sa grande horloge.
+    g.fillStyle = '#2a140a';
+    g.fillRect(120, 230, 760, 200);
+    for (let x = 120; x < 880; x += 40) g.fillRect(x, 214, 24, 18);
+    for (const x of [100, 840]) { g.fillRect(x, 150, 80, 280); for (let i = 0; i < 3; i++) g.fillRect(x + i * 30, 132, 20, 20); }
+    g.fillStyle = '#3a1e0e'; g.fillRect(420, 120, 160, 310);
+    g.fillStyle = '#e8a030'; g.beginPath(); g.arc(500, 200, 56, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#2a140a'; g.beginPath(); g.arc(500, 200, 48, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = '#ffd23f'; g.lineWidth = 3;
+    for (let i = 0; i < 12; i++) { const an = (i / 12) * Math.PI * 2; g.beginPath(); g.moveTo(500 + Math.cos(an) * 38, 200 + Math.sin(an) * 38); g.lineTo(500 + Math.cos(an) * 46, 200 + Math.sin(an) * 46); g.stroke(); }
+    g.lineWidth = 5; g.beginPath(); g.moveTo(500, 200); g.lineTo(500, 166); g.moveTo(500, 200); g.lineTo(524, 210); g.stroke();
+    // La porte, et les rangs de soldats devant les murs.
+    g.fillStyle = '#120804'; g.beginPath(); g.moveTo(450, 430); g.lineTo(450, 340); g.quadraticCurveTo(500, 300, 550, 340); g.lineTo(550, 430); g.fill();
+    for (let rang = 0; rang < 2; rang++) {
+      for (let i = 0; i < 26; i++) {
+        const x = 20 + i * 38 + rang * 19; const y = 440 + rang * 14;
+        if (x > 430 && x < 570) continue;
+        g.fillStyle = rang ? '#1a0e06' : '#24140a';
+        g.fillRect(x - 7, y - 40, 14, 30); g.beginPath(); g.arc(x, y - 46, 8, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = '#6a5030'; g.lineWidth = 1.5; g.beginPath(); g.moveTo(x + 9, y - 10); g.lineTo(x + 12, y - 80); g.stroke();
+        g.fillStyle = 'rgba(122,216,208,0.8)'; g.fillRect(x - 3, y - 48, 7, 2);
+      }
+    }
+  },
   desert(g, a, R) {
     soleil(g, 500, 280, 110, '#ffd26a', 2.2);
     g.fillStyle = '#a0601a';
@@ -430,6 +457,19 @@ export function animerArene(g, a, t) {
       for (let i = 0; i < 70; i++) { const x = (R() * L + Math.sin(t / 40 + i) * 30) % L; const y = (R() * H + t * (0.7 + R())) % H; g.beginPath(); g.arc(x, y, 1 + R() * 2, 0, Math.PI * 2); g.fill(); }
       break;
     }
+    case 'citadelle':
+      // Les étendards de l'Horloge qui claquent au vent, et la poussière.
+      for (const x of [140, 860, 300, 700]) {
+        g.fillStyle = '#5a1a0a'; g.fillRect(x - 2, 90, 4, 140);
+        g.fillStyle = '#c8501a';
+        g.beginPath(); g.moveTo(x + 2, 96);
+        for (let k = 0; k <= 6; k++) g.lineTo(x + 2 + k * 10, 96 + Math.sin(t / 6 + k * 0.8 + x) * 4);
+        for (let k = 6; k >= 0; k--) g.lineTo(x + 2 + k * 10, 146 + Math.sin(t / 6 + k * 0.8 + x) * 4);
+        g.fill();
+        g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(x + 32, 121 + Math.sin(t / 6 + 2.4 + x) * 4, 9, 0, Math.PI * 2); g.fill();
+      }
+      for (let i = 0; i < 40; i++) { const x = (R() * L + t * (1.5 + R() * 2)) % L; const y = 300 + R() * 200; g.fillStyle = rgba('#ffc080', 0.3); g.fillRect(x, y, 2, 1.5); }
+      break;
     case 'ruines': case 'desert':
       for (let i = 0; i < 40; i++) { const x = (R() * L + t * (1.5 + R() * 2)) % L; const y = 300 + R() * 200; g.fillStyle = rgba('#ffe0a0', 0.35); g.fillRect(x, y, 2, 1.5); }
       break;

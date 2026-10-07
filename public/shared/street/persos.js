@@ -9,9 +9,13 @@
  *   • deux techniques à manipulation (↓ → 👊…), sans jauge.
  *
  * Certains combattants sont à débloquer : les trois boss du mode Histoire
- * (`boss`), et trois personnages secrets (`secret`), cachés dans la
+ * (`boss`), et des personnages secrets (`secret`), cachés dans la
  * sélection tant qu'on ne les a pas gagnés : Kaïros à la fin de l'Histoire,
- * Onyx au Tournoi en difficile, Némésis au sommet de la Tour des défis.
+ * le Général Vorn, Sablia et Éclipse en cours d'histoire, Onyx au Tournoi
+ * en difficile, Némésis au sommet de la Tour des défis.
+ *
+ * Les figurants (l'armée de l'Horloge) ne se jouent pas : on les affronte
+ * seulement dans l'histoire.
  *
  * Les compétences sont composées de quelques briques, que le moteur
  * (combat.js) sait jouer : projectile, faisceau, ruée, zone, attraction,
@@ -377,12 +381,121 @@ export const PERSOS = [
       { nom: 'DOUBLE', entree: 'DBP', coup: { type: 'teleport', derriere: true, degats: 12, stun: 26, recul: 12, duree: 16 } },
     ],
   }),
+
+  /* ---- les combattants qu'on gagne au fil de l'histoire ---- */
+  P({
+    id: 'vorn', nom: 'GÉNÉRAL VORN', style: 'Chef de l’Armée de l’Horloge', desc: 'Mille soldats, un seul ordre', secret: 'histoire',
+    indice: 'Battez-le à la tête de son armée (mode Histoire, acte VI)',
+    c: { c1: '#e8a030', c2: '#5a3a10', faisceau: '#ffd080', aura: '#e8a030', peau: '#c89a78', cheveux: '#9a9a9a', tenue: '#2a3440', ceinture: '#e8a030' },
+    stats: { hp: 10, dmg: 11, def: 9 }, vitesse: 3.8, saut: 12, dmg: 1.05, hpMult: 1.01, defMult: 1.01,
+    look: { corps: 'massif', tete: 'heaume', extras: ['plumet', 'armure', 'cape', 'insigne'] },
+    specA: { nom: 'CHARGE DE LA LÉGION !', ...ruee({ vx: 14, duree: 30, degats: 17, stun: 30, recul: 18, armure: true, portee: 110 }) },
+    specB: { nom: 'PLUIE DE LANCES !', ...zone({ ou: 'cible', delai: 26, rayon: 110, hauteur: 260, degats: 6, coups: 3, stun: 30, forme: 'pic' }) },
+    ulti: { nom: 'ASSAUT DE LA LÉGION !!', portee: 280, visuel: 'legion' },
+    saisie: { nom: 'ORDRE DU GÉNÉRAL', seq: [['GARDE-À-VOUS !', 10, 6], ['EN RANG !', 10, 6], ['CHARGEZ !', 14, 8], ['SANS PITIÉ !', 18, 10], ['VICTOIRE !', 24, 14]] },
+    combos: [
+      { nom: 'MARCHE FORCÉE', entree: 'PPK', coup: ruee({ vx: 8, duree: 22, coups: 2, degats: 8, stun: 24, recul: 10, armure: true }) },
+      { nom: 'LANCE DU GÉNÉRAL', entree: 'DFP', coup: proj({ vitesse: 15, rayon: 14, degats: 11, duree: 60, forme: 'lance' }) },
+      { nom: 'MUR DE BOUCLIERS', entree: 'BBP', coup: { type: 'garde', duree: 40, contre: true } },
+    ],
+  }),
+  P({
+    id: 'sablia', nom: 'SABLIA', style: 'Gardienne du Sablier', desc: 'Chaque grain est une seconde volée', secret: 'histoire',
+    indice: 'Ouvrez-lui les yeux sur Kaïros (mode Histoire, acte IV)',
+    c: { c1: '#f0c060', c2: '#8a5a20', faisceau: '#ffe0a0', aura: '#f0c060', peau: '#d8a878', cheveux: '#f8e8c0', tenue: '#4a2a50', ceinture: '#f0c060' },
+    stats: { hp: 11, dmg: 13, def: 10 }, vitesse: 4.6, saut: 15, dmg: 1.25, hpMult: 1.1, defMult: 1.12,
+    look: { corps: 'fin', tete: 'longs', extras: ['robe', 'orbes', 'echarpe'] },
+    specA: { nom: 'TEMPÊTE DE SABLE !', ...faisceau({ portee: 520, epaisseur: 40, degats: 13, stun: 24, cone: true, effet: 'lenteur', couleur: '#f0c060' }) },
+    specB: { nom: 'SABLES MOUVANTS !', ...zone({ ou: 'cible', delai: 20, rayon: 120, hauteur: 70, degats: 10, stun: 40, forme: 'flaque', solSeulement: true, effet: 'lenteur' }) },
+    ulti: { nom: 'SABLIER INFINI !!', portee: 300, visuel: 'sablier-infini' },
+    saisie: { nom: 'ENSEVELISSEMENT', seq: [['GRAIN !', 8, 5], ['DUNE !', 10, 6], ['TOURBILLON !', 12, 7], ['ENSEVELI !', 16, 9], ['POUSSIÈRE !', 22, 12]] },
+    combos: [
+      { nom: 'VENT DU DÉSERT', entree: 'PPK', coup: ruee({ vx: 10, duree: 20, coups: 3, degats: 5, stun: 20, recul: 6 }) },
+      { nom: 'SABLIER', entree: 'DFP', coup: proj({ vitesse: 9, rayon: 18, degats: 10, duree: 90, forme: 'sablier', vy: -8, gravite: 0.3, effet: 'lenteur' }) },
+      { nom: 'MIRAGE', entree: 'DBP', coup: { type: 'teleport', recule: true, duree: 16 } },
+    ],
+  }),
+  P({
+    id: 'eclipse', nom: 'ÉCLIPSE', style: 'Lame du Temps Perdu', desc: 'La sœur que l’ombre avait perdue', secret: 'histoire',
+    indice: 'Rendez-la à sa sœur (mode Histoire, acte IX)',
+    c: { c1: '#ff9a3c', c2: '#3a1060', faisceau: '#ffc070', aura: '#ff7a20', peau: '#c8a0b8', cheveux: '#1a0a2a', tenue: '#120820', ceinture: '#ff9a3c' },
+    stats: { hp: 11, dmg: 13, def: 9 }, vitesse: 5.6, saut: 17, dmg: 1.29, hpMult: 1.05, defMult: 1.02,
+    look: { corps: 'fin', tete: 'couettes', extras: ['katana', 'echarpe', 'aura-noire'] },
+    specA: { nom: 'COURONNE NOIRE !', ...proj({ vitesse: 12, rayon: 24, degats: 14, forme: 'croissant', traverse: true }) },
+    specB: { nom: 'OMBRE SOLAIRE !', type: 'teleport', derriere: true, degats: 15, stun: 28, recul: 10, duree: 22 },
+    ulti: { nom: 'ÉCLIPSE TOTALE !!', portee: 300, visuel: 'eclipse-totale' },
+    saisie: { nom: 'NUIT EN PLEIN JOUR', seq: [['OMBRE !', 8, 4], ['LUNE !', 8, 5], ['SOLEIL !', 12, 7], ['ÉCLIPSE !', 16, 9], ['TOTALITÉ !', 22, 11]] },
+    combos: [
+      { nom: 'DANSE DU CRÉPUSCULE', entree: 'PPK', coup: ruee({ vx: 12, duree: 20, coups: 3, degats: 5, stun: 20, recul: 6, traverse: true }) },
+      { nom: 'LAME ORANGE', entree: 'FFP', coup: ruee({ vx: 16, duree: 14, degats: 12, stun: 26, recul: 14, invincible: 8 }) },
+      { nom: 'DOUBLE OMBRE', entree: 'DFK', coup: proj({ vitesse: 16, rayon: 12, degats: 6, nb: 2, eventail: true, forme: 'lame' }) },
+    ],
+  }),
 ];
 
-export const PERSO = Object.fromEntries(PERSOS.map((p) => [p.id, p]));
+/* ---------------------------------------------------------------- */
+/* Les figurants : l'armée de l'Horloge                               */
+/* ---------------------------------------------------------------- */
+
+/**
+ * Les soldats de Kaïros. On les combat dans l'histoire, souvent plusieurs
+ * d'affilée ; on ne les choisit jamais. Moins solides que les vrais
+ * combattants (ce sont des secondes gelées, devenues soldats).
+ */
+const SOLDAT = { c1: '#7ad8d0', c2: '#2a4a50', faisceau: '#a8fff2', aura: '#40c8c0', peau: '#8aa4a8', cheveux: '#202a30', tenue: '#3a4a54', ceinture: '#ffd23f' };
+export const FIGURANTS = [
+  P({
+    id: 'soldat', nom: 'SOLDAT DE L’HORLOGE', style: 'Fantassin', desc: 'Une seconde gelée, devenue soldat', figurant: true,
+    c: SOLDAT,
+    stats: { hp: 9, dmg: 10, def: 9 }, vitesse: 4.2, saut: 13, dmg: 1, hpMult: 0.85, defMult: 1,
+    look: { corps: 'normal', tete: 'heaume', extras: ['armure', 'insigne'] },
+    specA: { nom: 'TIR CADENCÉ !', ...proj({ vitesse: 14, rayon: 10, degats: 9, nb: 3, forme: 'balle', duree: 60 }) },
+    specB: { nom: 'CHARGE !', ...ruee({ vx: 13, duree: 20, degats: 13, stun: 26, recul: 14 }) },
+    ulti: { nom: 'SALVE DE L’HORLOGE !!', portee: 240, visuel: 'omega' },
+    saisie: { nom: 'CLÉ DE BRAS', seq: [['TIC !', 8, 5], ['TAC !', 8, 5], ['TIC !', 10, 6], ['TAC !', 12, 7], ['SONNERIE !', 18, 10]] },
+    combos: [
+      { nom: 'ESCRIME', entree: 'PPK', coup: ruee({ vx: 8, duree: 18, coups: 2, degats: 6, stun: 20, recul: 8 }) },
+      { nom: 'BAÏONNETTE', entree: 'FFP', coup: ruee({ vx: 14, duree: 14, degats: 10, stun: 22, recul: 12 }) },
+      { nom: 'GRENADE', entree: 'DFP', coup: proj({ vitesse: 8, rayon: 16, degats: 10, duree: 80, forme: 'boule', vy: -9, gravite: 0.4 }) },
+    ],
+  }),
+  P({
+    id: 'sentinelle', nom: 'SENTINELLE', style: 'Garde lourd', desc: 'Un mur qui marche', figurant: true,
+    c: { ...SOLDAT, c1: '#ff6a4a', c2: '#5a1a10', faisceau: '#ffb090', aura: '#ff6a4a', tenue: '#4a4448' },
+    stats: { hp: 10, dmg: 10, def: 11 }, vitesse: 3.0, saut: 10, dmg: 0.98, hpMult: 1.01, defMult: 1.17,
+    look: { corps: 'geant', tete: 'heaume', extras: ['armure', 'insigne', 'brassards'] },
+    specA: { nom: 'CANON D’ÉPAULE !', ...faisceau({ portee: 600, epaisseur: 30, degats: 13, stun: 24, couleur: '#ff6a4a' }) },
+    specB: { nom: 'ONDE DE CHOC !', ...zone({ ou: 'soi', delai: 10, rayon: 150, hauteur: 60, degats: 12, stun: 32, forme: 'seisme', solSeulement: true }) },
+    ulti: { nom: 'BASTION !!', portee: 220, visuel: 'tectonique' },
+    saisie: { nom: 'ÉCRASEMENT', seq: [['PRISE !', 10, 6], ['SERRE !', 12, 7], ['ÉCRASE !', 16, 9], ['PROJETTE !', 20, 12]] },
+    combos: [
+      { nom: 'MASSE', entree: 'PPK', coup: ruee({ vx: 6, duree: 24, degats: 14, stun: 30, recul: 16, armure: true }) },
+      { nom: 'BOUCLIER', entree: 'BBP', coup: { type: 'garde', duree: 46 } },
+      { nom: 'BÉLIER', entree: 'FFK', coup: ruee({ vx: 11, duree: 22, degats: 12, stun: 26, recul: 20, armure: true }) },
+    ],
+  }),
+  P({
+    id: 'chasseur', nom: 'CHASSEUR DU TEMPS', style: 'Éclaireur', desc: 'Il arrive toujours une seconde avant toi', figurant: true,
+    c: { ...SOLDAT, c1: '#c87aff', c2: '#3a1a5a', faisceau: '#e0b0ff', aura: '#a050ff', tenue: '#24203a' },
+    stats: { hp: 9, dmg: 11, def: 9 }, vitesse: 5.4, saut: 17, dmg: 1.13, hpMult: 0.88, defMult: 1.02,
+    look: { corps: 'fin', tete: 'heaume', extras: ['insigne', 'echarpe'] },
+    specA: { nom: 'DAGUES DU TEMPS !', ...proj({ vitesse: 16, rayon: 11, degats: 5, nb: 3, eventail: true, forme: 'aiguille', duree: 50 }) },
+    specB: { nom: 'SAUT TEMPOREL !', type: 'teleport', derriere: true, degats: 12, stun: 24, recul: 10, duree: 20 },
+    ulti: { nom: 'CHASSE À L’HOMME !!', portee: 260, visuel: 'mille-lames' },
+    saisie: { nom: 'EMBUSCADE', seq: [['VU !', 8, 4], ['PRIS !', 8, 5], ['SAIGNE !', 12, 6], ['FINI !', 18, 9]] },
+    combos: [
+      { nom: 'RAFALE', entree: 'PPK', coup: ruee({ vx: 11, duree: 18, coups: 3, degats: 4, stun: 18, recul: 6, traverse: true }) },
+      { nom: 'ESQUIVE', entree: 'DBP', coup: { type: 'teleport', recule: true, duree: 14 } },
+      { nom: 'COUP DE GRÂCE', entree: 'FFP', coup: ruee({ vx: 15, duree: 14, degats: 11, stun: 24, recul: 12 }) },
+    ],
+  }),
+];
+
+/** Tous ceux qui peuvent monter sur le ring, figurants compris. */
+export const PERSO = Object.fromEntries([...PERSOS, ...FIGURANTS].map((p) => [p.id, p]));
 export const ROSTER = PERSOS.filter((p) => !p.boss && !p.secret);
 export const BOSS = { normal: 'solarius', difficile: 'malvortex', impossible: 'lechaos' };
-/** Les personnages secrets, et où les gagner. */
+/** Les personnages secrets, et où les gagner (les autres secrets de l’histoire disent où dans `indice`). */
 export const SECRETS = { histoire: 'kairos', tournoi: 'onyx', tour: 'nemesis' };
 /** Un combattant à débloquer (boss ou secret). */
 export const aDebloquer = (p) => !!(p.boss || p.secret);
