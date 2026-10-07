@@ -296,7 +296,8 @@ export function dessinerCombattant(g, perso, o) {
   }
 
   /* ---- la tête ---- */
-  g.strokeStyle = k.peau;
+  // Le cou (le ninja le cache sous son masque).
+  g.strokeStyle = L.tete === 'ninja' ? teinte(k.c2, -0.55) : k.peau;
   g.lineWidth = 9 * m;
   g.beginPath(); g.moveTo(cou.x, cou.y); g.lineTo(tete.x, tete.y + 8); g.stroke();
   dessinerTete(g, perso, tete.x, tete.y, { t, regard: o.pose, touche: ['touche', 'vol', 'ko', 'sol'].includes(o.pose), ko: o.pose === 'ko', rot: pose.b + (pose.tt || 0), m });
@@ -356,6 +357,13 @@ export function dessinerTete(g, perso, x, y, o = {}) {
     g.fill();
   }
 
+  // Le faucheur : un crâne sous une capuche en lambeaux.
+  if (L.tete === 'crane') {
+    crane(g, k, o);
+    g.restore();
+    return;
+  }
+
   // Le visage.
   const grad = g.createRadialGradient(-4, -6, 3, 0, 0, r + 4);
   grad.addColorStop(0, teinte(k.peau, 0.18));
@@ -388,7 +396,7 @@ export function dessinerTete(g, perso, x, y, o = {}) {
   } else {
     g.fillStyle = '#ffffff';
     g.beginPath(); g.ellipse(3, -2, 3.6, 3, 0, 0, Math.PI * 2); g.ellipse(11, -2, 3.4, 3, 0, 0, Math.PI * 2); g.fill();
-    g.fillStyle = o.touche ? '#552222' : '#111';
+    g.fillStyle = o.touche ? '#552222' : L.tete === 'ninja' ? k.c1 : '#111';
     g.beginPath(); g.arc(4.4, -1.6, 1.8, 0, Math.PI * 2); g.arc(12.2, -1.6, 1.7, 0, Math.PI * 2); g.fill();
     // Les sourcils, froncés.
     g.strokeStyle = teinte(k.cheveux, -0.3); g.lineWidth = 2;
@@ -400,9 +408,57 @@ export function dessinerTete(g, perso, x, y, o = {}) {
   if (o.touche) { g.ellipse(9, 9, 3, 2.4, 0, 0, Math.PI * 2); } else { g.moveTo(5, 9); g.lineTo(12, 8); }
   g.stroke();
 
+  // Le ninja : un masque sur le bas du visage.
+  if (L.tete === 'ninja') {
+    g.save();
+    g.beginPath(); g.ellipse(0, 0, r + 0.5, r + 2, 0, 0, Math.PI * 2); g.ellipse(5, 8, 9.5, 7.5, 0, 0, Math.PI * 2); g.clip();
+    g.fillStyle = teinte(k.c2, -0.55);
+    g.fillRect(-22, 3, 44, 24);
+    g.strokeStyle = rgba(k.c1, 0.55); g.lineWidth = 1.2;
+    g.beginPath(); g.moveTo(-14, 8); g.quadraticCurveTo(4, 6, 16, 9); g.moveTo(-12, 13); g.quadraticCurveTo(4, 12, 15, 14); g.stroke();
+    g.restore();
+  }
+
   // Le dessus de la tête.
   coiffure(g, perso, t);
   g.restore();
+}
+
+/** Le crâne du faucheur, sa capuche déchirée, ses orbites qui luisent. */
+function crane(g, k, o) {
+  const capuche = teinte(k.tenue, 0.14);
+  // La capuche, derrière, au bas en lambeaux.
+  g.fillStyle = capuche;
+  g.beginPath();
+  g.moveTo(-24, 24); g.quadraticCurveTo(-31, -30, 2, -31); g.quadraticCurveTo(31, -27, 25, 8);
+  for (let i = 0; i <= 6; i++) g.lineTo(24 - i * 8, 26 + (i % 2 ? 9 : 0));
+  g.closePath(); g.fill();
+  // Le crâne.
+  const os = g.createRadialGradient(0, -7, 2, 3, 0, 19);
+  os.addColorStop(0, '#fffaf0'); os.addColorStop(1, '#a89c86');
+  g.fillStyle = os;
+  g.beginPath(); g.ellipse(3, -3, 14, 14.5, 0, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.roundRect(-2, 6, 14, 10, 3); g.fill();
+  // Les orbites, et ce qui luit au fond.
+  g.fillStyle = '#0a0010';
+  g.beginPath(); g.ellipse(3, -2, 4.4, 5, 0.2, 0, Math.PI * 2); g.ellipse(12, -2, 3.8, 4.8, -0.2, 0, Math.PI * 2); g.fill();
+  if (!o.ko) {
+    lueur(g, 3.5, -1.5, 3.6, k.c1); lueur(g, 12, -1.5, 3.4, k.c1);
+    g.fillStyle = '#f2d8ff';
+    g.beginPath(); g.arc(3.5, -1.5, 1.4, 0, Math.PI * 2); g.arc(12, -1.5, 1.3, 0, Math.PI * 2); g.fill();
+  }
+  // Le nez, les dents.
+  g.fillStyle = '#0a0010';
+  g.beginPath(); g.moveTo(8, 3); g.lineTo(6.3, 7); g.lineTo(9.7, 7); g.closePath(); g.fill();
+  g.strokeStyle = '#5a5040'; g.lineWidth = 1;
+  g.beginPath(); g.moveTo(0, 11); g.lineTo(12, 11);
+  for (let x = 1; x <= 11; x += 2.5) { g.moveTo(x, 8.5); g.lineTo(x, 14); }
+  g.stroke();
+  // Le bord de la capuche, qui tombe sur le front.
+  g.fillStyle = capuche;
+  g.beginPath();
+  g.moveTo(-19, 16); g.quadraticCurveTo(-24, -24, 2, -26); g.quadraticCurveTo(24, -24, 21, -9);
+  g.quadraticCurveTo(10, -18, -4, -13); g.quadraticCurveTo(-13, -3, -12, 16); g.closePath(); g.fill();
 }
 
 function lueur(g, x, y, r, c) {
@@ -447,6 +503,24 @@ function coiffure(g, p, t) {
         g.fillStyle = rgba('#e6faff', 0.9);
         const h = 14 + (i === 2 ? 10 : i % 2 ? 4 : 7);
         g.beginPath(); g.moveTo(-12 + i * 6, -13); g.lineTo(-9 + i * 6, -13 - h); g.lineTo(-6 + i * 6, -13); g.fill();
+      }
+      break;
+    }
+    case 'ninja': {
+      // Des mèches en pointe, le bandeau et ses deux pans qui flottent.
+      for (let i = 0; i < 6; i++) {
+        g.fillStyle = i % 2 ? k.cheveux : teinte(k.cheveux, 0.25);
+        g.beginPath(); g.moveTo(-15 + i * 6, -9); g.lineTo(-19 + i * 5, -27 - (i % 3) * 4); g.lineTo(-8 + i * 6, -11); g.fill();
+      }
+      g.fillStyle = k.c1;
+      g.fillRect(-15, -11, 31, 6);
+      g.fillStyle = '#d8d8e8';
+      g.beginPath(); g.roundRect(4, -10.5, 8, 5, 1.5); g.fill();
+      g.fillStyle = k.c1;
+      for (const [dy, f] of [[0, 1], [4, 0.8]]) {
+        g.beginPath(); g.moveTo(-14, -10 + dy * 0.5);
+        g.quadraticCurveTo(-28, -10 + dy + Math.sin(t / 4 + dy) * 5, -42 * f, -4 + dy + Math.sin(t / 3 + dy) * 7);
+        g.lineTo(-40 * f, 0 + dy + Math.sin(t / 3 + dy) * 7); g.quadraticCurveTo(-26, -4 + dy, -14, -6 + dy * 0.5); g.fill();
       }
       break;
     }
