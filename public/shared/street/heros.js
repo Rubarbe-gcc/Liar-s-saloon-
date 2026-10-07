@@ -49,6 +49,7 @@ export const MAX_ACCESSOIRES = 3;
  */
 export const ECOLES = {
   ki: {
+    victoire: ['v-salut', 'v-poing'], cri: 'Encore un peu d’entraînement, et tu y seras.',
     nom: 'Poing de Ki', style: 'Arts martiaux', texte: 'Équilibré : une boule d’énergie, un coup montant qui traverse tout.',
     vitesse: 4.6, saut: 14, dmg: 1.17, hpMult: 1.04, defMult: 0.99,
     specA: { nom: 'VAGUE DE KI !', ...proj({ vitesse: 12, rayon: 22, degats: 14, forme: 'boule' }) },
@@ -62,6 +63,7 @@ export const ECOLES = {
     ],
   },
   flamme: {
+    victoire: ['v-pointe', 'v-deux-poings'], cri: 'Ça, c’était brûlant !',
     nom: 'Flamme', style: 'Maître du feu', texte: 'Agressif : des boules de feu qui brûlent, un mur de flammes.',
     vitesse: 4.4, saut: 13, dmg: 1.3, hpMult: 1.06, defMult: 1.01,
     specA: { nom: 'BOULE DE FEU !', ...proj({ vitesse: 11, rayon: 20, degats: 12, forme: 'flamme', effet: 'brulure' }) },
@@ -75,6 +77,7 @@ export const ECOLES = {
     ],
   },
   foudre: {
+    victoire: ['v-flex', 'v-deux-poings'], cri: 'Plus rapide que l’éclair.',
     nom: 'Foudre', style: 'Guerrier de l’éclair', texte: 'Longue portée : un rayon électrique, la foudre qui tombe du ciel.',
     vitesse: 4.5, saut: 14, dmg: 1.11, hpMult: 0.96, defMult: 0.94,
     specA: { nom: 'RAYON ÉCLAIR !', ...faisceau({ portee: 600, epaisseur: 28, degats: 14, stun: 24, couleur: '#ffe680' }) },
@@ -88,6 +91,7 @@ export const ECOLES = {
     ],
   },
   givre: {
+    victoire: ['v-bras-croises', 'v-bras-ecartes'], cri: 'Glacial.',
     nom: 'Givre', style: 'Cryomancien', texte: 'Contrôle : ralentit et gèle l’adversaire.',
     vitesse: 4.2, saut: 14, dmg: 1.3, hpMult: 1.22, defMult: 1.22,
     specA: { nom: 'LANCE DE GLACE !', ...proj({ vitesse: 13, rayon: 16, degats: 12, forme: 'lance', effet: 'gel' }) },
@@ -101,6 +105,7 @@ export const ECOLES = {
     ],
   },
   ombre: {
+    victoire: ['v-meditation', 'v-bras-croises'], cri: 'Je n’étais même pas là.',
     nom: 'Ombre', style: 'Assassin', texte: 'Rapide : une onde au ras du sol, une téléportation dans le dos.',
     vitesse: 5.5, saut: 16, dmg: 1.27, hpMult: 1.04, defMult: 1.01,
     specA: { nom: 'VAGUE NOIRE !', ...proj({ vitesse: 9, rayon: 24, degats: 13, forme: 'onde', rase: true }) },
@@ -114,6 +119,7 @@ export const ECOLES = {
     ],
   },
   colosse: {
+    victoire: ['v-poing-sol', 'v-flex'], cri: 'Rien ne me fait tomber.',
     nom: 'Colosse', style: 'Lutteur', texte: 'Solide : charge en super-armure, fait trembler le sol.',
     vitesse: 3.5, saut: 11, dmg: 1.14, hpMult: 1.14, defMult: 1.12,
     specA: { nom: 'CHARGE DU TAUREAU !', ...ruee({ vx: 13, duree: 28, degats: 17, stun: 30, recul: 18, armure: true, portee: 110 }) },
@@ -127,6 +133,7 @@ export const ECOLES = {
     ],
   },
   lame: {
+    victoire: ['v-salut', 'v-genou'], cri: 'Coupé net.',
     nom: 'Lame', style: 'Épéiste', texte: 'Tranchant : un croissant qui traverse, une ruée invincible.',
     vitesse: 4.9, saut: 15, dmg: 1.26, hpMult: 1.05, defMult: 1.05,
     specA: { nom: 'CROISSANT D’ACIER !', ...proj({ vitesse: 12, rayon: 24, degats: 13, forme: 'croissant', traverse: true }) },
@@ -140,6 +147,7 @@ export const ECOLES = {
     ],
   },
   etoile: {
+    victoire: ['v-deux-poings', 'v-levitation'], cri: 'Fais un vœu.',
     nom: 'Étoiles', style: 'Mage céleste', texte: 'Magique : des étoiles qui suivent l’adversaire, une pluie d’étoiles.',
     vitesse: 4.4, saut: 16, dmg: 1.11, hpMult: 0.98, defMult: 0.98,
     specA: { nom: 'ÉTOILE FILANTE !', ...proj({ vitesse: 9, rayon: 16, degats: 12, forme: 'etoile', tete: true, duree: 110 }) },
@@ -192,5 +200,6 @@ export function construireHeros(d, id = 'heros') {
     vitesse: stats.vitesse, saut: ecole.saut, dmg: ecole.dmg, hpMult: stats.hpMult, defMult: ecole.defMult,
     look: { corps, tete, extras: tete === 'bandeau' ? ['bandeau-long', ...accessoires] : accessoires },
     specA: ecole.specA, specB: ecole.specB, ulti: ecole.ulti, saisie: ecole.saisie, combos: ecole.combos,
+    victoire: ecole.victoire, cri: ecole.cri,
   };
 }

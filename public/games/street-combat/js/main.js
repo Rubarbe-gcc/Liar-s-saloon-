@@ -1098,9 +1098,12 @@ function dessiner() {
     let alpha = 1;
     if (j.cache) alpha = 0.22;
     else if (j.invincible > 0 && j.etat === 'libre' && Math.floor(t / 3) % 2) alpha = 0.55;
+    // La victoire : celle du round, ou, s'il vient de gagner le combat, la grande.
+    const finale = j.victoires >= (c.victoiresRequises || 2);
+    const nomPose = pose(j) === 'victoire' && !finale ? 'victoire-round' : pose(j);
     dessinerCombattant(g, p, {
-      x: j.x, y: j.y, dir: j.dir, pose: pose(j), t: j.anim, p: progres, enLAir: !j.sol, alpha,
-      aura: j.etat === 'ulti' ? 1 : j.sp >= 100 ? 0.45 + Math.sin(t / 6) * 0.2 : 0,
+      x: j.x, y: j.y, dir: j.dir, pose: nomPose, t: j.anim, p: progres, enLAir: !j.sol, alpha,
+      aura: j.etat === 'ulti' ? 1 : j.etat === 'victoire' && finale ? 0.75 + Math.sin(t / 6) * 0.2 : j.sp >= 100 ? 0.45 + Math.sin(t / 6) * 0.2 : 0,
       statuts: Object.keys(j.statuts).length ? j.statuts : null, eclat: eclats[j.n] * 0.8, corrompu: !!config.corrompu?.[j.n],
     });
     // Le bouclier, la parade : un halo.
@@ -1165,6 +1168,7 @@ function montrerFin() {
   ecrire(CLE_RECORDS, r);
   $('fin').innerHTML = `<h2 class="fin-titre ${humainGagne ? 'victoire' : 'defaite'}">${titre}</h2>
     <canvas id="fin-portrait" width="1040" height="480"></canvas>
+    ${p.cri ? `<p class="cri" style="--c:${p.c.c1}">« ${esc(p.cri)} »</p>` : ''}
     <p class="sous"><b style="color:${p.c.c1}">${esc(p.nom)}</b> l’emporte, ${gagnant.victoires} round${gagnant.victoires > 1 ? 's' : ''} à ${c.joueurs[1 - c.vainqueur].victoires}.</p>
     <div class="fin-stats"><span><b>${stats.comboMax[0]}</b>meilleur combo</span>${config.mode === 'deux' ? `<span><b>${stats.comboMax[1]}</b>combo J2</span>` : ''}<span><b>${c.round}</b>rounds</span></div>
     ${extra}

@@ -493,6 +493,46 @@ export const FIGURANTS = [
   }),
 ];
 
+/**
+ * Les victoires : la pose de fin de round, la pose de fin de combat, et ce
+ * qu'il dit quand il gagne.
+ */
+const VICTOIRES = {
+  ryuken: ['v-salut', 'v-poing', 'Le maître serait fier. Bon… et ces ramen ?'],
+  blazero: ['v-pointe', 'v-deux-poings', 'Trop chaud pour toi ?'],
+  frostbyte: ['v-bras-croises', 'v-bras-ecartes', 'Reste au frais.'],
+  shadowkira: ['v-meditation', 'v-bras-croises', 'Tu ne m’as même pas vue venir.'],
+  thunderox: ['v-flex', 'v-deux-poings', 'LE TONNERRE A PARLÉ !'],
+  ironclad: ['v-salut-mili', 'v-bras-croises', 'Victoire confirmée. Probabilité initiale : 100 %.'],
+  serpenta: ['v-pointe', 'v-rire', 'Sssi facile…'],
+  gravox: ['v-bras-croises', 'v-levitation', 'Tout finit par tomber.'],
+  lunara: ['v-meditation', 'v-levitation', 'La lune m’avait prévenue.'],
+  pyroclaw: ['v-poing-sol', 'v-deux-poings', 'GRRRAAAAAH !'],
+  wraithblade: ['v-salut', 'v-genou', 'Une seule lame suffisait.'],
+  celestia: ['v-deux-poings', 'v-levitation', 'Les étoiles étaient de mon côté.'],
+  stoneback: ['v-poing-sol', 'v-flex', 'Je n’ai même pas bougé.'],
+  stormwing: ['v-bras-ecartes', 'v-levitation', 'Le ciel m’appartient.'],
+  voidreaper: ['v-bras-croises', 'v-bras-ecartes', 'Ton heure n’est pas venue… cette fois.'],
+  aquathorn: ['v-pointe', 'v-poing', 'Retourne nager dans ta flaque.'],
+  solarius: ['v-meditation', 'v-levitation', 'Que la lumière te guide.'],
+  malvortex: ['v-rire', 'v-bras-ecartes', 'Rampe, insecte.'],
+  lechaos: ['v-bras-ecartes', 'v-levitation', 'TOUT… S’EFFACE.'],
+  kairos: ['v-pointe', 'v-levitation', 'J’avais déjà vu cette fin.'],
+  onyx: ['v-sautille', 'v-poing', 'Cent un K.O.'],
+  nemesis: ['v-bras-croises', 'v-levitation', 'Je suis toi… en mieux.'],
+  vorn: ['v-salut-mili', 'v-garde-honneur', 'Repos, soldat. Tu t’es bien battu.'],
+  sablia: ['v-meditation', 'v-bras-ecartes', 'Ton temps est écoulé.'],
+  eclipse: ['v-bras-croises', 'v-pointe', 'Même le soleil s’éteint.'],
+  soldat: ['v-salut-mili', 'v-salut-mili', 'Tic. Tac.'],
+  sentinelle: ['v-flex', 'v-flex', 'Mur intact.'],
+  chasseur: ['v-bras-croises', 'v-pointe', 'Proie abattue.'],
+};
+for (const p of [...PERSOS, ...FIGURANTS]) {
+  const [round, combat, cri] = VICTOIRES[p.id] || ['v-poing', 'v-poing', 'Victoire !'];
+  p.victoire = [round, combat];
+  p.cri = cri;
+}
+
 /** Tous ceux qui peuvent monter sur le ring, figurants compris. */
 export const PERSO = Object.fromEntries([...PERSOS, ...FIGURANTS].map((p) => [p.id, p]));
 export const ROSTER = PERSOS.filter((p) => !p.boss && !p.secret);

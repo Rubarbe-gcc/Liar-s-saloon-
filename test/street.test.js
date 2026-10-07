@@ -49,6 +49,8 @@ test('le roster : 16 combattants, 3 boss, 6 secrets et 3 figurants, chacun avec 
     if (!p.figurant) visuels.add(p.ulti.visuel);
     assert.ok(p.saisie.seq.length >= 4, p.id);
     assert.equal(p.combos.length, 3, p.id);
+    // Sa façon de fêter un round, un combat, et ce qu’il dit quand il gagne.
+    assert.ok(p.victoire?.length === 2 && p.victoire.every((v) => v.startsWith('v-')) && p.cri, `${p.id} : victoire`);
     assert.equal(p.combos[0].entree, 'PPK', `${p.id} : l’enchaînement d’abord`);
     for (const cb of p.combos) assert.match(cb.entree, /^[FBDU]*[PK]+$/, `${p.id} ${cb.nom}`);
     // Deux techniques d'un même combattant n'ont jamais la même manipulation.

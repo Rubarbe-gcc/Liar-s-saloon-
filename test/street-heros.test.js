@@ -34,6 +34,7 @@ test('construireHeros : une fiche valide, même avec des options farfelues', () 
   assert.equal(nomPropre(''), 'HÉROS');
   assert.equal(nomPropre('Élodie la grande guerrière'), 'ÉLODIE LA GRAN');
   for (const k of ['c1', 'c2', 'faisceau', 'aura', 'peau', 'cheveux', 'tenue', 'ceinture']) assert.ok(h.c[k], k);
+  for (const e of Object.keys(ECOLES)) { const x = construireHeros({ ecole: e }); assert.ok(x.victoire.length === 2 && x.cri, e); }
   // La carrure compte : un héros massif a plus de vie, mais va moins vite.
   const fin = construireHeros({ ...defautHeros(), corps: 'fin' });
   const massif = construireHeros({ ...defautHeros(), corps: 'massif' });

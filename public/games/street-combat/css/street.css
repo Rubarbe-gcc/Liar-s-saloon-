@@ -173,7 +173,7 @@ button { font: inherit; color: inherit; }
 .fin-titre { font-family: var(--titre); font-size: clamp(2.6rem, 10vw, 4.4rem); letter-spacing: .05em; margin: 0; transform: skewX(-10deg); }
 .fin-titre.victoire { color: var(--or); text-shadow: 0 0 24px rgba(255,200,61,.7), 4px 4px 0 #5a2000; }
 .fin-titre.defaite { color: var(--rouge); text-shadow: 4px 4px 0 #2a0008; }
-.fin #fin-portrait, .etape #etape-vs { width: 100%; max-width: 520px; aspect-ratio: 13 / 6; display: block; margin: 8px auto; }
+#fin #fin-portrait, .etape #etape-vs { width: 100%; max-width: 520px; aspect-ratio: 13 / 6; display: block; margin: 8px auto; }
 .fin-stats { display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; color: var(--pale); font-weight: 700; margin: 8px 0; }
 .fin-stats b { color: #fff; font-size: 1.2rem; display: block; }
 .debloque { margin: 10px 0; padding: 12px; border-radius: 8px; background: linear-gradient(90deg, rgba(255,200,61,.25), rgba(255,42,74,.25)); font-weight: 800; }
@@ -362,3 +362,7 @@ kbd { display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4
 .teinte.on { box-shadow: 0 0 0 3px #08040f, 0 0 0 5px var(--or); transform: scale(1.08); }
 .slot-texte .ecole { font-style: normal; font-size: .75rem; font-weight: 800; color: var(--pale); margin-left: 4px; }
 @media (max-width: 760px) { .createur-corps { grid-template-columns: 1fr; } .createur-apercu canvas { max-height: 34vh; object-fit: contain; } }
+
+/* Ce que dit le vainqueur */
+.cri { margin: 4px auto 2px; max-width: 520px; font-family: var(--titre); font-size: clamp(1.1rem, 3.4vw, 1.5rem); letter-spacing: .03em; color: var(--c);
+  text-shadow: 2px 2px 0 #000; transform: skewX(-6deg); animation: titre .7s .2s cubic-bezier(.2,1.4,.4,1) both; }

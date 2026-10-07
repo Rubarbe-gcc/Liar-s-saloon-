@@ -79,7 +79,22 @@ function poseDe(nom, t, p = 0) {
     case 'touche': return { ...GARDE, b: -24, tt: -18, av: [-10, -40], ar: [-40, -20], ja: [26, -16], jr: [-26, 10] };
     case 'vol': return { ...GARDE, b: -30, tt: -20, av: [-80, -20], ar: [-120, -10], ja: [40, -30], jr: [10, -50], rot: -40 };
     case 'sol': case 'ko': return { ...GARDE, b: 0, tt: -10, av: [-150, 0], ar: [-170, -20], ja: [5, -5], jr: [-5, 10], rot: -90, sol: true };
-    case 'victoire': return { ...GARDE, b: -4, tt: -6, av: [172, -20 + s * 10], ar: [40, -120], ja: [14, -4], jr: [-14, 4] };
+    /* Les poses de victoire (chaque combattant a la sienne : voir persos.js). */
+    case 'victoire': case 'v-poing': return { ...GARDE, b: -4, tt: -6, av: [172, -20 + s * 10], ar: [40, -120], ja: [14, -4], jr: [-14, 4] };
+    case 'v-deux-poings': return { ...GARDE, b: 6, tt: -14, av: [160, -12 + s * 8], ar: [200, 12 - s * 8], ja: [24, -4], jr: [-24, 4] };
+    case 'v-bras-croises': return { ...GARDE, b: 4, tt: -10, av: [32, -128], ar: [24, -122], ja: [8, -2], jr: [-8, 2], dy: 1 + s };
+    case 'v-salut': return { ...GARDE, b: -26 + s * 2, tt: 38, av: [78, -92], ar: [72, -84], ja: [4, 0], jr: [-4, 0] };
+    case 'v-salut-mili': return { ...GARDE, b: -2, tt: -4, av: [135, 94], ar: [6, -6], ja: [3, 0], jr: [-3, 0] };
+    case 'v-pointe': return { ...GARDE, b: -3, tt: -6, av: [94 + s * 2, -4], ar: [-35, 95], ja: [18, -4], jr: [-18, 6] };
+    case 'v-flex': return { ...GARDE, b: 2, tt: -6, av: [100, 82 + s * 6], ar: [-100, -82 - s * 6], ja: [28, -10], jr: [-28, 10], dy: 6 };
+    case 'v-meditation': return { ...GARDE, b: 0, tt: 10, av: [36, 140], ar: [30, 146], ja: [4, 0], jr: [-4, 0], dy: s };
+    case 'v-rire': return { ...GARDE, b: 14 + Math.sin(t / 3) * 3, tt: -34, av: [-30, 100], ar: [-36, 96], ja: [20, -4], jr: [-20, 4] };
+    case 'v-sautille': { const r = Math.abs(Math.sin(t / 4)); return { ...GARDE, flotte: true, b: 2, av: [62, -130], ar: [52, -128], ja: [16, -14], jr: [-18, 18], dy: -r * 12 }; }
+    case 'v-levitation': return { ...GARDE, flotte: true, b: 4, tt: -12, av: [118, 14 + s * 6], ar: [-118, -14 - s * 6], ja: [12, -24], jr: [-8, -14], dy: -28 + s * 5 };
+    case 'v-genou': return { ...GARDE, b: -12, tt: 22, av: [70, -100], ar: [30, -40], ja: [88, -88], jr: [-30, -100], dy: 36 };
+    case 'v-bras-ecartes': return { ...GARDE, b: 8, tt: -20, av: [118 + s * 4, 18], ar: [-118 - s * 4, -18], ja: [20, -4], jr: [-20, 4] };
+    case 'v-poing-sol': return { ...GARDE, b: -40, tt: 34, av: [8, 4], ar: [40, -100], ja: [70, -110], jr: [-20, -80], dy: 30 };
+    case 'v-garde-honneur': return { ...GARDE, b: 0, tt: -4, av: [28, 26], ar: [34, 18], ja: [10, -2], jr: [-10, 2] };
     case 'saisie': return { ...GARDE, b: 16, av: [84, -25], ar: [76, -40], ja: [26, -10], jr: [-26, 14] };
     case 'lance': {
       const e = doux(p * 1.5);
@@ -144,7 +159,9 @@ export function dessinerCombattant(g, perso, o) {
   const L = perso.look;
   const car = CARRURES[L.corps] || CARRURES.normal;
   const e = (o.echelle || 1) * car.h;
-  const pose = poseDe(o.pose || 'repos', o.t || 0, o.p || 0);
+  let nomPose = o.pose || 'repos';
+  if (nomPose === 'victoire' || nomPose === 'victoire-round') nomPose = perso.victoire?.[nomPose === 'victoire' ? 1 : 0] || 'v-poing';
+  const pose = poseDe(nomPose, o.t || 0, o.p || 0);
   const t = o.t || 0;
 
   g.save();
@@ -176,7 +193,7 @@ export function dessinerCombattant(g, perso, o) {
   };
   let jambes = pieds(hanche);
   // Au sol : les pieds touchent terre.
-  if (!o.enLAir && !pose.sol) {
+  if (!o.enLAir && !pose.sol && !pose.flotte) {
     const bas = Math.max(jambes.fa.y, jambes.fr.y);
     hanche = { x: hanche.x, y: hanche.y - bas };
     jambes = pieds(hanche);
