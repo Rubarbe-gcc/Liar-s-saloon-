@@ -34,8 +34,9 @@ import * as echo from './mimic.js';
 import * as brasier from './brasier.js';
 import * as skullking from './skullking.js';
 import * as fiesta from './fiesta.js';
+import * as street from './street.js';
 
-const GAMES = { saloon, zenith, echo, brasier, skullking, fiesta };
+const GAMES = { saloon, zenith, echo, brasier, skullking, fiesta, street };
 const DEFAULT_GAME = 'saloon';
 
 /** Temps pendant lequel une place attend son joueur après une coupure. */

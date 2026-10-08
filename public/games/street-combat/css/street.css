@@ -420,3 +420,35 @@ kbd { display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4
 .codex-perso.inconnu { opacity: .45; }
 .codex-lore { padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,.05); }
 .codex-lore b { font-family: var(--titre); font-weight: 400; color: var(--or); letter-spacing: .05em; }
+
+.nuage-info { font-size: .8rem; opacity: .8; }
+
+/* Le combat en ligne */
+.enligne-moi { display: flex; align-items: center; gap: 14px; justify-content: center; margin: 12px 0; text-align: left; }
+.enligne-moi canvas { width: 96px; height: 96px; border-radius: 10px; }
+.enligne-moi > div { display: flex; flex-direction: column; gap: 8px; }
+.enligne-moi b { font-family: var(--titre); font-weight: 400; font-size: 1.3rem; letter-spacing: .04em; }
+.enligne-actions { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+.enligne-rejoindre { display: flex; gap: 8px; }
+.enligne-rejoindre input { width: 110px; padding: 10px; border-radius: 6px; border: 0; background: rgba(255,255,255,.08); color: #fff; font-family: var(--titre); font-size: 1.4rem;
+  letter-spacing: .2em; text-transform: uppercase; text-align: center; box-shadow: inset 0 0 0 2px rgba(255,255,255,.15); }
+.enligne-attente { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.enligne-code { font-family: var(--titre); font-size: 3.4rem; letter-spacing: .3em; color: var(--or); text-shadow: 3px 3px 0 #5a2000; }
+
+/* Le tutoriel, les défis, la manette */
+.tuto { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); z-index: 4; width: min(620px, calc(100% - 20px)); display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 10px 16px; border-radius: 12px; background: rgba(8,4,15,.85); box-shadow: inset 0 0 0 2px var(--or); text-align: center; pointer-events: none; }
+.tuto small { font-weight: 900; letter-spacing: .2em; font-size: .7rem; color: var(--pale); }
+.tuto b { font-family: var(--titre); font-weight: 400; font-size: 1.4rem; color: var(--or); letter-spacing: .05em; }
+.tuto span { font-weight: 700; font-size: .95rem; }
+.tuto .tuto-ok { color: #7dffb0; animation: titre .5s cubic-bezier(.2,1.6,.4,1) both; }
+.defis { position: absolute; right: 10px; top: 64px; z-index: 4; display: flex; flex-direction: column; gap: 3px; padding: 8px 12px; border-radius: 10px;
+  background: rgba(8,4,15,.78); font-size: .78rem; font-weight: 700; max-width: 300px; pointer-events: none; }
+.defis small { color: var(--or); font-weight: 900; letter-spacing: .1em; }
+.defis .fait { color: #ffd23f; }
+.fiche-defis { margin: 6px 0; font-weight: 800; color: var(--or); font-size: .9rem; }
+.fiche-defis small { color: var(--pale); font-weight: 600; }
+.manette-liste { display: grid; gap: 6px; margin: 10px 0; text-align: left; }
+.manette-liste div { display: grid; grid-template-columns: 1fr 100px auto; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,.05); }
+.manette-liste b { color: var(--or); }
+@media (max-width: 560px) { .defis { display: none; } }

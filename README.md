@@ -23,9 +23,13 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
   journal pour revoir les scènes), un **Tournoi** à huit (Onyx en finale en difficile), une
   **Tour des défis** (dix combats d'affilée, la vie qui se garde, puis
   Némésis), contre l'ordinateur (4 niveaux), à deux au clavier ou à la
-  manette, l'entraînement ; commandes tactiles sur téléphone. Moteur dans
-  `public/shared/street/` (testé sans écran), dessin, arènes, effets et
-  cinématiques dans `public/games/street-combat/js/`.
+  manette (boutons à choisir, vibrations), **en ligne** à deux appareils (un code
+  de salle, combat synchronisé image par image : `server/street.js`),
+  l'entraînement avec cinq **défis de combos** par combattant, un **tutoriel**
+  jouable, une difficulté **Récit** pour l'histoire, et la progression
+  **sauvegardée en ligne** avec le profil de l'arcade ; commandes tactiles sur
+  téléphone. Moteur dans `public/shared/street/` (testé sans écran), dessin,
+  arènes, effets et cinématiques dans `public/games/street-combat/js/`.
 - **FIESTA** — le jeu de plateau à mini-jeux, dans l'esprit de Wii Party : 2 à
   4 joueurs sur le même téléphone, ou **en ligne** chacun sur le sien (les
   mini-jeux s'y jouent tous en même temps), avec ou sans l'ordinateur. Un

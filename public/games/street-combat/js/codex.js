@@ -12,7 +12,11 @@ import { dessinerPortrait } from './dessin.js';
 const CLE_VUS = 'street.codex';
 const CLE_SCENES = 'street.codex.scenes';
 const lire = (cle) => { try { return new Set(JSON.parse(localStorage.getItem(cle)) || []); } catch { return new Set(); } };
-const ecrire = (cle, ens) => { try { localStorage.setItem(cle, JSON.stringify([...ens])); } catch { /* plein */ } };
+const ecrire = (cle, ens) => {
+  try { localStorage.setItem(cle, JSON.stringify([...ens])); } catch { /* plein */ }
+  // Pour la sauvegarde en ligne.
+  if (typeof dispatchEvent === 'function') dispatchEvent(new Event('street:modif'));
+};
 
 /** Ce personnage apparaît : sa fiche s'ouvre. */
 export function voir(id) {

@@ -77,12 +77,12 @@ let scene = null;
 let musique = 'calme';
 export const musiqueCine = () => musique;
 
-export function jouerCine(etapes, { hero, roles = {}, drapeaux = {}, debloquer = () => {}, croiser = () => {}, quittable = false, musique: m, vu = () => {} } = {}) {
+export function jouerCine(etapes, { hero, roles = {}, drapeaux = {}, debloquer = () => {}, croiser = () => {}, quittable = false, musique: m, vu = () => {}, aide = false } = {}) {
   if (m !== undefined) musique = m;
   return new Promise((fini) => {
     if (scene) terminer('quitte');
     scene = {
-      etapes: [...etapes], i: 0, hero, roles, drapeaux, debloquer, croiser, fini, vu, infil: null,
+      etapes: [...etapes], i: 0, hero, roles, drapeaux, debloquer, croiser, fini, vu, infil: null, aide,
       decor: 'dojo', acteurs: new Map(), effets: [], t: 0, attente: null, secousse: 0, rapide: false, fondu: null,
       cam: { ...CAMERA, anim: null }, vitesse: 1, bandes: 46, bandesCible: 46,
     };
@@ -364,11 +364,13 @@ function montrerQte(q) {
   const S = scene;
   if (S.rapide) { S.etapes.splice(S.i, 0, ...(q.reussi || [])); suivante(); return; }
   const d = $('cine-qte');
-  d.innerHTML = `<b>${remplir(q.texte || 'MAINTENANT !')}</b><span>Touchez l’écran ou appuyez sur ESPACE</span><div class="chrono"><i style="animation-duration:${(q.duree || 70) / 60}s"></i></div>`;
+  // Le mode Récit laisse plus de temps.
+  const duree = (q.duree || 70) * (S.aide ? 1.8 : 1);
+  d.innerHTML = `<b>${remplir(q.texte || 'MAINTENANT !')}</b><span>Touchez l’écran ou appuyez sur ESPACE</span><div class="chrono"><i style="animation-duration:${duree / 60}s"></i></div>`;
   d.hidden = false;
   son('annonce');
   S.vitesse = 0.3;
-  S.attente = { qte: q, fin: S.t + (q.duree || 70) };
+  S.attente = { qte: q, fin: S.t + duree };
 }
 
 function finirQte(reussi) {
@@ -423,7 +425,7 @@ function avancerInfiltration(S) {
     S.etapes.splice(S.i, 0, ...((reussi ? I.o.reussi : I.o.rate) || []));
     suivante();
   };
-  if (I.vu > 6) fin(false);
+  if (I.vu > (S.aide ? 16 : 6)) fin(false);
   else if (h.x >= 640) fin(true);
 }
 
@@ -434,8 +436,9 @@ function montrerChoix(e) {
   boite.hidden = false;
   $('cine-boite').hidden = true;
   son('annonce');
-  S.attente = { choix: true, fin: e.chrono && !S.rapide ? S.t + e.chrono * 60 : undefined, defaut: e.defaut ?? e.choix.length - 1 };
-  if (e.chrono && !S.rapide) boite.insertAdjacentHTML('afterbegin', `<div class="chrono"><i style="animation-duration:${e.chrono}s"></i></div>`);
+  const chrono = e.chrono ? e.chrono * (S.aide ? 1.6 : 1) : 0;
+  S.attente = { choix: true, fin: chrono && !S.rapide ? S.t + chrono * 60 : undefined, defaut: e.defaut ?? e.choix.length - 1 };
+  if (chrono && !S.rapide) boite.insertAdjacentHTML('afterbegin', `<div class="chrono"><i style="animation-duration:${chrono}s"></i></div>`);
   boite.onclick = (ev) => {
     const b = ev.target.closest('[data-k]');
     if (!b || scene !== S) return;

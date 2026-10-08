@@ -19,6 +19,9 @@ import { installerMusique } from '../../../shared/musique.js';
 import * as succes from '../../../shared/succes.js';
 import { jouerCine, avancerCine, passerCine, quitterCine, choisirCine, musiqueCine, tenirInfiltration, infiltrationEnCours, vrai, dimensionner as dimensionnerCine } from './cine.js';
 import * as CODEX from './codex.js';
+import * as NUAGE from '../../../shared/street/nuage.js';
+import * as EL from './enligne.js';
+import * as TUTO from './tutoriel.js';
 import * as HIST from './histoire.js';
 import { dire, crier, taire, voixDe, voixActives, basculerVoix } from './voix.js';
 import { CORPS, TETES, PEAUX, ENERGIES, TENUES, CHEVEUX, ACCESSOIRES, MAX_ACCESSOIRES, ECOLES, GENRES, VOIX_HAUTEUR, defautHeros, herosAuHasard, construireHeros } from '../../../shared/street/heros.js';
@@ -26,7 +29,48 @@ import { CORPS, TETES, PEAUX, ENERGIES, TENUES, CHEVEUX, ACCESSOIRES, MAX_ACCESS
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 function lire(cle, defaut) { try { return JSON.parse(localStorage.getItem(cle)) ?? defaut; } catch { return defaut; } }
-function ecrire(cle, v) { try { if (v == null) localStorage.removeItem(cle); else localStorage.setItem(cle, JSON.stringify(v)); } catch { /* plein */ } }
+function ecrire(cle, v) {
+  try { if (v == null) localStorage.removeItem(cle); else localStorage.setItem(cle, JSON.stringify(v)); } catch { /* plein */ }
+  if (CLES_NUAGE.has(cle)) nuageModifie();
+}
+
+/* ---- La sauvegarde en ligne : sous le code de profil de l'arcade (voir shared/street/nuage.js) ---- */
+const CLES_NUAGE = new Set(Object.values(NUAGE.CLES));
+let nuageT = 0;
+let nuageEnCours = null;
+/** Quelque chose a changé ici : on l'enverra dans un instant. */
+function nuageModifie() {
+  try { localStorage.setItem(NUAGE.CLE_MAJ, JSON.stringify(Date.now())); } catch { /* plein */ }
+  clearTimeout(nuageT);
+  nuageT = setTimeout(synchroniserNuage, 2000);
+}
+async function appelerNuage(url, options) {
+  try {
+    const r = await fetch(url, { cache: 'no-store', ...options });
+    let json = null;
+    try { json = await r.json(); } catch { /* vide */ }
+    return { ok: r.ok, statut: r.status, json };
+  } catch { return { ok: false, statut: 0, json: null }; }
+}
+/** On lit ce qui est en ligne, on fusionne avec ce qui est ici, on range le résultat des deux côtés. */
+function synchroniserNuage() {
+  if (nuageEnCours || !/^https?:$/.test(location.protocol)) return nuageEnCours;
+  nuageEnCours = (async () => {
+    const code = succes.codeProfil();
+    const r = await appelerNuage(`/api/sauvegarde?espace=street&cle=${code}`);
+    if (!r.ok && r.statut !== 404) return;
+    let distant = null;
+    if (r.ok && typeof r.json?.charge === 'string') { try { distant = JSON.parse(r.json.charge); } catch { /* illisible */ } }
+    const ici = NUAGE.lireTout(localStorage);
+    const tout = distant ? NUAGE.fusionner(ici, distant) : ici;
+    if (!NUAGE.memes(tout, ici)) { NUAGE.ecrireTout(localStorage, tout); dispatchEvent(new Event('street:nuage')); }
+    if (!distant || !NUAGE.memes(tout, distant)) {
+      const date = Math.max(Date.now(), (Number(r.json?.date) || 0) + 1);
+      await appelerNuage('/api/sauvegarde', { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ espace: 'street', cle: code, charge: JSON.stringify(tout), date }) });
+    }
+  })().finally(() => { nuageEnCours = null; });
+  return nuageEnCours;
+}
 
 const CLE_DEBLOQUES = 'street.debloques';
 const CLE_RECORDS = 'street.records';
@@ -187,8 +231,9 @@ function ouvrirChoix() {
     histoire: ['Le héros de l’histoire'],
     tournoi: ['Votre combattant pour le tournoi'],
     tour: ['Votre combattant pour la tour'],
+    enligne: ['Votre combattant en ligne'],
   };
-  const solo = ['histoire', 'tournoi', 'tour'].includes(prep.mode);
+  const solo = ['histoire', 'tournoi', 'tour', 'enligne'].includes(prep.mode);
   $('choix-titre').textContent = titres[prep.mode][prep.etape - 1];
   $('choix-ok').textContent = solo ? 'En route !' : prep.etape === 1 ? 'Choisir ›' : 'Combattre !';
   const grille = $('grille-persos');
@@ -322,6 +367,7 @@ function remplirFiche(p) {
       <span>DÉFENSE</span><i><b style="width:${(p.stats.def / 15) * 100}%"></b></i>
       <span>VITESSE</span><i><b style="width:${(p.vitesse / 6) * 100}%"></b></i>
     </div>
+    <p class="fiche-defis">⭐ Défis de combos : ${defisFaits(p.id).length} / 5 <small>(à l’Entraînement)</small></p>
     ${listeCoupsHtml(p)}`;
   $('choix-ok').disabled = verrou;
 }
@@ -355,6 +401,7 @@ function validerChoix() {
   if (prep.mode === 'histoire') { nouvelleHistoire(prep.choix); return; }
   if (prep.mode === 'tournoi') { lancerTournoi(prep.choix); return; }
   if (prep.mode === 'tour') { lancerTour(prep.choix); return; }
+  if (prep.mode === 'enligne') { const o = lire(CLE_ENLIGNE, {}); ecrire(CLE_ENLIGNE, { ...o, perso: prep.choix }); ouvrirEnLigne(); return; }
   if (prep.etape === 1) {
     prep.p1 = prep.choix;
     prep.etape = 2;
@@ -396,6 +443,7 @@ function ouvrirArenes() {
 
 const DIFFICULTES = {
   histoire: [
+    { id: 'recit', nom: 'RÉCIT', couleur: '#ff9ad8', glyphe: '🌸', texte: 'Pour profiter de l’histoire : des combats faciles, plus de temps pour les QTE et les choix.' },
     { id: 'normal', nom: 'NORMAL', couleur: '#36d46a', glyphe: '📖', texte: 'L’histoire, à un rythme raisonnable.' },
     { id: 'difficile', nom: 'DIFFICILE', couleur: '#ff2a4a', glyphe: '🔥', texte: 'Les combattants corrompus ne pardonnent rien.' },
   ],
@@ -485,7 +533,7 @@ function ouvrirSauvegardes() {
     return `<div class="slot" style="--c:${p.c.c1}">
       <canvas data-slot="${k}" width="120" height="120"></canvas>
       <div class="slot-texte">
-        <small>EMPLACEMENT ${k + 1} · ${h.difficulte === 'difficile' ? '🔥 DIFFICILE' : '📖 NORMAL'}</small>
+        <small>EMPLACEMENT ${k + 1} · ${{ difficile: '🔥 DIFFICILE', recit: '🌸 RÉCIT' }[h.difficulte] || '📖 NORMAL'}</small>
         <b style="color:${p.c.c1}">${esc(p.nom)}</b>${h.createur ? ` <i class="ecole">${esc(ECOLES[h.createur.ecole]?.nom || '')}</i>` : ''}
         <span>${h.fini ? '✔ Histoire terminée' : `${HIST.ACTES[sc.acte].num} — ${esc(sc.titre)} : ${esc(sc.sous)}`}</span>
         <div class="slot-barre"><i style="width:${progres}%"></i></div>
@@ -499,6 +547,7 @@ function ouvrirSauvegardes() {
       </div>
     </div>`;
   }).join('');
+  $('nuage-info').textContent = `☁️ Sauvegardé en ligne avec votre profil de l’arcade (code ${succes.joliCode(succes.codeProfil())}). Sur un autre appareil, entrez ce code dans le profil de l’arcade.`;
   $('slots').querySelectorAll('canvas[data-slot]').forEach((cv) => dessinerPortrait(cv.getContext('2d'), ficheDe(l[Number(cv.dataset.slot)]), 120, { t: 8 }));
   aller('s-sauvegardes');
 }
@@ -539,7 +588,7 @@ const nomsDe = (texte, h) => texte.replace(/\{(\w+)\}/g, (m, id) => (id === 'her
 function cineHistoire(etapes, h, drapeaux, musique) {
   aller('s-cine');
   dimensionnerCine();
-  return jouerCine(etapes, { hero: h.hero, roles: rolesDe(h.hero), drapeaux, debloquer, croiser, quittable: true, musique, vu: CODEX.voir });
+  return jouerCine(etapes, { hero: h.hero, roles: rolesDe(h.hero), drapeaux, debloquer, croiser, quittable: true, musique, vu: CODEX.voir, aide: h.difficulte === 'recit' });
 }
 
 /** Les combattants corrompus par la Fracture le montrent, dans les cinématiques aussi. */
@@ -712,6 +761,8 @@ function combatDe(sc, h) {
 /** Le niveau de l'ordinateur ; en mode Légende, un cran au-dessus. */
 const NIVEAUX_ORDI = ['facile', 'normal', 'difficile', 'impossible'];
 const niveauDe = (cb, h) => {
+  // Le mode Récit : l'ordinateur reste facile.
+  if (h.difficulte === 'recit') return h.drapeaux.legende ? 'normal' : 'facile';
   const n = cb.niveau[h.difficulte] || 'normal';
   return h.drapeaux.legende ? NIVEAUX_ORDI[Math.min(3, NIVEAUX_ORDI.indexOf(n) + 1)] : n;
 };
@@ -786,7 +837,7 @@ function combatHistoire(sc, adv, bonus, k = 0, vieRestante = null, phase = 1) {
   const contre = serie ? serie[k] : phase === 2 && cb.adv ? role(h, cb.adv) : adv;
   const moi = cb.joueur ? role(h, cb.joueur) : h.hero;
   const vieHero = vieRestante ?? (cb.vie?.[0] ?? 1) * hpMax(moi);
-  const vieAdv = serie || phase === 2 ? 1 : Math.min(cb.vie?.[1] ?? 1, bonus?.vieAdv ?? 1);
+  const vieAdv = Math.min(serie || phase === 2 ? 1 : Math.min(cb.vie?.[1] ?? 1, bonus?.vieAdv ?? 1), h.difficulte === 'recit' ? 0.8 : 1);
   const libre = cb.issue === 'libre';
   const dernier = (!serie || k === serie.length - 1) && !(base.phase2 && phase === 1);
   demarrerCombat({
@@ -881,10 +932,58 @@ function montrerBilan(h) {
   son('victoire');
 }
 
+/* ------------------------------------------------------------------ */
+/* Le combat en ligne                                                   */
+/* ------------------------------------------------------------------ */
+
+const CLE_ENLIGNE = 'street.enligne';
+
+function ouvrirEnLigne() {
+  const o = lire(CLE_ENLIGNE, {});
+  const perso = PERSO[o.perso] && disponible(PERSO[o.perso]) ? o.perso : 'ryuken';
+  $('enligne-nom').value = o.nom || '';
+  const cv = $('enligne-perso');
+  dessinerPortrait(cv.getContext('2d'), PERSO[perso], cv.width, { t: 8 });
+  $('enligne-perso-nom').textContent = PERSO[perso].nom;
+  $('enligne-attente').hidden = !EL.salle.code;
+  $('enligne-actions').hidden = !!EL.salle.code;
+  aller('s-enligne');
+  EL.connecter({
+    statut: (st) => { $('enligne-statut').textContent = { connexion: 'Connexion au serveur…', connecte: 'Connecté ! Créez une salle, ou rejoignez celle d’un ami avec son code.', perdu: 'Connexion perdue. Nouvelle tentative…', injoignable: 'Le serveur ne répond pas. On réessaie…' }[st] || ''; },
+    salle: (m) => { $('enligne-code-salle').textContent = m.code; $('enligne-attente').hidden = false; $('enligne-actions').hidden = true; son('annonce'); },
+    debut: (m) => {
+      fermer('ov-fin');
+      const normales = ARENES.filter((a) => !a.boss);
+      const arene = normales[m.graine % normales.length].id;
+      toast(`⚔️ ${esc(m.noms[0])} contre ${esc(m.noms[1])} — manche ${m.manche}`, 2500);
+      demarrerCombat({ mode: 'enligne', p1: m.persos[0], p2: m.persos[1], arene, ia: {}, graine: m.graine, n: m.n, noms: m.noms, musique: 'combat' });
+    },
+    revanche: () => { if (!$('ov-fin').hidden) $('fin').insertAdjacentHTML('beforeend', '<p class="regle">🔁 Votre adversaire veut une revanche !</p>'); },
+    parti: () => { combat = null; fermer('ov-fin'); fermer('ov-pause'); majMenu(); toast('Votre adversaire a quitté le combat.', 3000); },
+    erreur: (msg) => { $('enligne-statut').textContent = msg; son('ko'); },
+  });
+}
+const nomEnLigne = () => { const n = $('enligne-nom').value.trim().slice(0, 12) || 'Joueur'; ecrire(CLE_ENLIGNE, { ...lire(CLE_ENLIGNE, {}), nom: n }); return n; };
+const persoEnLigne = () => { const p = lire(CLE_ENLIGNE, {}).perso; return PERSO[p] && disponible(PERSO[p]) ? p : 'ryuken'; };
+let attenteAffichee = false;
+/** En ligne : si l'adversaire tarde, on le dit ; si les deux écrans divergent, aussi. */
+function attenteEnLigne() {
+  const lent = EL.LS.attente > 30;
+  if (lent !== attenteAffichee) {
+    attenteAffichee = lent;
+    $('allie-pret').hidden = !lent;
+    if (lent) $('allie-pret').textContent = '⏳ En attente de l’adversaire…';
+  }
+  if (EL.LS.desynchro && !EL.LS.signale) { EL.LS.signale = true; toast('⚠️ Les deux écrans ne sont plus d’accord. Recommencez le combat.', 4000); }
+}
+
 /** Tout remettre à zéro : combattants débloqués, rencontres, sauvegardes, tournoi et tour en cours. */
 function reinitialiser() {
   if (!confirm('Tout réinitialiser ?\n\nLes combattants débloqués, les rencontres, le Codex, les sauvegardes de l’histoire, le tournoi et la tour en cours seront effacés.')) return;
-  for (const cle of [CLE_DEBLOQUES, CLE_CROISES, CLE_SAUVEGARDES, CLE_HISTOIRE, CLE_TOURNOI, CLE_TOUR, 'street.codex', 'street.codex.scenes']) ecrire(cle, null);
+  for (const cle of [CLE_DEBLOQUES, CLE_CROISES, CLE_SAUVEGARDES, CLE_HISTOIRE, CLE_TOURNOI, CLE_TOUR, 'street.codex', 'street.codex.scenes', 'street.defis']) ecrire(cle, null);
+  // Sur les autres appareils aussi : ce qui a été gagné avant cet instant est effacé.
+  try { localStorage.setItem(NUAGE.CLE_REMISE, JSON.stringify(Date.now())); } catch { /* plein */ }
+  nuageModifie();
   portraitsGrille.clear();
   animMenu.a = null;
   majMenu();
@@ -1109,8 +1208,11 @@ function demarrerCombat(o) {
   const normales = ARENES.filter((a) => !a.boss);
   const arene = o.arene === 'hasard' || !o.arene ? normales[Math.floor(Math.random() * normales.length)].id : o.arene;
   config.areneId = arene;
-  combat = creerCombat({ p1: o.p1, p2: o.p2, ia: o.ia || {}, entrainement: o.mode === 'entrainement', graine: Date.now(), victoires: o.victoires || 2, vie: o.vie || [], survie: o.survie || 0 });
+  combat = creerCombat({ p1: o.p1, p2: o.p2, ia: o.ia || {}, entrainement: o.mode === 'entrainement', graine: o.graine ?? Date.now(), victoires: o.victoires || 2, vie: o.vie || [], survie: o.survie || 0 });
   allieUtilise = false;
+  $('tuto').hidden = !o.tuto;
+  $('defis').hidden = true;
+  if (o.mode === 'entrainement' && !o.tuto) setTimeout(majDefis, 0);
   $('allie-pret').hidden = !o.allie;
   if (o.allie) $('allie-pret').innerHTML = `🤝 <b style="color:${PERSO[o.allie].c.c1}">${esc(PERSO[o.allie].nom)}</b> · touche H`;
   $('b-allie').hidden = !o.allie || !tactile;
@@ -1151,7 +1253,8 @@ function boucle() {
   const maintenant = performance.now();
   let dt = Math.min(100, maintenant - derniere);
   derniere = maintenant;
-  if (enPause || !combat) return;
+  // En ligne, le combat ne s'arrête pas : l'adversaire, lui, joue toujours.
+  if ((enPause && config?.mode !== 'enligne') || !combat) return;
   reste += dt;
   let n = 0;
   while (reste >= 1000 / 60 && n < 5) {
@@ -1164,9 +1267,15 @@ function boucle() {
 }
 
 function pasDeCombat() {
-  const entrees = [entreesJoueur(0), config.mode === 'deux' ? entreesJoueur(1) : {}];
+  // En ligne : les entrées des deux appareils, image par image (ou on attend celles de l'adversaire).
+  const entrees = config.mode === 'enligne' ? EL.entreesDuPas(() => entreesJoueur(0)) : [entreesJoueur(0), config.mode === 'deux' ? entreesJoueur(1) : {}];
+  if (!entrees) { attenteEnLigne(); return; }
   pas(combat, entrees);
-  for (const ev of evenements(combat)) {
+  if (config.mode === 'enligne') { EL.apresPas(combat); attenteEnLigne(); }
+  const evs = evenements(combat);
+  if (config.tuto) suivreTuto(evs);
+  if (config.mode === 'entrainement' && !config.tuto) suivreDefis(evs);
+  for (const ev of evs) {
     FX.traiter(fx, ev, combat);
     if (ev.type === 'son') son(ev.nom);
     if (ev.type === 'annonce') { son(ev.ko ? 'ko' : 'annonce'); annoncer(ev.texte); }
@@ -1177,7 +1286,9 @@ function pasDeCombat() {
   }
   FX.avancerEffets(fx);
   majTactile();
+  const moiVib = config.mode === 'enligne' ? config.n : 0;
   combat.joueurs.forEach((j, k) => {
+    if (j.hp < hpAvant[k] && k === moiVib && config.mode !== 'deux') vibrer(Math.min(1, 0.3 + (hpAvant[k] - j.hp) / 25), j.hp <= 0 ? 450 : 90);
     if (j.hp < hpAvant[k]) eclats[k] = 1;
     hpAvant[k] = j.hp;
     eclats[k] = Math.max(0, eclats[k] - 0.18);
@@ -1186,6 +1297,83 @@ function pasDeCombat() {
     finMontree = true;
     setTimeout(montrerFin, 1400);
   }
+}
+
+/* ---- Le tutoriel ---- */
+
+const CLE_TUTO = 'street.tuto';
+let tuto = null;
+function lancerTutoriel() {
+  tuto = TUTO.creerTuto();
+  demarrerCombat({ mode: 'entrainement', tuto: true, p1: 'ryuken', p2: 'soldat', arene: 'dojo', ia: {}, musique: 'calme' });
+  majTuto();
+}
+function majTuto(texte) {
+  const e = TUTO.ETAPES[Math.min(tuto.i, TUTO.ETAPES.length - 1)];
+  $('tuto').hidden = false;
+  $('tuto').innerHTML = texte || `<small>TUTORIEL · ÉTAPE ${tuto.i + 1} / ${TUTO.ETAPES.length}</small><b>${esc(e.titre)}</b><span>${esc(e.texte((k) => TUTO.touche(k, tactile)))}</span>`;
+}
+function suivreTuto(evs) {
+  const r = TUTO.avancerTuto(tuto, combat, evs);
+  if (r === 'reussi') { son('valide'); majTuto(`<b class="tuto-ok">✔ Bien joué !</b>`); }
+  if (r === 'suivante') { son('annonce'); majTuto(); }
+  if (r === 'fini') {
+    ecrire(CLE_TUTO, true);
+    son('victoire');
+    majTuto('<b class="tuto-ok">🎓 Tutoriel terminé !</b><span>Vous savez tout. Les défis de combos vous attendent à l’entraînement.</span>');
+    setTimeout(() => { combat = null; $('tuto').hidden = true; config.tuto = false; majMenu(); toast('🎓 Bravo ! Essayez maintenant les défis de combos de chaque combattant, à l’Entraînement.', 4500); }, 3000);
+  }
+}
+
+/* ---- Les défis de combos (à l'entraînement) ---- */
+
+const CLE_DEFIS = 'street.defis';
+const defisFaits = (id) => lire(CLE_DEFIS, {})[id] || [];
+function majDefis() {
+  const p = PERSO[config.p1];
+  const faits = defisFaits(p.id);
+  $('defis').hidden = false;
+  $('defis').innerHTML = `<small>⭐ DÉFIS DE COMBOS · ${faits.length}/5</small>${TUTO.defisDe(p).map((d, i) => `<span class="${faits.includes(i) ? 'fait' : ''}">${faits.includes(i) ? '⭐' : '☆'} ${esc(d.texte)}</span>`).join('')}`;
+}
+function suivreDefis(evs) {
+  const p = PERSO[config.p1];
+  const faits = defisFaits(p.id);
+  const nouveaux = TUTO.defisReussis(p, faits, evs);
+  if (!nouveaux.length) return;
+  const tous = lire(CLE_DEFIS, {});
+  tous[p.id] = [...new Set([...faits, ...nouveaux])].sort((a, b) => a - b);
+  ecrire(CLE_DEFIS, tous);
+  son('victoire');
+  toast(`⭐ Défi réussi : ${esc(TUTO.defisDe(p)[nouveaux[0]].texte)}`, 2200);
+  majDefis();
+}
+
+/* ---- Les réglages de la manette ---- */
+
+const NOMS_ACTIONS = { P: '👊 Poing', K: '🦶 Pied', G: '✊ Saisie', B: 'Spécial B', A: 'Spécial A', U: 'ULTIME', H: '🤝 Allié' };
+let attenteBouton = null;
+function ouvrirManette() {
+  const carte = manetteActuelle();
+  const pad = navigator.getGamepads ? [...navigator.getGamepads()].find(Boolean) : null;
+  $('manette').innerHTML = `<p class="sous">${pad ? `🎮 ${esc(pad.id.slice(0, 40))}` : 'Branchez une manette et appuyez sur un bouton.'}</p>
+    <div class="manette-liste">${Object.entries(NOMS_ACTIONS).map(([k, nom]) => `<div><span>${nom}</span><b>${attenteBouton === k ? '…appuyez…' : `Bouton ${carte[k]}`}</b><button class="btn petit" data-touche="${k}">Changer</button></div>`).join('')}</div>
+    <div class="ligne-boutons"><button class="btn petit" id="b-vibration">${lire('street.vibration', true) ? '📳 Vibrations : oui' : '📴 Vibrations : non'}</button><button class="btn petit" id="b-manette-defaut">Par défaut</button></div>`;
+  $('ov-manette').hidden = false;
+}
+/** On attend qu'un bouton de la manette soit pressé, pour l'action choisie. */
+function ecouterBouton() {
+  if (!attenteBouton || $('ov-manette').hidden) { attenteBouton = null; return; }
+  const pad = navigator.getGamepads ? [...navigator.getGamepads()].find(Boolean) : null;
+  const i = pad ? pad.buttons.findIndex((b) => b.pressed) : -1;
+  if (i >= 0 && i < 12) {
+    ecrire(CLE_MANETTE, { ...lire(CLE_MANETTE, {}), [attenteBouton]: i });
+    attenteBouton = null;
+    son('valide');
+    vibrer(0.6, 120);
+    ouvrirManette();
+    return;
+  }
+  requestAnimationFrame(ecouterBouton);
 }
 
 /** Appeler l'allié à l'aide : une fois par combat. */
@@ -1281,14 +1469,15 @@ function dessiner() {
 function montrerFin() {
   const c = combat;
   const gagnant = c.joueurs[c.vainqueur];
-  const humainGagne = config.mode === 'deux' || config.mode === 'entrainement' ? true : c.vainqueur === 0;
+  const moi = config.mode === 'enligne' ? config.n : 0;
+  const humainGagne = config.mode === 'deux' || config.mode === 'entrainement' ? true : c.vainqueur === moi;
   const p = PERSO[gagnant.id];
   const r = records();
   r.combats += 1;
-  if (config.mode !== 'deux' && c.vainqueur === 0) r.victoires += 1;
+  if (config.mode !== 'deux' && c.vainqueur === moi) r.victoires += 1;
   r.combo = Math.max(r.combo, stats.comboMax[0], config.mode === 'deux' ? stats.comboMax[1] : 0);
   // Les succès.
-  if (config.mode !== 'deux' && c.vainqueur === 0) {
+  if (config.mode !== 'deux' && c.vainqueur === moi) {
     succes.debloquer('street-victoire');
     if (stats.perfect) succes.debloquer('street-perfect');
     if (stats.ultiKo) succes.debloquer('street-ulti');
@@ -1307,6 +1496,10 @@ function montrerFin() {
       : config.perdable
         ? '<button class="btn" id="b-fin-retente">Réessayer</button><button class="btn rouge" id="b-fin-suite">Continuer l’histoire ›</button>'
         : `<button class="btn" id="b-fin-menu">Menu</button><button class="btn rouge" id="b-fin-retente">${config.mode === 'histoire' ? 'Réessayer' : config.mode === 'tournoi' ? 'Recommencer le tournoi' : 'Recommencer la tour'}</button>`;
+  }
+  if (config.mode === 'enligne') {
+    titre = humainGagne ? 'VICTOIRE !' : 'DÉFAITE…';
+    boutons = '<button class="btn" id="b-fin-quitter-el">Quitter</button><button class="btn rouge" id="b-fin-revanche-el">Revanche !</button>';
   }
   ecrire(CLE_RECORDS, r);
   $('fin').innerHTML = `<h2 class="fin-titre ${humainGagne ? 'victoire' : 'defaite'}">${titre}</h2>
@@ -1333,6 +1526,8 @@ function montrerFin() {
   if ($('b-fin-menu') && config.suite && !humainGagne) $('b-fin-menu').onclick = go(() => { config.abandon?.(); majMenu(); });
   if ($('b-fin-suite')) $('b-fin-suite').onclick = go(() => config.suite(humainGagne, fin));
   if ($('b-fin-retente')) $('b-fin-retente').onclick = go(() => config.reessayer());
+  if ($('b-fin-quitter-el')) $('b-fin-quitter-el').onclick = go(() => { EL.quitter(); majMenu(); });
+  if ($('b-fin-revanche-el')) $('b-fin-revanche-el').onclick = () => { EL.revanche(); $('b-fin-revanche-el').disabled = true; $('b-fin-revanche-el').textContent = 'En attente de l’adversaire…'; };
 }
 
 /* ------------------------------------------------------------------ */
@@ -1344,7 +1539,18 @@ const CLAVIER = [
   { g: ['q', 'a'], d: ['d'], h: ['z', 'w'], b: ['s'], P: ['f'], K: ['g'], G: ['r'], A: ['v'], B: ['b'], U: ['t'] },
   { g: ['arrowleft'], d: ['arrowright'], h: ['arrowup'], b: ['arrowdown'], P: ['1', 'j'], K: ['2', 'k'], G: ['3', 'l'], A: ['4', 'i'], B: ['5', 'u'], U: ['6', 'o'] },
 ];
-const MANETTE = { P: 0, K: 1, G: 2, B: 3, A: 4, U: 5 };
+/** Les boutons de la manette, par défaut (A, B, X, Y, LB, RB, LT) ; on peut les changer (voir ouvrirManette). */
+const MANETTE_DEFAUT = { P: 0, K: 1, G: 2, B: 3, A: 4, U: 5, H: 6 };
+const CLE_MANETTE = 'street.manette';
+const manetteActuelle = () => ({ ...MANETTE_DEFAUT, ...lire(CLE_MANETTE, {}) });
+let manetteH = false;
+/** Faire vibrer la manette (et le téléphone) : force de 0 à 1, durée en millisecondes. */
+function vibrer(force, duree) {
+  if (!lire('street.vibration', true)) return;
+  const pad = navigator.getGamepads ? [...navigator.getGamepads()].find(Boolean) : null;
+  try { pad?.vibrationActuator?.playEffect?.('dual-rumble', { startDelay: 0, duration: duree, weakMagnitude: force * 0.6, strongMagnitude: force }); } catch { /* pas de vibreur */ }
+  if (tactile && navigator.vibrate) try { navigator.vibrate(Math.min(duree, 300)); } catch { /* rien */ }
+}
 const tactileEtat = { g: false, d: false, h: false, b: false, P: false, K: false, G: false, A: false, B: false, U: false };
 const tactile = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
 
@@ -1363,7 +1569,12 @@ function entreesJoueur(n) {
     if (ax > 0.5 || bt(15)) e.d = true;
     if (ay < -0.5 || bt(12)) e.h = true;
     if (ay > 0.5 || bt(13)) e.b = true;
-    for (const [k, i] of Object.entries(MANETTE)) if (bt(i)) e[k] = true;
+    const carte = manetteActuelle();
+    for (const [k, i] of Object.entries(carte)) if (k !== 'H' && bt(i)) e[k] = true;
+    // L'allié (mode Histoire) : un appui.
+    const h = !!bt(carte.H);
+    if (h && !manetteH) appelerAllie();
+    manetteH = h;
   }
   if (n === 0) for (const k of Object.keys(e)) if (tactileEtat[k]) e[k] = true;
   return e;
@@ -1371,7 +1582,7 @@ function entreesJoueur(n) {
 
 function majTactile() {
   if (!tactile) return;
-  const j = combat.joueurs[0];
+  const j = combat.joueurs[config.mode === 'enligne' ? config.n : 0];
   document.querySelectorAll('#manette-boutons .tb').forEach((b) => {
     const k = b.dataset.b;
     if (k === 'U') b.classList.toggle('pret', j.sp >= JAUGE.ulti);
@@ -1472,6 +1683,25 @@ function brancher() {
     }
   });
   $('b-reset').addEventListener('click', reinitialiser);
+  $('b-tuto').addEventListener('click', () => { son('choix'); fermer('ov-etape'); lancerTutoriel(); });
+  $('b-manette').addEventListener('click', () => { son('choix'); ouvrirManette(); });
+  $('manette').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-touche]');
+    if (b) { attenteBouton = b.dataset.touche; ouvrirManette(); requestAnimationFrame(ecouterBouton); return; }
+    if (e.target.closest('#b-vibration')) { ecrire('street.vibration', !lire('street.vibration', true)); if (lire('street.vibration', true)) vibrer(0.8, 200); ouvrirManette(); }
+    if (e.target.closest('#b-manette-defaut')) { ecrire(CLE_MANETTE, null); ouvrirManette(); }
+  });
+  $('b-enligne').addEventListener('click', () => { son('choix'); ouvrirEnLigne(); });
+  $('enligne-choisir').addEventListener('click', () => { prep.p1 = persoEnLigne(); commencerMode('enligne'); });
+  $('enligne-creer').addEventListener('click', () => { son('valide'); EL.creer(persoEnLigne(), nomEnLigne()); });
+  $('enligne-rejoindre').addEventListener('click', () => {
+    const code = $('enligne-code').value.trim().toUpperCase();
+    if (code.length < 4) { $('enligne-statut').textContent = 'Le code de la salle fait 4 lettres.'; return; }
+    son('valide');
+    EL.rejoindre(code, persoEnLigne(), nomEnLigne());
+  });
+  $('enligne-annuler').addEventListener('click', () => { EL.quitter(); $('enligne-attente').hidden = true; $('enligne-actions').hidden = false; });
+  $('enligne-retour').addEventListener('click', () => { if (EL.salle.code) EL.quitter(); majMenu(); });
   const majVoix = () => { for (const id of ['b-voix-menu', 'b-voix']) $(id).textContent = voixActives() ? '🗣️ Voix' : '🤐 Voix coupées'; };
   for (const id of ['b-voix-menu', 'b-voix']) $(id).addEventListener('click', () => { basculerVoix(); majVoix(); if (voixActives()) dire('Voix activées !', voixDe({ id: 'annonceur' })); });
   majVoix();
@@ -1549,7 +1779,7 @@ function brancher() {
   });
   $('choix-retour').addEventListener('click', () => {
     if (prep.etape === 2) { prep.etape = 1; ouvrirChoix(); return; }
-    if (prep.mode === 'histoire' || prep.mode === 'tournoi') ouvrirDifficultes(prep.mode); else majMenu();
+    if (prep.mode === 'histoire' || prep.mode === 'tournoi') ouvrirDifficultes(prep.mode); else if (prep.mode === 'enligne') ouvrirEnLigne(); else majMenu();
   });
 
   $('niveaux-ia').addEventListener('click', (e) => {
@@ -1577,6 +1807,8 @@ function brancher() {
   });
   $('b-quitter').addEventListener('click', () => {
     fermer('ov-pause'); enPause = false; combat = null;
+    $('tuto').hidden = true; $('defis').hidden = true;
+    if (config?.mode === 'enligne') { EL.quitter(); majMenu(); return; }
     if (config?.mode === 'histoire' && partie) { quitterHistoire(); return; }
     majMenu();
   });
@@ -1632,6 +1864,22 @@ function musiqueDuMoment() {
 
 brancher();
 succes.visiter('street');
+addEventListener('street:modif', nuageModifie);
+addEventListener('street:nuage', () => {
+  portraitsGrille.clear();
+  if ($('s-menu').classList.contains('is-active')) majMenu();
+  if ($('s-sauvegardes').classList.contains('is-active')) ouvrirSauvegardes();
+});
+setTimeout(synchroniserNuage, 800);
+if (!lire(CLE_TUTO, false) && !records().combats) {
+  setTimeout(() => {
+    $('etape').innerHTML = `<h2>🎓 Première fois ?</h2><p class="sous">Deux minutes de tutoriel pour apprendre à bouger, garder, enchaîner, lancer un spécial et l’ultime.</p>
+      <div class="ligne-boutons"><button class="btn" id="b-tuto-non">Plus tard</button><button class="btn rouge" id="b-tuto-oui">🎓 Faire le tutoriel</button></div>`;
+    ouvrir('ov-etape');
+    $('b-tuto-non').onclick = () => { ecrire(CLE_TUTO, true); fermer('ov-etape'); };
+    $('b-tuto-oui').onclick = () => { fermer('ov-etape'); lancerTutoriel(); };
+  }, 600);
+}
 majMenu();
 installerMusique('street', { actif: () => !estMuet(), theme: musiqueDuMoment });
 

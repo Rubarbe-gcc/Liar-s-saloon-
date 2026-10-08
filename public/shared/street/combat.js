@@ -536,7 +536,7 @@ function recevoirCoup(c, att, def, coup, sorte, dirCoup, hx, hy) {
       def.hp = Math.max(1, def.hp - chip);
     }
     c.gel = Math.max(c.gel, 3);
-    evt(c, { type: 'garde', x: hx, y: hy, couleur: '#8fe6ff' });
+    evt(c, { type: 'garde', joueur: def.n, x: hx, y: hy, couleur: '#8fe6ff' });
     evt(c, { type: 'son', nom: 'garde' });
     return true;
   }

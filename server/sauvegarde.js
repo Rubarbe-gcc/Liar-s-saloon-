@@ -9,7 +9,8 @@
  * pas ce qu'il garde.
  *
  * Le même service garde aussi le PROFIL de l'arcade (pseudo, avatar,
- * succès), dans un autre espace : `espace=profil`. Sans espace, c'est RAID.
+ * succès), dans un autre espace : `espace=profil` ; et la progression de
+ * STREET COMBAT (`espace=street`), sous le même code. Sans espace, c'est RAID.
  *
  * Il faut un endroit où ranger : une base Redis (Upstash, depuis l'onglet
  * Storage de Vercel), annoncée par ses variables d'environnement. Sans elle,
@@ -23,8 +24,8 @@ export const CHARGE_MAX = 200 * 1024;
 const DUREE_S = 180 * 24 * 3600;
 
 const CLE_VALIDE = /^[A-HJ-NP-Z2-9]{10}$/;
-/** Les espaces de rangement : la partie de RAID, le profil de l'arcade. */
-const ESPACES = ['raid', 'profil'];
+/** Les espaces de rangement : la partie de RAID, le profil de l'arcade, la progression de STREET COMBAT. */
+const ESPACES = ['raid', 'profil', 'street'];
 const espaceDe = (e) => (ESPACES.includes(e) ? e : 'raid');
 export const normaliser = (cle) => String(cle || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 

@@ -31,14 +31,19 @@
         <button class="btn violet" id="b-tour">🗼 Tour des défis<small id="tour-info"></small></button>
         <button class="btn bleu" id="b-versus">🤖 Contre l’ordi</button>
         <button class="btn bleu" id="b-deux">🎮 Deux joueurs</button>
+        <button class="btn violet" id="b-enligne">🌐 En ligne</button>
       </div>
-      <button class="btn" id="b-entrainement">🥋 Entraînement</button>
+      <div class="deux-col">
+        <button class="btn" id="b-entrainement">🥋 Entraînement<small>et défis de combos</small></button>
+        <button class="btn" id="b-tuto">🎓 Tutoriel</button>
+      </div>
     </div>
     <p class="secrets-info" id="secrets-info"></p>
     <div class="menu-bas">
       <a class="btn petit" href="/">‹ Arcade</a>
       <button class="btn petit" id="b-commandes">⌨️ Commandes</button>
       <button class="btn petit" id="b-codex">📚 Codex</button>
+      <button class="btn petit" id="b-manette">🎮 Manette</button>
       <button class="btn petit" id="b-son-menu">🔊</button>
       <button class="btn petit" id="b-voix-menu">🗣️ Voix</button>
       <button class="btn petit" id="b-reset" title="Remettre à zéro les combattants débloqués et les sauvegardes">♻️ Réinitialiser</button>
@@ -53,6 +58,7 @@
     <button class="rond retour" data-va="s-menu" aria-label="Retour">‹</button>
     <h2>📖 Mode Histoire</h2>
     <p class="sous">La Fracture — trois emplacements de sauvegarde. La partie se sauvegarde toute seule à chaque scène.</p>
+    <p class="sous nuage-info" id="nuage-info"></p>
     <div class="slots" id="slots"></div>
   </div>
 </section>
@@ -73,6 +79,33 @@
         <button class="btn rouge btn-large" id="createur-ok">Commencer l’histoire ›</button>
       </aside>
       <div class="createur-options" id="createur-options"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ======================= EN LIGNE ======================= -->
+<section class="ecran" id="s-enligne">
+  <div class="panneau">
+    <button class="rond retour" id="enligne-retour" aria-label="Retour">‹</button>
+    <h2>🌐 Combat en ligne</h2>
+    <p class="sous" id="enligne-statut">Connexion au serveur…</p>
+    <div class="enligne-moi">
+      <canvas id="enligne-perso" width="120" height="120"></canvas>
+      <div>
+        <b id="enligne-perso-nom"></b>
+        <label class="createur-nom"><span>NOM</span><input id="enligne-nom" maxlength="12" autocomplete="off" spellcheck="false"></label>
+        <button class="btn petit" id="enligne-choisir">Changer de combattant</button>
+      </div>
+    </div>
+    <div class="enligne-actions" id="enligne-actions">
+      <button class="btn rouge" id="enligne-creer">Créer une salle</button>
+      <div class="enligne-rejoindre"><input id="enligne-code" maxlength="4" placeholder="CODE" autocomplete="off"><button class="btn bleu" id="enligne-rejoindre">Rejoindre</button></div>
+    </div>
+    <div class="enligne-attente" id="enligne-attente" hidden>
+      <p>Donnez ce code à votre adversaire :</p>
+      <b class="enligne-code" id="enligne-code-salle"></b>
+      <p class="sous">En attente d’un adversaire…</p>
+      <button class="btn petit" id="enligne-annuler">Annuler</button>
     </div>
   </div>
 </section>
@@ -142,6 +175,8 @@
     <canvas id="canvas" aria-label="Le combat"></canvas>
     <button class="rond petit pause" id="b-pause" aria-label="Pause">❚❚</button>
     <div class="allie-pret" id="allie-pret" hidden></div>
+    <div class="tuto" id="tuto" hidden></div>
+    <div class="defis" id="defis" hidden></div>
   </div>
   <div class="tactile" id="tactile" hidden>
     <div class="manette-dir" id="manette-dir"><div class="manette-base"></div><div class="manette-bouton" id="manette-bouton"></div></div>
@@ -195,6 +230,13 @@
     <h2>📚 Codex</h2>
     <div class="codex-onglets" id="codex-onglets"></div>
     <div class="codex" id="codex"></div>
+  </div>
+</div>
+<div class="ov" id="ov-manette" hidden>
+  <div class="feuille">
+    <button class="rond fermer" data-ferme="ov-manette">✕</button>
+    <h2>🎮 Manette</h2>
+    <div id="manette"></div>
   </div>
 </div>
 <div class="toast" id="toast" hidden></div>
