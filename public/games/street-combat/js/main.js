@@ -595,7 +595,7 @@ function cineHistoire(etapes, h, drapeaux, musique) {
 function corrompre(etapes, id) {
   return etapes.map((e) => {
     const x = { ...e };
-    if (x.entre === id) x.corrompu = true;
+    if (x.entre === id && x.corrompu === undefined) x.corrompu = true;
     if (x.alors) x.alors = corrompre(x.alors, id);
     if (x.sinon) x.sinon = corrompre(x.sinon, id);
     if (x.choix) x.choix = x.choix.map((c) => ({ ...c, suite: corrompre(c.suite || [], id) }));

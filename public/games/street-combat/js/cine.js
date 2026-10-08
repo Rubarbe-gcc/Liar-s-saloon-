@@ -15,6 +15,8 @@
  *   { pose: 'hero'|id, p: 'garde' }                     change une pose
  *   { devoile: id }                                     une silhouette se révèle
  *   { purifie: id }                                     l'éclat de la Fracture sort de lui : il redevient lui-même
+ *   { corrompt: id, n: 6 }                              l'inverse : les éclats lui échappent des mains, tournent
+ *                                                       autour de lui, puis plongent en lui : la Fracture le prend
  *   { effet: 'fracture'|'eclair'|'flash'|'secousse'|'gel'|'aube'|'nuit', duree }
  *   { sort: 'hero'|id, comment: 'teleport'|'marche' }  quelqu'un s'en va
  *   { attendre: 40 }                                    une pause (en images)
@@ -165,6 +167,15 @@ function suivante() {
     S.effets.push({ nom: 'purif', t: 0, duree: 60, x: a.x, y: a.y - 95 });
     son('ulti');
     S.attente = { fin: S.t + 50 };
+    return;
+  }
+  if (e.corrompt) {
+    const a = S.acteurs.get(qui(e.corrompt));
+    if (!a || a.corrompu) { suivante(); return; }
+    if (S.rapide) { a.corrompu = true; suivante(); return; }
+    S.effets.push({ nom: 'corruption', t: 0, duree: 160, x: a.x, y: a.y - 95, n: e.n || 6, acteur: a });
+    son('ulti');
+    S.attente = { fin: S.t + 160 };
     return;
   }
   if (e.qte) { montrerQte(e.qte); return; }
@@ -538,6 +549,9 @@ function avancer(S) {
     if (a.entree === 1) a.pose = a.poseFinale;
   }
   for (const f of S.effets) f.t += S.vitesse;
+  for (const f of S.effets) {
+    if (f.nom === 'corruption' && f.t >= 110 && !f.fait) { f.fait = true; f.acteur.corrompu = true; f.acteur.aura = 1; S.secousse = 14; son('impact-lourd'); }
+  }
   S.effets = S.effets.filter((f) => f.t < f.duree || ['gel', 'nuit', 'aube', 'fracture', 'souvenir'].includes(f.nom));
   S.secousse *= 0.88;
   // Ce qu'on attend est fini : la suite.
@@ -810,6 +824,48 @@ function effetDevant(g, f, S) {
     g.restore();
   }
   if (f.nom === 'flash') { g.fillStyle = `rgba(255,255,255,${Math.max(0, v)})`; g.fillRect(0, 0, L, H); }
+  if (f.nom === 'corruption') {
+    // Les éclats s'échappent de ses mains, tournent autour de lui de plus en plus vite, puis plongent dans sa poitrine.
+    const t = f.t;
+    const sort = Math.min(1, t / 35);
+    const plonge = Math.max(0, Math.min(1, (t - 80) / 30));
+    const r = 125 * sort * (1 - plonge);
+    g.save(); g.globalCompositeOperation = 'lighter';
+    const lueur = g.createRadialGradient(f.x, f.y, 0, f.x, f.y, 190);
+    lueur.addColorStop(0, rgba('#c814ff', Math.min(0.75, 0.25 * sort + 0.5 * plonge))); lueur.addColorStop(1, rgba('#c814ff', 0));
+    g.fillStyle = lueur; g.beginPath(); g.arc(f.x, f.y, 190, 0, Math.PI * 2); g.fill();
+    for (let i = 0; i < f.n; i++) {
+      for (let q = 0; q < 5; q++) {
+        // L'éclat, et sa traînée (les positions d'avant).
+        const tt = Math.max(0, t - q * 2);
+        const a = (i / f.n) * Math.PI * 2 + tt * 0.03 + tt * tt * 0.0004;
+        const ex = f.x + Math.cos(a) * r;
+        const ey = f.y + 25 * (1 - sort) + Math.sin(a) * r * 0.4;
+        if (q) { g.fillStyle = rgba('#c814ff', 0.35 - q * 0.06); g.beginPath(); g.arc(ex, ey, 7 - q, 0, Math.PI * 2); g.fill(); continue; }
+        const gr = g.createRadialGradient(ex, ey, 0, ex, ey, 26);
+        gr.addColorStop(0, rgba('#ff9aff', 0.9)); gr.addColorStop(1, rgba('#c814ff', 0));
+        g.fillStyle = gr; g.beginPath(); g.arc(ex, ey, 26, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#f0a0ff'; g.beginPath(); g.moveTo(ex, ey - 12); g.lineTo(ex + 6, ey); g.lineTo(ex, ey + 12); g.lineTo(ex - 6, ey); g.closePath(); g.fill();
+      }
+    }
+    // Ils sont en lui : une onde violette, des éclairs qui partent de sa poitrine.
+    if (t >= 110) {
+      const p = Math.min(1, (t - 110) / 50);
+      for (const [rr, c] of [[p * 320, '#c814ff'], [p * 220, '#ff50ff']]) {
+        g.strokeStyle = rgba(c, Math.max(0, 1 - p)); g.lineWidth = 10 * (1 - p) + 1;
+        g.beginPath(); g.ellipse(f.x, f.y, rr, rr * 0.6, 0, 0, Math.PI * 2); g.stroke();
+      }
+      g.strokeStyle = rgba('#ff9aff', Math.max(0, 1 - p * 1.5)); g.lineWidth = 3;
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2 + hf(i) * 0.4;
+        g.beginPath(); g.moveTo(f.x, f.y);
+        for (let k = 1; k <= 4; k++) g.lineTo(f.x + Math.cos(a + (hf(i * 5 + k) - 0.5) * 0.6) * k * 55 * (0.4 + p), f.y + Math.sin(a + (hf(i * 3 + k) - 0.5) * 0.6) * k * 40 * (0.4 + p));
+        g.stroke();
+      }
+    }
+    g.restore();
+    if (t >= 110 && t < 122) { g.fillStyle = `rgba(200,20,255,${0.55 * (1 - (t - 110) / 12)})`; g.fillRect(0, 0, L, H); }
+  }
   if (f.nom === 'purif') {
     // L'éclat jaillit de sa poitrine, monte et se brise ; une onde violette, puis blanche.
     const p = f.t / f.duree;

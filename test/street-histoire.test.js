@@ -43,7 +43,7 @@ test('le scénario : dix actes, des combats, des vagues de soldats et des scène
     if (sc.arene) assert.ok(ARENES.has(sc.arene), `${sc.id} : arène ${sc.arene}`);
     if (sc.acte !== undefined) assert.ok(ACTES[sc.acte], sc.id);
     for (const l of listes(sc)) for (const e of toutes(l)) {
-      for (const k of ['entre', 'dit', 'sort', 'pose', 'devoile', 'debloque', 'croise']) {
+      for (const k of ['entre', 'dit', 'sort', 'pose', 'devoile', 'debloque', 'croise', 'purifie', 'corrompt']) {
         if (e[k] !== undefined) assert.ok(e[k] === 'hero' || PERSO[e[k]], `${sc.id} : ${k} ${e[k]}`);
       }
       if (e.decor) assert.ok(ARENES.has(e.decor), `${sc.id} : décor ${e.decor}`);
@@ -162,4 +162,16 @@ test('les fins : la vraie se mérite, la solitaire se subit', () => {
   const gains = {};
   for (const sc of SCENES) for (const l of listes(sc)) for (const e of toutes(l)) for (const c of e.choix || []) for (const [id, n] of Object.entries(c.affinite || {})) gains[id] = Math.max(gains[id] || 0, 0) + Math.max(0, n);
   assert.ok(ALLIES.filter((id) => (gains[id] || 0) >= 2).length >= 5, JSON.stringify(gains));
+});
+
+test('« Six éclats » : on voit le héros ramasser les éclats et se transformer, avant qu’il parle en corrompu', () => {
+  const sc = SCENES.find((s) => s.id === 'tentation');
+  const i = (f) => sc.etapes.findIndex(f);
+  const entree = sc.etapes[i((e) => e.entre === 'hero')];
+  assert.equal(entree.corrompu, false, 'il entre encore lui-même');
+  const ramasse = i((e) => e.pose === 'hero' && e.p === 'accroupi');
+  const change = i((e) => e.corrompt === 'hero');
+  const tente = i((e) => e.dit === 'hero' && /tout arrêter/.test(e.texte));
+  assert.ok(ramasse > 0 && change > ramasse && tente > change, 'il ramasse, il change, puis il parle');
+  assert.ok(sc.combat.corrompu && sc.combat.adv === 'hero', 'et on le combat corrompu');
 });
