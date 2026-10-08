@@ -24,7 +24,7 @@ import * as EL from './enligne.js';
 import * as TUTO from './tutoriel.js';
 import * as HIST from './histoire.js';
 import { dire, crier, taire, voixDe, voixActives, basculerVoix } from './voix.js';
-import { CORPS, TETES, PEAUX, ENERGIES, TENUES, CHEVEUX, ACCESSOIRES, MAX_ACCESSOIRES, ECOLES, GENRES, VOIX_HAUTEUR, defautHeros, herosAuHasard, construireHeros } from '../../../shared/street/heros.js';
+import { CORPS, TETES, PEAUX, ENERGIES, TENUES, CHEVEUX, ACCESSOIRES, MAX_ACCESSOIRES, ECOLES, TECHNIQUES, techniquesDe, GENRES, VOIX_HAUTEUR, defautHeros, herosAuHasard, construireHeros } from '../../../shared/street/heros.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -663,9 +663,12 @@ function majCreateur() {
     return `<button class="puce${on ? ' on' : ''}" data-champ="${champ}" data-val="${id}">${esc(nom)}</button>`;
   }).join('');
   const teintes = (champ, liste) => liste.map((c) => `<button class="teinte${d[champ] === c ? ' on' : ''}" data-champ="${champ}" data-val="${c}" style="--c:${c}" aria-label="${c}"></button>`).join('');
+  const tech = techniquesDe(d);
   $('createur-options').innerHTML = `
-    <h4>École de combat</h4>
+    <h4>École de combat <small>(la saisie, les combos ; elle conseille des techniques ✦)</small></h4>
     <div class="ecoles">${Object.entries(ECOLES).map(([id, e]) => `<button class="ecole-carte${d.ecole === id ? ' on' : ''}" data-champ="ecole" data-val="${id}"><b>${esc(e.nom)}</b><small>${esc(e.texte)}</small></button>`).join('')}</div>
+    <h4>Techniques <small>(à vous seul : aucun autre combattant ne les a)</small></h4>
+    ${[['a', 'techA', 'Spécial A', 'B + A'], ['b', 'techB', 'Spécial B', 'B'], ['u', 'techU', 'Ultime', 'ULTI']].map(([k, champ, titre]) => `<div class="tech-titre">${titre}</div><div class="ecoles techniques">${Object.entries(TECHNIQUES[k]).map(([id, x]) => `<button class="ecole-carte${tech[k] === id ? ' on' : ''}${ECOLES[d.ecole].techniques[k] === id ? ' conseil' : ''}" data-champ="${champ}" data-val="${id}"><b>${esc(x.nom)}</b><small>${esc(x.texte)}</small></button>`).join('')}</div>`).join('')}
     <h4>Genre</h4><div class="puces">${puces('genre', GENRES)}</div>
     <h4>Voix</h4>
     <div class="reglages-voix">
@@ -681,7 +684,7 @@ function majCreateur() {
     <h4>Cheveux</h4><div class="teintes">${teintes('cheveux', CHEVEUX)}</div>
     <h4>Accessoires <small>(${d.accessoires.length}/${MAX_ACCESSOIRES})</small></h4><div class="puces">${puces('accessoires', ACCESSOIRES, true)}</div>`;
   const p = construireHeros(d);
-  $('createur-coups').innerHTML = `<b style="color:${p.c.c1}">${esc(ECOLES[d.ecole].nom)}</b> · ${esc(p.specB.nom)} · ${esc(p.specA.nom)} · <span>ULTIME : ${esc(p.ulti.nom)}</span>`;
+  $('createur-coups').innerHTML = `<b style="color:${p.c.c1}">${esc(ECOLES[d.ecole].nom)}</b> · B : ${esc(p.specB.nom)} · A : ${esc(p.specA.nom)} · <span>ULTIME : ${esc(p.ulti.nom)}</span>`;
   animCreateur.t = 0;
 }
 
@@ -1246,6 +1249,11 @@ function dimensionner() {
   cv.style.height = `${A.H * echelle}px`;
   cv.width = Math.round(A.L * echelle * r);
   cv.height = Math.round(A.H * echelle * r);
+  // Le tutoriel et les défis se posent juste sous les barres de vie, quelle que soit la taille de l'écran.
+  const rc = cv.getBoundingClientRect();
+  const rs = scene.getBoundingClientRect();
+  scene.style.setProperty('--sous-hud', `${Math.round(rc.top - rs.top + 96 * echelle)}px`);
+  scene.style.setProperty('--bord-droit', `${Math.round(rs.right - rc.right + 8)}px`);
 }
 
 function boucle() {
@@ -1715,6 +1723,8 @@ function brancher() {
       else if (d.accessoires.length < MAX_ACCESSOIRES) d.accessoires.push(val);
       else { toast(`${MAX_ACCESSOIRES} accessoires au plus`); return; }
     } else d[champ] = val;
+    // Changer d'école reprend les techniques qu'elle conseille.
+    if (champ === 'ecole') { d.techA = null; d.techB = null; d.techU = null; }
     // Changer de genre accorde la voix (on peut la régler ensuite).
     if (champ === 'genre') d.voixTimbre = val === 'f' ? Math.max(d.voixTimbre ?? 0, 0.8) : Math.min(d.voixTimbre ?? 1, 0.2);
     son('choix');

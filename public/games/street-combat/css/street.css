@@ -354,6 +354,8 @@ kbd { display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4
 .ecole-carte b { display: block; font-family: var(--titre); font-weight: 400; letter-spacing: .05em; font-size: 1.05rem; }
 .ecole-carte small { display: block; margin-top: 2px; color: var(--pale); font-size: .72rem; line-height: 1.3; }
 .ecole-carte.on { background: rgba(255,200,61,.16); box-shadow: inset 0 0 0 2px var(--or); }
+.tech-titre { margin: 8px 0 4px; font-size: .72rem; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--or); }
+.ecole-carte.conseil b::after { content: " ✦"; color: var(--or); font-size: .8em; }
 .puces { display: flex; flex-wrap: wrap; gap: 6px; }
 .puce { border: 0; cursor: pointer; padding: 7px 12px; border-radius: 999px; background: rgba(255,255,255,.07); color: #fff; font: inherit; font-weight: 700; font-size: .85rem; }
 .puce.on { background: var(--or); color: #2a1600; }
@@ -436,13 +438,13 @@ kbd { display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4
 .enligne-code { font-family: var(--titre); font-size: 3.4rem; letter-spacing: .3em; color: var(--or); text-shadow: 3px 3px 0 #5a2000; }
 
 /* Le tutoriel, les défis, la manette */
-.tuto { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); z-index: 4; width: min(620px, calc(100% - 20px)); display: flex; flex-direction: column; align-items: center; gap: 4px;
+.tuto { position: absolute; left: 50%; top: var(--sous-hud, 64px); transform: translateX(-50%); z-index: 4; width: min(620px, calc(100% - 20px)); display: flex; flex-direction: column; align-items: center; gap: 4px;
   padding: 10px 16px; border-radius: 12px; background: rgba(8,4,15,.85); box-shadow: inset 0 0 0 2px var(--or); text-align: center; pointer-events: none; }
 .tuto small { font-weight: 900; letter-spacing: .2em; font-size: .7rem; color: var(--pale); }
 .tuto b { font-family: var(--titre); font-weight: 400; font-size: 1.4rem; color: var(--or); letter-spacing: .05em; }
 .tuto span { font-weight: 700; font-size: .95rem; }
 .tuto .tuto-ok { color: #7dffb0; animation: titre .5s cubic-bezier(.2,1.6,.4,1) both; }
-.defis { position: absolute; right: 10px; top: 64px; z-index: 4; display: flex; flex-direction: column; gap: 3px; padding: 8px 12px; border-radius: 10px;
+.defis { position: absolute; right: var(--bord-droit, 10px); top: var(--sous-hud, 64px); z-index: 4; display: flex; flex-direction: column; gap: 3px; padding: 8px 12px; border-radius: 10px;
   background: rgba(8,4,15,.78); font-size: .78rem; font-weight: 700; max-width: 300px; pointer-events: none; }
 .defis small { color: var(--or); font-weight: 900; letter-spacing: .1em; }
 .defis .fait { color: #ffd23f; }
