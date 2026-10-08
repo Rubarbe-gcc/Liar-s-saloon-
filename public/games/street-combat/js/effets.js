@@ -14,6 +14,8 @@ const L = ARENE.L;
 const H = ARENE.H;
 const SOL = ARENE.SOL;
 const TAU = Math.PI * 2;
+/** Les couleurs d'un combattant, teintes par l'élément d'une technique du héros (feu, glace…). */
+const teinteK = (k, c) => (c ? { ...k, c1: c, faisceau: c, aura: c, teinte: c } : k);
 const hasardFixe = (n) => { const x = Math.sin(n * 12.9898) * 43758.5453; return x - Math.floor(x); };
 
 export function creerEffets() {
@@ -189,7 +191,7 @@ export function dessinerProjectiles(g, c, t) {
     g.translate(p.x, p.y);
     switch (d.forme) {
       case 'heros-eclat': case 'heros-phenix': case 'heros-flocon': case 'heros-corbeau': case 'heros-meteore': case 'heros-anneau': case 'heros-oiseau':
-        dessinerProjHeros(g, d.forme, r, k, dir, t, p);
+        dessinerProjHeros(g, d.forme, r, teinteK(k, d.teinte), dir, t, p);
         break;
       case 'flamme': case 'rocher': case 'goutte': case 'boule': case 'orbe': case 'bulle': case 'ame': case 'balle': case 'trou-noir': case 'etoile': case 'plume':
       default:
@@ -337,7 +339,7 @@ export function dessinerZones(g, c, t) {
       g.beginPath(); g.ellipse(x, SOL, d.rayon * (1.4 - p * 0.4), 10, 0, 0, TAU); g.stroke();
       if (d.hauteur >= 500) { g.fillStyle = rgba(k.c1, 0.08 + p * 0.1); g.fillRect(x - d.rayon * 0.5, 0, d.rayon, SOL); }
       g.restore();
-      if (d.forme?.startsWith('heros-')) lumiere(g, () => sceau(g, x, SOL, d.rayon * (0.4 + p * 0.6), k.c1, 0.4 + p * 0.6, z.t / 10));
+      if (d.forme?.startsWith('heros-')) lumiere(g, () => sceau(g, x, SOL, d.rayon * (0.4 + p * 0.6), d.teinte || k.c1, 0.4 + p * 0.6, z.t / 10));
       if (d.forme === 'lune') { const y = -80 + p * (SOL - 120); lumiere(g, () => halo(g, x, y, 70, '#dcebff', 0.9)); g.fillStyle = '#eef6ff'; g.beginPath(); g.arc(x, y, 38, 0, TAU); g.fill(); g.fillStyle = '#c8d8f0'; g.beginPath(); g.arc(x - 10, y - 8, 7, 0, TAU); g.arc(x + 12, y + 10, 5, 0, TAU); g.fill(); }
       continue;
     }
@@ -434,7 +436,7 @@ export function dessinerZones(g, c, t) {
         break;
       }
       case 'heros-geyser': case 'heros-lances': case 'heros-cristaux': case 'heros-onde': case 'heros-sceau':
-        dessinerZoneHeros(g, d, x, actif, k, z);
+        dessinerZoneHeros(g, d, x, actif, teinteK(k, d.teinte), z);
         break;
       case 'fissure':
         lumiere(g, () => { eclair(g, x - d.rayon, SOL - 20, x + d.rayon, SOL - 160, rgba('#ff50ff', 0.9), 5, 8, z.t); halo(g, x, SOL - 90, d.rayon * 1.3, '#c814ff', 0.5); });
@@ -477,7 +479,7 @@ export function dessinerFaisceaux(g, fx, c) {
         // Le rayon tressé du héros : deux fils de lumière enlacés.
         if (d.tresse) {
           for (const s of [-1, 1]) {
-            g.strokeStyle = rgba(s > 0 ? '#ffffff' : k.c1, 0.9 * p); g.lineWidth = 5;
+            g.strokeStyle = rgba(s > 0 ? '#ffffff' : d.couleur || k.c1, 0.9 * p); g.lineWidth = 5;
             g.beginPath();
             for (let xx = 0; xx <= long; xx += 8) { const yy = Math.sin(xx / 30 - f.t / 2) * ep * 0.75 * s; if (xx) g.lineTo(xx, yy); else g.moveTo(xx, yy); }
             g.stroke();
@@ -617,7 +619,7 @@ export function dessinerCineUlti(g, fx, c) {
   if (!C) return;
   const j = c.joueurs[C.joueur];
   const o = c.joueurs[1 - C.joueur];
-  const k = PERSO[j.id].c;
+  const k = teinteK(PERSO[j.id].c, PERSO[j.id].ulti?.teinte);
   const t = C.t;
   const A = { id: j.id, x: j.x, y: j.y - 90, dir: j.dir };
   const D = { x: o.x, y: o.y - 90 };
@@ -1351,7 +1353,10 @@ const ULTIS_HEROS = {
   },
   /* Un immense phénix naît de l'aura et traverse l'adversaire. */
   'heros-phenix'(g, t, A, D, k) {
-    g.fillStyle = `rgba(40,8,0,${Math.min(0.45, t / 40)})`; g.fillRect(0, 0, L, H);
+    const F = k.teinte
+      ? { fond: '4,10,30', queue: k.c1, aile1: '#ffffff', aile2: k.c1, coeur: '#ffffff', corps: '#f4fbff', crete: k.c1 }
+      : { fond: '40,8,0', queue: '#ff7a1a', aile1: '#ffcf4a', aile2: '#ff8a1a', coeur: '#ffe680', corps: '#fff6d8', crete: '#ff9a1a' };
+    g.fillStyle = `rgba(${F.fond},${Math.min(0.45, t / 40)})`; g.fillRect(0, 0, L, H);
     const p = Math.max(0, (t - 20) / 50);
     if (p < 1.4) {
       const m = Math.min(1, p);
@@ -1361,24 +1366,24 @@ const ULTIS_HEROS = {
       const e = 1 + Math.min(1, t / 20) * 1.2;
       g.save(); g.translate(x, y); g.scale(A.dir * e, e);
       lumiere(g, () => {
-        for (let i = 1; i < 14; i++) halo(g, -i * 16, Math.sin(t / 4 + i * 0.6) * (6 + i * 2), 26 - i, i % 3 ? '#ff7a1a' : k.c1, 0.6 - i * 0.035);
+        for (let i = 1; i < 14; i++) halo(g, -i * 16, Math.sin(t / 4 + i * 0.6) * (6 + i * 2), 26 - i, i % 3 ? F.queue : k.c1, 0.6 - i * 0.035);
         for (const s of [-1, 1]) {
-          g.fillStyle = rgba(s < 0 ? '#ffcf4a' : '#ff8a1a', 0.85);
+          g.fillStyle = rgba(s < 0 ? F.aile1 : F.aile2, 0.85);
           g.beginPath(); g.moveTo(-10, 0);
           g.bezierCurveTo(-20, s * 60 * (0.6 + bat * 0.5), -90, s * 90 * (0.6 + bat * 0.5), -110, s * 70 * (0.5 + bat * 0.5));
           g.bezierCurveTo(-70, s * 30, -40, s * 14, -10, 0); g.fill();
         }
-        halo(g, 0, 0, 50, '#ffe680', 0.9);
+        halo(g, 0, 0, 50, F.coeur, 0.9);
       });
-      g.fillStyle = '#fff6d8';
+      g.fillStyle = F.corps;
       g.beginPath(); g.ellipse(0, 0, 30, 13, 0, 0, TAU); g.fill();
       g.beginPath(); g.arc(26, -10, 11, 0, TAU); g.fill();
       g.beginPath(); g.moveTo(34, -12); g.lineTo(50, -6); g.lineTo(34, -4); g.fill();
-      g.fillStyle = '#ff9a1a';
+      g.fillStyle = F.crete;
       for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(22, -18); g.lineTo(10 - i * 8, -34 - i * 4); g.lineTo(18 - i * 4, -16); g.fill(); }
       g.restore();
     }
-    if (t > 66) lumiere(g, () => halo(g, D.x, D.y, (t - 66) * 9, '#ff9a1a', Math.max(0, 1 - (t - 66) / 40)));
+    if (t > 66) lumiere(g, () => halo(g, D.x, D.y, (t - 66) * 9, F.crete, Math.max(0, 1 - (t - 66) / 40)));
   },
   /* Un tourbillon d'éclairs qui se resserre sur l'adversaire. */
   'heros-tempete'(g, t, A, D, k) {
@@ -1448,7 +1453,8 @@ const ULTIS_HEROS = {
   'heros-eveil'(g, t, A, D, k) {
     g.fillStyle = `rgba(0,0,0,${Math.min(0.5, t / 35)})`; g.fillRect(0, 0, L, H);
     const p = Math.min(1, t / 45);
-    const perso = PERSO[A.id];
+    const p0 = PERSO[A.id];
+    const perso = p0 && k.teinte ? { ...p0, c: { ...p0.c, c1: k.c1, aura: k.c1, faisceau: k.c1, tenue: k.c1 } } : p0;
     lumiere(g, () => {
       halo(g, A.x - A.dir * 60, SOL - 220 * p, 260 * p, k.c1, 0.5);
       for (let i = 0; i < 16; i++) halo(g, A.x - A.dir * 60 + (hasardFixe(i) - 0.5) * 300, SOL - ((t * 5 + i * 37) % 400), 6, k.faisceau, 0.7);

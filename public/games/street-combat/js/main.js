@@ -665,10 +665,10 @@ function majCreateur() {
   const teintes = (champ, liste) => liste.map((c) => `<button class="teinte${d[champ] === c ? ' on' : ''}" data-champ="${champ}" data-val="${c}" style="--c:${c}" aria-label="${c}"></button>`).join('');
   const tech = techniquesDe(d);
   $('createur-options').innerHTML = `
-    <h4>École de combat <small>(la saisie, les combos ; elle conseille des techniques ✦)</small></h4>
+    <h4>École de combat <small>(ses techniques, sa saisie, ses combos)</small></h4>
     <div class="ecoles">${Object.entries(ECOLES).map(([id, e]) => `<button class="ecole-carte${d.ecole === id ? ' on' : ''}" data-champ="ecole" data-val="${id}"><b>${esc(e.nom)}</b><small>${esc(e.texte)}</small></button>`).join('')}</div>
-    <h4>Techniques <small>(à vous seul : aucun autre combattant ne les a)</small></h4>
-    ${[['a', 'techA', 'Spécial A', 'B + A'], ['b', 'techB', 'Spécial B', 'B'], ['u', 'techU', 'Ultime', 'ULTI']].map(([k, champ, titre]) => `<div class="tech-titre">${titre}</div><div class="ecoles techniques">${Object.entries(TECHNIQUES[k]).map(([id, x]) => `<button class="ecole-carte${tech[k] === id ? ' on' : ''}${ECOLES[d.ecole].techniques[k] === id ? ' conseil' : ''}" data-champ="${champ}" data-val="${id}"><b>${esc(x.nom)}</b><small>${esc(x.texte)}</small></button>`).join('')}</div>`).join('')}
+    <h4>Techniques de l’école ${esc(ECOLES[d.ecole].nom)} <small>(à vous seul : aucun autre combattant ne les a ; ✦ conseillée)</small></h4>
+    ${[['a', 'techA', 'Spécial A', 'B + A'], ['b', 'techB', 'Spécial B', 'B'], ['u', 'techU', 'Ultime', 'ULTI']].map(([k, champ, titre]) => `<div class="tech-titre">${titre}</div><div class="ecoles techniques">${ECOLES[d.ecole].techniques[k].map((id, i) => [id, TECHNIQUES[k][id], i]).map(([id, x, i]) => `<button class="ecole-carte${tech[k] === id ? ' on' : ''}${i === 0 ? ' conseil' : ''}" data-champ="${champ}" data-val="${id}"><b>${esc(x.nom)}</b><small>${esc(x.texte)}</small></button>`).join('')}</div>`).join('')}
     <h4>Genre</h4><div class="puces">${puces('genre', GENRES)}</div>
     <h4>Voix</h4>
     <div class="reglages-voix">

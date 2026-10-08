@@ -17,7 +17,10 @@ test('le créateur : des choix pour tout, huit écoles complètes', () => {
   assert.equal(Object.keys(ECOLES).length, 8);
   for (const [id, e] of Object.entries(ECOLES)) {
     assert.ok(e.nom && e.texte && e.saisie.seq.length >= 4, id);
-    for (const k of ['a', 'b', 'u']) assert.ok(TECHNIQUES[k][e.techniques[k]], `${id} : technique ${k}`);
+    for (const k of ['a', 'b', 'u']) {
+      assert.equal(e.techniques[k].length, 3, `${id} : trois techniques ${k}`);
+      for (const t of e.techniques[k]) assert.ok(TECHNIQUES[k][t], `${id} : technique ${k} « ${t} »`);
+    }
     assert.equal(e.combos.length, 3, id);
     assert.equal(e.combos[0].entree, 'PPK', id);
     assert.equal(new Set(e.combos.map((c) => c.entree)).size, 3, id);
@@ -30,7 +33,7 @@ test('construireHeros : une fiche valide, même avec des options farfelues', () 
   assert.equal(h.nom, 'KAZESCRIPT');
   assert.equal(h.look.corps, 'normal');
   assert.equal(h.look.tete, 'bandeau');
-  assert.equal(h.specA.nom, TECHNIQUES.a[ECOLES.ki.techniques.a].nom);
+  assert.equal(h.specA.nom, TECHNIQUES.a[ECOLES.ki.techniques.a[0]].nom);
   assert.equal(h.specA.texte, undefined, 'la description reste au créateur');
   assert.ok(h.look.extras.filter((x) => x !== 'bandeau-long').length <= MAX_ACCESSOIRES);
   assert.ok(!h.look.extras.includes('faux'));
@@ -68,10 +71,16 @@ test('les techniques du héros sont à lui seul : ni leurs noms, ni leurs formes
     for (const cb of p.combos || []) { nomsAutres.add(cb.nom); voir(cb.coup); }
   }
   assert.ok(![...formes].some((x) => x.startsWith('heros-')), 'les formes heros-… ne sont qu’au héros');
+  const nomsHeros = new Set();
   for (const k of ['a', 'b', 'u']) {
-    assert.equal(Object.keys(TECHNIQUES[k]).length, 8, k);
+    // Chaque technique appartient à une école, une seule.
+    const parEcole = Object.values(ECOLES).flatMap((e) => e.techniques[k]);
+    assert.equal(new Set(parEcole).size, parEcole.length, `${k} : une technique dans deux écoles`);
+    assert.deepEqual([...parEcole].sort(), Object.keys(TECHNIQUES[k]).sort(), `${k} : toutes les techniques ont leur école`);
     for (const [id, x] of Object.entries(TECHNIQUES[k])) {
       assert.ok(x.nom && x.texte, id);
+      assert.ok(!nomsHeros.has(x.nom), `${x.nom} : deux techniques du héros ont ce nom`);
+      nomsHeros.add(x.nom);
       assert.ok(!nomsAutres.has(x.nom), `${x.nom} : un autre combattant a déjà ce nom`);
       if (x.forme) assert.match(x.forme, /^heros-/, id);
       if (k === 'u') { assert.match(x.visuel, /^heros-/, id); assert.ok(!visuels.has(x.visuel), id); }
@@ -91,23 +100,30 @@ test('les techniques du héros sont à lui seul : ni leurs noms, ni leurs formes
 });
 
 test('on choisit ses techniques ; sinon, ce sont celles de l’école', () => {
-  assert.deepEqual(techniquesDe({ ecole: 'lame' }), ECOLES.lame.techniques);
-  assert.deepEqual(techniquesDe({ ecole: 'lame', techA: 'phenix', techB: 'inconnue', techU: 'promesses' }), { a: 'phenix', b: ECOLES.lame.techniques.b, u: 'promesses' });
-  const h = construireHeros({ ecole: 'colosse', techA: 'tresse', techB: 'faille', techU: 'horizon' });
-  assert.equal(h.specA.nom, TECHNIQUES.a.tresse.nom);
-  assert.equal(h.specB.type, 'teleport');
-  assert.equal(h.ulti.visuel, 'heros-horizon');
-  const r = herosAuHasard(() => 0.99);
-  assert.ok(TECHNIQUES.a[r.techA] && TECHNIQUES.b[r.techB] && TECHNIQUES.u[r.techU]);
+  const premieres = (e) => ({ a: ECOLES[e].techniques.a[0], b: ECOLES[e].techniques.b[0], u: ECOLES[e].techniques.u[0] });
+  assert.deepEqual(techniquesDe({ ecole: 'lame' }), premieres('lame'));
+  assert.deepEqual(techniquesDe({ ecole: 'lame', techA: 'dagues', techB: 'inconnue', techU: 'sabre' }), { a: 'dagues', b: ECOLES.lame.techniques.b[0], u: 'sabre' });
+  // Une technique d'une autre école ne se prend pas : c'est logique, on reste dans son école.
+  assert.deepEqual(techniquesDe({ ecole: 'lame', techA: 'phenix', techU: 'promesses' }), premieres('lame'));
+  const h = construireHeros({ ecole: 'colosse', techA: 'eboulis', techB: 'ecrase', techU: 'terre' });
+  assert.equal(h.specA.nom, TECHNIQUES.a.eboulis.nom);
+  assert.equal(h.specB.plonge, true);
+  assert.equal(h.ulti.visuel, 'heros-sceau');
+  assert.equal(h.ulti.teinte, '#c8a050', 'le sceau du colosse a la couleur de la terre');
+  for (const x of [0, 0.3, 0.6, 0.99]) {
+    const r = herosAuHasard(() => x);
+    const t = ECOLES[r.ecole].techniques;
+    assert.ok(t.a.includes(r.techA) && t.b.includes(r.techB) && t.u.includes(r.techU), 'au hasard, mais dans son école');
+  }
 });
 
-test('chaque technique se joue pour de vrai : les deux spéciaux et l’ultime', () => {
-  const ka = Object.keys(TECHNIQUES.a);
-  const kb = Object.keys(TECHNIQUES.b);
-  const ku = Object.keys(TECHNIQUES.u);
-  for (let i = 0; i < 8; i++) {
-    PERSO.heros = construireHeros({ ecole: 'ki', techA: ka[i], techB: kb[i], techU: ku[i] });
-    const c = C.creerCombat({ p1: 'heros', p2: 'ryuken', entrainement: true, graine: i });
+test('chaque technique se joue pour de vrai : les deux spéciaux et l’ultime, dans chaque école', () => {
+  let graine = 0;
+  for (const [ecole, e] of Object.entries(ECOLES)) for (let i = 0; i < 3; i++) {
+    const [a, b, u] = [e.techniques.a[i], e.techniques.b[i], e.techniques.u[i]];
+    PERSO.heros = construireHeros({ ecole, techA: a, techB: b, techU: u });
+    assert.equal(PERSO.heros.specA.nom, TECHNIQUES.a[a].nom);
+    const c = C.creerCombat({ p1: 'heros', p2: 'ryuken', entrainement: true, graine: graine++ });
     const vus = new Set();
     for (const [touche, attendu] of [[{ B: true }, 'specB'], [{ A: true }, 'specA'], [{ U: true }, 'ulti']]) {
       c.joueurs[0].x = 420; c.joueurs[1].x = 540;
@@ -120,7 +136,7 @@ test('chaque technique se joue pour de vrai : les deux spéciaux et l’ultime',
           if (e.type === 'ulti') vus.add('ulti');
         }
       }
-      assert.ok(vus.has(attendu), `${ka[i]} / ${kb[i]} / ${ku[i]} : ${attendu}`);
+      assert.ok(vus.has(attendu), `${ecole} : ${a} / ${b} / ${u} : ${attendu}`);
     }
   }
   delete PERSO.heros;

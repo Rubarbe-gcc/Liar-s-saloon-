@@ -16,7 +16,8 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
   phases, un combat de survie, des flashbacks jouables, une note S/A/B/C par
   combat, un mode Légende et un Codex ; on crée son propre héros — nom, homme ou femme, allure,
   couleurs, voix, école de combat, et ses techniques à lui seul : deux spéciaux
-  et un ultime à choisir parmi 24, que nul autre combattant n’a —, des voix pour chaque personnage (synthèse
+  et un ultime, trois au choix pour chacun dans son école (feu, glace,
+  foudre, ombre…), que nul autre combattant n’a —, des voix pour chaque personnage (synthèse
   vocale du navigateur, coupées par défaut), une musique par ambiance, dix actes, une cinquantaine de scènes, cinématiques, dialogues et
   choix qui changent la suite, des combattants corrompus par la Fracture à
   libérer, des scènes où l’on incarne d’autres combattants, des vagues de soldats de l'Armée de l'Horloge,
