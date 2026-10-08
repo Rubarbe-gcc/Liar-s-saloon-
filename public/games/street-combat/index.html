@@ -38,6 +38,7 @@
     <div class="menu-bas">
       <a class="btn petit" href="/">‹ Arcade</a>
       <button class="btn petit" id="b-commandes">⌨️ Commandes</button>
+      <button class="btn petit" id="b-codex">📚 Codex</button>
       <button class="btn petit" id="b-son-menu">🔊</button>
       <button class="btn petit" id="b-voix-menu">🗣️ Voix</button>
       <button class="btn petit" id="b-reset" title="Remettre à zéro les combattants débloqués et les sauvegardes">♻️ Réinitialiser</button>
@@ -130,6 +131,8 @@
   <div class="cine-debloque" id="cine-debloque" hidden></div>
   <div class="cine-choix" id="cine-choix" hidden></div>
   <div class="cine-lieu" id="cine-lieu" hidden></div>
+  <div class="cine-qte" id="cine-qte" hidden></div>
+  <div class="cine-infil" id="cine-infil" hidden><b>INFILTRATION</b><span>Maintenez ESPACE (ou le doigt sur l’écran) pour avancer. Arrêtez-vous quand la lumière passe sur vous !</span></div>
   <div class="cine-haut"><button class="btn petit" id="cine-quitter" hidden>💾 Quitter</button><button class="btn petit" id="cine-passer">Passer ⏭</button></div>
 </section>
 
@@ -138,10 +141,12 @@
   <div class="scene" id="scene">
     <canvas id="canvas" aria-label="Le combat"></canvas>
     <button class="rond petit pause" id="b-pause" aria-label="Pause">❚❚</button>
+    <div class="allie-pret" id="allie-pret" hidden></div>
   </div>
   <div class="tactile" id="tactile" hidden>
     <div class="manette-dir" id="manette-dir"><div class="manette-base"></div><div class="manette-bouton" id="manette-bouton"></div></div>
     <div class="manette-boutons" id="manette-boutons">
+      <button class="tb allie" id="b-allie" hidden>ALLIÉ</button>
       <button data-b="U" class="tb ulti">ULTI</button>
       <button data-b="A" class="tb spe">A</button>
       <button data-b="B" class="tb spe">B</button>
@@ -184,6 +189,14 @@
   </div>
 </div>
 
+<div class="ov" id="ov-codex" hidden>
+  <div class="feuille large">
+    <button class="rond fermer" data-ferme="ov-codex">✕</button>
+    <h2>📚 Codex</h2>
+    <div class="codex-onglets" id="codex-onglets"></div>
+    <div class="codex" id="codex"></div>
+  </div>
+</div>
 <div class="toast" id="toast" hidden></div>
 <div class="sauve" id="sauve" hidden>💾 Sauvegardé</div>
 

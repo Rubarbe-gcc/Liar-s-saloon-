@@ -29,14 +29,14 @@ function jouer(c, n, e1 = {}, e2 = {}) {
 /** Les entrées d'une séquence : une étape par image, puis rien. */
 const suite = (etapes) => (k) => etapes[k] || {};
 
-test('le roster : 16 combattants, 3 boss, 6 secrets et 3 figurants, chacun avec ses compétences, son ultime et ses combos', () => {
+test('le roster : 16 combattants, 3 boss, 8 secrets et 7 figurants, chacun avec ses compétences, son ultime et ses combos', () => {
   assert.equal(ROSTER.length, 16);
-  assert.equal(PERSOS.length, 25);
-  assert.equal(PERSOS.filter((p) => p.secret).length, 6);
+  assert.equal(PERSOS.length, 27);
+  assert.equal(PERSOS.filter((p) => p.secret).length, 8);
   // Les secrets de l’histoire disent où les gagner.
   for (const p of PERSOS.filter((x) => x.secret === 'histoire' && x.id !== SECRETS.histoire)) assert.ok(p.indice, p.id);
   // Les figurants : jamais dans la sélection, jamais à débloquer, mais prêts à se battre.
-  assert.equal(FIGURANTS.length, 3);
+  assert.equal(FIGURANTS.length, 7);
   for (const p of FIGURANTS) { assert.ok(p.figurant && PERSO[p.id] === p && !PERSOS.includes(p) && !aDebloquer(p), p.id); }
   assert.deepEqual(Object.values(BOSS).sort(), ['lechaos', 'malvortex', 'solarius']);
   assert.deepEqual(Object.values(SECRETS).sort(), ['kairos', 'nemesis', 'onyx']);
@@ -56,7 +56,7 @@ test('le roster : 16 combattants, 3 boss, 6 secrets et 3 figurants, chacun avec 
     // Deux techniques d'un même combattant n'ont jamais la même manipulation.
     assert.equal(new Set(p.combos.map((x) => x.entree)).size, 3, p.id);
   }
-  assert.equal(visuels.size, 25, 'un ultime unique par combattant');
+  assert.equal(visuels.size, 27, 'un ultime unique par combattant');
 });
 
 test('les coups de base : un poing touche, la garde le bloque', () => {
@@ -239,4 +239,26 @@ test('un combat en un seul round, avec la vie gardée du combat d’avant (la To
   assert.equal(c.phase, 'fin');
   assert.equal(c.vainqueur, 0);
   assert.equal(c.round, 1);
+});
+
+test('un allié à la rescousse : un coup qui passe la garde, une seule fois par appel', () => {
+  const c = duel();
+  const hp = c.joueurs[1].hp;
+  c.joueurs[1].enGarde = true;
+  assert.ok(C.assister(c, 0, 'blazero', 16));
+  assert.ok(c.joueurs[1].hp < hp, 'l’adversaire est touché, même en garde');
+  const evs = C.evenements(c);
+  assert.ok(evs.some((e) => e.type === 'assistance' && e.allie === 'blazero'));
+  c.phase = 'intro';
+  assert.equal(C.assister(c, 0, 'blazero'), false, 'pas d’allié hors du combat');
+});
+
+test('un combat de survie : tenir jusqu’au bout du temps suffit à gagner', () => {
+  const c = C.creerCombat({ p1: 'ryuken', p2: 'lechaos', graine: 1, survie: 5 });
+  c.phase = 'combat';
+  c.joueurs[0].x = 100; c.joueurs[1].x = 900;
+  let f = 0;
+  while (c.phase !== 'fin' && f++ < 60 * 30) { C.pas(c); C.evenements(c); }
+  assert.equal(c.phase, 'fin');
+  assert.equal(c.vainqueur, 0, 'le héros a tenu : il gagne');
 });

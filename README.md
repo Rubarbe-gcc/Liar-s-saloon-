@@ -10,7 +10,11 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
   compétences à lui (projectiles, rayons, ruées, téléportations, frappes du ciel,
   brûlure, poison, gel…), sa saisie, trois combos (👊 👊 🦶 et deux
   manipulations) et son ultime en cinématique. Un **mode Histoire** (« La
-  Fracture » : on crée son propre héros — nom, homme ou femme, allure,
+  Fracture » : dix actes, 66 scènes, trois fins et une vraie fin cachée, un
+  super-boss secret, des QTE, des choix chronométrés, une infiltration, des
+  alliés à appeler en combat et une affinité avec chacun, des boss en deux
+  phases, un combat de survie, des flashbacks jouables, une note S/A/B/C par
+  combat, un mode Légende et un Codex ; on crée son propre héros — nom, homme ou femme, allure,
   couleurs, voix, école de combat —, des voix pour chaque personnage (synthèse
   vocale du navigateur, coupées par défaut), une musique par ambiance, dix actes, une cinquantaine de scènes, cinématiques, dialogues et
   choix qui changent la suite, des combattants corrompus par la Fracture à

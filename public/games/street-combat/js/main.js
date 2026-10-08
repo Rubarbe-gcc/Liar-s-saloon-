@@ -9,7 +9,7 @@
  */
 
 import { PERSOS, PERSO, ROSTER, BOSS, SECRETS, JAUGE, STATUTS, lireEntree, aDebloquer } from '../../../shared/street/persos.js';
-import { creerCombat, pas, evenements, pose, ARENE as A } from '../../../shared/street/combat.js';
+import { creerCombat, pas, evenements, pose, assister, ARENE as A } from '../../../shared/street/combat.js';
 import { dessinerCombattant, dessinerPortrait, rgba, teinte } from './dessin.js';
 import { ARENES, ARENE, fondArene, animerArene } from './arenes.js';
 import * as FX from './effets.js';
@@ -17,7 +17,8 @@ import { creerHud, dessinerHud } from './hud.js';
 import { jouer as son, estMuet, basculerSon } from './son.js';
 import { installerMusique } from '../../../shared/musique.js';
 import * as succes from '../../../shared/succes.js';
-import { jouerCine, avancerCine, passerCine, quitterCine, choisirCine, musiqueCine, dimensionner as dimensionnerCine } from './cine.js';
+import { jouerCine, avancerCine, passerCine, quitterCine, choisirCine, musiqueCine, tenirInfiltration, infiltrationEnCours, vrai, dimensionner as dimensionnerCine } from './cine.js';
+import * as CODEX from './codex.js';
 import * as HIST from './histoire.js';
 import { dire, crier, taire, voixDe, voixActives, basculerVoix } from './voix.js';
 import { CORPS, TETES, PEAUX, ENERGIES, TENUES, CHEVEUX, ACCESSOIRES, MAX_ACCESSOIRES, ECOLES, GENRES, VOIX_HAUTEUR, defautHeros, herosAuHasard, construireHeros } from '../../../shared/street/heros.js';
@@ -423,7 +424,7 @@ function ouvrirDifficultes(mode) {
 function cinematique(etapes, hero, musique = 'tension') {
   aller('s-cine');
   dimensionnerCine();
-  return jouerCine(etapes, { hero, debloquer, musique });
+  return jouerCine(etapes, { hero, debloquer, musique, vu: CODEX.voir });
 }
 
 /* ------------------------------------------------------------------ */
@@ -491,7 +492,7 @@ function ouvrirSauvegardes() {
         <small>${progres} % · ${h.victoires} victoire${h.victoires > 1 ? 's' : ''} · ${duree(h.temps)} de jeu · ${quand(h.maj)}</small>
       </div>
       <div class="slot-boutons">
-        ${h.fini ? '' : `<button class="btn rouge petit" data-continuer="${k}">▶ Continuer</button>`}
+        ${h.fini ? `<button class="btn or petit" data-legende="${k}">⭐ Légende</button>` : `<button class="btn rouge petit" data-continuer="${k}">▶ Continuer</button>`}
         <button class="btn petit" data-journal="${k}">📜 Journal</button>
         ${h.createur ? `<button class="btn petit" data-modifier="${k}">✏️ Héros</button>` : ''}
         <button class="btn petit" data-efface="${k}" title="Effacer">🗑️</button>
@@ -528,9 +529,9 @@ function ouvrirJournal(k) {
 
 /* ---- le déroulé de l'histoire ---- */
 
-const condition = (sc, h) => !sc.si || (sc.si.startsWith('!') ? !h.drapeaux[sc.si.slice(1)] : !!h.drapeaux[sc.si]);
+const condition = (sc, h) => !sc.si || vrai(sc.si, h.drapeaux);
 /** Le héros ne se croise pas lui-même : sa doublure joue son rôle. */
-const rolesDe = (hero) => (hero === HIST.DOUBLURE ? {} : { [hero]: HIST.DOUBLURE });
+const rolesDe = (hero) => (hero === 'heros' ? {} : hero === HIST.DOUBLURE ? { [hero]: HIST.DOUBLURE2 } : { [hero]: HIST.DOUBLURE });
 /** Qui joue ce rôle ('hero' : le héros de la partie, qu'on peut aussi affronter). */
 const role = (h, id) => (id === 'hero' ? h.hero : rolesDe(h.hero)[id] || id);
 const nomsDe = (texte, h) => texte.replace(/\{(\w+)\}/g, (m, id) => (id === 'hero' ? PERSO[h.hero].nom : PERSO[role(h, id)]?.nom || m));
@@ -538,7 +539,7 @@ const nomsDe = (texte, h) => texte.replace(/\{(\w+)\}/g, (m, id) => (id === 'her
 function cineHistoire(etapes, h, drapeaux, musique) {
   aller('s-cine');
   dimensionnerCine();
-  return jouerCine(etapes, { hero: h.hero, roles: rolesDe(h.hero), drapeaux, debloquer, croiser, quittable: true, musique });
+  return jouerCine(etapes, { hero: h.hero, roles: rolesDe(h.hero), drapeaux, debloquer, croiser, quittable: true, musique, vu: CODEX.voir });
 }
 
 /** Les combattants corrompus par la Fracture le montrent, dans les cinématiques aussi. */
@@ -682,6 +683,12 @@ async function jouerScene() {
   while (h.scene < HIST.SCENES.length && !condition(HIST.SCENES[h.scene], h)) h.scene += 1;
   if (h.scene >= HIST.SCENES.length) { finHistoire(); return; }
   const sc = HIST.SCENES[h.scene];
+  CODEX.atteindre(sc.id);
+  // Avant l'épilogue : quelle fin a-t-on méritée ?
+  if (sc.id === 'epilogue' && h.phase === 'avant') {
+    for (const f of ['vraie', 'heroique', 'solitaire']) delete h.drapeaux[`fin_${f}`];
+    h.drapeaux[`fin_${HIST.finDe(h.drapeaux)}`] = true;
+  }
   if (h.phase === 'avant') {
     // Les choix ne comptent qu'une fois la scène finie (quitter au milieu la fait rejouer).
     const d = { ...h.drapeaux };
@@ -696,23 +703,49 @@ async function jouerScene() {
   apresCombat(sc, h.phase === 'apres');
 }
 
+/** Le combat d'une scène, selon les choix faits (une vague plus longue si on a été repéré…). */
+function combatDe(sc, h) {
+  let cb = { ...sc.combat };
+  for (const v of cb.variantes || []) if (condition({ si: v.si }, h)) cb = { ...cb, ...v };
+  return cb;
+}
+/** Le niveau de l'ordinateur ; en mode Légende, un cran au-dessus. */
+const NIVEAUX_ORDI = ['facile', 'normal', 'difficile', 'impossible'];
+const niveauDe = (cb, h) => {
+  const n = cb.niveau[h.difficulte] || 'normal';
+  return h.drapeaux.legende ? NIVEAUX_ORDI[Math.min(3, NIVEAUX_ORDI.indexOf(n) + 1)] : n;
+};
+/** L'allié qu'on peut appeler à l'aide (une fois) ; au combat final, le plus proche de soi. */
+function allieDe(cb, h) {
+  if (!cb.allie) return null;
+  if (cb.allieSi && !condition({ si: cb.allieSi }, h)) return null;
+  if (cb.allie !== 'meilleur') return role(h, cb.allie);
+  const amis = HIST.ALLIES.filter((id) => (h.drapeaux[`aff_${id}`] || 0) >= 1).sort((a, b) => (h.drapeaux[`aff_${b}`] || 0) - (h.drapeaux[`aff_${a}`] || 0));
+  return amis.length ? role(h, amis[0]) : null;
+}
+const bonusDe = (cb, h) => (cb.bonus && condition({ si: cb.bonus.si }, h) ? cb.bonus : null);
+
 /** Avant un combat : qui, à quel niveau, et les règles du jour. */
 function avantCombat(sc) {
   const h = partie.h;
-  const cb = sc.combat;
+  const cb = combatDe(sc, h);
   const adv = role(h, cb.adv);
-  const bonus = cb.bonus && condition({ si: cb.bonus.si }, h) ? cb.bonus : null;
+  const bonus = bonusDe(cb, h);
+  const allie = allieDe(cb, h);
   const regles = [cb.regle, bonus && nomsDe(bonus.texte, h)].filter(Boolean);
   const moi = PERSO[cb.joueur ? role(h, cb.joueur) : h.hero];
   const lui = PERSO[adv];
   if (cb.joueur) regles.unshift(`🎮 Vous incarnez ${moi.nom}`);
+  if (cb.survie) regles.unshift(`⏳ Survivez ${cb.survie} secondes !`);
   if (cb.corrompu) regles.push('💜 Corrompu par la Fracture : battez-le pour lui arracher son éclat');
+  if (allie) regles.push(`🤝 ${PERSO[allie].nom} peut vous aider une fois : touche H (ou le bouton ALLIÉ)`);
+  if (h.drapeaux.legende) regles.push('⭐ Mode Légende : l’ordinateur frappe plus fort');
   const contre = cb.serie
     ? cb.serie.map((id) => `<b style="color:${PERSO[id].c.c1}">${esc(PERSO[id].nom)}</b>`).join(', ')
     : `<b style="color:${lui.c.c1}">${esc(lui.nom)}</b>${cb.victoires === 1 ? ' · un round' : ''}`;
   $('etape').innerHTML = `<h2>${esc(sc.titre)}</h2><p class="sous">${esc(sc.sous)}</p>
     <canvas id="etape-vs" width="1040" height="480"></canvas>
-    <p class="sous"><b style="color:${moi.c.c1}">${esc(moi.nom)}</b> contre ${contre} · ordinateur ${cb.niveau[h.difficulte] || 'normal'}</p>
+    <p class="sous"><b style="color:${moi.c.c1}">${esc(moi.nom)}</b> contre ${contre} · ordinateur ${niveauDe(cb, h)}</p>
     ${regles.map((r) => `<p class="regle">${esc(r)}</p>`).join('')}
     <div class="ligne-boutons"><button class="btn" id="b-etape-quitter">💾 Sauvegarder et quitter</button><button class="btn rouge" id="b-etape-go">⚔️ Combattre !</button></div>`;
   dessinerVs($('etape-vs'), moi, lui, !!cb.corrompu);
@@ -722,38 +755,77 @@ function avantCombat(sc) {
   $('b-etape-quitter').onclick = () => { fermer('ov-etape'); quitterHistoire(); };
 }
 
-/** Après chaque soldat d'une vague, on récupère un peu de vie. */
+/** Après chaque soldat d'une vague, on récupère un peu de vie ; entre les deux phases d'un boss aussi. */
 const REPOS_SERIE = 0.2;
+const REPOS_PHASE = 0.35;
+
+/** La note d'un combat gagné : S, A, B ou C (la vie gardée, les rounds perdus, un perfect). */
+function noteCombat(c) {
+  const j = c.joueurs[0];
+  const r = j.hp / j.hpMax;
+  const perdus = c.joueurs[1].victoires;
+  if (stats.perfect || (r >= 0.6 && perdus === 0)) return 'S';
+  if (r >= 0.35 && perdus === 0) return 'A';
+  if (r >= 0.15 || perdus === 0) return 'B';
+  return 'C';
+}
+const RANG = { S: 4, A: 3, B: 2, C: 1 };
 
 /**
  * Un combat de l'histoire. Une vague (`serie`) : un round contre chacun,
  * à la suite, la vie du héros passant de l'un à l'autre ; perdre en
- * cours de route fait recommencer la vague.
+ * cours de route fait recommencer la vague. Un boss à deux phases
+ * (`phase2`) se relève après une cinématique, plus fort.
  */
-function combatHistoire(sc, adv, bonus, k = 0, vieRestante = null) {
+function combatHistoire(sc, adv, bonus, k = 0, vieRestante = null, phase = 1) {
   const h = partie.h;
-  const cb = sc.combat;
+  const base = combatDe(sc, h);
+  const cb = phase === 2 ? { ...base, ...base.phase2, victoires: 1 } : base;
   const hpMax = (id) => Math.round(150 * PERSO[id].hpMult);
   const serie = cb.serie ? cb.serie.map((id) => role(h, id)) : null;
-  const contre = serie ? serie[k] : adv;
+  const contre = serie ? serie[k] : phase === 2 && cb.adv ? role(h, cb.adv) : adv;
   const moi = cb.joueur ? role(h, cb.joueur) : h.hero;
   const vieHero = vieRestante ?? (cb.vie?.[0] ?? 1) * hpMax(moi);
-  const vieAdv = serie ? 1 : Math.min(cb.vie?.[1] ?? 1, bonus?.vieAdv ?? 1);
+  const vieAdv = serie || phase === 2 ? 1 : Math.min(cb.vie?.[1] ?? 1, bonus?.vieAdv ?? 1);
   const libre = cb.issue === 'libre';
-  const dernier = !serie || k === serie.length - 1;
+  const dernier = (!serie || k === serie.length - 1) && !(base.phase2 && phase === 1);
   demarrerCombat({
-    p1: moi, p2: contre, arene: sc.arene, ia: { 1: cb.niveau[h.difficulte] || 'normal' }, mode: 'histoire', musique: HIST.musiqueDe(sc, 'combat'),
+    p1: moi, p2: contre, arene: sc.arene, ia: { 1: niveauDe(cb, h) }, mode: 'histoire', musique: HIST.musiqueDe(sc, 'combat'),
     victoires: serie ? 1 : cb.victoires || 2,
     vie: [vieHero < hpMax(moi) ? vieHero : null, vieAdv < 1 ? vieAdv * hpMax(contre) : null],
+    survie: cb.survie || 0,
     corrompu: [false, !!cb.corrompu],
+    echelle: [1, phase === 2 ? cb.echelle || 1 : 1],
+    allie: allieDe(cb, h),
     perdable: libre,
-    texteFin: (gagne) => (gagne
-      ? (dernier ? `<p class="sous">${esc(sc.titre)} — ${esc(sc.sous)}</p>` : `<p class="sous">Adversaire ${k + 1} sur ${serie.length} à terre ! Au suivant : <b>${esc(PERSO[serie[k + 1]].nom)}</b> (+${REPOS_SERIE * 100} % de vie)</p>`)
-      : libre ? '<p class="sous">Il était bien trop fort… mais l’histoire continue.</p>'
-        : `<p class="sous">L’histoire n’est pas finie. Relevez-vous !${serie ? ' La vague recommence au début.' : ''} <small>(partie sauvegardée)</small></p>`),
-    suite: (gagne, fin) => {
-      if (gagne && !dernier) { combatHistoire(sc, adv, bonus, k + 1, Math.min(hpMax(moi), fin.hpHero + hpMax(moi) * REPOS_SERIE)); return; }
-      if (gagne) h.victoires += 1;
+    texteFin: (gagne, c) => {
+      if (!gagne) {
+        return libre ? '<p class="sous">Il était bien trop fort… mais l’histoire continue.</p>'
+          : `<p class="sous">L’histoire n’est pas finie. Relevez-vous !${serie || phase === 2 ? ' Le combat reprend au début.' : ''} <small>(partie sauvegardée)</small></p>`;
+      }
+      if (!dernier) {
+        return serie && k < serie.length - 1
+          ? `<p class="sous">Adversaire ${k + 1} sur ${serie.length} à terre ! Au suivant : <b>${esc(PERSO[serie[k + 1]].nom)}</b> (+${REPOS_SERIE * 100} % de vie)</p>`
+          : '<p class="sous">… Mais ce n’est pas fini.</p>';
+      }
+      const note = noteCombat(c);
+      return `<p class="note-combat note-${note}"><b>${note}</b><span>${{ S: 'Parfait !', A: 'Excellent', B: 'Bien', C: 'De justesse' }[note]}</span></p><p class="sous">${esc(sc.titre)} — ${esc(sc.sous)}</p>`;
+    },
+    suite: async (gagne, finC) => {
+      if (gagne && serie && k < serie.length - 1) { combatHistoire(sc, adv, bonus, k + 1, Math.min(hpMax(moi), finC.hpHero + hpMax(moi) * REPOS_SERIE), phase); return; }
+      // Le boss se relève : la deuxième phase.
+      if (gagne && base.phase2 && phase === 1) {
+        const r = await cineHistoire([{ decor: sc.arene }, { entre: base.joueur || 'hero', cote: 'g', comment: 'place', p: 'garde' }, { entre: base.adv, cote: 'd', comment: 'place', p: 'touche' }, ...base.phase2.cine], h, { ...h.drapeaux }, 'tension');
+        if (r === 'quitte') { quitterHistoire(); return; }
+        combatHistoire(sc, adv, bonus, 0, Math.min(hpMax(moi), finC.hpHero + hpMax(moi) * REPOS_PHASE), 2);
+        return;
+      }
+      if (gagne) {
+        h.victoires += 1;
+        const note = noteCombat(finC.c);
+        h.notes = h.notes || {};
+        if (!h.notes[sc.id] || RANG[note] > RANG[h.notes[sc.id]]) h.notes[sc.id] = note;
+      }
       h.phase = gagne ? 'apres' : 'apresDefaite';
       sauver(true);
       apresCombat(sc, gagne);
@@ -784,13 +856,35 @@ function finHistoire() {
   partie = null;
   succes.debloquer('street-campagne');
   majMenu();
-  toast('📖 Histoire terminée ! Onyx vous attend au Tournoi, Némésis au sommet de la Tour.', 4500);
+  montrerBilan(h);
+}
+
+/** Le bilan de l'histoire : la fin obtenue, les notes de chaque combat, ce qui s'est débloqué. */
+function montrerBilan(h) {
+  const notes = Object.values(h.notes || {});
+  const compte = (n) => notes.filter((x) => x === n).length;
+  const moyenne = notes.length ? notes.reduce((a, n) => a + RANG[n], 0) / notes.length : 0;
+  const lettre = moyenne >= 3.5 ? 'S' : moyenne >= 2.6 ? 'A' : moyenne >= 1.8 ? 'B' : 'C';
+  const finObtenue = HIST.finDe(h.drapeaux);
+  const nomsFins = { vraie: '🌅 La vraie fin', heroique: '🏆 La fin héroïque', solitaire: '🌑 La fin solitaire' };
+  const amis = HIST.ALLIES.filter((id) => (h.drapeaux[`aff_${id}`] || 0) >= 2).map((id) => PERSO[role(h, id)].nom);
+  $('etape').innerHTML = `<h2>📊 Bilan de l’histoire</h2>
+    <p class="sous">${esc(ficheDe(h).nom)} · ${duree(h.temps)} de jeu · ${h.victoires} victoires${h.drapeaux.legende ? ' · ⭐ mode Légende' : ''}</p>
+    <p class="note-combat note-${lettre}"><b>${lettre}</b><span>note moyenne</span></p>
+    <p class="sous">${['S', 'A', 'B', 'C'].map((n) => `${n} × ${compte(n)}`).join(' · ')}</p>
+    <p class="regle">${nomsFins[finObtenue]}</p>
+    <p class="sous">Vos plus proches alliés : ${amis.length ? amis.map(esc).join(', ') : 'personne… (la fin aurait pu être plus belle)'}</p>
+    ${finObtenue !== 'vraie' ? '<p class="sous" style="font-size:.85rem">Il existe une autre fin… Pardonner, tendre la main, garder ses amis près de soi.</p>' : ''}
+    <p class="sous">⭐ Le <b>mode Légende</b> est débloqué : rejouez l’histoire, plus difficile, avec des dialogues en plus.</p>
+    <div class="ligne-boutons"><button class="btn rouge" data-ferme="ov-etape">Continuer</button></div>`;
+  ouvrir('ov-etape');
+  son('victoire');
 }
 
 /** Tout remettre à zéro : combattants débloqués, rencontres, sauvegardes, tournoi et tour en cours. */
 function reinitialiser() {
-  if (!confirm('Tout réinitialiser ?\n\nLes combattants débloqués, les rencontres, les sauvegardes de l’histoire, le tournoi et la tour en cours seront effacés.')) return;
-  for (const cle of [CLE_DEBLOQUES, CLE_CROISES, CLE_SAUVEGARDES, CLE_HISTOIRE, CLE_TOURNOI, CLE_TOUR]) ecrire(cle, null);
+  if (!confirm('Tout réinitialiser ?\n\nLes combattants débloqués, les rencontres, le Codex, les sauvegardes de l’histoire, le tournoi et la tour en cours seront effacés.')) return;
+  for (const cle of [CLE_DEBLOQUES, CLE_CROISES, CLE_SAUVEGARDES, CLE_HISTOIRE, CLE_TOURNOI, CLE_TOUR, 'street.codex', 'street.codex.scenes']) ecrire(cle, null);
   portraitsGrille.clear();
   animMenu.a = null;
   majMenu();
@@ -1015,7 +1109,11 @@ function demarrerCombat(o) {
   const normales = ARENES.filter((a) => !a.boss);
   const arene = o.arene === 'hasard' || !o.arene ? normales[Math.floor(Math.random() * normales.length)].id : o.arene;
   config.areneId = arene;
-  combat = creerCombat({ p1: o.p1, p2: o.p2, ia: o.ia || {}, entrainement: o.mode === 'entrainement', graine: Date.now(), victoires: o.victoires || 2, vie: o.vie || [] });
+  combat = creerCombat({ p1: o.p1, p2: o.p2, ia: o.ia || {}, entrainement: o.mode === 'entrainement', graine: Date.now(), victoires: o.victoires || 2, vie: o.vie || [], survie: o.survie || 0 });
+  allieUtilise = false;
+  $('allie-pret').hidden = !o.allie;
+  if (o.allie) $('allie-pret').innerHTML = `🤝 <b style="color:${PERSO[o.allie].c.c1}">${esc(PERSO[o.allie].nom)}</b> · touche H`;
+  $('b-allie').hidden = !o.allie || !tactile;
   fx = FX.creerEffets();
   hud = creerHud();
   stats = { comboMax: [0, 0], ultiKo: false, perfect: false };
@@ -1090,6 +1188,17 @@ function pasDeCombat() {
   }
 }
 
+/** Appeler l'allié à l'aide : une fois par combat. */
+let allieUtilise = false;
+function appelerAllie() {
+  if (!config?.allie || allieUtilise || !combat) return;
+  if (!assister(combat, 0, config.allie, 18)) return;
+  allieUtilise = true;
+  $('allie-pret').hidden = true;
+  $('b-allie').hidden = true;
+  son('ulti');
+}
+
 /** L'annonceur : « Round 1 », « Combat ! », « K.O. ! »… */
 const PAROLES_ANNONCE = { 'FIGHT !': 'Combat !', 'K.O. !': 'Ko !', 'PERFECT !': 'Parfait !', 'TEMPS !': 'Temps !' };
 function annoncer(texte) {
@@ -1138,7 +1247,7 @@ function dessiner() {
     dessinerCombattant(g, p, {
       x: j.x, y: j.y, dir: j.dir, pose: nomPose, t: j.anim, p: progres, enLAir: !j.sol, alpha,
       aura: j.etat === 'ulti' ? 1 : j.etat === 'victoire' && finale ? 0.75 + Math.sin(t / 6) * 0.2 : j.sp >= 100 ? 0.45 + Math.sin(t / 6) * 0.2 : 0,
-      statuts: Object.keys(j.statuts).length ? j.statuts : null, eclat: eclats[j.n] * 0.8, corrompu: !!config.corrompu?.[j.n],
+      statuts: Object.keys(j.statuts).length ? j.statuts : null, eclat: eclats[j.n] * 0.8, corrompu: !!config.corrompu?.[j.n], echelle: config.echelle?.[j.n] || 1,
     });
     // Le bouclier, la parade : un halo.
     if (j.garde || j.armure > 0) {
@@ -1338,6 +1447,20 @@ function brancher() {
     if (b.dataset.nouvelle !== undefined) { prep.slot = Number(b.dataset.nouvelle); ouvrirDifficultes('histoire'); }
     if (b.dataset.continuer !== undefined) continuerHistoire(Number(b.dataset.continuer));
     if (b.dataset.journal !== undefined) ouvrirJournal(Number(b.dataset.journal));
+    if (b.dataset.legende !== undefined) {
+      const k = Number(b.dataset.legende);
+      const ancien = sauvegardes()[k];
+      if (!confirm('Commencer le mode Légende ? L’histoire recommence, plus difficile, avec le même héros. (Cette sauvegarde terminée sera remplacée.)')) return;
+      prep.slot = k;
+      prep.difficulte = ancien.difficulte;
+      const h = nouvellePartie(ancien.hero, ancien.difficulte);
+      if (ancien.createur) h.createur = ancien.createur;
+      h.drapeaux.legende = true;
+      partie = { slot: k, h, depuis: Date.now() };
+      inscrireHeros(h);
+      sauver(true);
+      jouerScene();
+    }
     if (b.dataset.modifier !== undefined) { const k = Number(b.dataset.modifier); ouvrirCreateur(sauvegardes()[k].createur, 'modifier', k); }
     if (b.dataset.efface !== undefined) {
       const k = Number(b.dataset.efface);
@@ -1462,6 +1585,7 @@ function brancher() {
     if (e.target.closest?.('input, textarea')) return;
     const k = e.key.toLowerCase();
     if ($('s-cine').classList.contains('is-active')) {
+      if (k === ' ' && infiltrationEnCours()) { e.preventDefault(); tenirInfiltration(true); return; }
       if (k === 'enter' || k === ' ') { e.preventDefault(); avancerCine(); }
       if (['1', '2', '3'].includes(k)) choisirCine(Number(k) - 1);
       if (k === 'escape') passerCine();
@@ -1474,11 +1598,16 @@ function brancher() {
         if (enPause) ouvrir('ov-pause'); else { fermer('ov-pause'); derniere = performance.now(); }
         return;
       }
+      if (k === 'h') { appelerAllie(); return; }
       if (k.startsWith('arrow') || k === ' ') e.preventDefault();
     }
     touches.add(k);
   });
-  addEventListener('keyup', (e) => touches.delete(e.key.toLowerCase()));
+  addEventListener('keyup', (e) => { touches.delete(e.key.toLowerCase()); if (e.key === ' ') tenirInfiltration(false); });
+  $('s-cine').addEventListener('pointerdown', () => tenirInfiltration(true));
+  for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) $('s-cine').addEventListener(ev, () => tenirInfiltration(false));
+  $('b-allie').addEventListener('pointerdown', (e) => { e.preventDefault(); appelerAllie(); });
+  $('b-codex').addEventListener('click', () => { son('choix'); CODEX.ouvrir(); });
   addEventListener('blur', () => touches.clear());
   addEventListener('resize', () => {
     if ($('s-combat').classList.contains('is-active')) dimensionner();

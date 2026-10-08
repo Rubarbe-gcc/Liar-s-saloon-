@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { THEMES } from '../public/shared/musique.js';
 
 import { PERSO, PERSOS, ROSTER, BOSS, SECRETS, FIGURANTS } from '../public/shared/street/persos.js';
-import { ACTES, SCENES, DOUBLURE, TOUR_BOSS, TOURNOI_FINALE, TOUR_VICTOIRE, victoireTournoi, MUSIQUES, musiqueDe } from '../public/games/street-combat/js/histoire.js';
+import { ACTES, SCENES, DOUBLURE, TOUR_BOSS, TOURNOI_FINALE, TOUR_VICTOIRE, victoireTournoi, MUSIQUES, musiqueDe, ALLIES, finDe } from '../public/games/street-combat/js/histoire.js';
 
 const ARENES = new Set([...readFileSync(new URL('../public/games/street-combat/js/arenes.js', import.meta.url), 'utf8').matchAll(/\{ id: '(\w+)', nom:/g)].map((m) => m[1]));
 const NIVEAUX = ['facile', 'normal', 'difficile', 'impossible'];
@@ -56,7 +56,10 @@ test('le scénario : dix actes, des combats, des vagues de soldats et des scène
       assert.ok(sc.combat.adv === 'hero' || PERSO[sc.combat.adv], `${sc.id} : ${sc.combat.adv}`);
       if (sc.combat.issue) assert.ok(sc.apresDefaite, `${sc.id} : et si on perd ?`);
       // On incarne quelqu’un d’autre : un vrai combattant ; un corrompu : jamais un soldat de l’Horloge.
-      if (sc.combat.joueur) assert.ok(PERSOS.includes(PERSO[sc.combat.joueur]), `${sc.id} : ${sc.combat.joueur}`);
+      // (ou, dans un flashback, quelqu’un du passé)
+      if (sc.combat.joueur) assert.ok(PERSO[sc.combat.joueur] && (PERSOS.includes(PERSO[sc.combat.joueur]) || sc.combat.regle?.startsWith('Flashback')), `${sc.id} : ${sc.combat.joueur}`);
+      for (const v of sc.combat.variantes || []) assert.ok(v.si, `${sc.id} : une variante sans condition`);
+      if (sc.combat.phase2) assert.ok(sc.combat.phase2.cine?.length, `${sc.id} : la phase 2 sans cinématique`);
       if (sc.combat.corrompu) assert.ok(!PERSO[sc.combat.adv]?.figurant && !sc.combat.serie, sc.id);
       // Affronter son propre héros : seulement en incarnant quelqu’un d’autre.
       if (sc.combat.adv === 'hero') assert.ok(sc.combat.joueur, sc.id);
@@ -71,14 +74,23 @@ test('les choix : chaque condition dépend d’un drapeau qu’un choix (ou une 
   for (const sc of SCENES) {
     if (sc.si) lus.push([sc.id, sc.si]);
     if (sc.combat?.bonus) lus.push([sc.id, sc.combat.bonus.si]);
+    for (const v of sc.combat?.variantes || []) lus.push([sc.id, v.si]);
+    if (sc.combat?.allieSi) lus.push([sc.id, sc.combat.allieSi]);
     for (const l of listes(sc)) for (const e of toutes(l)) {
-      if (e.choix) for (const c of e.choix) if (c.drapeau) leves.add(c.drapeau);
+      if (e.choix) for (const c of e.choix) { if (c.drapeau) leves.add(c.drapeau); for (const id of Object.keys(c.affinite || {})) leves.add(`aff_${id}`); }
+      if (e.qte?.drapeau) leves.add(e.qte.drapeau);
+      if (e.infiltration?.drapeau) leves.add(e.infiltration.drapeau);
       if (e.marque) leves.add(e.marque);
       if (e.si) lus.push([sc.id, e.si]);
     }
   }
   assert.ok(leves.size >= 5, 'au moins cinq décisions qui comptent');
-  for (const [id, si] of lus) assert.ok(leves.has(si.replace(/^!/, '')), `${id} : le drapeau ${si} n’est jamais levé`);
+  // Ceux que le jeu lève lui-même : la fin méritée, le mode Légende.
+  for (const x of ['fin_vraie', 'fin_heroique', 'fin_solitaire', 'legende']) leves.add(x);
+  for (const [id, si] of lus) for (const c of si.split('&')) {
+    const nom = c.trim().replace(/^!/, '').replace(/\s*(>=|<=|>|<|==).*$/, '');
+    assert.ok(leves.has(nom), `${id} : le drapeau ${nom} n’est jamais levé`);
+  }
   // Les deux chemins de l'acte III : un seul des deux se joue.
   const chemins = SCENES.filter((s) => s.si);
   assert.ok(chemins.some((s) => s.si.startsWith('!')) && chemins.some((s) => !s.si.startsWith('!')));
@@ -102,9 +114,12 @@ test('les déblocages : les boss en les battant, Vorn, Sablia, Éclipse en route
   for (const id of [SECRETS.tournoi, SECRETS.tour]) assert.ok(croises.includes(id) && !debloques.includes(id), id);
   // Un boss croisé avant d'être débloqué.
   assert.ok(croises.includes(BOSS.difficile) && croises.includes('vorn'));
-  // La dernière scène : l'épilogue, après Kaïros.
-  assert.equal(SCENES.at(-1).id, 'epilogue');
-  assert.equal(SCENES.filter((sc) => sc.combat).at(-1).combat.adv, SECRETS.histoire, 'le dernier combat : Kaïros');
+  // Après Kaïros : l'épilogue, la vraie fin, la scène après le générique, le super-boss caché.
+  const ids = SCENES.map((sc) => sc.id);
+  assert.ok(ids.indexOf('horloge') < ids.indexOf('epilogue') && ids.indexOf('epilogue') < ids.indexOf('vraie-fin') && ids.indexOf('vraie-fin') < ids.indexOf('post-generique'));
+  assert.equal(SCENES.at(-1).id, 'coeur');
+  assert.equal(SCENES.at(-1).si, 'fin_vraie', 'le super-boss : seulement après la vraie fin');
+  assert.equal(SCENES.filter((sc) => sc.combat && !sc.si).at(-1).combat.adv, SECRETS.histoire, 'le dernier combat de tous : Kaïros');
 });
 
 test('la doublure : quel que soit le héros, personne ne se croise lui-même', () => {
@@ -113,7 +128,13 @@ test('la doublure : quel que soit le héros, personne ne se croise lui-même', (
     if (sc.combat && sc.combat.adv !== 'hero') acteurs.add(sc.combat.adv);
     for (const l of listes(sc)) for (const e of toutes(l)) for (const k of ['entre', 'dit']) if (e[k] && e[k] !== 'hero') acteurs.add(e[k]);
   }
-  assert.ok(!acteurs.has(DOUBLURE), 'la doublure ne joue aucun rôle à elle');
+  // La doublure a son rôle (le gardien) : dans ses scènes, aucun autre combattant de base, pour qu'elle ne croise jamais un héros qu'elle remplace.
+  for (const sc of SCENES) {
+    const ici = new Set();
+    for (const l of listes(sc)) for (const e of toutes(l)) for (const k of ['entre', 'dit']) if (e[k] && e[k] !== 'hero') ici.add(e[k]);
+    if (sc.combat && sc.combat.adv !== 'hero') ici.add(sc.combat.adv);
+    if (ici.has(DOUBLURE)) for (const id of ici) assert.ok(id === DOUBLURE || !ROSTER.includes(PERSO[id]), `\${sc.id} : \${id} avec la doublure`);
+  }
   assert.ok(ROSTER.some((p) => p.id === DOUBLURE));
   // Les boss et les secrets ne sont jamais le héros de l'histoire : ils peuvent garder leur rôle.
   for (const id of acteurs) assert.ok(PERSO[id], id);
@@ -129,4 +150,16 @@ test('la musique : chaque scène a la sienne, et chaque musique existe', () => {
   // Kaïros : la musique du combat final ; les grands boss, la musique de boss.
   assert.equal(musiqueDe(SCENES.find((sc) => sc.id === 'horloge'), 'combat'), 'final');
   assert.equal(musiqueDe(SCENES.find((sc) => sc.id === 'trone'), 'combat'), 'boss');
+});
+
+test('les fins : la vraie se mérite, la solitaire se subit', () => {
+  const bons = { kairos_main: true, kira_pardon: true, ryuken_raisonne: true, aff_ryuken: 4, aff_celestia: 2, aff_shadowkira: 3 };
+  assert.equal(finDe(bons), 'vraie');
+  assert.equal(finDe({ ...bons, ryuken_raisonne: false }), 'heroique');
+  assert.equal(finDe({}), 'solitaire');
+  assert.equal(finDe({ kairos_main: true }), 'heroique', 'tendre la main à Kaïros évite la solitude');
+  // Les choix de l'histoire peuvent mener à la vraie fin : assez d'occasions de se rapprocher de chaque allié.
+  const gains = {};
+  for (const sc of SCENES) for (const l of listes(sc)) for (const e of toutes(l)) for (const c of e.choix || []) for (const [id, n] of Object.entries(c.affinite || {})) gains[id] = Math.max(gains[id] || 0, 0) + Math.max(0, n);
+  assert.ok(ALLIES.filter((id) => (gains[id] || 0) >= 2).length >= 5, JSON.stringify(gains));
 });

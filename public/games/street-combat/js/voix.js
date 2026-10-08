@@ -62,6 +62,12 @@ export const VOIX = {
   soldat: { genre: 'h', hauteur: 0.6, vitesse: 1.1 },
   sentinelle: { genre: 'h', hauteur: 0.35, vitesse: 0.9 },
   chasseur: { genre: 'h', hauteur: 0.85, vitesse: 1.15 },
+  hemera: { genre: 'f', hauteur: 1.2, vitesse: 0.95 },
+  premier: { genre: 'h', hauteur: 0.8, vitesse: 0.88 },
+  maitre: { genre: 'h', hauteur: 0.75, vitesse: 0.82 },
+  vornjeune: { genre: 'h', hauteur: 0.85, vitesse: 1.05 },
+  pillard: { genre: 'h', hauteur: 0.9, vitesse: 1.15 },
+  habitant: { genre: 'h', hauteur: 1.0, vitesse: 1.1 },
 };
 /** La voix d'un combattant (le héros créé porte la sienne). */
 export const voixDe = (p) => (p?.voix || VOIX[p?.id] || { genre: 'h', hauteur: 1, vitesse: 1 });

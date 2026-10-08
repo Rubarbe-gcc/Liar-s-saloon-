@@ -30,6 +30,14 @@
  *   { retire: [ids] }                                   ils disparaissent d'un coup
  *   { calme: true }                                     tous les effets s'arrêtent
  *   { musique: 'triste' | null }                        la musique change (null : le silence)
+ *
+ * Pour jouer dans les cinématiques :
+ *   { qte: { texte, duree, reussi: [...], rate: [...], drapeau } }   appuyer à temps (rater lève le drapeau)
+ *   { choix: [...], chrono: 5, defaut: 1 }                          un choix à faire vite (sinon, le défaut)
+ *   { choix: [{ …, affinite: { ryuken: 2 } }] }                     un choix qui rapproche d'un allié (« aff_ryuken »)
+ *   { si: 'aff_ryuken>=2' }                                         une condition sur l'affinité
+ *   { infiltration: { garde, drapeau, reussi: [...], rate: [...] } } avancer sans se faire voir
+ *   effet 'souvenir' : un flashback (sépia, vignette), jusqu'au prochain { calme }
  *   { titre, film: true }                               un titre façon générique de film
  *   auto: n (sur narre, dit, titre)                     passe tout seul au bout de n images
  *   effets : onde, debris, horloge-brisee, rayons, pilier, braises, eclairs, confettis,
@@ -69,16 +77,16 @@ let scene = null;
 let musique = 'calme';
 export const musiqueCine = () => musique;
 
-export function jouerCine(etapes, { hero, roles = {}, drapeaux = {}, debloquer = () => {}, croiser = () => {}, quittable = false, musique: m } = {}) {
+export function jouerCine(etapes, { hero, roles = {}, drapeaux = {}, debloquer = () => {}, croiser = () => {}, quittable = false, musique: m, vu = () => {} } = {}) {
   if (m !== undefined) musique = m;
   return new Promise((fini) => {
     if (scene) terminer('quitte');
     scene = {
-      etapes: [...etapes], i: 0, hero, roles, drapeaux, debloquer, croiser, fini,
+      etapes: [...etapes], i: 0, hero, roles, drapeaux, debloquer, croiser, fini, vu, infil: null,
       decor: 'dojo', acteurs: new Map(), effets: [], t: 0, attente: null, secousse: 0, rapide: false, fondu: null,
       cam: { ...CAMERA, anim: null }, vitesse: 1, bandes: 46, bandesCible: 46,
     };
-    for (const id of ['cine-boite', 'cine-titre', 'cine-debloque', 'cine-choix']) $(id).hidden = true;
+    for (const id of ['cine-boite', 'cine-titre', 'cine-debloque', 'cine-choix', 'cine-qte', 'cine-infil']) $(id).hidden = true;
     $('cine-lieu').hidden = true;
     $('cine-quitter').hidden = !quittable;
     dimensionner();
@@ -94,7 +102,15 @@ const remplir = (texte) => texte
   .replace(/\{h:([^|}]*)\|([^}]*)\}/g, (m, masc, fem) => (feminin() ? fem : masc))
   .replace(/\{e\}/g, () => (feminin() ? 'e' : ''))
   .replace(/\{(\w+)\}/g, (m, id) => (id === 'hero' ? PERSO[scene.hero]?.nom || 'toi' : PERSO[qui(id)]?.nom || m));
-const vrai = (cond, d) => (cond.startsWith('!') ? !d[cond.slice(1)] : !!d[cond]);
+/** Une condition : 'drapeau', '!drapeau', 'aff_ryuken>=2'… plusieurs avec « & ». */
+export function vrai(cond, d) {
+  return String(cond).split('&').every((c) => {
+    const m = c.trim().match(/^(\w+)\s*(>=|<=|>|<|==)\s*(-?\d+)$/);
+    if (m) { const v = Number(d[m[1]] || 0); const n = Number(m[3]); return { '>=': v >= n, '<=': v <= n, '>': v > n, '<': v < n, '==': v === n }[m[2]]; }
+    const x = c.trim();
+    return x.startsWith('!') ? !d[x.slice(1)] : !!d[x];
+  });
+}
 
 /* ------------------------------------------------------------------ */
 /* Les étapes                                                          */
@@ -151,6 +167,8 @@ function suivante() {
     S.attente = { fin: S.t + 50 };
     return;
   }
+  if (e.qte) { montrerQte(e.qte); return; }
+  if (e.infiltration) { commencerInfiltration(e.infiltration); return; }
   if (e.choix) { montrerChoix(e); return; }
   if (e.debloque) { montrerCarte(e.debloque, 'debloque'); return; }
   if (e.croise) { montrerCarte(e.croise, 'croise', e.indice); return; }
@@ -211,6 +229,7 @@ function nouvelActeur(e) {
   if (comment === 'apparait' || comment === 'teleport') a.alpha = 0;
   a.poseFinale = e.p || 'repos';
   S.acteurs.set(id, a);
+  if (!a.ombre) S.vu(id);
   return a;
 }
 
@@ -229,7 +248,7 @@ function terminer(comment) {
   taire();
   scene = null;
   cancelAnimationFrame(raf);
-  for (const id of ['cine-boite', 'cine-titre', 'cine-debloque', 'cine-choix', 'cine-lieu']) $(id).hidden = true;
+  for (const id of ['cine-boite', 'cine-titre', 'cine-debloque', 'cine-choix', 'cine-lieu', 'cine-qte', 'cine-infil']) $(id).hidden = true;
   if (S) S.fini(comment);
 }
 
@@ -237,6 +256,8 @@ function terminer(comment) {
 export function avancerCine() {
   const S = scene;
   if (!S) return;
+  if (S.attente?.qte) { finirQte(true); return; }
+  if (S.attente?.infil) return;
   if (S.ecrit && S.ecrit.n < S.ecrit.texte.length) { S.ecrit.n = S.ecrit.texte.length; return; }
   if (S.attente?.tap) {
     S.attente = null;
@@ -252,7 +273,7 @@ export function avancerCine() {
 /** Passer : on saute les dialogues, mais pas les choix ni les combattants rencontrés. */
 export function passerCine() {
   const S = scene;
-  if (!S || S.attente?.choix) return;
+  if (!S || S.attente?.choix || S.attente?.qte || S.attente?.infil) return;
   S.rapide = true;
   taire();
   S.fondu = null;
@@ -337,6 +358,75 @@ function montrerLieu(texte) {
   lieuT = setTimeout(() => { l.hidden = true; }, 4200);
 }
 
+/* ---- Les QTE : appuyer à temps ---- */
+
+function montrerQte(q) {
+  const S = scene;
+  if (S.rapide) { S.etapes.splice(S.i, 0, ...(q.reussi || [])); suivante(); return; }
+  const d = $('cine-qte');
+  d.innerHTML = `<b>${remplir(q.texte || 'MAINTENANT !')}</b><span>Touchez l’écran ou appuyez sur ESPACE</span><div class="chrono"><i style="animation-duration:${(q.duree || 70) / 60}s"></i></div>`;
+  d.hidden = false;
+  son('annonce');
+  S.vitesse = 0.3;
+  S.attente = { qte: q, fin: S.t + (q.duree || 70) };
+}
+
+function finirQte(reussi) {
+  const S = scene;
+  const q = S.attente.qte;
+  $('cine-qte').hidden = true;
+  S.vitesse = 1;
+  S.attente = null;
+  if (!reussi && q.drapeau) S.drapeaux[q.drapeau] = true;
+  son(reussi ? 'valide' : 'ko');
+  if (reussi) S.effets.push({ nom: 'flash', t: 0, duree: 16 });
+  S.etapes.splice(S.i, 0, ...((reussi ? q.reussi : q.rate) || []));
+  suivante();
+}
+
+/* ---- L'infiltration : avancer quand le garde ne regarde pas ---- */
+
+function commencerInfiltration(o) {
+  const S = scene;
+  if (S.rapide) { S.etapes.splice(S.i, 0, ...(o.reussi || [])); suivante(); return; }
+  const h = S.acteurs.get(S.hero);
+  if (h) { h.x = 110; h.cible = 110; h.dir = 1; h.entree = 1; }
+  S.infil = { o, tenu: false, t0: S.t, vu: 0 };
+  $('cine-infil').hidden = false;
+  S.attente = { infil: true };
+}
+
+/** Tenir pour avancer (la barre d'espace, ou le doigt sur l'écran). */
+export function tenirInfiltration(v) {
+  if (scene?.infil) scene.infil.tenu = v;
+}
+export const infiltrationEnCours = () => !!scene?.infil;
+
+/** Où tombe la lumière du garde, en ce moment. */
+const lumiere = (S) => 430 + Math.sin((S.t - S.infil.t0) / 48) * 300;
+
+function avancerInfiltration(S) {
+  const I = S.infil;
+  const h = S.acteurs.get(S.hero);
+  if (!h) return;
+  const cx = lumiere(S);
+  if (I.tenu) { h.x += 2.2; h.cible = h.x; h.pose = 'marche'; } else h.pose = 'accroupi';
+  // Bouger dans la lumière : repéré.
+  if (I.tenu && Math.abs(h.x - cx) < 85) I.vu += 1; else I.vu = Math.max(0, I.vu - 1);
+  const fin = (reussi) => {
+    S.infil = null;
+    $('cine-infil').hidden = true;
+    S.attente = null;
+    h.pose = 'repos';
+    if (!reussi && I.o.drapeau) S.drapeaux[I.o.drapeau] = true;
+    son(reussi ? 'valide' : 'ko');
+    S.etapes.splice(S.i, 0, ...((reussi ? I.o.reussi : I.o.rate) || []));
+    suivante();
+  };
+  if (I.vu > 6) fin(false);
+  else if (h.x >= 640) fin(true);
+}
+
 function montrerChoix(e) {
   const S = scene;
   const boite = $('cine-choix');
@@ -344,13 +434,15 @@ function montrerChoix(e) {
   boite.hidden = false;
   $('cine-boite').hidden = true;
   son('annonce');
-  S.attente = { choix: true };
+  S.attente = { choix: true, fin: e.chrono && !S.rapide ? S.t + e.chrono * 60 : undefined, defaut: e.defaut ?? e.choix.length - 1 };
+  if (e.chrono && !S.rapide) boite.insertAdjacentHTML('afterbegin', `<div class="chrono"><i style="animation-duration:${e.chrono}s"></i></div>`);
   boite.onclick = (ev) => {
     const b = ev.target.closest('[data-k]');
     if (!b || scene !== S) return;
     ev.stopPropagation();
     const c = e.choix[Number(b.dataset.k)];
     if (c.drapeau) S.drapeaux[c.drapeau] = true;
+    for (const [id, n] of Object.entries(c.affinite || {})) S.drapeaux[`aff_${id}`] = (S.drapeaux[`aff_${id}`] || 0) + n;
     boite.hidden = true;
     son('valide');
     S.attente = null;
@@ -442,10 +534,13 @@ function avancer(S) {
     if (a.entree === 1) a.pose = a.poseFinale;
   }
   for (const f of S.effets) f.t += S.vitesse;
-  S.effets = S.effets.filter((f) => f.t < f.duree || f.nom === 'gel' || f.nom === 'nuit' || f.nom === 'aube' || f.nom === 'fracture');
+  S.effets = S.effets.filter((f) => f.t < f.duree || ['gel', 'nuit', 'aube', 'fracture', 'souvenir'].includes(f.nom));
   S.secousse *= 0.88;
   // Ce qu'on attend est fini : la suite.
   const at = S.attente;
+  if (at?.qte && S.t >= at.fin) { finirQte(false); return; }
+  if (at?.choix && at.fin !== undefined && S.t >= at.fin) { const b = $('cine-choix').querySelectorAll('[data-k]')[at.defaut]; at.fin = undefined; b?.click(); return; }
+  if (S.infil) avancerInfiltration(S);
   if (at && at.tap && at.auto !== undefined && S.t >= at.auto && !(S.ecrit && S.ecrit.n < S.ecrit.texte.length) && !parleEncore()) { avancerCine(); return; }
   if (at && !at.tap && !at.choix && !at.fondu) {
     const fini = (at.fin !== undefined && S.t >= at.fin) || (at.acteur && at.acteur.entree >= 1) || (at.sortie && !S.acteurs.has(at.sortie.id));
@@ -454,6 +549,7 @@ function avancer(S) {
 }
 
 function dessiner(S) {
+  if (S.infil) S.infil.dessine = false;
   const cv = $('cine-canvas');
   const g = cv.getContext('2d');
   const e = cv.width / L;
@@ -468,6 +564,16 @@ function dessiner(S) {
   for (const f of S.effets) effetFond(g, f, S);
   // Les combattants, celui qui parle un peu mis en avant.
   for (const a of S.acteurs.values()) {
+    if (S.infil && a.id === S.hero && !S.infil.dessine) {
+      const cx = lumiere(S);
+      S.infil.dessine = true;
+      g.save(); g.globalCompositeOperation = 'lighter';
+      const gr = g.createLinearGradient(0, 300, 0, SOL);
+      gr.addColorStop(0, 'rgba(255,240,150,0.05)'); gr.addColorStop(1, `rgba(255,240,150,${S.infil.vu ? 0.5 : 0.28})`);
+      g.fillStyle = gr;
+      g.beginPath(); g.moveTo(780, 300); g.lineTo(cx - 85, SOL + 6); g.lineTo(cx + 85, SOL + 6); g.closePath(); g.fill();
+      g.restore();
+    }
     const parle = S.ecrit && S.ecrit.qui === a.id && S.ecrit.n < S.ecrit.texte.length;
     dessinerCombattant(g, PERSO[a.id], {
       x: a.x, y: a.y, dir: a.dir, pose: a.pose, t: a.t + (parle ? Math.floor(S.t / 4) : 0), p: 1, alpha: a.alpha,
@@ -600,6 +706,20 @@ function effetFond(g, f, S) {
 /** Les effets devant (l'éclair, le flash, le temps figé). */
 function effetDevant(g, f, S) {
   const v = 1 - f.t / f.duree;
+  if (f.nom === 'souvenir') {
+    // Un souvenir : sans couleurs, sépia, les bords dans l'ombre, un grain qui scintille.
+    const a = Math.min(1, f.t / 30);
+    g.save();
+    g.globalAlpha = a;
+    g.globalCompositeOperation = 'saturation'; g.fillStyle = '#808080'; g.fillRect(-L, -H, L * 3, H * 3);
+    g.globalCompositeOperation = 'multiply'; g.fillStyle = '#e8c890'; g.fillRect(-L, -H, L * 3, H * 3);
+    g.globalCompositeOperation = 'source-over';
+    const vg = g.createRadialGradient(L / 2, H / 2, 200, L / 2, H / 2, 620);
+    vg.addColorStop(0, 'rgba(40,24,8,0)'); vg.addColorStop(1, 'rgba(40,24,8,0.7)');
+    g.fillStyle = vg; g.fillRect(0, 0, L, H);
+    for (let i = 0; i < 40; i++) { g.fillStyle = rgba('#fff4e0', 0.12); g.fillRect(hf(i + Math.floor(S.t / 3) * 7) * L, hf(i * 3 + Math.floor(S.t / 3)) * H, 2, 2); }
+    g.restore();
+  }
   if (f.nom === 'onde') {
     // L'onde de choc : des anneaux qui s'élargissent, un éclair blanc.
     const x = f.x ?? L / 2; const y = f.y ?? 380;

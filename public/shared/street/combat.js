@@ -95,9 +95,10 @@ function nouveauJoueur(id, n) {
 /**
  * @param {{ p1: string, p2: string, ia?: { 0?: string, 1?: string }, entrainement?: boolean, graine?: any,
  *           victoires?: number, vie?: [number|null, number|null] }} o
- *   victoires : les rounds à gagner ; vie : la vie de départ de chacun (la Tour des défis la garde d'un combat à l'autre).
+ *   victoires : les rounds à gagner ; vie : la vie de départ de chacun (la Tour des défis la garde d'un combat à l'autre) ;
+ *   survie : un combat de survie (mode Histoire) — tenir ce nombre de secondes suffit à gagner.
  */
-export function creerCombat({ p1, p2, ia = {}, entrainement = false, graine = Date.now(), victoires = VICTOIRES, vie = [] } = {}) {
+export function creerCombat({ p1, p2, ia = {}, entrainement = false, graine = Date.now(), victoires = VICTOIRES, vie = [], survie = 0 } = {}) {
   const c = {
     v: 1, f: 0, alea: graineDe(graine), entrainement,
     joueurs: [nouveauJoueur(p1, 0), nouveauJoueur(p2, 1)],
@@ -108,6 +109,7 @@ export function creerCombat({ p1, p2, ia = {}, entrainement = false, graine = Da
   c.joueurs.forEach((j, k) => { if (ia[k]) j.ia = { niveau: NIVEAUX_IA[ia[k]] ? ia[k] : 'normal', t: 0, plan: null, combo: null }; });
   c.joueurs.forEach((j, k) => { if (vie[k]) j.hp = Math.max(1, Math.min(j.hpMax, Math.round(vie[k]))); });
   c.victoiresRequises = Math.max(1, victoires);
+  if (survie > 0) { c.survie = survie; c.temps = survie; c.victoiresRequises = 1; }
   if (entrainement) { c.phase = 'combat'; c.temps = Infinity; }
   return c;
 }
@@ -912,9 +914,22 @@ function verifierFin(c) {
     const [a, b] = c.joueurs;
     const pa = a.hp / a.hpMax;
     const pb = b.hp / b.hpMax;
-    c.gagnantRound = pa > pb ? 0 : pb > pa ? 1 : null;
-    evt(c, { type: 'annonce', texte: 'TEMPS !', duree: 100, gros: true });
+    c.gagnantRound = c.survie ? 0 : pa > pb ? 0 : pb > pa ? 1 : null;
+    evt(c, { type: 'annonce', texte: c.survie ? 'TU AS TENU !' : 'TEMPS !', duree: 100, gros: true });
   }
+}
+
+/**
+ * Un allié intervient (mode Histoire, une fois par combat) : un coup qui
+ * passe la garde, porté avec la force de l'allié. Rend vrai s'il a frappé.
+ */
+export function assister(c, n, allie, degats = 16) {
+  const att = c.joueurs[n];
+  const def = c.joueurs[1 - n];
+  if (c.phase !== 'combat' || c.cine || def.hp <= 0) return false;
+  appliquerDegats(c, att, def, { degats, stun: 40, recul: 16, lance: true, jauge: 0 }, 'special', def.x > att.x ? 1 : -1, def.x, def.y - 90, PERSO[allie] || perso(att));
+  evt(c, { type: 'assistance', joueur: n, allie, x: def.x, y: def.y - 90 });
+  return true;
 }
 
 function finDeRound(c) {

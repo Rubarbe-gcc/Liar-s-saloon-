@@ -30,6 +30,9 @@ export const ARENES = [
   { id: 'horloge', nom: 'HORS DU TEMPS', ciel: ['#02080c', '#06202a', '#0c3a44', '#14505a'], sol: '#1a3a40', sol2: '#0a2228', deco: '#4fe0d0', deco2: '#ffd23f', boss: 'kairos' },
   { id: 'ring', nom: 'GRAND RING', ciel: ['#05030a', '#0e0818', '#1a0e24', '#24102a'], sol: '#2a2a6a', sol2: '#1a1a4a', deco: '#ffd23f', deco2: '#d8102a', boss: 'onyx' },
   { id: 'sommet', nom: 'SOMMET DE LA TOUR', ciel: ['#03040e', '#0a1030', '#1a2a5a', '#3a4a7a'], sol: '#4a4a5a', sol2: '#2a2a36', deco: '#c0d8ff', deco2: '#ffffff', boss: 'nemesis' },
+  { id: 'neonfeu', nom: 'NÉON CITY EN FLAMMES', ciel: ['#140000', '#3a0806', '#7a1a0a', '#c8501a'], sol: '#1a0a08', sol2: '#2a0c08', deco: '#ff5a1a', deco2: '#ffc83a' },
+  { id: 'dojopluie', nom: 'LE DOJO SOUS LA PLUIE', ciel: ['#05080e', '#0e1620', '#1a2430', '#2a3440'], sol: '#2a2420', sol2: '#1a1612', deco: '#8aa0c0', deco2: '#c8d8f0' },
+  { id: 'engrenages', nom: 'AU CŒUR DE L’HORLOGE', ciel: ['#0a0804', '#1a1408', '#2a2010', '#3a2c14'], sol: '#2a2418', sol2: '#14100a', deco: '#ffd23f', deco2: '#4fe0d0' },
   { id: 'citadelle', nom: 'CITADELLE DE L’HORLOGE', ciel: ['#1a0804', '#4a1a0a', '#a04a14', '#e89040'], sol: '#4a3420', sol2: '#2a1c10', deco: '#e8a030', deco2: '#ffd23f', boss: 'vorn' },
 ];
 export const ARENE = Object.fromEntries(ARENES.map((a) => [a.id, a]));
@@ -324,6 +327,29 @@ const DECORS = {
       g.fillStyle = '#ffd23f'; g.beginPath(); g.moveTo(x - 46, y - 80); g.lineTo(x, y - 140); g.lineTo(x + 46, y - 80); g.fill();
     }
   },
+  /* Néon City après l'attaque de l'armée : la ville brûle. */
+  neonfeu(g, a, R) {
+    DECORS.neon(g, a, R);
+    const lueur = g.createLinearGradient(0, 0, 0, SOL);
+    lueur.addColorStop(0, 'rgba(60,0,0,0.35)'); lueur.addColorStop(1, 'rgba(255,90,20,0.35)');
+    g.fillStyle = lueur; g.fillRect(0, 0, L, SOL);
+    // La fumée, en grands panaches noirs.
+    for (let i = 0; i < 9; i++) {
+      const x = R() * L; const y = 60 + R() * 200;
+      g.fillStyle = 'rgba(10,6,6,0.45)';
+      for (let k = 0; k < 4; k++) { g.beginPath(); g.arc(x + k * 30, y - k * 18, 40 + R() * 30, 0, Math.PI * 2); g.fill(); }
+    }
+  },
+  /* Le dojo, un soir de deuil : la pluie. */
+  dojopluie(g, a, R) {
+    DECORS.dojo(g, a, R);
+    g.fillStyle = 'rgba(10,20,40,0.55)'; g.fillRect(0, 0, L, SOL);
+  },
+  /* Au cœur de l'horloge : des engrenages partout (ils tournent : voir animerArene). */
+  engrenages(g, a, R) {
+    ciel_etoile(g, R, 40, SOL);
+    for (let i = 0; i < 6; i++) { g.fillStyle = 'rgba(255,210,63,0.06)'; g.fillRect(i * 180, 0, 30, SOL); }
+  },
   citadelle(g, a, R) {
     soleil(g, 780, 300, 90, '#ffb050', 2.4);
     // Les remparts de la citadelle, au loin, et sa grande horloge.
@@ -457,6 +483,30 @@ export function animerArene(g, a, t) {
       for (let i = 0; i < 70; i++) { const x = (R() * L + Math.sin(t / 40 + i) * 30) % L; const y = (R() * H + t * (0.7 + R())) % H; g.beginPath(); g.arc(x, y, 1 + R() * 2, 0, Math.PI * 2); g.fill(); }
       break;
     }
+    case 'neonfeu':
+      // Des flammes au pied des immeubles, des braises qui montent.
+      for (let i = 0; i < 14; i++) {
+        const x = (i * 77 + 30) % L; const h = 40 + Math.sin(t / 5 + i) * 14 + (i % 3) * 18;
+        const gr = g.createLinearGradient(0, SOL - h - 20, 0, SOL);
+        gr.addColorStop(0, 'rgba(255,200,60,0)'); gr.addColorStop(0.5, 'rgba(255,110,20,0.55)'); gr.addColorStop(1, 'rgba(255,60,10,0.75)');
+        g.fillStyle = gr; g.beginPath(); g.moveTo(x - 26, SOL); g.quadraticCurveTo(x - 10 + Math.sin(t / 4 + i) * 8, SOL - h, x, SOL - h - 20); g.quadraticCurveTo(x + 10, SOL - h, x + 26, SOL); g.fill();
+      }
+      for (let i = 0; i < 50; i++) { const x = (R() * L + Math.sin(t / 30 + i) * 20) % L; const y = SOL - ((t * (1 + R() * 2) + R() * SOL) % SOL); g.fillStyle = rgba('#ffa040', 0.6); g.fillRect(x, y, 2, 2); }
+      break;
+    case 'dojopluie':
+      g.strokeStyle = 'rgba(170,200,240,0.45)'; g.lineWidth = 1.2;
+      for (let i = 0; i < 140; i++) { const x = (R() * L + t * 3) % L; const y = (R() * H + t * 22) % H; g.beginPath(); g.moveTo(x, y); g.lineTo(x - 4, y + 18); g.stroke(); }
+      // Les éclaboussures sur le sol.
+      for (let i = 0; i < 12; i++) { const x = (R() * L + t * 7) % L; const r = (t + i * 11) % 20; g.strokeStyle = rgba('#c8d8f0', 0.5 * (1 - r / 20)); g.beginPath(); g.ellipse(x, SOL + 20 + (i % 4) * 25, r, r * 0.3, 0, 0, Math.PI * 2); g.stroke(); }
+      break;
+    case 'engrenages':
+      // De grands engrenages qui tournent lentement, d'autres plus vite.
+      for (const [x, y, r, d, v, c] of [[140, 160, 120, 16, 0.004, 'rgba(255,210,63,0.22)'], [430, 90, 70, 12, -0.007, 'rgba(79,224,208,0.2)'], [700, 200, 150, 20, 0.003, 'rgba(255,210,63,0.18)'], [900, 80, 60, 10, -0.01, 'rgba(255,210,63,0.25)'], [560, 330, 50, 9, 0.012, 'rgba(79,224,208,0.22)']]) {
+        g.save(); g.translate(x, y); g.rotate(t * v); engrenage(g, 0, 0, r, d, c); g.restore();
+      }
+      g.strokeStyle = 'rgba(255,210,63,0.4)'; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(0, 380); g.lineTo(L, 380); g.stroke();
+      break;
     case 'citadelle':
       // Les étendards de l'Horloge qui claquent au vent, et la poussière.
       for (const x of [140, 860, 300, 700]) {

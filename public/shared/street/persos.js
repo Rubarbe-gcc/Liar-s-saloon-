@@ -433,6 +433,38 @@ export const PERSOS = [
       { nom: 'DOUBLE OMBRE', entree: 'DFK', coup: proj({ vitesse: 16, rayon: 12, degats: 6, nb: 2, eventail: true, forme: 'lame' }) },
     ],
   }),
+  P({
+    id: 'hemera', nom: 'HÉMÉRA', style: 'Fille de l’Aube', desc: 'Mille ans d’attente, une seule seconde rendue', secret: 'histoire',
+    indice: 'Obtenez la vraie fin du mode Histoire',
+    c: { c1: '#ffb070', c2: '#a04a6a', faisceau: '#ffe0b0', aura: '#ffa060', peau: '#f0c8a8', cheveux: '#fff0d8', tenue: '#6a2a4a', ceinture: '#ffd23f' },
+    stats: { hp: 11, dmg: 12, def: 10 }, vitesse: 4.9, saut: 17, dmg: 1.22, hpMult: 1.05, defMult: 1.05,
+    look: { corps: 'fin', tete: 'longs', extras: ['robe', 'etoiles', 'echarpe'] },
+    specA: { nom: 'PREMIER RAYON !', ...faisceau({ portee: 650, epaisseur: 30, degats: 14, stun: 24, couleur: '#ffe0b0' }) },
+    specB: { nom: 'AURORE !', ...zone({ ou: 'cible', delai: 22, rayon: 90, hauteur: 300, degats: 5, coups: 3, stun: 28, forme: 'rayon-ciel' }) },
+    ulti: { nom: 'L’AUBE ÉTERNELLE !!', portee: 300, visuel: 'aube-eternelle' },
+    saisie: { nom: 'LEVER DU JOUR', seq: [['NUIT !', 8, 5], ['ÉTOILE !', 10, 6], ['AUBE !', 14, 8], ['MATIN !', 20, 11]] },
+    combos: [
+      { nom: 'ROSÉE', entree: 'PPK', coup: ruee({ vx: 10, duree: 20, coups: 3, degats: 5, stun: 20, recul: 6 }) },
+      { nom: 'SECONDE RENDUE', entree: 'BBP', coup: { type: 'soin', soin: 12, duree: 40 } },
+      { nom: 'ÉTOILE DU MATIN', entree: 'DFP', coup: proj({ vitesse: 9, rayon: 16, degats: 11, forme: 'etoile', tete: true, duree: 110 }) },
+    ],
+  }),
+  P({
+    id: 'premier', nom: 'LE PREMIER HÉROS', style: 'La Boucle Zéro', desc: 'Il a été toi, il y a mille essais', secret: 'histoire',
+    indice: 'Battez-le au cœur de l’horloge brisée, après la vraie fin',
+    c: { c1: '#e8d8a0', c2: '#4a4030', faisceau: '#fff4c8', aura: '#e8d8a0', peau: '#c8b8a0', cheveux: '#e8e0d0', tenue: '#2a2620', ceinture: '#e8d8a0' },
+    stats: { hp: 12, dmg: 13, def: 11 }, vitesse: 5.1, saut: 16, dmg: 1.25, hpMult: 1.2, defMult: 1.2,
+    look: { corps: 'normal', tete: 'bandeau', extras: ['bandeau-long', 'cape', 'katana', 'fissures-energie'] },
+    specA: { nom: 'ÉCHO DU PASSÉ !', ...proj({ vitesse: 13, rayon: 20, degats: 12, nb: 3, eventail: true, forme: 'boule' }) },
+    specB: { nom: 'BOUCLE !', type: 'teleport', derriere: true, degats: 17, stun: 30, recul: 12, duree: 20 },
+    ulti: { nom: 'MILLE BOUCLES !!', portee: 300, visuel: 'mille-boucles' },
+    saisie: { nom: 'DÉJÀ-VU', seq: [['ENCORE !', 8, 5], ['ENCORE !', 10, 6], ['ENCORE !', 12, 7], ['TOUJOURS !', 16, 9], ['FIN ?', 24, 14]] },
+    combos: [
+      { nom: 'MÉMOIRE DES COUPS', entree: 'PPK', coup: ruee({ vx: 11, duree: 22, coups: 4, degats: 5, stun: 22, recul: 7, traverse: true }) },
+      { nom: 'LAME D’AVANT', entree: 'FFP', coup: ruee({ vx: 16, duree: 14, degats: 13, stun: 26, recul: 14, invincible: 10 }) },
+      { nom: 'RETOUR', entree: 'BBP', coup: { type: 'garde', duree: 40, contre: true } },
+    ],
+  }),
 ];
 
 /* ---------------------------------------------------------------- */
@@ -491,6 +523,67 @@ export const FIGURANTS = [
       { nom: 'COUP DE GRÂCE', entree: 'FFP', coup: ruee({ vx: 15, duree: 14, degats: 11, stun: 24, recul: 12 }) },
     ],
   }),
+  /* Ceux qu'on ne voit que dans l'histoire : le Maître, Vorn jeune, des pillards, un habitant. */
+  P({
+    id: 'maitre', nom: 'MAÎTRE GEN', style: 'Le vieux maître', desc: 'Il a tout appris à Ryu-Ken', figurant: true,
+    c: { c1: '#f0e0b0', c2: '#6a5a3a', faisceau: '#fff4d0', aura: '#f0e0b0', peau: '#d8b090', cheveux: '#f4f4f0', tenue: '#e8e0d0', ceinture: '#3a3a3a' },
+    stats: { hp: 9, dmg: 11, def: 11 }, vitesse: 3.6, saut: 12, dmg: 1.1, hpMult: 0.9, defMult: 1.1,
+    look: { corps: 'fin', tete: 'rase', extras: ['barbe', 'robe'] },
+    specA: { nom: 'PAUME DU VENT !', ...proj({ vitesse: 10, rayon: 20, degats: 12, forme: 'onde' }) },
+    specB: { nom: 'PARADE DU MAÎTRE !', type: 'garde', duree: 40, contre: true },
+    ulti: { nom: 'DERNIÈRE LEÇON !!', portee: 240, visuel: 'hadoken' },
+    saisie: { nom: 'PROJECTION', seq: [['UN !', 8, 5], ['DEUX !', 10, 6], ['TROIS !', 14, 8], ['LEÇON !', 18, 10]] },
+    combos: [
+      { nom: 'BÂTON', entree: 'PPK', coup: ruee({ vx: 7, duree: 20, coups: 2, degats: 6, stun: 20, recul: 8 }) },
+      { nom: 'SOUFFLE', entree: 'DFP', coup: proj({ vitesse: 9, rayon: 14, degats: 8, duree: 50, forme: 'onde' }) },
+      { nom: 'ESQUIVE', entree: 'DBP', coup: { type: 'teleport', recule: true, duree: 14 } },
+    ],
+  }),
+  P({
+    id: 'vornjeune', nom: 'VORN (100 ANS PLUS TÔT)', style: 'Jeune soldat', desc: 'Avant la dette, avant l’horloge', figurant: true,
+    c: { c1: '#e8a030', c2: '#6a2a10', faisceau: '#ffd080', aura: '#e8a030', peau: '#d0a080', cheveux: '#3a2a1a', tenue: '#7a2a1a', ceinture: '#c8a060' },
+    stats: { hp: 12, dmg: 13, def: 11 }, vitesse: 4.4, saut: 13, dmg: 1.33, hpMult: 1.19, defMult: 1.19,
+    look: { corps: 'normal', tete: 'rase', extras: ['armure', 'echarpe', 'epee-general'] },
+    specA: { nom: 'CHARGE !', ...ruee({ vx: 13, duree: 26, degats: 15, stun: 28, recul: 16, armure: true }) },
+    specB: { nom: 'TAILLE LARGE !', ...proj({ vitesse: 13, rayon: 22, degats: 11, forme: 'croissant', duree: 50 }) },
+    ulti: { nom: 'POUR MES HOMMES !!', portee: 240, visuel: 'legion' },
+    saisie: { nom: 'CORPS À CORPS', seq: [['TIENS !', 8, 5], ['ENCORE !', 10, 6], ['DEBOUT !', 14, 8], ['POUR EUX !', 18, 10]] },
+    combos: [
+      { nom: 'ESCRIME', entree: 'PPK', coup: ruee({ vx: 8, duree: 20, coups: 2, degats: 7, stun: 22, recul: 9 }) },
+      { nom: 'ESTOC', entree: 'FFP', coup: ruee({ vx: 15, duree: 14, degats: 11, stun: 24, recul: 14 }) },
+      { nom: 'BOUCLIER', entree: 'BBP', coup: { type: 'garde', duree: 40 } },
+    ],
+  }),
+  P({
+    id: 'pillard', nom: 'PILLARD', style: 'Mercenaire', desc: 'Il se bat pour l’or, et pour rien d’autre', figurant: true,
+    c: { c1: '#c8783a', c2: '#4a2a10', faisceau: '#ffb070', aura: '#c8783a', peau: '#b88a6a', cheveux: '#2a1a10', tenue: '#5a4a3a', ceinture: '#8a6a3a' },
+    stats: { hp: 9, dmg: 10, def: 9 }, vitesse: 4.6, saut: 14, dmg: 1.03, hpMult: 0.89, defMult: 1.03,
+    look: { corps: 'normal', tete: 'capuche', extras: ['echarpe'] },
+    specA: { nom: 'COUTEAUX !', ...proj({ vitesse: 15, rayon: 10, degats: 5, nb: 3, eventail: true, forme: 'lame', duree: 50 }) },
+    specB: { nom: 'COUP BAS !', ...ruee({ vx: 13, duree: 18, degats: 12, stun: 24, recul: 12, balaye: true }) },
+    ulti: { nom: 'PILLAGE !!', portee: 220, visuel: 'mille-lames' },
+    saisie: { nom: 'DÉTROUSSER', seq: [['ATTRAPÉ !', 8, 5], ['FOUILLÉ !', 8, 5], ['VOLÉ !', 10, 6], ['FILÉ !', 14, 8]] },
+    combos: [
+      { nom: 'RAFALE', entree: 'PPK', coup: ruee({ vx: 9, duree: 18, coups: 3, degats: 4, stun: 18, recul: 6 }) },
+      { nom: 'ROULADE', entree: 'DBP', coup: { type: 'teleport', recule: true, duree: 14 } },
+      { nom: 'BOMBE', entree: 'DFP', coup: proj({ vitesse: 8, rayon: 16, degats: 10, duree: 80, forme: 'boule', vy: -9, gravite: 0.4 }) },
+    ],
+  }),
+  P({
+    id: 'habitant', nom: 'HABITANT DE NÉON', style: 'Un citoyen en colère', desc: 'Il a tout perdu dans l’attaque', figurant: true,
+    c: { c1: '#8ab4d8', c2: '#2a3a5a', faisceau: '#c8dcff', aura: '#8ab4d8', peau: '#e0b896', cheveux: '#5a3a1a', tenue: '#4a5a6a', ceinture: '#2a2a2a' },
+    stats: { hp: 6, dmg: 6, def: 6 }, vitesse: 4, saut: 12, dmg: 0.6, hpMult: 0.6, defMult: 0.8,
+    look: { corps: 'normal', tete: 'bandeau', extras: ['echarpe'] },
+    specA: { nom: 'PIERRE !', ...proj({ vitesse: 10, rayon: 12, degats: 6, forme: 'rocher', vy: -6, gravite: 0.3 }) },
+    specB: { nom: 'BOUSCULADE !', ...ruee({ vx: 10, duree: 18, degats: 6, stun: 18, recul: 12 }) },
+    ulti: { nom: 'COLÈRE !!', portee: 200, visuel: 'hadoken' },
+    saisie: { nom: 'EMPOIGNADE', seq: [['HÉ !', 6, 4], ['TOI !', 6, 4], ['VA-T’EN !', 8, 5], ['DEHORS !', 10, 6]] },
+    combos: [
+      { nom: 'POINGS', entree: 'PPK', coup: ruee({ vx: 7, duree: 18, coups: 2, degats: 4, stun: 16, recul: 6 }) },
+      { nom: 'CRIS', entree: 'DFP', coup: proj({ vitesse: 8, rayon: 14, degats: 4, duree: 40, forme: 'onde' }) },
+      { nom: 'RECUL', entree: 'DBP', coup: { type: 'teleport', recule: true, duree: 14 } },
+    ],
+  }),
 ];
 
 /**
@@ -526,6 +619,12 @@ const VICTOIRES = {
   soldat: ['v-salut-mili', 'v-salut-mili', 'Tic. Tac.'],
   sentinelle: ['v-flex', 'v-flex', 'Mur intact.'],
   chasseur: ['v-bras-croises', 'v-pointe', 'Proie abattue.'],
+  hemera: ['v-meditation', 'v-levitation', 'Le jour se lève toujours.'],
+  premier: ['v-bras-croises', 'v-genou', 'J’ai été toi. Tu seras moi.'],
+  maitre: ['v-salut', 'v-meditation', 'La patience est la plus forte des techniques.'],
+  vornjeune: ['v-salut-mili', 'v-poing', 'Pour mes hommes !'],
+  pillard: ['v-rire', 'v-pointe', 'Ta bourse ou ta vie !'],
+  habitant: ['v-pointe', 'v-poing', 'Va-t’en de notre ville !'],
 };
 for (const p of [...PERSOS, ...FIGURANTS]) {
   const [round, combat, cri] = VICTOIRES[p.id] || ['v-poing', 'v-poing', 'Victoire !'];

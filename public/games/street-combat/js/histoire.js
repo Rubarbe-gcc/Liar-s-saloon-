@@ -66,8 +66,25 @@ const coupFinal = (x, c, texte) => [
 /** Le titre de fin, façon générique de film. */
 const titreFin = (titre, sous, calme = true) => [...(calme ? [{ calme: true }] : []), { bandes: 46 }, { titre, sous, film: true, auto: 240 }];
 
+/** Les alliés dont on peut se rapprocher (« aff_ryuken »… : l'affinité, que les choix font monter). */
+export const ALLIES = ['ryuken', 'celestia', 'ironclad', 'blazero', 'shadowkira', 'vorn', 'sablia'];
+
+/**
+ * La fin méritée : la vraie (pardonner, tendre la main, ramener son ami,
+ * garder ses alliés près de soi), la solitaire (presque personne à ses
+ * côtés), sinon l'héroïque.
+ */
+export function finDe(d) {
+  const proches = ALLIES.filter((id) => (d[`aff_${id}`] || 0) >= 2).length;
+  if (d.kairos_main && d.kira_pardon && d.ryuken_raisonne && proches >= 3) return 'vraie';
+  if (proches <= 1 && !d.kairos_main) return 'solitaire';
+  return 'heroique';
+}
+
 /** Quand le héros tient déjà un rôle de l'histoire, c'est lui qui le joue à sa place. */
 export const DOUBLURE = 'stoneback';
+/** …et si le héros est la doublure elle-même, c'est celui-ci qui joue son rôle. */
+export const DOUBLURE2 = 'gravox';
 
 export const SCENES = [
   /* ============================ ACTE I : L'ÉTINCELLE ============================ */
@@ -81,6 +98,7 @@ export const SCENES = [
       { entre: 'ryuken', cote: 'd', comment: 'saut', p: 'garde' },
       { dit: 'ryuken', texte: 'Te voilà enfin, {hero} ! Je commençais à croire que tu avais peur de ta revanche.' },
       { dit: 'hero', texte: 'Peur ? Je suis venu{e} finir ce qu’on a commencé la semaine dernière.', p: 'garde' },
+      { si: 'legende', alors: [{ dit: 'ryuken', texte: 'Hé… Tu fais une drôle de tête. Comme si tu avais déjà vécu cette nuit.' }, { dit: 'hero', texte: '(Mille fois. Et cette fois, je sais comment elle finit.)' }] },
       { dit: 'ryuken', texte: 'Ha ! Alors en garde. Le premier qui touche le sol paie les ramen.' },
       { narre: 'Ils n’ont jamais su qui aurait gagné.' },
       { musique: 'tension' },
@@ -124,7 +142,7 @@ export const SCENES = [
         question: 'Que dire à {blazero} ?',
         choix: [
           {
-            texte: '« Viens avec moi. On ne sera pas trop de deux. »', drapeau: 'blazero_allie',
+            texte: '« Viens avec moi. On ne sera pas trop de deux. »', drapeau: 'blazero_allie', affinite: { blazero: 2 },
             suite: [
               { dit: 'blazero', texte: 'Moi ? Après t’avoir à moitié grillé ? T’es un drôle de numéro, toi.', p: 'repos' },
               { dit: 'blazero', texte: 'D’accord. Pas tout de suite : j’ai un dojo à éteindre. Mais le jour où tu as besoin de feu… je serai là.', p: 'victoire' },
@@ -264,6 +282,14 @@ export const SCENES = [
       { dit: 'malvortex', texte: 'Merci de l’avoir calmé pour moi, petit insecte.' },
       { dit: 'hero', texte: 'Qui es-tu ?', p: 'garde' },
       { dit: 'malvortex', texte: 'Le seigneur des abysses. Ton pire cauchemar. Et cet éclat… est à moi.', p: 'lance' },
+      { narre: 'Une boule de feu noir jaillit de sa main, droit sur {hero} !' },
+      {
+        qte: {
+          texte: 'ESQUIVE !', duree: 60, drapeau: 'brule',
+          reussi: [{ narre: '{hero} roule sur le côté. Le feu noir fait fondre la roche là où il se tenait.' }],
+          rate: [{ effet: 'flash', duree: 20 }, { narre: 'Trop tard. Le feu noir frappe {hero} de plein fouet. Ça brûle jusqu’à l’os.' }, { pose: 'hero', p: 'touche' }],
+        },
+      },
       { croise: 'malvortex', indice: 'Vous le battrez plus loin dans l’histoire… si vous en êtes capable.' },
     ],
   },
@@ -277,7 +303,7 @@ export const SCENES = [
       { dit: 'hero', texte: 'Alors on a 3 % de chances. C’est déjà ça.', p: 'garde' },
       { dit: 'malvortex', texte: 'J’aime ton insolence. Je vais la garder en souvenir… avec ton âme.', p: 'lance' },
     ],
-    combat: {
+    combat: { variantes: [{ si: 'brule', vie: [0.5, 1], regle: 'Un seul round · vous êtes gravement brûlé · perdre n’arrête pas l’histoire' }],
       adv: 'malvortex', niveau: { normal: 'difficile', difficile: 'impossible' }, victoires: 1, vie: [0.7, 1], issue: 'libre',
       regle: 'Un seul round · vous êtes blessé · perdre n’arrête pas l’histoire',
     },
@@ -303,17 +329,92 @@ export const SCENES = [
     ],
   },
   {
-    id: 'convalescence', acte: 1, titre: 'INTERLUDE', sous: 'Le dojo reconstruit', arene: 'dojo',
+    id: 'maitre', acte: 1, titre: 'INTERLUDE', sous: 'La dernière leçon', arene: 'dojo',
+    etapes: [
+      { lieu: 'LE VIEUX DOJO — LA NUIT SUIVANTE' },
+      { narre: 'On a ramené {hero} au dojo. Un vieil homme veille, une tasse de thé à la main.' },
+      { entre: 'hero', cote: 'g', comment: 'place', p: 'touche' },
+      { entre: 'maitre', cote: 'c', comment: 'place' },
+      { entre: 'ryuken', cote: 'gg', comment: 'place' },
+      { dit: 'maitre', texte: 'Ah. L’élève de mon élève se réveille. Je suis Gen. On m’appelle « maître », mais je préfère « grand-père ».' },
+      { dit: 'hero', texte: 'Malvortex… Je n’ai rien pu faire.', p: 'repos' },
+      { dit: 'maitre', texte: 'Un combattant ne se mesure pas au nombre de fois où il tombe. Mais au nombre de fois où il se relève.' },
+      { dit: 'ryuken', texte: 'Il nous la sort au moins une fois par jour, celle-là.', p: 'victoire' },
+      { dit: 'maitre', texte: 'Parce que tu ne l’as toujours pas comprise, Ryu-Ken.' },
+      { musique: 'tension' },
+      { effet: 'secousse', duree: 40 },
+      { effet: 'eclair', x: 700, duree: 30 },
+      { entre: 'malvortex', cote: 'd', comment: 'apparait' },
+      { dit: 'malvortex', texte: 'Tu as quelque chose qui m’appartient, insecte. Deux éclats. Rends-les.' },
+      { dit: 'maitre', texte: 'Ce dojo a quatre cents ans. Il n’a jamais rien rendu à personne.', p: 'garde' },
+      { dit: 'malvortex', texte: 'Un vieillard. Comme c’est touchant.', p: 'lance' },
+      { narre: 'Une lance de feu noir file vers {hero}, encore à genoux. Le vieux maître se jette devant.' },
+      {
+        qte: {
+          texte: 'PROTÈGE LE MAÎTRE !', duree: 55, drapeau: 'maitre_seul',
+          reussi: [{ narre: '{hero} bondit et dévie la moitié du feu… mais l’autre moitié frappe Gen en pleine poitrine.' }],
+          rate: [{ narre: 'Le feu noir frappe Gen en pleine poitrine. {hero} n’a même pas eu le temps de se relever.' }],
+        },
+      },
+      { effet: 'flash', duree: 30 },
+      { pose: 'maitre', p: 'ko' },
+      { dit: 'ryuken', texte: 'MAÎTRE !', p: 'touche' },
+      { dit: 'maitre', texte: 'Dernière… leçon…', p: 'ko' },
+      { effet: 'onde', x: 500, y: 400, c: '#f0e0b0', duree: 80, attendre: false },
+      { narre: 'Dans un dernier souffle, le vieil homme frappe le sol. Une onde de lumière blanche repousse Malvortex hors du dojo.' },
+      { dit: 'malvortex', texte: 'Argh ! Maudit vieillard…', p: 'touche' },
+      { sort: 'malvortex', comment: 'teleport' },
+      { musique: 'triste' },
+      { dit: 'maitre', texte: 'Ryu-Ken… Ne laisse pas… la colère… choisir à ta place.', p: 'ko' },
+      { dit: 'maitre', texte: 'Et toi, l’élève de mon élève… relève-toi. Toujours.', p: 'ko' },
+      { narre: 'Maître Gen ferme les yeux. Dehors, il s’est mis à pleuvoir.' },
+      { dit: 'ryuken', texte: 'Je le tuerai. Je jure que je tuerai Malvortex.', p: 'touche' },
+    ],
+  },
+  {
+    id: 'deuil', acte: 1, titre: 'INTERLUDE', sous: 'Sous la pluie', arene: 'dojopluie',
     etapes: [
       { lieu: 'LE VIEUX DOJO — TROIS JOURS PLUS TARD' },
-      { narre: 'Le dojo sent encore la fumée, mais les murs sont debout. {hero} a dormi deux jours entiers.' },
+      { narre: 'On a enterré Maître Gen derrière le dojo, sous le vieux cerisier. Il pleut depuis trois jours.' },
+      { entre: 'ryuken', cote: 'd', comment: 'place', p: 'repos', dir: -1 },
+      { entre: 'hero', cote: 'g', comment: 'marche' },
+      { dit: 'ryuken', texte: '…' },
+      { dit: 'hero', texte: '{ryuken}…' },
+      { dit: 'ryuken', texte: 'Il m’a ramassé dans la rue quand j’avais six ans. Il m’a appris à tenir une garde avant de m’apprendre à lire.' },
+      { dit: 'ryuken', texte: 'Et moi, je n’ai même pas bougé. J’étais là, à trois pas, et je n’ai rien fait.', p: 'touche' },
+      {
+        question: 'Que dire à {ryuken} ?',
+        choix: [
+          {
+            texte: '« Je suis là. On va porter ça ensemble. »', affinite: { ryuken: 2 },
+            suite: [
+              { dit: 'ryuken', texte: '… Merci. Reste juste un peu. Le temps que la pluie s’arrête.', p: 'repos' },
+              { narre: 'Ils restent là longtemps, sans rien dire. La pluie ne s’arrête pas. Mais {ryuken} n’est plus seul sous elle.' },
+            ],
+          },
+          {
+            texte: '« Il faut avancer. Il l’aurait voulu. »', affinite: { ryuken: -1 },
+            suite: [
+              { dit: 'ryuken', texte: 'Avancer. Facile à dire. Ce n’était pas ton maître.', p: 'garde' },
+              { narre: '{ryuken} s’éloigne sous la pluie. Quelque chose s’est refroidi entre eux.' },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'convalescence', acte: 1, titre: 'INTERLUDE', sous: 'Le dojo reconstruit', arene: 'dojo',
+    etapes: [
+      { lieu: 'LE VIEUX DOJO — UNE SEMAINE PLUS TARD' },
+      { narre: 'Le dojo sent encore la fumée, mais les murs sont debout. Sur l’autel, une photo du vieux maître, et un bol de thé encore chaud.' },
       { entre: 'hero', cote: 'g', comment: 'marche' },
       { entre: 'ryuken', cote: 'd', comment: 'place' },
-      { dit: 'ryuken', texte: 'Enfin réveillé ! Tu ronfles, tu sais. Même le maître l’a remarqué.' },
-      { dit: 'hero', texte: 'Malvortex… Il était tellement fort. Je n’ai rien pu faire.', p: 'repos' },
-      { dit: 'ryuken', texte: 'Tu te souviens de ce que disait le maître ? « Un combattant ne se mesure pas au nombre de fois où il tombe… »' },
+      { dit: 'ryuken', texte: 'Tu t’entraînes encore ? Il est trois heures du matin.' },
+      { dit: 'hero', texte: 'Malvortex. Je n’arrête pas de le revoir.', p: 'repos' },
+      { dit: 'ryuken', texte: 'Moi aussi. Tous les soirs. « Un combattant ne se mesure pas au nombre de fois où il tombe… »' },
       { dit: 'hero', texte: '« …mais au nombre de fois où il se relève. » Il disait aussi qu’il fallait manger ses légumes.' },
-      { dit: 'ryuken', texte: 'Ha ! Ça aussi, c’était vrai.', p: 'victoire' },
+      { dit: 'ryuken', texte: 'Ha… Ouais. Ça aussi, c’était vrai.', p: 'repos' },
       {
         si: 'blazero_allie',
         alors: [
@@ -369,6 +470,43 @@ export const SCENES = [
     ],
   },
   {
+    id: 'colere', acte: 1, titre: 'INTERLUDE', sous: 'La ville en flammes', arene: 'neonfeu',
+    etapes: [
+      { lieu: 'NÉON CITY — LA NUIT DE L’ATTAQUE' },
+      { narre: 'En repartant, l’armée de l’Horloge a mis le feu au quartier. Ils cherchaient les éclats. Ils cherchaient {hero}.' },
+      { entre: 'hero', cote: 'g', comment: 'marche' },
+      { entre: 'celestia', cote: 'gg', comment: 'chute' },
+      { entre: 'habitant', cote: 'd', comment: 'marche', dir: -1 },
+      { dit: 'habitant', texte: 'C’est toi ! C’est toi qu’ils cherchaient ! Ma boutique, ma maison… Tout a brûlé à cause de toi !' },
+      { dit: 'hero', texte: 'Je… je ne voulais pas…', p: 'touche' },
+      { dit: 'habitant', texte: 'Tes cailloux attirent les monstres ! Pars ! Prends tes éclats et va-t’en de notre ville !', p: 'lance' },
+      { narre: 'Derrière lui, d’autres habitants se rassemblent. Les regards sont durs. Quelqu’un ramasse une pierre.' },
+      {
+        question: 'Les habitants vous chassent.',
+        chrono: 8, defaut: 0,
+        choix: [
+          {
+            texte: 'Partir. Ils ont raison : les éclats attirent le danger.', drapeau: 'exil', affinite: { ironclad: 1 },
+            suite: [
+              { dit: 'hero', texte: 'D’accord. Je pars. Mais je reviendrai, quand tout sera fini. Pour reconstruire.', p: 'repos' },
+              { dit: 'celestia', texte: 'Alors je pars avec toi. Une étoile, ça suit toujours ceux qu’elle a choisis.' },
+              { narre: '{hero} quitte le quartier sous les huées. Personne ne voit ses poings serrés.' },
+            ],
+          },
+          {
+            texte: 'Rester, et les aider à éteindre les flammes.', drapeau: 'aide_ville', affinite: { celestia: 1 },
+            suite: [
+              { dit: 'hero', texte: 'Je ne pars pas. Pas tant que ça brûle. Donnez-moi un seau.' },
+              { narre: 'Toute la nuit, {hero} porte de l’eau, dégage les décombres, sort un vieil homme d’un immeuble en feu.' },
+              { dit: 'habitant', texte: '… Tu aurais pu partir. Tu ne l’as pas fait. Je retire ce que j’ai dit. Enfin… une partie.', p: 'repos' },
+              { dit: 'celestia', texte: 'Tu vois ? Les gens ne sont pas méchants. Ils ont peur.' },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
     id: 'toit', acte: 1, titre: 'INTERLUDE', sous: 'Une alliée dans l’ombre', arene: 'neon',
     etapes: [
       { effet: 'nuit', attendre: false },
@@ -377,6 +515,7 @@ export const SCENES = [
       { entre: 'celestia', cote: 'gg', comment: 'place' },
       { entre: 'ironclad', cote: 'dd', comment: 'place', dir: -1 },
       { narre: 'Deux éclats sur trois. Le dernier entre les griffes de Malvortex. {ryuken}, prisonnier. Et dans le ciel, la Fracture continue de s’élargir.' },
+      { si: 'exil', alors: [{ narre: 'Depuis les toits, {hero} regarde la ville qu’on lui a demandé de quitter. Les flammes sont éteintes. Les blessures, non.' }] },
       { dit: 'celestia', texte: 'La Citadelle de l’Horloge… Les étoiles refusent de me montrer où elle est. Quelqu’un la cache.' },
       { dit: 'ironclad', texte: 'Le désert fait trois millions de kilomètres carrés. Sans coordonnées, nous chercherons des années.' },
       { entre: 'shadowkira', cote: 'd', comment: 'teleport' },
@@ -389,7 +528,7 @@ export const SCENES = [
         question: '{shadowkira} veut vous suivre.',
         choix: [
           {
-            texte: '« D’accord. Bienvenue dans l’équipe. »', drapeau: 'kira_confiance',
+            texte: '« D’accord. Bienvenue dans l’équipe. »', drapeau: 'kira_confiance', affinite: { shadowkira: 1 },
             suite: [
               { dit: 'shadowkira', texte: '… Merci. Tu ne le regretteras pas.', p: 'repos' },
               { dit: 'celestia', texte: '(Elle a hésité avant de dire ça. Tu as vu ?)' },
@@ -446,6 +585,34 @@ export const SCENES = [
     ],
   },
   {
+    id: 'avant-fracture', acte: 2, titre: 'TROIS JOURS PLUS TÔT', sous: 'Ce que Kaïros a fait', arene: 'ruines',
+    etapes: [
+      { effet: 'souvenir', attendre: false },
+      { lieu: 'RUINES ANTIQUES — TROIS JOURS AVANT LA FRACTURE' },
+      { narre: 'Trois jours avant que le ciel se fende, quelqu’un est déjà venu au temple de la lune.' },
+      { entre: 'lunara', cote: 'd', comment: 'place', p: 'repos', dir: -1 },
+      { entre: 'kairos', cote: 'g', comment: 'apparait' },
+      { dit: 'lunara', texte: 'Qui es-tu ? La lune ne t’a pas vu venir. Elle voit tout le monde venir.' },
+      { dit: 'kairos', texte: 'La lune ne voit que ce qui passe. Moi, je suis ce qui revient.' },
+      { dit: 'kairos', texte: 'Tu vas m’aider, prêtresse. Tu chanteras pour moi. Tu verras celui que j’attends, et tu le guideras… jusqu’à moi.' },
+      { dit: 'lunara', texte: 'Je ne chante pour personne.', p: 'garde' },
+      { dit: 'kairos', texte: 'Tu as déjà chanté pour moi neuf cent quatre-vingt-dix-neuf fois. Tu ne t’en souviens jamais.', p: 'lance' },
+    ],
+    combat: {
+      adv: 'lunara', joueur: 'kairos', niveau: { normal: 'normal', difficile: 'difficile' },
+      regle: 'Flashback : vous êtes Kaïros, trois jours avant la Fracture',
+    },
+    apres: [
+      { effet: 'souvenir', attendre: false },
+      { narre: 'Kaïros pose un petit éclat violet au creux de la main de Lunara. Elle cesse de se débattre. Ses yeux changent de couleur.' },
+      { purifie: 'lunara' },
+      { entre: 'lunara', cote: 'd', comment: 'place', p: 'repos', corrompu: true },
+      { dit: 'lunara', texte: '… Oui. Je chanterai.', p: 'repos' },
+      { dit: 'kairos', texte: 'Chaque fois, c’est la même chanson. Chaque fois, j’espère une autre fin.', p: 'repos' },
+      { calme: true },
+    ],
+  },
+  {
     id: 'ruines', acte: 2, titre: 'CHAPITRE 9', sous: 'Le temple de la lune', arene: 'ruines',
     etapes: [
       { effet: 'nuit', attendre: false },
@@ -493,7 +660,32 @@ export const SCENES = [
     ],
   },
   {
-    id: 'foret', acte: 2, titre: 'CHAPITRE 10', sous: 'La porte de la forêt', arene: 'foret',
+    id: 'gardien', acte: 2, titre: 'CHAPITRE 10', sous: 'Le gardien qui se souvient', arene: 'ruines',
+    etapes: [
+      { lieu: 'RUINES ANTIQUES — LA SALLE ENFOUIE' },
+      { narre: 'Sous le temple, une salle que personne n’a ouverte depuis mille ans. Au centre, une statue de pierre… qui ouvre les yeux.' },
+      { entre: 'hero', cote: 'g', comment: 'marche' },
+      { entre: 'stoneback', cote: 'd', comment: 'place', p: 'garde' },
+      { dit: 'stoneback', texte: 'Encore toi.' },
+      { si: 'legende', alors: [{ dit: 'stoneback', texte: 'Tu es revenu… Mille et une fois. Toi, tu te souviens, cette fois. C’est nouveau.' }] },
+      { dit: 'hero', texte: 'On se connaît ?', p: 'garde' },
+      { dit: 'stoneback', texte: 'Je t’ai vu mille fois descendre ces marches. Avec un autre visage, une autre voix. Toujours la même question dans les yeux.' },
+      { dit: 'stoneback', texte: 'Avant de répondre, je dois savoir si tu es celui qui ira au bout. Les autres n’y allaient jamais.', p: 'lance' },
+    ],
+    combat: { adv: 'stoneback', niveau: { normal: 'normal', difficile: 'difficile' }, regle: 'L’épreuve du gardien' },
+    apres: [
+      { dit: 'stoneback', texte: 'Hm. Plus fort que la plupart.', p: 'repos' },
+      { dit: 'stoneback', texte: 'Écoute bien. L’homme à l’horloge rejoue cette histoire depuis mille ans. Chaque fois qu’il échoue, il remonte le temps et recommence.' },
+      { dit: 'stoneback', texte: 'Chaque fois, un héros se lève. Chaque fois, le héros tombe. Tu es le millième.' },
+      { dit: 'hero', texte: 'Et les autres ? Les 999 autres ?' },
+      { dit: 'stoneback', texte: 'Le dernier — le 999ᵉ — il ne l’a pas laissé partir. Il l’a gardé. Refait. À ton image. Le reflet qui te suit… c’était lui.', p: 'repos' },
+      { dit: 'stoneback', texte: 'Et le tout premier… il est encore là-bas. Au cœur de l’horloge. Personne n’en revient.' },
+      { dit: 'hero', texte: 'Alors je serai le premier à en revenir.', p: 'garde' },
+      { dit: 'stoneback', texte: 'C’est ce qu’ils disent tous. Mais toi… tu as l’air d’y croire.' },
+    ],
+  },
+  {
+    id: 'foret', acte: 2, titre: 'CHAPITRE 11', sous: 'La porte de la forêt', arene: 'foret',
     etapes: [
       { lieu: 'FORÊT MAUDITE' },
       { entre: 'hero', cote: 'g', comment: 'marche' },
@@ -512,7 +704,7 @@ export const SCENES = [
     ],
   },
   {
-    id: 'trahison', acte: 2, titre: 'CHAPITRE 11', sous: 'L’ombre et le temps', arene: 'foret',
+    id: 'trahison', acte: 2, titre: 'CHAPITRE 12', sous: 'L’ombre et le temps', arene: 'foret',
     etapes: [
       { lieu: 'FORÊT MAUDITE — AU-DELÀ DE LA PORTE' },
       { entre: 'hero', cote: 'g', comment: 'marche' },
@@ -543,7 +735,7 @@ export const SCENES = [
         question: 'Que faire de {shadowkira} ?',
         choix: [
           {
-            texte: '« Va-t’en. Et cette fois, choisis le bon camp. »', drapeau: 'kira_pardon',
+            texte: '« Va-t’en. Et cette fois, choisis le bon camp. »', drapeau: 'kira_pardon', affinite: { shadowkira: 2 },
             suite: [
               { dit: 'shadowkira', texte: 'Tu me laisses partir ? Après tout ça ?', p: 'repos' },
               { dit: 'shadowkira', texte: '… Je n’oublierai pas. Le jour où tu auras besoin d’une ombre, je serai là.' },
@@ -603,7 +795,13 @@ export const SCENES = [
       { dit: 'celestia', texte: 'Tu sais pourquoi je suis tombée du ciel, {hero} ? Je ne te l’ai jamais dit.' },
       { dit: 'hero', texte: 'Je pensais que c’était ta façon de faire une entrée.', p: 'repos' },
       { dit: 'celestia', texte: 'J’étais une étoile. Une vraie. La Fracture m’a arrachée au ciel. Si elle ne se referme pas… je ne pourrai jamais rentrer chez moi.' },
-      { dit: 'hero', texte: 'Alors on la refermera. Promis.' },
+      {
+        question: 'Celestia veut rentrer chez elle.',
+        choix: [
+          { texte: '« Je te ramènerai chez toi. Promis. »', affinite: { celestia: 2 }, suite: [{ dit: 'celestia', texte: 'Personne ne m’avait jamais promis quelque chose. Je m’en souviendrai.' }] },
+          { texte: '« Tu es déjà chez toi. Avec nous. »', affinite: { celestia: 1, ironclad: 1 }, suite: [{ dit: 'celestia', texte: 'Avec vous… C’est drôle. Ça ressemble presque à une maison.' }] },
+        ],
+      },
       { dit: 'ironclad', texte: 'Moi, j’ai perdu 2 % de ma mémoire. Je ne sais pas ce qu’il y avait dedans. C’est… étrange, de regretter quelque chose qu’on ne connaît pas.' },
       { dit: 'celestia', texte: 'C’est peut-être ça, être humain, {ironclad}.' },
       { dit: 'ironclad', texte: 'Information enregistrée. Dans les 98 % restants.', p: 'victoire' },
@@ -612,19 +810,30 @@ export const SCENES = [
     ],
   },
   {
-    id: 'infiltration', acte: 3, titre: 'CHAPITRE 12', sous: 'Aux portes de la citadelle', arene: 'citadelle',
+    id: 'infiltration', acte: 3, titre: 'CHAPITRE 13', sous: 'Aux portes de la citadelle', arene: 'citadelle',
     etapes: [
       { lieu: 'CITADELLE DE L’HORLOGE — LA PORTE EST' },
       { entre: 'hero', cote: 'g', comment: 'marche' },
       { entre: 'ironclad', cote: 'gg', comment: 'marche' },
-      { dit: 'ironclad', texte: 'Plan : {celestia} crée une diversion au nord. Nous entrons par l’est. Deux gardes seulement.' },
+      { dit: 'ironclad', texte: 'Plan : {celestia} crée une diversion au nord. Nous entrons par l’est. Une sentinelle balaie la cour avec son projecteur.' },
+      { entre: 'sentinelle', cote: 'dd', comment: 'place', dir: -1 },
+      { dit: 'ironclad', texte: 'À toi. Avance quand la lumière est loin. Arrête-toi quand elle passe.' },
+      { sort: 'ironclad', comment: 'marche' },
+      {
+        infiltration: {
+          drapeau: 'repere',
+          reussi: [{ narre: 'Personne n’a rien vu. {hero} atteint la porte est sans un bruit.' }],
+          rate: [{ effet: 'flash', duree: 20 }, { narre: 'La lumière s’arrête sur {hero}. Une sirène hurle dans toute la citadelle.' }, { dit: 'sentinelle', texte: 'INTRUS ! À MOI, LA GARDE !' }],
+        },
+      },
+      { sort: 'sentinelle', comment: 'teleport' },
       { entre: 'chasseur', cote: 'd', comment: 'place', p: 'garde' },
       { entre: 'soldat', cote: 'dd', comment: 'place', dir: -1 },
       { dit: 'chasseur', texte: 'Halte. Personne n’entre sans l’ordre du Général.' },
       { dit: 'hero', texte: 'J’ai un ordre pour toi : pousse-toi.', p: 'garde' },
       { dit: 'ironclad', texte: 'Ce n’était pas une diversion très discrète, {hero}.' },
     ],
-    combat: {
+    combat: { variantes: [{ si: 'repere', serie: ['chasseur', 'soldat', 'sentinelle'], regle: 'Repéré ! Trois gardes d’affilée · un round chacun' }],
       adv: 'chasseur', serie: ['chasseur', 'soldat'], niveau: { normal: 'normal', difficile: 'difficile' },
       regle: 'Deux gardes d’affilée · un round chacun · votre vie passe de l’un à l’autre',
     },
@@ -636,7 +845,7 @@ export const SCENES = [
     ],
   },
   {
-    id: 'cachot', acte: 3, titre: 'CHAPITRE 13', sous: 'La gardienne et le prisonnier', arene: 'citadelle',
+    id: 'cachot', acte: 3, titre: 'CHAPITRE 14', sous: 'La gardienne et le prisonnier', arene: 'citadelle',
     etapes: [
       { lieu: 'CITADELLE DE L’HORLOGE — LES CACHOTS' },
       { entre: 'ryuken', cote: 'dd', comment: 'place', p: 'touche', dir: -1 },
@@ -659,12 +868,19 @@ export const SCENES = [
       { dit: 'hero', texte: 'Kaïros t’a menti. À toi aussi.' },
       { narre: 'Sablia ouvre la main. Les barreaux du cachot s’effritent, grain par grain.' },
       { dit: 'ryuken', texte: 'Enfin libre ! Elle me faisait la lecture, tu sais. Elle est pas si méchante.', p: 'victoire' },
+      {
+        question: 'Sablia hésite.',
+        choix: [
+          { texte: '« Viens avec nous. Tu as ta place à nos côtés. »', affinite: { sablia: 2 }, suite: [{ dit: 'sablia', texte: 'Ma place… Personne ne m’avait jamais dit ça.', p: 'repos' }] },
+          { texte: '« Fais ce que tu veux. Mais ne nous trahis pas. »', suite: [{ dit: 'sablia', texte: 'Je comprends ta méfiance. Je la mérite.', p: 'repos' }] },
+        ],
+      },
       { dit: 'sablia', texte: 'Je viens avec vous. Je connais chaque couloir de cette citadelle. Et je veux voir ce que vaut ton monde, {hero}.', p: 'repos' },
       { debloque: 'sablia' },
     ],
   },
   {
-    id: 'vorn1', acte: 3, titre: 'CHAPITRE 14', sous: 'Le Général à la porte', arene: 'citadelle',
+    id: 'vorn1', acte: 3, titre: 'CHAPITRE 15', sous: 'Le Général à la porte', arene: 'citadelle',
     etapes: [
       { lieu: 'CITADELLE DE L’HORLOGE — LA GRANDE PORTE' },
       { entre: 'hero', cote: 'g', comment: 'marche' },
@@ -733,7 +949,7 @@ export const SCENES = [
     ],
   },
   {
-    id: 'toundra', acte: 4, si: 'route_glace', titre: 'CHAPITRE 15', sous: 'Le cœur de glace', arene: 'toundra',
+    id: 'toundra', acte: 4, si: 'route_glace', titre: 'CHAPITRE 16', sous: 'Le cœur de glace', arene: 'toundra',
     etapes: [
       { lieu: 'TOUNDRA GLACÉE — MOINS 52 DEGRÉS' },
       { entre: 'hero', cote: 'g', comment: 'marche' },
@@ -751,7 +967,7 @@ export const SCENES = [
     ],
   },
   {
-    id: 'tempete', acte: 4, si: '!route_glace', titre: 'CHAPITRE 15', sous: 'L’œil de la tempête', arene: 'desert',
+    id: 'tempete', acte: 4, si: '!route_glace', titre: 'CHAPITRE 16', sous: 'L’œil de la tempête', arene: 'desert',
     etapes: [
       { lieu: 'DÉSERT MAUDIT — L’ŒIL DE LA TEMPÊTE' },
       { effet: 'eclair', x: 300, duree: 30 },
@@ -802,7 +1018,7 @@ export const SCENES = [
     ],
   },
   {
-    id: 'abysses', acte: 4, titre: 'CHAPITRE 16', sous: 'Les profondeurs', arene: 'abysses',
+    id: 'abysses', acte: 4, titre: 'CHAPITRE 17', sous: 'Les profondeurs', arene: 'abysses',
     etapes: [
       { lieu: 'ABYSSES MARINES — 3 000 M DE FOND' },
       { narre: 'Au rendez-vous, sur la plage, il n’y avait personne. Juste un signal de détresse, qui montait des profondeurs.' },
@@ -814,7 +1030,7 @@ export const SCENES = [
       { dit: 'aquathorn', texte: 'Kaïros m’a promis que l’océan recouvrirait le monde. Je n’ai qu’à garder ses éclats au frais.' },
       { dit: 'hero', texte: 'Le voyage m’a épuisé… mais pas assez pour te laisser faire.', p: 'garde' },
     ],
-    combat: { adv: 'aquathorn', corrompu: true, niveau: { normal: 'normal', difficile: 'difficile' }, vie: [0.75, 1], regle: 'Vous arrivez épuisé du voyage' },
+    combat: { allie: 'ironclad', adv: 'aquathorn', corrompu: true, niveau: { normal: 'normal', difficile: 'difficile' }, vie: [0.75, 1], regle: 'Vous arrivez épuisé du voyage' },
     apres: [
       { entre: 'ironclad', cote: 'gg', comment: 'place' },
       { dit: 'aquathorn', texte: 'L’eau… elle redevient claire.', p: 'touche' },
@@ -824,20 +1040,29 @@ export const SCENES = [
     ],
   },
   {
-    id: 'cite', acte: 4, titre: 'CHAPITRE 17', sous: 'La cité qui tombe', arene: 'celeste',
+    id: 'cite', acte: 4, titre: 'CHAPITRE 18', sous: 'La cité qui tombe', arene: 'celeste',
     etapes: [
       { lieu: 'CITÉ CÉLESTE — EN CHUTE LIBRE' },
       { effet: 'secousse', duree: 50 },
       { entre: 'celestia', cote: 'gg', comment: 'place', p: 'touche' },
       { entre: 'hero', cote: 'g', comment: 'chute' },
       { dit: 'celestia', texte: '{hero} ! Il a brisé les piliers qui tiennent la cité dans le ciel !', p: 'touche' },
+      { effet: 'secousse', duree: 40 },
+      { narre: 'Le sol se dérobe sous {celestia}. Elle glisse vers le vide !' },
+      {
+        qte: {
+          texte: 'RATTRAPE-LA !', duree: 55, drapeau: 'celestia_tombee',
+          reussi: [{ narre: '{hero} plonge et attrape sa main au dernier moment.' }, { dit: 'celestia', texte: 'Tu… tu m’as rattrapée.' }],
+          rate: [{ narre: '{celestia} tombe… et ne se rattrape qu’à un pilier, dix mètres plus bas. Elle remonte, blessée au bras.', }, { dit: 'celestia', texte: 'Ça va… Ça va. Occupe-toi de lui.', p: 'touche' }],
+        },
+      },
       { entre: 'thunderox', cote: 'd', comment: 'chute', p: 'lance' },
       { effet: 'eclair', x: 700, duree: 30 },
       { dit: 'thunderox', texte: 'PLUS DE CIEL ! PLUS D’ÉTOILES ! RIEN QUE LE TONNERRE !' },
       { dit: 'hero', texte: '{thunderox}, la cité va s’écraser ! Il y a des gens, ici !', p: 'garde' },
       { dit: 'thunderox', texte: 'ALORS ILS TOMBERONT AVEC MOI !', p: 'lance' },
     ],
-    combat: { adv: 'thunderox', corrompu: true, niveau: { normal: 'normal', difficile: 'difficile' } },
+    combat: { allie: 'celestia', allieSi: '!celestia_tombee', adv: 'thunderox', corrompu: true, niveau: { normal: 'normal', difficile: 'difficile' } },
     apres: [
       { entre: 'celestia', cote: 'gg', comment: 'place' },
       { dit: 'thunderox', texte: 'J’ai… j’ai failli tous les tuer…', p: 'touche' },
@@ -868,7 +1093,7 @@ export const SCENES = [
         question: 'Avant la bataille…',
         choix: [
           {
-            texte: '📜 Envoyer un message à Vorn : « Je sais pour ta dette. Il existe une autre façon de la payer. »', drapeau: 'vorn_message',
+            texte: '📜 Envoyer un message à Vorn : « Je sais pour ta dette. Il existe une autre façon de la payer. »', drapeau: 'vorn_message', affinite: { vorn: 2 },
             suite: [
               { dit: 'sablia', texte: 'Je vais le lui porter. Il me tuera peut-être… mais il lira jusqu’au bout. C’est un homme d’honneur.' },
               { sort: 'sablia', comment: 'teleport' },
@@ -876,7 +1101,7 @@ export const SCENES = [
             ],
           },
           {
-            texte: '⚔️ Frapper vite, avant l’aube',
+            texte: '⚔️ Frapper vite, avant l’aube', affinite: { ryuken: 1 },
             suite: [
               { dit: 'ryuken', texte: 'Attaque surprise ? J’aime bien. Le maître aurait détesté.', p: 'garde' },
             ],
@@ -886,7 +1111,7 @@ export const SCENES = [
     ],
   },
   {
-    id: 'entrainement', acte: 5, titre: 'CHAPITRE 18', sous: 'Le dernier round', arene: 'neon',
+    id: 'entrainement', acte: 5, titre: 'CHAPITRE 19', sous: 'Le dernier round', arene: 'neon',
     etapes: [
       { effet: 'nuit', attendre: false },
       { lieu: 'NÉON CITY — LES TOITS, LA VEILLE DE LA BATAILLE' },
@@ -913,7 +1138,7 @@ export const SCENES = [
     ],
   },
   {
-    id: 'bataille', acte: 5, titre: 'CHAPITRE 19', sous: 'La plaine de cendres', arene: 'desert',
+    id: 'bataille', acte: 5, titre: 'CHAPITRE 20', sous: 'La plaine de cendres', arene: 'desert',
     etapes: [
       { lieu: 'LA PLAINE DE CENDRES — L’AUBE' },
       { narre: 'L’aube se lève sur dix mille soldats. Face à eux, une poignée de combattants.' },
@@ -934,7 +1159,7 @@ export const SCENES = [
       { sort: 'ryuken', comment: 'marche' },
       { entre: 'soldat', cote: 'd', comment: 'marche', p: 'garde' },
     ],
-    combat: {
+    combat: { allie: 'ryuken',
       adv: 'soldat', serie: ['soldat', 'sentinelle', 'chasseur'], niveau: { normal: 'normal', difficile: 'difficile' },
       regle: 'Trois soldats d’affilée · un round chacun · votre vie passe de l’un à l’autre',
     },
@@ -944,6 +1169,13 @@ export const SCENES = [
       { entre: 'sentinelle', cote: 'dd', comment: 'place', dir: -1, p: 'lance' },
       { entre: 'ryuken', cote: 'gg', comment: 'saut' },
       { dit: 'ryuken', texte: '{hero} ! ATTENTION !', p: 'garde' },
+      {
+        qte: {
+          texte: 'TIRE-LE EN ARRIÈRE !', duree: 45, drapeau: 'ryuken_grave',
+          reussi: [{ narre: '{hero} attrape {ryuken} par le col. Trop tard pour l’éviter… mais le tir ne le touche qu’à l’épaule.' }],
+          rate: [{ narre: 'Le tir frappe {ryuken} en pleine poitrine.' }],
+        },
+      },
       { effet: 'eclair', x: 200, duree: 30 },
       { effet: 'secousse', duree: 40 },
       { pose: 'ryuken', p: 'ko' },
@@ -957,13 +1189,53 @@ export const SCENES = [
     ],
   },
   {
-    id: 'vorn2', acte: 5, titre: 'CHAPITRE 20', sous: 'Le Général', arene: 'citadelle',
+    id: 'souvenir-vorn', acte: 5, titre: 'CENT ANS PLUS TÔT', sous: 'La dette du Général', arene: 'ruines',
+    etapes: [
+      { effet: 'souvenir', attendre: false },
+      { lieu: 'UN CHAMP DE BATAILLE OUBLIÉ — IL Y A CENT ANS' },
+      { narre: 'Avant d’être Général, Vorn était un jeune soldat. Ce jour-là, son régiment avait été abandonné par ses chefs.' },
+      { entre: 'vornjeune', cote: 'g', comment: 'place', p: 'garde' },
+      { entre: 'pillard', cote: 'd', comment: 'marche', dir: -1 },
+      { dit: 'pillard', texte: 'Ton armée a fui, petit soldat. Il ne reste que toi et tes blessés. Rends-toi.' },
+      { dit: 'vornjeune', texte: 'Mes hommes sont derrière moi. Personne ne passera.', p: 'garde' },
+    ],
+    combat: {
+      adv: 'pillard', serie: ['pillard', 'pillard'], joueur: 'vornjeune', issue: 'libre', niveau: { normal: 'normal', difficile: 'difficile' },
+      regle: 'Flashback : vous êtes Vorn, il y a cent ans · deux pillards d’affilée',
+    },
+    apres: [
+      { effet: 'souvenir', attendre: false },
+      { narre: 'Les pillards s’enfuient. Mais une flèche perdue a trouvé le cœur du jeune soldat. Il s’effondre au milieu de ses blessés.' },
+      { pose: 'vornjeune', p: 'ko' },
+      { effet: 'gel', attendre: false },
+      { entre: 'kairos', cote: 'c', comment: 'apparait', dir: -1 },
+      { dit: 'kairos', texte: 'Quel dommage. Un soldat qui ne laisse pas ses hommes derrière lui, ça ne court pas les rues.' },
+      { dit: 'vornjeune', texte: 'Qui… êtes-vous…', p: 'ko' },
+      { dit: 'kairos', texte: 'Quelqu’un qui a du temps à revendre. Je te donne le tien. En échange, un jour, tu me serviras.' },
+      { dit: 'vornjeune', texte: 'Sauvez… mes hommes d’abord.', p: 'ko' },
+      { dit: 'kairos', texte: '… Tu vois ? C’est exactement pour ça que je te choisis.', p: 'repos' },
+      { calme: true },
+    ],
+    apresDefaite: [
+      { effet: 'souvenir', attendre: false },
+      { narre: 'Le jeune soldat tombe, criblé de coups, au milieu de ses blessés. Les pillards s’éloignent en riant.' },
+      { pose: 'vornjeune', p: 'ko' },
+      { effet: 'gel', attendre: false },
+      { entre: 'kairos', cote: 'c', comment: 'apparait', dir: -1 },
+      { dit: 'kairos', texte: 'Il a tenu plus longtemps qu’ils ne le croyaient. Assez longtemps pour que je le remarque.' },
+      { dit: 'kairos', texte: 'Je te donne du temps, soldat. En échange, un jour, tu me serviras.' },
+      { calme: true },
+    ],
+  },
+  {
+    id: 'vorn2', acte: 5, titre: 'CHAPITRE 21', sous: 'Le Général', arene: 'citadelle',
     etapes: [
       { lieu: 'LA PLAINE DE CENDRES — LE ROCHER DU GÉNÉRAL' },
       { entre: 'hero', cote: 'g', comment: 'marche' },
       { entre: 'vorn', cote: 'd', comment: 'place', p: 'garde' },
       { dit: 'hero', texte: '{ryuken} est tombé à cause de ta guerre. Je ne vais pas me retenir.', p: 'lance' },
       { dit: 'vorn', texte: 'Je l’ai vu se jeter devant le canon. C’était un acte de soldat. Le plus noble de toute cette bataille.', p: 'repos' },
+      { dit: 'vorn', texte: 'Il y a cent ans, quelqu’un a fait la même chose pour moi. Je n’ai jamais oublié.' },
       {
         si: 'vorn_honneur',
         alors: [{ dit: 'vorn', texte: '{h:Le seul combattant|La seule combattante} qui m’ait jamais mis un genou à terre. Je savais que ce serait toi.' }],
@@ -979,7 +1251,7 @@ export const SCENES = [
         sinon: [{ dit: 'vorn', texte: 'Un soldat ne pose pas de questions. En garde !', p: 'lance' }],
       },
     ],
-    combat: {
+    combat: { allie: 'ironclad',
       adv: 'vorn', niveau: { normal: 'difficile', difficile: 'difficile' },
       bonus: { si: 'vorn_message', vieAdv: 0.85, texte: '📜 Le doute ralentit sa lame' },
     },
@@ -1032,7 +1304,7 @@ export const SCENES = [
 
   /* ===================== ACTE VII : L'ENFER ET LA LUMIÈRE ===================== */
   {
-    id: 'cathedrale', acte: 6, titre: 'CHAPITRE 21', sous: 'Le jugement de la lumière', arene: 'cathedrale',
+    id: 'cathedrale', acte: 6, titre: 'CHAPITRE 22', sous: 'Le jugement de la lumière', arene: 'cathedrale',
     etapes: [
       { lieu: 'CATHÉDRALE SOLAIRE' },
       { entre: 'hero', cote: 'g', comment: 'marche' },
@@ -1067,7 +1339,56 @@ export const SCENES = [
     ],
   },
   {
-    id: 'portes', acte: 6, titre: 'CHAPITRE 22', sous: 'Les portes de l’enfer', arene: 'trone',
+    id: 'vengeance', acte: 6, titre: 'CHAPITRE 23', sous: 'Ce que la colère choisit', arene: 'trone',
+    etapes: [
+      { lieu: 'LES PORTES DE L’ENFER — L’AUBE' },
+      { narre: 'Au matin, la place de {ryuken} était vide. Un mot sur l’oreiller : « Pardon. Je dois le faire moi-même. »' },
+      { entre: 'hero', cote: 'g', comment: 'marche' },
+      { entre: 'ryuken', cote: 'd', comment: 'place', p: 'repos', dir: -1, corrompu: true },
+      { dit: 'hero', texte: '{ryuken} ! Tes yeux… Qu’est-ce que tu as fait ?', p: 'touche' },
+      { dit: 'ryuken', texte: 'J’ai ramassé un éclat. Celui que Malvortex a laissé tomber au dojo. Le soir où il a tué le maître.' },
+      { dit: 'ryuken', texte: 'Avec ça, je suis assez fort. Je vais descendre. Je vais le trouver. Et je vais faire ce que tu n’as pas pu faire.', p: 'garde' },
+      { dit: 'hero', texte: 'Le maître a dit de ne pas laisser la colère choisir à ta place !' },
+      { dit: 'ryuken', texte: 'LE MAÎTRE EST MORT ! Écarte-toi, ou je passe à travers toi.', p: 'lance' },
+      {
+        question: '{ryuken} se met en garde. Il va frapper.',
+        chrono: 6, defaut: 0,
+        choix: [
+          { texte: 'Le frapper pour l’arrêter.', suite: [{ dit: 'hero', texte: 'Alors viens. Je te ramènerai, même s’il faut te mettre à terre.', p: 'garde' }] },
+          {
+            texte: 'Baisser ta garde, et lui parler.', drapeau: 'ryuken_raisonne', affinite: { ryuken: 2 },
+            suite: [
+              { pose: 'hero', p: 'repos' },
+              { dit: 'hero', texte: 'Je ne me battrai pas contre toi. Tu te souviens ? Le premier qui touche le sol paie les ramen. Tu me dois toujours des ramen.' },
+              { effet: 'flash', duree: 15 },
+              { narre: 'Le coup part quand même. {hero} l’encaisse sans se défendre. Mais dans les yeux violets de {ryuken}, quelque chose a vacillé.' },
+              { pose: 'hero', p: 'touche' },
+            ],
+          },
+        ],
+      },
+    ],
+    combat: {
+      adv: 'ryuken', corrompu: true, niveau: { normal: 'normal', difficile: 'difficile' },
+      variantes: [{ si: 'ryuken_raisonne', vie: [0.7, 0.65], regle: 'Vous avez encaissé sans vous défendre… mais vos mots l’ont ébranlé' }],
+    },
+    apres: [
+      {
+        si: 'ryuken_raisonne',
+        alors: [
+          { dit: 'ryuken', texte: 'Tu as baissé ta garde. Pour moi. Espèce d’idiot{e}.', p: 'touche' },
+          { dit: 'ryuken', texte: 'Le maître aurait fait exactement pareil.', p: 'repos' },
+        ],
+        sinon: [
+          { dit: 'ryuken', texte: 'Tu m’as… arrêté. Heureusement que tu m’as arrêté.', p: 'touche' },
+          { dit: 'ryuken', texte: 'J’allais devenir comme lui. Exactement comme lui.', p: 'repos' },
+        ],
+      },
+      { dit: 'hero', texte: 'On va le trouver, Malvortex. Ensemble. Et on fera ce que le maître aurait voulu.' },
+    ],
+  },
+  {
+    id: 'portes', acte: 6, titre: 'CHAPITRE 24', sous: 'Les portes de l’enfer', arene: 'trone',
     etapes: [
       { lieu: 'LES PORTES DE L’ENFER' },
       { entre: 'hero', cote: 'g', comment: 'marche' },
@@ -1087,7 +1408,7 @@ export const SCENES = [
       },
       { dit: 'hero', texte: 'Écarte-toi de cette porte.', p: 'garde' },
     ],
-    combat: {
+    combat: { allie: 'celestia',
       adv: 'voidreaper', niveau: { normal: 'normal', difficile: 'difficile' },
       bonus: { si: 'blazero_allie', vieAdv: 0.65, texte: '🔥 {blazero} l’a déjà bien entamé' },
     },
@@ -1099,7 +1420,7 @@ export const SCENES = [
     ],
   },
   {
-    id: 'trone', acte: 6, titre: 'CHAPITRE 23', sous: 'Le trône des abysses', arene: 'trone',
+    id: 'trone', acte: 6, titre: 'CHAPITRE 25', sous: 'Le trône des abysses', arene: 'trone',
     etapes: [
       { lieu: 'TRÔNE INFERNAL' },
       { entre: 'hero', cote: 'g', comment: 'marche' },
@@ -1113,7 +1434,7 @@ export const SCENES = [
       { dit: 'hero', texte: 'Je suis venu{e} chercher le dernier éclat. Et refermer la Fracture.', p: 'garde' },
       { dit: 'malvortex', texte: 'La refermer ? Pauvre fou. Elle n’est pas à moi, elle est à LUI. Et derrière elle, quelque chose a faim.', p: 'lance' },
     ],
-    combat: { adv: 'malvortex', niveau: { normal: 'difficile', difficile: 'impossible' } },
+    combat: { allie: 'ryuken', allieSi: 'ryuken_raisonne', adv: 'malvortex', niveau: { normal: 'difficile', difficile: 'impossible' } },
     finale: [
       ...coupFinal(700, '#ff2800', 'Le seigneur des abysses encaisse le coup de trop.'),
       { effet: 'eclairs', c: '#ff3a2a', duree: 320, attendre: false },
@@ -1129,6 +1450,14 @@ export const SCENES = [
     ],
     apres: [
       { dit: 'malvortex', texte: 'Impossible… battu par un… Pfff.', p: 'touche' },
+      { entre: 'ryuken', cote: 'gg', comment: 'marche' },
+      { dit: 'ryuken', texte: 'C’est lui. Celui qui a tué le maître. Il est à terre.', p: 'garde' },
+      { dit: 'malvortex', texte: 'Vas-y, petit. Finis-moi. Montre-moi que tu me ressembles.', p: 'touche' },
+      {
+        si: 'ryuken_raisonne',
+        alors: [{ dit: 'ryuken', texte: 'Non. Je ne te ressemble pas. Le maître m’a appris mieux que ça.', p: 'repos' }],
+        sinon: [{ narre: 'Le poing de {ryuken} tremble au-dessus de Malvortex. Longtemps. Puis il retombe.' }, { dit: 'ryuken', texte: 'Tu ne vaux même pas ma colère.', p: 'repos' }],
+      },
       { debloque: 'malvortex' },
       { narre: 'Le sixième éclat roule aux pieds de {hero}. Les six éclats se mettent à briller ensemble… et la Fracture leur répond.' },
       { effet: 'fracture', attendre: false },
@@ -1139,7 +1468,7 @@ export const SCENES = [
 
   /* ========================= ACTE VIII : DIMENSION ZÉRO ========================= */
   {
-    id: 'tentation', acte: 6, titre: 'CHAPITRE 24', sous: 'Six éclats', arene: 'trone',
+    id: 'tentation', acte: 6, titre: 'CHAPITRE 26', sous: 'Six éclats', arene: 'trone',
     etapes: [
       { lieu: 'TRÔNE INFERNAL — LES ÉCLATS RÉUNIS' },
       { entre: 'hero', cote: 'd', comment: 'place', p: 'repos', dir: -1 },
@@ -1150,7 +1479,7 @@ export const SCENES = [
       { dit: 'celestia', texte: '{hero}, lâche-les ! C’est exactement ce qu’ils ont dit à {blazero}, à {serpenta}, à tous les autres !' },
       { dit: 'ryuken', texte: 'Tes yeux… {hero}, tes yeux sont violets.', p: 'garde' },
       { dit: 'hero', texte: 'Je ne suis pas comme eux. Je suis plus fort. Je vais tous vous protéger… même contre vous-mêmes.', p: 'lance' },
-      { dit: 'ryuken', texte: 'Le maître disait : « Le pire adversaire, c’est celui qui croit avoir raison. » Désolé. Je vais devoir te cogner.', p: 'garde' },
+      { dit: 'ryuken', texte: 'Le maître disait : « Le pire adversaire, c’est celui qui croit avoir raison. » Tu m’as ramené, l’autre jour. À mon tour.', p: 'garde' },
     ],
     combat: {
       adv: 'hero', joueur: 'ryuken', corrompu: true, niveau: { normal: 'normal', difficile: 'difficile' },
@@ -1186,7 +1515,7 @@ export const SCENES = [
     ],
   },
   {
-    id: 'portail', acte: 7, titre: 'CHAPITRE 25', sous: 'La garde du portail', arene: 'zero',
+    id: 'portail', acte: 7, titre: 'CHAPITRE 27', sous: 'La garde du portail', arene: 'zero',
     etapes: [
       { effet: 'fracture', attendre: false },
       { lieu: 'LA FRACTURE — LE SEUIL' },
@@ -1204,22 +1533,73 @@ export const SCENES = [
       { narre: 'Le dernier garde se défait en poussière. Mais derrière lui, la brèche commence à se refermer. Trop tôt. Bien trop tôt.' },
       { effet: 'secousse', duree: 50 },
       { entre: 'ironclad', cote: 'dd', comment: 'chute', dir: -1 },
+      { entre: 'vorn', cote: 'd', comment: 'saut', dir: -1 },
       { dit: 'ironclad', texte: 'La brèche se referme. Dans quarante secondes, plus personne ne pourra passer.' },
-      { dit: 'hero', texte: '{ironclad} ! Qu’est-ce que tu fais là ?!', p: 'garde' },
-      { dit: 'ironclad', texte: 'Je la retiens. Mes bras sont faits pour ça. Passe, {hero}.', p: 'garde' },
-      { dit: 'hero', texte: 'Et toi ? Tu viens avec moi !' },
-      { dit: 'ironclad', texte: 'Négatif. Si je lâche, elle se referme. Si je tiens… je ne pourrai plus jamais lâcher.', p: 'garde' },
-      { dit: 'ironclad', texte: 'Tu te souviens ? J’ai perdu 2 % de ma mémoire, et je regrettais de ne pas savoir ce qu’il y avait dedans.' },
-      { dit: 'ironclad', texte: 'Maintenant, je sais ce que je regretterai. Ce sera toi. Ça me va.', p: 'repos' },
-      { dit: 'hero', texte: '{ironclad}… NON !', p: 'touche' },
-      { narre: '{hero} franchit la brèche. Derrière, la Fracture se referme sur {ironclad} dans un grand silence. Ses yeux s’éteignent, l’un après l’autre.' },
-      { effet: 'flash', duree: 40 },
-      { sort: 'ironclad', comment: 'teleport' },
+      { dit: 'vorn', texte: 'Quelqu’un doit la tenir ouverte. De l’intérieur. Et ne jamais lâcher.', p: 'garde' },
+      { dit: 'ironclad', texte: 'Je le ferai. Mes bras sont faits pour ça.' },
+      { dit: 'vorn', texte: 'Non. Moi. J’ai une dette à payer. Cent ans de dette.', p: 'garde' },
+      {
+        question: 'Qui retiendra la brèche ?',
+        chrono: 8, defaut: 0,
+        choix: [
+          {
+            texte: '{ironclad}', affinite: { vorn: 1 },
+            suite: [
+              { dit: 'ironclad', texte: 'Tu te souviens ? J’ai perdu 2 % de ma mémoire, et je regrettais de ne pas savoir ce qu’il y avait dedans.' },
+              { dit: 'ironclad', texte: 'Maintenant, je sais ce que je regretterai. Ce sera toi. Ça me va.', p: 'repos' },
+              { dit: 'hero', texte: '{ironclad}… NON !', p: 'touche' },
+              { narre: '{hero} franchit la brèche, poussé{e} par Vorn. Derrière, la Fracture se referme sur {ironclad} dans un grand silence. Ses yeux s’éteignent, l’un après l’autre.' },
+              { effet: 'flash', duree: 40 },
+              { sort: 'ironclad', comment: 'teleport' },
+            ],
+          },
+          {
+            texte: 'Le Général Vorn', drapeau: 'sacrifice_vorn', affinite: { ironclad: 1 },
+            suite: [
+              { dit: 'vorn', texte: 'Merci. Il y a cent ans, un homme m’a donné du temps. Aujourd’hui, je le rends. Au bon camp.', p: 'repos' },
+              { dit: 'vorn', texte: 'Dis à Sablia… qu’un soldat a fini par payer ses dettes.' },
+              { dit: 'hero', texte: 'Vorn…', p: 'touche' },
+              { narre: '{ironclad} pousse {hero} dans la brèche. Le Général plante son épée dans la roche et retient le ciel de ses deux bras. Il ne recule pas d’un pas. Puis la Fracture se referme sur lui.' },
+              { effet: 'flash', duree: 40 },
+              { sort: 'vorn', comment: 'teleport' },
+            ],
+          },
+        ],
+      },
       { dit: 'hero', texte: 'Je te le promets. Ça ne sera pas pour rien.', p: 'garde' },
+      { sort: 'ironclad', comment: 'teleport' },
+      { sort: 'vorn', comment: 'teleport' },
     ],
   },
   {
-    id: 'zero', acte: 7, titre: 'CHAPITRE 26', sous: 'Dimension Zéro', arene: 'zero',
+    id: 'abime', acte: 7, titre: 'CHAPITRE 28', sous: 'Tenir', arene: 'zero',
+    etapes: [
+      { effet: 'fracture', attendre: false },
+      { lieu: 'DIMENSION ZÉRO — LE BORD DU NÉANT' },
+      { entre: 'hero', cote: 'g', comment: 'chute' },
+      { effet: 'secousse', duree: 60 },
+      { entre: 'lechaos', cote: 'd', comment: 'apparait' },
+      { narre: 'Il n’a pas de visage. Il a une présence. L’air se tord autour de lui. Chaque seconde ici pèse une année.' },
+      { dit: 'lechaos', texte: 'PETIT… CHOSE… QUI RESPIRE.' },
+      { narre: '{hero} frappe. Rien. Le Chaos ne sent rien. Pas encore. Il faut tenir, jusqu’à ce que quelque chose change.' },
+    ],
+    combat: {
+      adv: 'lechaos', survie: 30, niveau: { normal: 'difficile', difficile: 'impossible' }, vie: [1, 1],
+      regle: 'Impossible à battre pour l’instant : tenez 30 secondes',
+    },
+    apres: [
+      { effet: 'flash', duree: 40 },
+      { entre: 'solarius', cote: 'c', comment: 'apparait', dir: 1, aura: 1 },
+      { dit: 'solarius', texte: 'Tu as tenu. Exactement assez longtemps.' },
+      { dit: 'solarius', texte: 'Je vais retenir une moitié de lui dans la lumière. L’autre moitié… c’est à toi.', p: 'garde' },
+      { effet: 'rayons', x: 500, y: 170, c: '#ffe680', duree: 200, attendre: false },
+      { narre: 'Le gardien de la lumière se jette sur le Chaos. Un éclair blanc. Quand il retombe, le Chaos est plus petit, plus lent… et il saigne de la lumière.' },
+      { sort: 'solarius', comment: 'teleport' },
+      { calme: true },
+    ],
+  },
+  {
+    id: 'zero', acte: 7, titre: 'CHAPITRE 29', sous: 'Dimension Zéro', arene: 'zero',
     etapes: [
       { effet: 'fracture', attendre: false },
       { lieu: 'DIMENSION ZÉRO — AU-DELÀ DE TOUT' },
@@ -1239,7 +1619,17 @@ export const SCENES = [
         ],
       },
     ],
-    combat: {
+    combat: { phase2: {
+        echelle: 1.35, niveau: { normal: 'difficile', difficile: 'impossible' },
+        cine: [
+          { musique: null },
+          { narre: 'Le Chaos se tord. Il enfle. Il grandit, jusqu’à toucher le ciel du néant.', auto: 160 },
+          { effet: 'eclairs', c: '#c814ff', duree: 200, attendre: false },
+          { effet: 'secousse', duree: 60 },
+          { dit: 'lechaos', texte: 'JE… SUIS… TOUT.' },
+          { musique: 'boss' },
+        ],
+      },
       adv: 'lechaos', niveau: { normal: 'difficile', difficile: 'impossible' },
       bonus: { si: 'kira_pardon', vieAdv: 0.75, texte: '🗡️ {shadowkira} l’a frappé dans le dos' },
     },
@@ -1303,11 +1693,11 @@ export const SCENES = [
       { dit: 'ryuken', texte: 'La… la plaine de cendres. Vorn. Les ramen. Je… je me souviens !', p: 'touche' },
       { dit: 'ryuken', texte: 'Kaïros a remonté le temps ?! Et tout le monde a oublié ?' },
       { dit: 'hero', texte: 'Tout le monde. Sauf les éclats. Il va falloir réveiller nos amis un par un.', p: 'garde' },
-      { dit: 'hero', texte: '… Attends. Une semaine plus tôt. Avant la brèche. Alors {ironclad}… Il est vivant.', p: 'touche' },
+      { si: '!sacrifice_vorn', alors: [{ dit: 'hero', texte: '… Attends. Une semaine plus tôt. Avant la brèche. Alors {ironclad}… Il est vivant.', p: 'touche' }], sinon: [{ dit: 'hero', texte: '… Attends. Une semaine plus tôt. Avant la brèche. Alors Vorn… Il est vivant.', p: 'touche' }] },
     ],
   },
   {
-    id: 'retour', acte: 8, titre: 'INTERLUDE', sous: 'Ce qui avait été perdu', arene: 'station',
+    id: 'retour', acte: 8, si: '!sacrifice_vorn', titre: 'INTERLUDE', sous: 'Ce qui avait été perdu', arene: 'station',
     etapes: [
       { lieu: 'STATION ORBITALE ZÉRO-G — UNE SEMAINE PLUS TÔT' },
       { entre: 'ironclad', cote: 'd', comment: 'place', dir: -1 },
@@ -1319,12 +1709,31 @@ export const SCENES = [
       { effet: 'flash', duree: 30 },
       { dit: 'ironclad', texte: 'Données reçues. La station. Le volcan. La plaine de cendres. La brèche qui se referme.', p: 'touche' },
       { dit: 'ironclad', texte: 'Je me souviens de… ma fin. C’était silencieux. Et pas désagréable. J’avais quelqu’un à protéger.', p: 'repos' },
-      { dit: 'hero', texte: 'Ne refais plus jamais ça. Tu m’entends ? Plus jamais.' },
+      {
+        question: '{ironclad} est là, vivant.',
+        choix: [
+          { texte: '« Ne refais plus jamais ça. Tu m’entends ? Plus jamais. »', affinite: { ironclad: 2 }, suite: [] },
+          { texte: '« Merci. Pour la brèche. Pour tout. »', affinite: { ironclad: 1 }, suite: [] },
+        ],
+      },
       { dit: 'ironclad', texte: 'Je ne peux pas promettre ça. Mais je peux promettre de tout faire pour rester. Mémoire : 100 %. Je ne veux plus rien oublier.', p: 'victoire' },
     ],
   },
   {
-    id: 'souvenir', acte: 8, titre: 'CHAPITRE 27', sous: 'L’étoile qui avait oublié', arene: 'celeste',
+    id: 'retour-vorn', acte: 8, si: 'sacrifice_vorn', titre: 'INTERLUDE', sous: 'Un Général qui ne se souvient pas', arene: 'citadelle',
+    etapes: [
+      { lieu: 'CITADELLE DE L’HORLOGE — UNE SEMAINE PLUS TÔT' },
+      { narre: 'De loin, caché dans les dunes, {hero} regarde la grande porte de la citadelle. Le Général passe ses troupes en revue. Vivant.' },
+      { entre: 'vorn', cote: 'd', comment: 'place', dir: -1 },
+      { entre: 'hero', cote: 'gg', comment: 'place', p: 'accroupi' },
+      { dit: 'vorn', texte: 'En rang. Vérifiez vos armes. Le maître attend des nouvelles des éclats.' },
+      { dit: 'hero', texte: '(Il a retenu le ciel pour moi. Et il ne le sait même pas.)', p: 'repos' },
+      { narre: 'Le Général lève les yeux vers les dunes, comme s’il avait senti un regard. Il fronce les sourcils. Puis il s’en va.' },
+      { dit: 'hero', texte: '(Sablia saura lui rendre sa mémoire. Il le faut.)' },
+    ],
+  },
+  {
+    id: 'souvenir', acte: 8, titre: 'CHAPITRE 30', sous: 'L’étoile qui avait oublié', arene: 'celeste',
     etapes: [
       { lieu: 'CITÉ CÉLESTE — UNE SEMAINE PLUS TÔT' },
       { entre: 'hero', cote: 'g', comment: 'apparait' },
@@ -1345,7 +1754,7 @@ export const SCENES = [
     ],
   },
   {
-    id: 'sablia2', acte: 8, titre: 'CHAPITRE 28', sous: 'Le sable se souvient', arene: 'citadelle',
+    id: 'sablia2', acte: 8, titre: 'CHAPITRE 31', sous: 'Le sable se souvient', arene: 'citadelle',
     etapes: [
       { lieu: 'CITADELLE DE L’HORLOGE — UNE SEMAINE PLUS TÔT' },
       { entre: 'hero', cote: 'g', comment: 'apparait' },
@@ -1355,7 +1764,7 @@ export const SCENES = [
       { dit: 'sablia', texte: 'Mensonges. Je suis la gardienne du sablier. Je n’ai jamais trahi mon maître.', p: 'garde' },
       { dit: 'hero', texte: 'Pas encore. Mais tu vas le faire. Pour la deuxième fois.', p: 'garde' },
     ],
-    combat: { adv: 'sablia', corrompu: true, niveau: { normal: 'difficile', difficile: 'difficile' }, regle: 'Elle a rejoint votre camp une fois… Kaïros l’a reprise' },
+    combat: { allie: 'celestia', adv: 'sablia', corrompu: true, niveau: { normal: 'difficile', difficile: 'difficile' }, regle: 'Elle a rejoint votre camp une fois… Kaïros l’a reprise' },
     apres: [
       { dit: 'sablia', texte: 'Ce sable… dans ta poche. Il chante une chanson que je connais.', p: 'touche' },
       { narre: '{hero} ouvre la main. Les six éclats brillent. Et le sable de Sablia se met à couler… dans l’autre sens.' },
@@ -1366,7 +1775,7 @@ export const SCENES = [
     ],
   },
   {
-    id: 'eclipse', acte: 8, titre: 'CHAPITRE 29', sous: 'Deux sœurs, une ombre', arene: 'neon',
+    id: 'eclipse', acte: 8, titre: 'CHAPITRE 32', sous: 'Deux sœurs, une ombre', arene: 'neon',
     etapes: [
       { effet: 'nuit', attendre: false },
       { lieu: 'NÉON CITY — MINUIT' },
@@ -1450,7 +1859,7 @@ export const SCENES = [
 
   /* ========================== ACTE X : HORS DU TEMPS ========================== */
   {
-    id: 'garde', acte: 9, titre: 'CHAPITRE 30', sous: 'Les marches de l’horloge', arene: 'horloge',
+    id: 'garde', acte: 9, titre: 'CHAPITRE 33', sous: 'Les marches de l’horloge', arene: 'horloge',
     etapes: [
       { lieu: 'HORS DU TEMPS — LES MARCHES DE L’HORLOGE' },
       { narre: 'Un escalier de pierre flotte dans le vide, jusqu’à une horloge grande comme une montagne. Chaque marche est une seconde.' },
@@ -1461,7 +1870,7 @@ export const SCENES = [
       { dit: 'vorn', texte: 'Je retiens les autres. Toi, monte. Et ne te retourne pas.', p: 'garde' },
       { sort: 'vorn', comment: 'marche' },
     ],
-    combat: {
+    combat: { allie: 'ironclad',
       adv: 'sentinelle', serie: ['sentinelle', 'chasseur', 'sentinelle'], niveau: { normal: 'normal', difficile: 'difficile' },
       regle: 'Trois gardes d’affilée · un round chacun · votre vie passe de l’un à l’autre',
     },
@@ -1517,7 +1926,25 @@ export const SCENES = [
       { dit: 'hero', texte: 'Alors tu sais déjà comment ça finit.', p: 'garde' },
       { dit: 'kairos', texte: 'Oui. Toi, à genoux.', p: 'lance' },
     ],
-    combat: { adv: 'kairos', niveau: { normal: 'difficile', difficile: 'impossible' } },
+    combat: { allie: 'meilleur',
+      bonus: { si: 'aff_ryuken>=2&aff_celestia>=2', vieAdv: 0.85, texte: '💞 Vos amis vous soutiennent : Kaïros vacille déjà' },
+      phase2: {
+        niveau: { normal: 'difficile', difficile: 'impossible' },
+        cine: [
+          { musique: null },
+          { effet: 'gel', attendre: false },
+          { narre: 'Kaïros tombe à genoux… puis sourit.', auto: 120 },
+          { dit: 'kairos', texte: 'Tu crois que c’est fini ? Le temps est À MOI.', p: 'lance' },
+          { effet: 'onde', x: 700, y: 360, c: '#4fe0d0', duree: 80, attendre: false },
+          { effet: 'flash', duree: 40 },
+          { narre: 'Le temps recule. Ses blessures se referment, une à une… mais pas les tiennes.' },
+          { calme: true },
+          { pose: 'kairos', p: 'garde' },
+          { si: 'legende', alors: [{ dit: 'kairos', texte: 'Toi… tu te souviens, toi aussi ? Alors tu sais que je ne lâche jamais.' }] },
+          { dit: 'kairos', texte: 'Recommençons.', p: 'lance' },
+          { musique: 'final' },
+        ],
+      }, adv: 'kairos', niveau: { normal: 'difficile', difficile: 'impossible' } },
     finale: [
       { musique: null },
       { bandes: 92 },
@@ -1564,6 +1991,20 @@ export const SCENES = [
       { narre: 'Le cadran se fend. Les aiguilles s’arrêtent. Puis, lentement, elles repartent… dans le bon sens. Là-haut, la Fracture commence à se refermer.' },
       { dit: 'kairos', texte: 'Mille essais. Mille échecs. Je n’avais jamais perdu. Ni dans le passé, ni dans le futur.', p: 'repos' },
       { dit: 'hero', texte: 'Pourquoi, Kaïros ? Mille fois. Mille mondes brisés. Pour quoi ?' },
+      { decor: 'ruines', fondu: true },
+      { effet: 'souvenir', attendre: false },
+      { lieu: 'IL Y A MILLE ANS' },
+      { entre: 'kairos', cote: 'g', comment: 'place', p: 'repos' },
+      { entre: 'hemera', cote: 'd', comment: 'place', p: 'repos', dir: -1 },
+      { dit: 'hemera', texte: 'Papa, pourquoi les aiguilles tournent toujours dans le même sens ?' },
+      { dit: 'kairos', texte: 'Parce que le temps ne revient jamais en arrière, ma chérie. C’est ce qui le rend précieux.' },
+      { dit: 'hemera', texte: 'Alors il faut faire attention à chaque seconde ?' },
+      { dit: 'kairos', texte: 'À chaque seconde. Promets-le-moi.' },
+      { dit: 'hemera', texte: 'Promis !', p: 'victoire' },
+      { decor: 'horloge', fondu: true },
+      { calme: true },
+      { entre: 'hero', cote: 'g', comment: 'place' },
+      { entre: 'kairos', cote: 'd', comment: 'place', p: 'touche' },
       { dit: 'kairos', texte: 'Il y a mille ans, j’avais une fille. Elle s’appelait Héméra. Elle aimait regarder les aiguilles tourner.' },
       { dit: 'kairos', texte: 'Une fièvre l’a emportée, un matin d’hiver. Je suis remonté à la veille. Elle est morte quand même. Alors je suis remonté encore. Et encore.' },
       { dit: 'kairos', texte: 'Mille fois, je l’ai vue partir. Le temps refuse de rendre ce qu’il a pris. Alors j’ai cherché un guerrier assez fort pour vaincre le temps lui-même.' },
@@ -1592,6 +2033,34 @@ export const SCENES = [
     ],
   },
   {
+    id: 'disparition', acte: 9, titre: 'INTERLUDE', sous: 'Le temps qu’on donne', arene: 'horloge',
+    etapes: [
+      { lieu: 'HORS DU TEMPS — L’HORLOGE BRISÉE' },
+      { narre: 'L’horloge est brisée. Le temps volé rentre chez lui. Tout le temps volé.' },
+      { entre: 'hero', cote: 'g', comment: 'place' },
+      { entre: 'eclipse', cote: 'd', comment: 'place', p: 'touche', dir: -1 },
+      { dit: 'eclipse', texte: 'Mes mains… je ne vois plus mes mains.', p: 'touche' },
+      { narre: 'Éclipse pâlit. Elle devient transparente, comme une ombre à midi.' },
+      { si: 'kira_pardon', alors: [{ entre: 'shadowkira', cote: 'dd', comment: 'teleport', dir: -1 }, { dit: 'shadowkira', texte: 'Non… Non, non, non ! Pas maintenant ! Je viens juste de te retrouver !', p: 'touche' }] },
+      { entre: 'sablia', cote: 'c', comment: 'apparait' },
+      { dit: 'sablia', texte: 'Kaïros l’a faite avec du temps volé. L’horloge brisée, ce temps repart. Et elle avec.' },
+      { dit: 'hero', texte: 'Il y a forcément un moyen !', p: 'garde' },
+      { dit: 'sablia', texte: 'Il y en a un. Du temps qui n’a jamais été volé. Du temps qu’on donne.', p: 'repos' },
+      { dit: 'sablia', texte: 'Moi, j’ai mille ans de sable dans les veines. C’est largement assez pour une vie.' },
+      { dit: 'hero', texte: 'Sablia… Tu ne peux pas…' },
+      { dit: 'sablia', texte: 'Tu m’as appris que chaque grain était un morceau de vie. Laisse-moi en rendre un. Le plus important.', p: 'victoire' },
+      { effet: 'braises', c: '#f0c060', n: 120, duree: 400, attendre: false },
+      { auraSur: 'sablia', v: 1 },
+      { narre: 'Le sable s’envole de Sablia, grain par grain, et enveloppe Éclipse. Les couleurs reviennent sur son visage.' },
+      { pose: 'eclipse', p: 'repos' },
+      { dit: 'eclipse', texte: 'Je… je suis là. Je suis vraiment là.' },
+      { dit: 'sablia', texte: 'Prends soin de ta sœur. Et de mes secondes.' },
+      { sort: 'sablia', comment: 'teleport' },
+      { narre: 'Il ne reste qu’un peu de sable doré, que le vent emporte vers la ville. Et une seconde de silence, qui dure longtemps.' },
+      { calme: true },
+    ],
+  },
+  {
     id: 'adieux', acte: 9, titre: 'INTERLUDE', sous: 'Une étoile de plus', arene: 'celeste',
     etapes: [
       { effet: 'nuit', attendre: false },
@@ -1617,41 +2086,120 @@ export const SCENES = [
       { effet: 'aube', attendre: false },
       { lieu: 'NÉON CITY — L’AUBE' },
       { entre: 'hero', cote: 'c', comment: 'marche' },
-      { entre: 'ryuken', cote: 'd', comment: 'saut' },
-      { dit: 'ryuken', texte: 'Te voilà ! La Fracture s’est refermée cette nuit. Toute la ville ne parle que de toi.' },
-      { narre: 'Il fait jour, et pourtant, juste au-dessus de la lune, une étoile brille encore. Elle n’a pas l’air pressée de s’éteindre.' },
-      { entre: 'ironclad', cote: 'gg', comment: 'chute' },
-      { dit: 'ironclad', texte: 'Mémoire : 100 %. Je n’ai rien oublié. Ni personne.', p: 'victoire' },
-      { entre: 'vorn', cote: 'g', comment: 'marche' },
-      { dit: 'vorn', texte: 'Sablia et moi, nous allons rendre les secondes qui restent. Une par une. Il nous faudra peut-être cent ans. Ça tombe bien : j’ai l’habitude.' },
-      { sort: 'vorn', comment: 'marche' },
       {
-        si: 'blazero_allie',
+        si: 'fin_solitaire',
         alors: [
-          { entre: 'blazero', cote: 'dd', comment: 'saut', dir: -1 },
-          { dit: 'blazero', texte: 'Et moi, on m’oublie ? Qui a fait griller le messager des enfers, hein ?', p: 'victoire' },
+          { narre: 'La Fracture est refermée. La ville est sauvée. Et pourtant, sur le toit, {hero} est seul{e}.' },
+          { narre: 'Certains sont partis sans un mot. D’autres ne se sont jamais vraiment approchés. On peut sauver le monde, et perdre les gens en chemin.' },
+          { si: 'aff_ryuken>=1', alors: [{ entre: 'ryuken', cote: 'd', comment: 'marche' }, { dit: 'ryuken', texte: 'Hé. Je savais que je te trouverais ici. Les ramen… c’est toujours d’actualité.' }] },
+          { musique: 'triste' },
+          { titre: 'FIN', sous: 'La fin solitaire — d’autres choix mènent à d’autres fins.', film: true },
         ],
       },
       {
-        si: 'kira_pardon',
+        si: '!fin_solitaire',
         alors: [
-          { entre: 'shadowkira', cote: 'g', comment: 'teleport' },
-          { dit: 'shadowkira', texte: 'Ma sœur dort pour la première fois depuis dix ans. Avec la lumière allumée. Merci, {hero}.' },
-          { sort: 'shadowkira', comment: 'teleport' },
+          { entre: 'ryuken', cote: 'd', comment: 'saut' },
+          { dit: 'ryuken', texte: 'Te voilà ! La Fracture s’est refermée cette nuit. Toute la ville ne parle que de toi.' },
+          { narre: 'Il fait jour, et pourtant, juste au-dessus de la lune, une étoile brille encore. Elle n’a pas l’air pressée de s’éteindre.' },
+          { entre: 'ironclad', cote: 'gg', comment: 'chute' },
+          { dit: 'ironclad', texte: 'Mémoire : 100 %. Je n’ai rien oublié. Ni personne.', p: 'victoire' },
+          { entre: 'vorn', cote: 'g', comment: 'marche' },
+          { dit: 'vorn', texte: 'Sablia nous a donné tout son temps. Je rendrai les secondes qui restent, une par une, pour elle. Il me faudra peut-être cent ans. Ça tombe bien : j’ai l’habitude.' },
+          { sort: 'vorn', comment: 'marche' },
+          {
+            si: 'blazero_allie',
+            alors: [
+              { entre: 'blazero', cote: 'dd', comment: 'saut', dir: -1 },
+              { dit: 'blazero', texte: 'Et moi, on m’oublie ? Qui a fait griller le messager des enfers, hein ?', p: 'victoire' },
+            ],
+          },
+          {
+            si: 'kira_pardon',
+            alors: [
+              { entre: 'shadowkira', cote: 'g', comment: 'teleport' },
+              { dit: 'shadowkira', texte: 'Ma sœur dort pour la première fois depuis dix ans. Avec la lumière allumée. Merci, {hero}.' },
+              { sort: 'shadowkira', comment: 'teleport' },
+            ],
+            sinon: [{ narre: 'On raconte qu’une jeune fille sans ombre parcourt la ville, à la recherche de sa sœur. On raconte qu’elle est tout près.' }],
+          },
+          {
+            si: 'kairos_main',
+            alors: [{ narre: 'Sur un toit voisin, un homme à l’horloge regarde le soleil se lever. Pour la première fois depuis mille ans, il ne sait pas ce que la journée lui réserve.' }],
+            sinon: [{ narre: 'Quelque part, hors du temps, une horloge s’est arrêtée. Pour combien de temps ?' }],
+          },
+          { narre: 'Sur les murs de la ville, une affiche toute neuve : « GRAND TOURNOI — Venez défier ONYX, le champion invaincu. »' },
+          { narre: 'Et tout en haut de la Tour des défis, une silhouette attend. Elle a ton visage.' },
+          { dit: 'ryuken', texte: 'Alors, {hero}… Je te dois des ramen, je crois. Mais d’abord : ce round, on le finit ?' },
+          { dit: 'hero', texte: 'Le monde me doit bien un bon combat. En garde !', p: 'victoire' },
+          { musique: 'epique' },
+          { titre: 'FIN', sous: 'Merci d’avoir joué ! — Onyx vous attend au Tournoi, Némésis au sommet de la Tour.' },
+          { si: 'fin_vraie', alors: [{ narre: 'Mais l’histoire n’est pas tout à fait finie…' }] },
         ],
-        sinon: [{ narre: 'On raconte qu’une jeune fille sans ombre parcourt la ville, à la recherche de sa sœur. On raconte qu’elle est tout près.' }],
       },
-      {
-        si: 'kairos_main',
-        alors: [{ narre: 'Sur un toit voisin, un homme à l’horloge regarde le soleil se lever. Pour la première fois depuis mille ans, il ne sait pas ce que la journée lui réserve.' }],
-        sinon: [{ narre: 'Quelque part, hors du temps, une horloge s’est arrêtée. Pour combien de temps ?' }],
-      },
-      { narre: 'Sur les murs de la ville, une affiche toute neuve : « GRAND TOURNOI — Venez défier ONYX, le champion invaincu. »' },
-      { narre: 'Et tout en haut de la Tour des défis, une silhouette attend. Elle a ton visage.' },
-      { dit: 'ryuken', texte: 'Alors, {hero}… Je te dois des ramen, je crois. Mais d’abord : ce round, on le finit ?' },
-      { dit: 'hero', texte: 'Le monde me doit bien un bon combat. En garde !', p: 'victoire' },
+    ],
+  },
+  {
+    id: 'vraie-fin', acte: 9, si: 'fin_vraie', titre: 'LA VRAIE FIN', sous: 'Une seconde rendue', arene: 'neon',
+    etapes: [
+      { effet: 'aube', attendre: false },
+      { lieu: 'NÉON CITY — UN TOIT, AU LEVER DU JOUR' },
+      { entre: 'kairos', cote: 'd', comment: 'place', p: 'repos', dir: -1 },
+      { entre: 'hero', cote: 'g', comment: 'marche' },
+      { dit: 'kairos', texte: 'Les secondes rentrent chez elles. Toutes. Je les entends, comme une pluie qui tombe à l’envers.' },
+      { narre: 'Une poussière dorée tourbillonne sur le toit. Elle s’assemble, grain par grain, en une silhouette.' },
+      { effet: 'braises', c: '#ffd090', n: 100, duree: 400, attendre: false },
+      { entre: 'hemera', cote: 'c', comment: 'apparait', dir: -1 },
+      { dit: 'hemera', texte: '… Papa ?' },
+      { dit: 'kairos', texte: 'Héméra…', p: 'touche' },
+      { dit: 'hemera', texte: 'Tu as fait attention à chaque seconde ? Comme promis ?' },
+      { dit: 'kairos', texte: 'Non. J’en ai gâché mille ans. Mais quelqu’un m’a appris à avancer.', p: 'repos' },
+      { narre: 'Le vieil homme serre sa fille dans ses bras. Pour la première fois depuis mille ans, l’horloge dans son dos s’arrête… et repart, dans le bon sens.' },
       { musique: 'epique' },
-      { titre: 'FIN', sous: 'Merci d’avoir joué ! — Onyx vous attend au Tournoi, Némésis au sommet de la Tour.' },
+      { dit: 'hemera', texte: 'Merci, {hero}. Je ne sais pas qui tu es. Mais je sais que c’est toi.' },
+      { debloque: 'hemera' },
+      { titre: 'LA VRAIE FIN', sous: 'Merci d’avoir tout donné.', film: true },
+    ],
+  },
+  {
+    id: 'post-generique', acte: 9, titre: 'APRÈS LE GÉNÉRIQUE', sous: '…', arene: 'engrenages',
+    etapes: [
+      { musique: 'mystere' },
+      { lieu: 'QUELQUE PART, AU CŒUR DE L’HORLOGE BRISÉE' },
+      { narre: 'Les engrenages tournent encore. Lentement. Quelqu’un est assis au milieu, depuis très, très longtemps.' },
+      { entre: 'premier', cote: 'c', comment: 'place', ombre: true, p: 'repos' },
+      { dit: 'premier', texte: 'Le millième… a réussi.' },
+      { dit: 'premier', texte: 'Alors il viendra. Il vient toujours, quand la boucle se brise.' },
+      { dit: 'premier', texte: 'Viens, millième. J’ai quelque chose à te rendre.' },
+      { croise: 'premier', indice: 'Battez-le au cœur de l’horloge brisée, après la vraie fin.' },
+      { titre: 'À SUIVRE…', film: true, auto: 260 },
+    ],
+  },
+  {
+    id: 'coeur', acte: 9, si: 'fin_vraie', titre: 'ÉPILOGUE SECRET', sous: 'Le Premier Héros', arene: 'engrenages',
+    etapes: [
+      { lieu: 'AU CŒUR DE L’HORLOGE BRISÉE' },
+      { entre: 'hero', cote: 'g', comment: 'apparait' },
+      { entre: 'premier', cote: 'd', comment: 'place', ombre: true, p: 'repos' },
+      { dit: 'premier', texte: 'Tu es venu{e}.' },
+      { devoile: 'premier' },
+      { dit: 'hero', texte: 'Tu… tu me ressembles.', p: 'garde' },
+      { dit: 'premier', texte: 'J’ai été toi. Le tout premier. Kaïros m’a choisi le premier soir. J’ai échoué, et je suis resté ici, prisonnier, à regarder passer les 999 autres.' },
+      { dit: 'premier', texte: 'Mille ans à apprendre tous leurs coups. Tous les tiens.' },
+      { dit: 'premier', texte: 'Libère-moi, millième. Bats-moi. C’est la seule façon pour moi de partir.', p: 'lance' },
+    ],
+    combat: { adv: 'premier', niveau: { normal: 'difficile', difficile: 'impossible' }, allie: 'meilleur', regle: 'Le combat le plus dur du jeu' },
+    finale: [
+      ...coupFinal(700, '#e8d8a0', 'Le dernier coup… de la dernière boucle.'),
+      { effet: 'horloge-brisee', duree: 240, attendre: false },
+      { effet: 'debris', c: '#e8d8a0', n: 50, duree: 220, attendre: false },
+      { narre: 'Les engrenages s’arrêtent, un à un. Pour la première fois depuis mille ans, le cœur de l’horloge se tait.', auto: 200 },
+      ...titreFin('LA BOUCLE EST BRISÉE', 'Il n’y aura pas de mille-et-unième fois'),
+    ],
+    apres: [
+      { dit: 'premier', texte: 'Merci. Je peux enfin partir. Ou rester… à tes côtés, si tu veux bien d’un vieux héros.', p: 'repos' },
+      { debloque: 'premier' },
+      { dit: 'premier', texte: 'La boucle est brisée, millième. Ce qui vient maintenant… personne ne l’a jamais vécu. Pas même lui.' },
     ],
   },
 ];
@@ -1677,6 +2225,19 @@ export const TOUR_BOSS = [
  * et « combat » (la musique de combat ordinaire).
  */
 export const MUSIQUES = {
+  maitre: ['calme'],
+  deuil: ['triste'],
+  colere: ['tension'],
+  'avant-fracture': ['mystere', 'boss', 'mystere'],
+  gardien: ['mystere', 'combat', 'mystere'],
+  'souvenir-vorn': ['triste', 'armee', 'triste'],
+  vengeance: ['triste', 'boss', 'triste'],
+  abime: ['tension', 'boss', 'epique'],
+  disparition: ['triste'],
+  'retour-vorn': ['triste'],
+  'vraie-fin': ['triste'],
+  'post-generique': ['mystere'],
+  coeur: ['mystere', 'final', 'epique'],
   volcan: [, , 'tension'],
   malvortex1: [, , 'tension'],
   assaut: ['armee', , 'tension'],
@@ -1710,7 +2271,7 @@ export const MUSIQUES = {
   horloge: [, , 'triste'],
   adieux: ['triste'],
 };
-const BOSS_MUSIQUE = { solarius: 'boss', malvortex: 'boss', lechaos: 'boss', vorn: 'boss', kairos: 'final' };
+const BOSS_MUSIQUE = { solarius: 'boss', malvortex: 'boss', lechaos: 'boss', vorn: 'boss', kairos: 'final', premier: 'final' };
 /** La musique d'une scène, avant / pendant / après le combat. */
 export function musiqueDe(sc, quand) {
   const m = MUSIQUES[sc.id] || [];

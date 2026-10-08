@@ -65,6 +65,16 @@ export function traiter(fx, ev, c) {
       if (ev.type !== 'combo-nom') fx.flash = { c: PERSO[j.id].c.c1, vie: 8, max: 8, a: 0.25 };
       break;
     }
+    case 'assistance': {
+      // L'allié surgit : son nom, un éclair de sa couleur, une gerbe d'étincelles.
+      const p = PERSO[ev.allie];
+      if (!p) break;
+      fx.noms[ev.joueur] = { texte: `${p.nom} À LA RESCOUSSE !`, vie: 80, max: 80, c: p.c.c1, sorte: 'special' };
+      fx.flash = { c: p.c.c1, vie: 14, max: 14, a: 0.45 };
+      etincelles(fx, ev.x, ev.y, 40, p.c.c1, 10);
+      fx.secousse = Math.max(fx.secousse, 10);
+      break;
+    }
     case 'faisceau':
       fx.faisceaux.push({ joueur: ev.joueur, def: ev.def, t: 0, duree: ev.duree });
       break;
@@ -991,6 +1001,38 @@ const ULTIS = {
       });
     }
     if (t > 66) lumiere(g, () => halo(g, D.x, D.y, (t - 66) * 12, k.c1, Math.max(0, 1 - (t - 66) / 40)));
+  },
+  /* HÉMÉRA : l'aube se lève, mille rayons dorés. */
+  'aube-eternelle'(g, t, A, D, k) {
+    const p = Math.min(1, t / 60);
+    const gr = g.createLinearGradient(0, H, 0, 0);
+    gr.addColorStop(0, `rgba(255,160,90,${0.5 * p})`); gr.addColorStop(1, `rgba(120,60,140,${0.3 * p})`);
+    g.fillStyle = gr; g.fillRect(0, 0, L, H);
+    lumiere(g, () => {
+      halo(g, L / 2, SOL - 40 + (1 - p) * 200, 260 * p + 40, '#ffd090', 0.9);
+      for (let i = 0; i < 16; i++) {
+        const a = -Math.PI + (i / 15) * Math.PI;
+        g.strokeStyle = rgba('#ffe0b0', 0.5 * p); g.lineWidth = 6;
+        g.beginPath(); g.moveTo(L / 2, SOL - 40); g.lineTo(L / 2 + Math.cos(a) * 900, SOL - 40 + Math.sin(a) * 900); g.stroke();
+      }
+      if (t > 50) halo(g, D.x, D.y, (t - 50) * 6, '#ffffff', Math.max(0, 1 - (t - 50) / 40));
+    });
+  },
+  /* LE PREMIER HÉROS : mille boucles — ses images d'avant frappent toutes ensemble. */
+  'mille-boucles'(g, t, A, D, k) {
+    g.fillStyle = `rgba(20,16,8,${Math.min(0.6, t / 40)})`; g.fillRect(0, 0, L, H);
+    for (let i = 0; i < 12; i++) {
+      const a = (i / 12) * TAU + t / 30;
+      const rr = 280 - Math.min(1, t / 60) * 200;
+      const x = D.x + Math.cos(a) * rr;
+      const y = D.y + 30 + Math.sin(a) * rr * 0.35;
+      g.save(); g.globalAlpha = 0.5; g.fillStyle = k.c1;
+      g.beginPath(); g.ellipse(x, y - 40, 14, 40, 0, 0, TAU); g.fill();
+      g.beginPath(); g.arc(x, y - 92, 12, 0, TAU); g.fill();
+      g.restore();
+      if (t > 40 && (t + i * 2) % 14 < 3) lumiere(g, () => { g.strokeStyle = rgba('#fff4c8', 0.9); g.lineWidth = 3; g.beginPath(); g.moveTo(x, y - 60); g.lineTo(D.x, D.y); g.stroke(); });
+    }
+    if (t > 62) texteContour(g, 'ENCORE.', L / 2, 170, 90, k.c1, '#2a2010', 'center', true);
   },
   /* LE CHAOS : tout finit ici. */
   'omega-collapse'(g, t, A, D, k) {
