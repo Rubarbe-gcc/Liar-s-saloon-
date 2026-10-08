@@ -258,7 +258,8 @@ export function avancerCine() {
   if (!S) return;
   if (S.attente?.qte) { finirQte(true); return; }
   if (S.attente?.infil) return;
-  if (S.ecrit && S.ecrit.n < S.ecrit.texte.length) { S.ecrit.n = S.ecrit.texte.length; return; }
+  // Le texte s'écrit encore : on l'affiche en entier d'un coup.
+  if (S.ecrit && S.ecrit.n < S.ecrit.texte.length) { S.ecrit.n = S.ecrit.texte.length; $('cine-texte').textContent = S.ecrit.texte; return; }
   if (S.attente?.tap) {
     S.attente = null;
     $('cine-boite').hidden = true;
