@@ -36,6 +36,18 @@ const BOUTONS = ['P', 'K', 'G', 'A', 'B', 'U'];
 const JUGGLE_MAX = 4;
 /** La vie de base (multipliée par celle du combattant). */
 export const VIE = 150;
+/**
+ * Les murs de l'arène (option `murs`) : projeté contre un bord, on l'abîme ;
+ * au troisième choc, il cède, et le combat passe dans la zone voisine (une
+ * autre arène, `c.etage`), l'adversaire à terre. Une transition de
+ * MUR_TRANSITION images, noire au milieu.
+ */
+export const MUR_PV = 3;
+export const MUR_TRANSITION = 60;
+const MUR_VITESSE = 5;
+const MUR_REPOS = 40;
+const MUR_DEGATS = 3;
+const MUR_BRISE_DEGATS = 10;
 
 /** Les coups normaux : démarrage, coups actifs, récupération, portée, dégâts. */
 const NORMAUX = {
@@ -96,9 +108,10 @@ function nouveauJoueur(id, n) {
  * @param {{ p1: string, p2: string, ia?: { 0?: string, 1?: string }, entrainement?: boolean, graine?: any,
  *           victoires?: number, vie?: [number|null, number|null] }} o
  *   victoires : les rounds à gagner ; vie : la vie de départ de chacun (la Tour des défis la garde d'un combat à l'autre) ;
- *   survie : un combat de survie (mode Histoire) — tenir ce nombre de secondes suffit à gagner.
+ *   survie : un combat de survie (mode Histoire) — tenir ce nombre de secondes suffit à gagner ;
+ *   murs : des murs qu'on peut briser, pour passer dans une autre zone.
  */
-export function creerCombat({ p1, p2, ia = {}, entrainement = false, graine = Date.now(), victoires = VICTOIRES, vie = [], survie = 0 } = {}) {
+export function creerCombat({ p1, p2, ia = {}, entrainement = false, graine = Date.now(), victoires = VICTOIRES, vie = [], survie = 0, murs = false } = {}) {
   const c = {
     v: 1, f: 0, alea: graineDe(graine), entrainement,
     joueurs: [nouveauJoueur(p1, 0), nouveauJoueur(p2, 1)],
@@ -111,6 +124,7 @@ export function creerCombat({ p1, p2, ia = {}, entrainement = false, graine = Da
   c.victoiresRequises = Math.max(1, victoires);
   if (survie > 0) { c.survie = survie; c.temps = survie; c.victoiresRequises = 1; }
   if (entrainement) { c.phase = 'combat'; c.temps = Infinity; }
+  if (murs) { c.murs = [MUR_PV, MUR_PV]; c.etage = 0; c.transition = 0; }
   return c;
 }
 
@@ -130,6 +144,11 @@ export function pas(c, entrees = []) {
   c.joueurs.forEach((j, k) => lireEntrees(c, j, j.ia
     ? (!fige && c.phase === 'combat' ? penser(c, j) : { ...VIDE })
     : { ...VIDE, ...(entrees[k] || {}) }));
+  if (c.transition > 0) {
+    c.transition -= 1;
+    if (c.transition === MUR_TRANSITION / 2) changerDeZone(c);
+    return;
+  }
   // Les cinématiques (saisie, ultime) arrêtent le reste.
   if (c.cine) { avancerCine(c); return; }
   if (c.gel > 0) { c.gel -= 1; return; }
@@ -831,7 +850,55 @@ function physique(c, j) {
     if (Math.abs(j.vx) < 0.1) j.vx = 0;
   }
   j.x += j.vx;
+  if (c.murs) contreLeMur(c, j);
   j.x = Math.max(ARENE.BORD, Math.min(ARENE.L - ARENE.BORD, j.x));
+}
+
+/** Projeté contre un bord : le mur s'abîme ; au dernier choc, il cède. */
+function contreLeMur(c, j) {
+  if (j.murRepos > 0) { j.murRepos -= 1; return; }
+  const cote = j.x <= ARENE.BORD ? 0 : j.x >= ARENE.L - ARENE.BORD ? 1 : -1;
+  if (cote < 0 || c.phase !== 'combat' || j.hp <= 0 || c.entrainement) return;
+  if (!['touche', 'vol'].includes(j.etat) || Math.abs(j.vx) < MUR_VITESSE || (cote === 0) !== (j.vx < 0)) return;
+  j.murRepos = MUR_REPOS;
+  c.murs[cote] -= 1;
+  j.hp = Math.max(1, j.hp - MUR_DEGATS);
+  const x = cote === 0 ? ARENE.BORD - 20 : ARENE.L - ARENE.BORD + 20;
+  if (c.murs[cote] > 0) {
+    // Il rebondit sur le mur.
+    j.vx = -j.vx * 0.4;
+    evt(c, { type: 'mur', cote, reste: c.murs[cote], joueur: j.n, x, y: j.y - 80 });
+    evt(c, { type: 'secousse', force: 8 });
+    evt(c, { type: 'son', nom: 'impact-lourd' });
+    return;
+  }
+  // Le mur cède : on passe de l'autre côté.
+  j.hp = Math.max(1, j.hp - MUR_BRISE_DEGATS);
+  c.transition = MUR_TRANSITION;
+  c.murCote = cote;
+  c.murVictime = j.n;
+  c.projectiles = [];
+  c.zones = [];
+  evt(c, { type: 'mur-brise', cote, joueur: j.n, x, y: j.y - 80 });
+  evt(c, { type: 'texte', x: 500, y: 200, texte: 'MUR BRISÉ !', couleur: '#ffd23f', gros: true });
+  evt(c, { type: 'son', nom: 'ko' });
+}
+
+/** Au milieu de la transition : la zone suivante. La victime y tombe, à terre ; l'autre l'attend. */
+function changerDeZone(c) {
+  c.etage += 1;
+  c.murs = [MUR_PV, MUR_PV];
+  const v = c.joueurs[c.murVictime];
+  const a = adv(c, v);
+  // Passé par la gauche, il arrive à gauche du centre ; par la droite, à droite.
+  const s = c.murCote === 0 ? -1 : 1;
+  v.x = 500 + s * 130; v.y = ARENE.SOL - 260; v.vx = 0; v.vy = 2; v.sol = false;
+  v.etat = 'vol'; v.action = null; v.garde = null; v.juggle = JUGGLE_MAX; v.murRepos = MUR_REPOS;
+  a.x = 500 - s * 130; a.y = ARENE.SOL; a.vx = 0; a.vy = 0; a.sol = true;
+  if (a.etat !== 'libre') { a.etat = 'libre'; a.stun = 0; }
+  a.action = null;
+  orienterUn(v, a); orienterUn(a, v);
+  evt(c, { type: 'zone-suivante', etage: c.etage });
 }
 
 function statuts(c, j) {
@@ -960,11 +1027,13 @@ function nouveauRound(c) {
   c.projectiles = [];
   c.zones = [];
   c.gagnantRound = null;
+  // Les murs se reconstruisent ; on reste dans la zone où l’on est.
+  if (c.murs) c.murs = [MUR_PV, MUR_PV];
   for (const j of c.joueurs) {
     Object.assign(j, {
       hp: j.hpMax, x: j.n === 0 ? 300 : 700, y: ARENE.SOL, vx: 0, vy: 0, dir: j.n === 0 ? 1 : -1, sol: true,
       etat: 'libre', action: null, stun: 0, invincible: 0, armure: 0, garde: null, statuts: {}, juggle: 0, cache: false,
-      combo: { n: 0, degats: 0 }, chaine: '', tampon: [],
+      combo: { n: 0, degats: 0 }, chaine: '', tampon: [], murRepos: 0,
     });
   }
 }

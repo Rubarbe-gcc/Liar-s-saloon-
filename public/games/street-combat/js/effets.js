@@ -97,6 +97,23 @@ export function traiter(fx, ev, c) {
     case 'soin':
       for (let i = 0; i < 18; i++) fx.parts.push({ x: ev.x + (Math.random() - 0.5) * 60, y: ev.y - Math.random() * 140, vx: 0, vy: -1 - Math.random() * 2, vie: 40, max: 40, r: 3, c: '#7dffb0', grav: 0, type: 'rond' });
       break;
+    case 'mur': {
+      // Le mur encaisse : des éclats de pierre, la poussière.
+      const s = ev.cote === 0 ? 1 : -1;
+      for (let i = 0; i < 16; i++) fx.parts.push({ x: ev.x, y: ev.y + (Math.random() - 0.5) * 140, vx: s * (1 + Math.random() * 5), vy: -Math.random() * 5, vie: 40, max: 40, r: 2 + Math.random() * 4, c: '#c8b090', grav: 0.35, type: 'rond' });
+      for (let i = 0; i < 8; i++) fx.parts.push({ x: ev.x, y: ev.y + (Math.random() - 0.5) * 160, vx: s * Math.random() * 2, vy: -Math.random(), vie: 40, max: 40, r: 10 + Math.random() * 12, c: '#a09080', grav: 0, type: 'fumee' });
+      fx.secousse = Math.max(fx.secousse, 9);
+      break;
+    }
+    case 'mur-brise': {
+      // Le mur cède : il vole en morceaux.
+      const s = ev.cote === 0 ? 1 : -1;
+      for (let i = 0; i < 60; i++) fx.parts.push({ x: ev.x, y: ev.y + (Math.random() - 0.5) * 260, vx: -s * (2 + Math.random() * 9), vy: -2 - Math.random() * 8, vie: 60, max: 60, r: 3 + Math.random() * 7, c: i % 3 ? '#b8a080' : '#7a6a58', grav: 0.4, type: 'rond' });
+      etincelles(fx, ev.x, ev.y, 40, '#ffd23f', 10);
+      fx.flash = { c: '#ffffff', vie: 14, max: 14, a: 0.7 };
+      fx.secousse = 22;
+      break;
+    }
     case 'chute':
       for (let i = 0; i < 12; i++) fx.parts.push({ x: ev.x + (Math.random() - 0.5) * 80, y: ev.y, vx: (Math.random() - 0.5) * 4, vy: -Math.random() * 2, vie: 30, max: 30, r: 6 + Math.random() * 8, c: '#d8c8b0', grav: 0, type: 'fumee' });
       fx.secousse = Math.max(fx.secousse, 4);

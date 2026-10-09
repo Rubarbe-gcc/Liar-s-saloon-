@@ -27,6 +27,12 @@ Une petite salle d'arcade en ligne. Chaque jeu vit dans son dossier sous
   Némésis), contre l'ordinateur (4 niveaux), à deux au clavier ou à la
   manette (boutons à choisir, vibrations), **en ligne** à deux appareils (un code
   de salle, combat synchronisé image par image : `server/street.js`),
+  un **mode Arcade** (sept combats, son rival, un boss, une fin pour chaque
+  combattant, et des pièces à remettre), des **replays** (le moteur rejoue les
+  entrées : on revoit ses combats, on garde les plus beaux), des **murs** qu'on
+  brise pour passer dans la zone d'à côté, trois **tenues** par combattant, un
+  héros qui **monte de niveau** dans l'histoire et débloque des coiffures, des
+  tenues et des accessoires, des commandes tactiles réglables,
   l'entraînement avec cinq **défis de combos** par combattant, un **tutoriel**
   jouable, une difficulté **Récit** pour l'histoire, et la progression
   **sauvegardée en ligne** avec le profil de l'arcade ; commandes tactiles sur

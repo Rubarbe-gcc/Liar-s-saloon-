@@ -614,3 +614,60 @@ function feuPilier(g, x, t) {
   }
   g.restore();
 }
+
+/* ------------------------------------------------------------------ */
+/* Les murs qu'on brise, et la zone d'à côté                           */
+/* ------------------------------------------------------------------ */
+
+/** Derrière chaque mur, une autre zone : le dojo donne sur son jardin sous la pluie, le ring sur la rue… */
+export const SUITE = {
+  dojo: 'dojopluie', dojopluie: 'dojo', neon: 'neonfeu', neonfeu: 'neon', citadelle: 'desert', desert: 'citadelle',
+  ruines: 'foret', foret: 'ruines', volcan: 'trone', trone: 'volcan', station: 'celeste', celeste: 'cathedrale',
+  cathedrale: 'celeste', jungle: 'ruines', toundra: 'abysses', abysses: 'jungle', ring: 'neon', horloge: 'engrenages',
+  engrenages: 'horloge', sommet: 'celeste', zero: 'horloge',
+};
+/** L'arène où l'on se bat, après avoir brisé `etage` murs depuis celle du départ. */
+export function areneApres(depart, etage = 0) {
+  let id = depart;
+  for (let i = 0; i < etage; i++) id = SUITE[id] || id;
+  return ARENE[id] || ARENE.dojo;
+}
+
+/** Les deux murs, au bord de l'arène : plus ils ont pris de chocs, plus ils se fendent. */
+export function dessinerMurs(g, a, murs, pvMax, t) {
+  for (const cote of [0, 1]) {
+    const degats = pvMax - murs[cote];
+    const x0 = cote === 0 ? 0 : L - 26;
+    g.save();
+    const gr = g.createLinearGradient(x0, 0, x0 + 26, 0);
+    const c = teinte(a.sol2, 0.12);
+    gr.addColorStop(cote === 0 ? 0 : 1, teinte(c, -0.25)); gr.addColorStop(cote === 0 ? 1 : 0, c);
+    g.fillStyle = gr;
+    g.fillRect(x0, SOL - 300, 26, 300);
+    // Les briques.
+    g.strokeStyle = rgba('#000000', 0.35); g.lineWidth = 1;
+    for (let rang = 0, y = SOL - 300; y < SOL; rang += 1, y += 22) {
+      g.beginPath(); g.moveTo(x0, y); g.lineTo(x0 + 26, y); g.stroke();
+      const dx = (rang % 2) * 13;
+      g.beginPath(); g.moveTo(x0 + dx, y); g.lineTo(x0 + dx, y + 22); g.stroke();
+    }
+    g.fillStyle = rgba(a.deco, 0.7); g.fillRect(cote === 0 ? x0 + 23 : x0, SOL - 300, 3, 300);
+    // Les fissures, et la lumière de l'autre côté qui passe à travers.
+    if (degats > 0) {
+      const xm = cote === 0 ? x0 + 24 : x0 + 2;
+      g.strokeStyle = rgba('#120a04', 0.9); g.lineWidth = 2;
+      for (let i = 0; i < degats * 3; i++) {
+        const y = SOL - 60 - ((i * 53) % 220);
+        g.beginPath(); g.moveTo(xm, y);
+        for (let s = 1; s <= 4; s++) g.lineTo(xm + (cote === 0 ? -1 : 1) * s * 5, y + Math.sin(i * 7 + s) * 14);
+        g.stroke();
+      }
+      if (degats >= pvMax - 1) {
+        g.globalCompositeOperation = 'lighter';
+        g.fillStyle = rgba(a.deco2, 0.25 + Math.sin(t / 5) * 0.12);
+        g.fillRect(cote === 0 ? x0 + 6 : x0 + 4, SOL - 200, 16, 140);
+      }
+    }
+    g.restore();
+  }
+}

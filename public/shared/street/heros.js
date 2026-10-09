@@ -44,6 +44,56 @@ export const ACCESSOIRES = [
 ];
 export const MAX_ACCESSOIRES = 3;
 
+/* ---------------------------------------------------------------- */
+/* La progression : le héros gagne de l'expérience dans l'histoire    */
+/* ---------------------------------------------------------------- */
+
+export const NIVEAU_MAX = 20;
+/** L'expérience qu'il faut, au total, pour atteindre ce niveau. */
+export const xpPour = (n) => 40 * n * (n - 1);
+export function niveauDe(xp = 0) {
+  let n = 1;
+  while (n < NIVEAU_MAX && xp >= xpPour(n + 1)) n += 1;
+  return n;
+}
+/** Ce que rapporte un combat de l'histoire : plus pour une belle note, et plus on avance. */
+export function gainXp({ gagne = true, note = 'C', acte = 0 } = {}) {
+  if (!gagne) return 20;
+  return 100 + ({ S: 150, A: 90, B: 40, C: 0 }[note] || 0) + acte * 10;
+}
+
+/** Les deux énergies qu'on gagne en montant de niveau. */
+export const ENERGIES_BONUS = {
+  blanc: { c1: '#f4f8ff', c2: '#7a8aa8', faisceau: '#ffffff', aura: '#e8f0ff', ceinture: '#f4f8ff' },
+  noir: { c1: '#3a2a4a', c2: '#0a0610', faisceau: '#b48aff', aura: '#5a3a8a', ceinture: '#1a1222' },
+};
+/** Ce que débloque chaque niveau. `champ` : l'option du créateur qu'il complète. */
+export const RECOMPENSES = [
+  { niveau: 2, champ: 'cheveux', val: '#ffffff', nom: 'Cheveux blancs' },
+  { niveau: 3, champ: 'tete', val: 'ninja', nom: 'Coiffure de ninja' },
+  { niveau: 4, champ: 'tenue', val: '#c8961e', nom: 'Tenue dorée' },
+  { niveau: 5, champ: 'accessoires', val: 'gants-boxe', nom: 'Gants de boxe' },
+  { niveau: 6, champ: 'energie', val: 'blanc', nom: 'Énergie blanche' },
+  { niveau: 7, champ: 'tete', val: 'casque', nom: 'Casque' },
+  { niveau: 8, champ: 'accessoires', val: 'ceinture-champion', nom: 'Ceinture de champion' },
+  { niveau: 9, champ: 'cheveux', val: '#7a3af0', nom: 'Cheveux violets' },
+  { niveau: 10, champ: 'tete', val: 'halo', nom: 'Auréole' },
+  { niveau: 11, champ: 'energie', val: 'noir', nom: 'Énergie noire' },
+  { niveau: 12, champ: 'accessoires', val: 'armure-noire', nom: 'Armure noire' },
+  { niveau: 13, champ: 'tete', val: 'visiere', nom: 'Visière' },
+  { niveau: 14, champ: 'accessoires', val: 'yeux-luisants', nom: 'Yeux luisants' },
+  { niveau: 15, champ: 'accessoires', val: 'ailes-lumiere', nom: 'Ailes de lumière' },
+  { niveau: 16, champ: 'tete', val: 'cristaux', nom: 'Couronne de cristaux' },
+  { niveau: 17, champ: 'accessoires', val: 'armure-or', nom: 'Armure d’or' },
+  { niveau: 18, champ: 'tenue', val: '#0e0e14', nom: 'Tenue de légende' },
+  { niveau: 19, champ: 'tete', val: 'couronne-etoiles', nom: 'Couronne d’étoiles' },
+  { niveau: 20, champ: 'accessoires', val: 'ailes-dragon', nom: 'Ailes de dragon' },
+];
+/** Les récompenses déjà gagnées à ce niveau ; celles qu'on gagne en passant d'un niveau à l'autre. */
+export const recompensesDe = (niveau) => RECOMPENSES.filter((r) => r.niveau <= niveau);
+export const nouvellesRecompenses = (avant, apres) => RECOMPENSES.filter((r) => r.niveau > avant && r.niveau <= apres);
+const bonus = (champ) => RECOMPENSES.filter((r) => r.champ === champ).map((r) => r.val);
+
 export const GENRES = [['h', 'Homme'], ['f', 'Femme']];
 /** La voix : une hauteur (grave 0.5 → aigu 1.6) et un timbre (masculin 0 → féminin 1). */
 export const VOIX_HAUTEUR = [0.5, 1.6];
@@ -310,10 +360,10 @@ export function construireHeros(d, id = 'heros') {
   const ecole = ECOLES[def.ecole] || ECOLES.ki;
   const tech = techniquesDe(def);
   const sans = ({ texte, ...coup }) => { void texte; return coup; };
-  const energie = ENERGIES[def.energie] || ENERGIES.rouge;
+  const energie = ENERGIES[def.energie] || ENERGIES_BONUS[def.energie] || ENERGIES.rouge;
   const corps = CORPS.some(([c]) => c === def.corps) ? def.corps : 'normal';
-  const tete = TETES.some(([t]) => t === def.tete) ? def.tete : 'bandeau';
-  const accessoires = (def.accessoires || []).filter((a) => ACCESSOIRES.some(([x]) => x === a)).slice(0, MAX_ACCESSOIRES);
+  const tete = TETES.some(([t]) => t === def.tete) || bonus('tete').includes(def.tete) ? def.tete : 'bandeau';
+  const accessoires = (def.accessoires || []).filter((a) => ACCESSOIRES.some(([x]) => x === a) || bonus('accessoires').includes(a)).slice(0, MAX_ACCESSOIRES);
   // La carrure pèse un peu sur la vie et la vitesse.
   const poids = { fin: [-0.05, 0.3], normal: [0, 0], massif: [0.06, -0.35] }[corps];
   const stats = { hpMult: Math.round((ecole.hpMult + poids[0]) * 100) / 100, vitesse: Math.round((ecole.vitesse + poids[1]) * 10) / 10 };

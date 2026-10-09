@@ -9,9 +9,9 @@
  */
 
 import { PERSOS, PERSO, ROSTER, BOSS, SECRETS, JAUGE, STATUTS, lireEntree, aDebloquer } from '../../../shared/street/persos.js';
-import { creerCombat, pas, evenements, pose, assister, ARENE as A } from '../../../shared/street/combat.js';
+import { creerCombat, pas, evenements, pose, assister, ARENE as A, MUR_PV, MUR_TRANSITION } from '../../../shared/street/combat.js';
 import { dessinerCombattant, dessinerPortrait, rgba, teinte } from './dessin.js';
-import { ARENES, ARENE, fondArene, animerArene } from './arenes.js';
+import { ARENES, ARENE, fondArene, animerArene, areneApres, dessinerMurs } from './arenes.js';
 import * as FX from './effets.js';
 import { creerHud, dessinerHud } from './hud.js';
 import { jouer as son, estMuet, basculerSon } from './son.js';
@@ -24,7 +24,13 @@ import * as EL from './enligne.js';
 import * as TUTO from './tutoriel.js';
 import * as HIST from './histoire.js';
 import { dire, crier, taire, voixDe, voixActives, basculerVoix } from './voix.js';
-import { CORPS, TETES, PEAUX, ENERGIES, TENUES, CHEVEUX, ACCESSOIRES, MAX_ACCESSOIRES, ECOLES, TECHNIQUES, techniquesDe, GENRES, VOIX_HAUTEUR, defautHeros, herosAuHasard, construireHeros } from '../../../shared/street/heros.js';
+import { CORPS, TETES, PEAUX, ENERGIES, TENUES, CHEVEUX, ACCESSOIRES, MAX_ACCESSOIRES, ECOLES, TECHNIQUES, techniquesDe, GENRES, VOIX_HAUTEUR, defautHeros, herosAuHasard, construireHeros, ENERGIES_BONUS, RECOMPENSES, NIVEAU_MAX, niveauDe as niveauHeros, xpPour, gainXp, nouvellesRecompenses } from '../../../shared/street/heros.js';
+import * as REPLAY from '../../../shared/street/replay.js';
+import { TENUES as TENUES_PERSO, idTenue, baseDe, tenueDe, tenuesOuvertes, enregistrerTenues } from '../../../shared/street/tenues.js';
+import * as ARCADE from '../../../shared/street/arcade.js';
+
+// Les tenues alternatives sont des fiches à part (« ryuken~1 ») : on les inscrit tout de suite.
+enregistrerTenues();
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -80,6 +86,10 @@ const CLE_CROISES = 'street.croises';
 const CLE_TOURNOI = 'street.tournoi';
 const CLE_TOUR = 'street.tour';
 const CLE_NIVEAU = 'street.niveau';
+const CLE_ARCADE = 'street.arcade';
+const CLE_ARCADE_FINIS = 'street.arcade.finis';
+const CLE_REPLAYS = 'street.replays';
+const CLE_TACTILE = 'street.tactile';
 const NIVEAUX = [['facile', 'Facile'], ['normal', 'Normal'], ['difficile', 'Difficile'], ['impossible', 'Impossible']];
 
 const debloques = () => new Set(lire(CLE_DEBLOQUES, []));
@@ -197,7 +207,10 @@ function majMenu() {
   const r = records();
   const to = lire(CLE_TOUR, null);
   $('tour-info').textContent = to ? `Reprendre : étage ${to.etage + 1}` : r.tour ? `Record : étage ${r.tour}` : '';
+  const ar = lire(CLE_ARCADE, null);
+  $('arcade-info').textContent = ar ? `Reprendre : combat ${ar.etape + 1} sur ${ar.file.length}` : r.arcade ? `Terminé ${r.arcade} fois` : '';
   const caches = PERSOS.filter((p) => !disponible(p)).length;
+  if (!caches) succes.debloquer('street-tous');
   $('secrets-info').textContent = caches ? `🔒 ${caches} combattant${caches > 1 ? 's' : ''} à découvrir` : '✨ Tous les combattants sont débloqués !';
   $('records').textContent = r.combats ? `🏆 ${r.victoires} victoire${r.victoires > 1 ? 's' : ''} · meilleur combo ${r.combo}` : '';
   $('b-son-menu').textContent = estMuet() ? '🔇' : '🔊';
@@ -208,7 +221,7 @@ function majMenu() {
 /* Ce qu'on prépare : le mode, les combattants, l'arène                 */
 /* ------------------------------------------------------------------ */
 
-const prep = { mode: 'versus', p1: 'ryuken', p2: null, arene: null, niveau: lire(CLE_NIVEAU, 'normal'), etape: 1, choix: 'ryuken' };
+const prep = { mode: 'versus', p1: 'ryuken', p2: null, arene: null, niveau: lire(CLE_NIVEAU, 'normal'), etape: 1, choix: 'ryuken', tenue: 0 };
 
 function commencerMode(mode) {
   prep.mode = mode;
@@ -231,9 +244,10 @@ function ouvrirChoix() {
     histoire: ['Le héros de l’histoire'],
     tournoi: ['Votre combattant pour le tournoi'],
     tour: ['Votre combattant pour la tour'],
+    arcade: ['Votre combattant pour l’Arcade'],
     enligne: ['Votre combattant en ligne'],
   };
-  const solo = ['histoire', 'tournoi', 'tour', 'enligne'].includes(prep.mode);
+  const solo = ['histoire', 'tournoi', 'tour', 'enligne', 'arcade'].includes(prep.mode);
   $('choix-titre').textContent = titres[prep.mode][prep.etape - 1];
   $('choix-ok').textContent = solo ? 'En route !' : prep.etape === 1 ? 'Choisir ›' : 'Combattre !';
   const grille = $('grille-persos');
@@ -276,7 +290,9 @@ function ouvrirChoix() {
     b.title = b.classList.contains('verrou') ? `${p.nom} — l’histoire se joue avec un combattant de base` : p.nom;
     grille.append(b);
   }
-  prep.choix = prep.etape === 1 ? prep.p1 : (prep.p2 || ROSTER[Math.floor(Math.random() * ROSTER.length)].id);
+  const avant = prep.etape === 1 ? prep.p1 : (prep.p2 || ROSTER[Math.floor(Math.random() * ROSTER.length)].id);
+  prep.choix = baseDe(avant);
+  prep.tenue = tenueDe(avant);
   if (!disponible(PERSO[prep.choix]) || (prep.mode === 'histoire' && aDebloquer(PERSO[prep.choix]))) prep.choix = 'ryuken';
   marquerChoix();
   aller('s-choix');
@@ -285,9 +301,10 @@ function ouvrirChoix() {
 function marquerChoix() {
   document.querySelectorAll('.carte-perso').forEach((b) => {
     b.classList.toggle('choisi', b.dataset.id === prep.choix);
-    b.classList.toggle('choisi2', prep.etape === 2 && b.dataset.id === prep.p1);
+    b.classList.toggle('choisi2', prep.etape === 2 && b.dataset.id === baseDe(prep.p1));
   });
   remplirFiche(PERSO[prep.choix]);
+  remplirTenues();
   animFiche.t0 = 0;
 }
 
@@ -367,7 +384,7 @@ function remplirFiche(p) {
       <span>DÉFENSE</span><i><b style="width:${(p.stats.def / 15) * 100}%"></b></i>
       <span>VITESSE</span><i><b style="width:${(p.vitesse / 6) * 100}%"></b></i>
     </div>
-    <p class="fiche-defis">⭐ Défis de combos : ${defisFaits(p.id).length} / 5 <small>(à l’Entraînement)</small></p>
+    <p class="fiche-defis">⭐ Défis de combos : ${defisFaits(p.id).length} / 5 <small>(à l’Entraînement)</small>${lire(CLE_ARCADE_FINIS, []).includes(p.id) ? ' · 🕹️ Arcade terminée' : ''}</p>
     ${listeCoupsHtml(p)}`;
   $('choix-ok').disabled = verrou;
 }
@@ -375,7 +392,7 @@ function remplirFiche(p) {
 function dessinerFiche() {
   const cv = $('fiche-apercu');
   const g = cv.getContext('2d');
-  const p = PERSO[prep.choix];
+  const p = PERSO[idChoisi()] || PERSO[prep.choix];
   animFiche.t0 = (animFiche.t0 || 0) + 1;
   const t = animFiche.t0;
   const fond = g.createLinearGradient(0, 0, 0, cv.height);
@@ -399,16 +416,19 @@ function validerChoix() {
   son('valide');
   if (prep.mode === 'histoire' && aDebloquer(p)) return;
   if (prep.mode === 'histoire') { nouvelleHistoire(prep.choix); return; }
-  if (prep.mode === 'tournoi') { lancerTournoi(prep.choix); return; }
-  if (prep.mode === 'tour') { lancerTour(prep.choix); return; }
+  if (prep.mode === 'tournoi') { lancerTournoi(idChoisi()); return; }
+  if (prep.mode === 'tour') { lancerTour(idChoisi()); return; }
+  if (prep.mode === 'arcade') { lancerArcade(idChoisi(), prep.difficulte); return; }
   if (prep.mode === 'enligne') { const o = lire(CLE_ENLIGNE, {}); ecrire(CLE_ENLIGNE, { ...o, perso: prep.choix }); ouvrirEnLigne(); return; }
   if (prep.etape === 1) {
-    prep.p1 = prep.choix;
+    prep.p1 = idChoisi();
     prep.etape = 2;
     ouvrirChoix();
     return;
   }
-  prep.p2 = prep.choix;
+  prep.p2 = idChoisi();
+  // Le même combattant de chaque côté : le second prend une autre tenue.
+  if (prep.p2 === prep.p1) prep.p2 = idTenue(prep.choix, (tenueDe(prep.p1) + 1) % TENUES_PERSO.length);
   ouvrirArenes();
 }
 
@@ -447,6 +467,11 @@ const DIFFICULTES = {
     { id: 'normal', nom: 'NORMAL', couleur: '#36d46a', glyphe: '📖', texte: 'L’histoire, à un rythme raisonnable.' },
     { id: 'difficile', nom: 'DIFFICILE', couleur: '#ff2a4a', glyphe: '🔥', texte: 'Les combattants corrompus ne pardonnent rien.' },
   ],
+  arcade: [
+    { id: 'facile', nom: 'FACILE', couleur: '#36d46a', glyphe: '🪙', texte: 'Sept combats tranquilles. Le boss : Solarius.' },
+    { id: 'normal', nom: 'NORMAL', couleur: '#36b4ff', glyphe: '🕹️', texte: 'Ça se corse en route. Le boss : Malvortex.' },
+    { id: 'difficile', nom: 'DIFFICILE', couleur: '#ff2a4a', glyphe: '🔥', texte: 'Pour les meilleurs. Le boss : le Chaos lui-même.' },
+  ],
   tournoi: [
     { id: 'facile', nom: 'FACILE', couleur: '#36d46a', glyphe: '🥉', texte: 'Huit combattants, trois victoires pour la coupe.' },
     { id: 'normal', nom: 'NORMAL', couleur: '#36b4ff', glyphe: '🥈', texte: 'Les favoris ne se laissent pas faire.' },
@@ -456,10 +481,12 @@ const DIFFICULTES = {
 
 function ouvrirDifficultes(mode) {
   prep.modeDiff = mode;
-  $('difficulte-titre').textContent = mode === 'histoire' ? 'Mode Histoire' : 'Tournoi';
-  $('difficulte-sous').textContent = mode === 'histoire'
-    ? 'La Fracture : cinq actes, des alliés, des trahisons, des choix qui comptent — et des boss à débloquer.'
-    : 'Huit combattants, un tableau, une seule coupe. Perdez un match, et c’est fini.';
+  $('difficulte-titre').textContent = { histoire: 'Mode Histoire', tournoi: 'Tournoi', arcade: 'Mode Arcade' }[mode];
+  $('difficulte-sous').textContent = {
+    histoire: 'La Fracture : dix actes, des alliés, des trahisons, des choix qui comptent — et des boss à débloquer.',
+    tournoi: 'Huit combattants, un tableau, une seule coupe. Perdez un match, et c’est fini.',
+    arcade: 'Sept combats d’affilée : votre rival, un boss… et votre fin. Perdu ? Remettez une pièce.',
+  }[mode];
   const onyx = debloques().has(SECRETS.tournoi);
   $('difficultes').innerHTML = DIFFICULTES[mode].map((d) => `<button class="diff" data-diff="${d.id}" style="--c:${d.couleur}">
       <span class="boss-ic">${d.glyphe}</span><b>${d.nom}</b><small>${esc(d.texte)}</small>
@@ -537,7 +564,7 @@ function ouvrirSauvegardes() {
         <b style="color:${p.c.c1}">${esc(p.nom)}</b>${h.createur ? ` <i class="ecole">${esc(ECOLES[h.createur.ecole]?.nom || '')}</i>` : ''}
         <span>${h.fini ? '✔ Histoire terminée' : `${HIST.ACTES[sc.acte].num} — ${esc(sc.titre)} : ${esc(sc.sous)}`}</span>
         <div class="slot-barre"><i style="width:${progres}%"></i></div>
-        <small>${progres} % · ${h.victoires} victoire${h.victoires > 1 ? 's' : ''} · ${duree(h.temps)} de jeu · ${quand(h.maj)}</small>
+        <small>${h.createur ? `Niv. ${niveauHeros(h.xp || 0)} · ` : ''}${progres} % · ${h.victoires} victoire${h.victoires > 1 ? 's' : ''} · ${duree(h.temps)} de jeu · ${quand(h.maj)}</small>
       </div>
       <div class="slot-boutons">
         ${h.fini ? `<button class="btn or petit" data-legende="${k}">⭐ Légende</button>` : `<button class="btn rouge petit" data-continuer="${k}">▶ Continuer</button>`}
@@ -649,6 +676,8 @@ function ouvrirCreateur(def = defautHeros(), mode = 'nouveau', slot = 0) {
   createur.def = { ...defautHeros(), ...def, accessoires: [...(def.accessoires || [])] };
   createur.mode = mode;
   createur.slot = slot;
+  createur.xp = mode === 'nouveau' ? 0 : sauvegardes()[slot]?.xp || 0;
+  createur.niveau = niveauHeros(createur.xp);
   $('createur-titre').textContent = mode === 'nouveau' ? 'Créez votre héros' : 'Votre héros';
   $('createur-ok').textContent = mode === 'nouveau' ? 'Commencer l’histoire ›' : 'Enregistrer ✔';
   $('createur-nom').value = createur.def.nom;
@@ -663,8 +692,23 @@ function majCreateur() {
     return `<button class="puce${on ? ' on' : ''}" data-champ="${champ}" data-val="${id}">${esc(nom)}</button>`;
   }).join('');
   const teintes = (champ, liste) => liste.map((c) => `<button class="teinte${d[champ] === c ? ' on' : ''}" data-champ="${champ}" data-val="${c}" style="--c:${c}" aria-label="${c}"></button>`).join('');
+  // Ce qu'on gagne en montant de niveau : visible, mais fermé tant qu'on n'y est pas.
+  const niveau = createur.niveau || 1;
+  const recompenses = (champ) => RECOMPENSES.filter((r) => r.champ === champ);
+  const titre = (r) => esc(r.niveau > niveau ? `${r.nom} — niveau ${r.niveau}` : r.nom);
+  const pucesBonus = (champ, multi = false) => recompenses(champ).map((r) => {
+    const on = multi ? d[champ].includes(r.val) : d[champ] === r.val;
+    const ferme = r.niveau > niveau;
+    return `<button class="puce${on ? ' on' : ''}${ferme ? ' ferme' : ''}" data-champ="${champ}" data-val="${r.val}" title="${titre(r)}">${ferme ? `🔒 Niv. ${r.niveau}` : `✨ ${esc(r.nom)}`}</button>`;
+  }).join('');
+  const teintesBonus = (champ, couleur = (v) => v) => recompenses(champ).map((r) => `<button class="teinte${d[champ] === r.val ? ' on' : ''}${r.niveau > niveau ? ' ferme' : ''}" data-champ="${champ}" data-val="${r.val}" style="--c:${couleur(r.val)}" title="${titre(r)}" aria-label="${esc(r.nom)}"></button>`).join('');
+  const xp = createur.xp || 0;
+  const barre = niveau >= NIVEAU_MAX ? 100 : ((xp - xpPour(niveau)) / (xpPour(niveau + 1) - xpPour(niveau))) * 100;
+  const entete = createur.mode === 'nouveau'
+    ? '<div class="niveau-heros">Niveau 1 · gagnez des combats dans l’histoire pour débloquer coiffures, tenues et accessoires (✨)</div>'
+    : `<div class="niveau-heros">Niveau ${niveau}${niveau < NIVEAU_MAX ? ` · ${xp - xpPour(niveau)} / ${xpPour(niveau + 1) - xpPour(niveau)} XP` : ' · MAXIMUM'}<i><b style="width:${barre}%"></b></i></div>`;
   const tech = techniquesDe(d);
-  $('createur-options').innerHTML = `
+  $('createur-options').innerHTML = `${entete}
     <h4>École de combat <small>(ses techniques, sa saisie, ses combos)</small></h4>
     <div class="ecoles">${Object.entries(ECOLES).map(([id, e]) => `<button class="ecole-carte${d.ecole === id ? ' on' : ''}" data-champ="ecole" data-val="${id}"><b>${esc(e.nom)}</b><small>${esc(e.texte)}</small></button>`).join('')}</div>
     <h4>Techniques de l’école ${esc(ECOLES[d.ecole].nom)} <small>(à vous seul : aucun autre combattant ne les a ; ✦ conseillée)</small></h4>
@@ -677,12 +721,12 @@ function majCreateur() {
       <button class="btn petit" data-ecouter>🔊 Écouter</button>
     </div>
     <h4>Carrure</h4><div class="puces">${puces('corps', CORPS)}</div>
-    <h4>Coiffure</h4><div class="puces">${puces('tete', TETES)}</div>
+    <h4>Coiffure</h4><div class="puces">${puces('tete', TETES)}${pucesBonus('tete')}</div>
     <h4>Peau</h4><div class="teintes">${teintes('peau', PEAUX)}</div>
-    <h4>Énergie</h4><div class="teintes">${Object.entries(ENERGIES).map(([id, e]) => `<button class="teinte${d.energie === id ? ' on' : ''}" data-champ="energie" data-val="${id}" style="--c:${e.c1}" aria-label="${id}"></button>`).join('')}</div>
-    <h4>Tenue</h4><div class="teintes">${teintes('tenue', TENUES)}</div>
-    <h4>Cheveux</h4><div class="teintes">${teintes('cheveux', CHEVEUX)}</div>
-    <h4>Accessoires <small>(${d.accessoires.length}/${MAX_ACCESSOIRES})</small></h4><div class="puces">${puces('accessoires', ACCESSOIRES, true)}</div>`;
+    <h4>Énergie</h4><div class="teintes">${Object.entries(ENERGIES).map(([id, e]) => `<button class="teinte${d.energie === id ? ' on' : ''}" data-champ="energie" data-val="${id}" style="--c:${e.c1}" aria-label="${id}"></button>`).join('')}${teintesBonus('energie', (v) => ENERGIES_BONUS[v].c1)}</div>
+    <h4>Tenue</h4><div class="teintes">${teintes('tenue', TENUES)}${teintesBonus('tenue')}</div>
+    <h4>Cheveux</h4><div class="teintes">${teintes('cheveux', CHEVEUX)}${teintesBonus('cheveux')}</div>
+    <h4>Accessoires <small>(${d.accessoires.length}/${MAX_ACCESSOIRES})</small></h4><div class="puces">${puces('accessoires', ACCESSOIRES, true)}${pucesBonus('accessoires', true)}</div>`;
   const p = construireHeros(d);
   $('createur-coups').innerHTML = `<b style="color:${p.c.c1}">${esc(ECOLES[d.ecole].nom)}</b> · B : ${esc(p.specB.nom)} · A : ${esc(p.specA.nom)} · <span>ULTIME : ${esc(p.ulti.nom)}</span>`;
   animCreateur.t = 0;
@@ -863,7 +907,8 @@ function combatHistoire(sc, adv, bonus, k = 0, vieRestante = null, phase = 1) {
           : '<p class="sous">… Mais ce n’est pas fini.</p>';
       }
       const note = noteCombat(c);
-      return `<p class="note-combat note-${note}"><b>${note}</b><span>${{ S: 'Parfait !', A: 'Excellent', B: 'Bien', C: 'De justesse' }[note]}</span></p><p class="sous">${esc(sc.titre)} — ${esc(sc.sous)}</p>`;
+      const xp = h.createur ? donnerXp(h, gainXp({ note, acte: sc.acte })) : '';
+      return `<p class="note-combat note-${note}"><b>${note}</b><span>${{ S: 'Parfait !', A: 'Excellent', B: 'Bien', C: 'De justesse' }[note]}</span></p>${xp}<p class="sous">${esc(sc.titre)} — ${esc(sc.sous)}</p>`;
     },
     suite: async (gagne, finC) => {
       if (gagne && serie && k < serie.length - 1) { combatHistoire(sc, adv, bonus, k + 1, Math.min(hpMax(moi), finC.hpHero + hpMax(moi) * REPOS_SERIE), phase); return; }
@@ -892,6 +937,7 @@ function combatHistoire(sc, adv, bonus, k = 0, vieRestante = null, phase = 1) {
 async function apresCombat(sc, gagne) {
   const h = partie.h;
   if (gagne && role(h, sc.combat.adv) === 'lechaos') succes.debloquer('street-chaos');
+  if (gagne && sc.combat.adv === 'premier') succes.debloquer('street-premier');
   const etapes = etapesApres(sc, gagne);
   const d = { ...h.drapeaux };
   const r = await cineHistoire(etapes, h, d, HIST.musiqueDe(sc, 'apres'));
@@ -909,6 +955,7 @@ function finHistoire() {
   sauver(true);
   partie = null;
   succes.debloquer('street-campagne');
+  if (HIST.finDe(h.drapeaux) === 'vraie') succes.debloquer('street-vraie-fin');
   majMenu();
   montrerBilan(h);
 }
@@ -1002,7 +1049,7 @@ const melange = (l) => { const t = [...l]; for (let i = t.length - 1; i > 0; i--
 
 function lancerTournoi(hero) {
   const diff = prep.difficulte || 'normal';
-  const pool = melange(PERSOS.filter((p) => disponible(p) && p.id !== hero && p.id !== SECRETS.tournoi).map((p) => p.id));
+  const pool = melange(PERSOS.filter((p) => disponible(p) && p.id !== baseDe(hero) && p.id !== SECRETS.tournoi).map((p) => p.id));
   const tableau = [hero, ...pool.slice(0, 7)];
   // En difficile, le champion invaincu est de l'autre côté du tableau.
   if (diff === 'difficile') tableau[7] = SECRETS.tournoi;
@@ -1091,8 +1138,8 @@ const REPOS_TOUR = 0.4;
 
 function lancerTour(hero) {
   // Les combattants de base d'abord ; les boss et les secrets déjà débloqués gardent les deux derniers étages.
-  const base = melange(ROSTER.filter((p) => p.id !== hero).map((p) => p.id));
-  const forts = melange(PERSOS.filter((p) => aDebloquer(p) && disponible(p) && p.id !== hero && p.id !== SECRETS.tour).map((p) => p.id));
+  const base = melange(ROSTER.filter((p) => p.id !== baseDe(hero)).map((p) => p.id));
+  const forts = melange(PERSOS.filter((p) => aDebloquer(p) && disponible(p) && p.id !== baseDe(hero) && p.id !== SECRETS.tour).map((p) => p.id));
   const file = Array.from({ length: ETAGES }, (_, k) => (k >= ETAGES - 2 && forts.length ? forts[(k - (ETAGES - 2)) % forts.length] : base[k % base.length]));
   const normales = ARENES.filter((a) => !a.boss).map((a) => a.id);
   const arenes = file.map(() => normales[Math.floor(Math.random() * normales.length)]);
@@ -1211,7 +1258,21 @@ function demarrerCombat(o) {
   const normales = ARENES.filter((a) => !a.boss);
   const arene = o.arene === 'hasard' || !o.arene ? normales[Math.floor(Math.random() * normales.length)].id : o.arene;
   config.areneId = arene;
-  combat = creerCombat({ p1: o.p1, p2: o.p2, ia: o.ia || {}, entrainement: o.mode === 'entrainement', graine: o.graine ?? Date.now(), victoires: o.victoires || 2, vie: o.vie || [], survie: o.survie || 0 });
+  // Les murs qu'on brise : partout, sauf à l'entraînement.
+  const murs = o.murs ?? o.mode !== 'entrainement';
+  const graine = o.graine ?? Date.now();
+  const reglages = { p1: o.p1, p2: o.p2, ia: o.ia || {}, graine, victoires: o.victoires || 2, vie: o.vie || [], survie: o.survie || 0, murs };
+  combat = creerCombat({ ...reglages, entrainement: o.mode === 'entrainement' });
+  // On enregistre le combat, pour pouvoir le revoir (pas l'entraînement, ni un replay).
+  enregistrement = o.mode === 'entrainement' || o.mode === 'replay' ? null : REPLAY.enregistrer({
+    ...reglages, arene, corrompu: o.corrompu || null, echelle: o.echelle || null, mode: o.mode,
+    fiches: Object.fromEntries([o.p1, o.p2].filter((id) => id === 'heros').map((id) => [id, PERSO[id]])),
+  });
+  if (o.mode !== 'replay') lecture = null;
+  $('replay-barre').hidden = o.mode !== 'replay';
+  $('b-replay-pause').textContent = '⏸';
+  $('b-replay-vitesse').textContent = `×${replayVitesse}`;
+  appliquerTactile();
   allieUtilise = false;
   $('tuto').hidden = !o.tuto;
   $('defis').hidden = true;
@@ -1263,9 +1324,9 @@ function boucle() {
   derniere = maintenant;
   // En ligne, le combat ne s'arrête pas : l'adversaire, lui, joue toujours.
   if ((enPause && config?.mode !== 'enligne') || !combat) return;
-  reste += dt;
+  reste += dt * (config.mode === 'replay' ? replayVitesse : 1);
   let n = 0;
-  while (reste >= 1000 / 60 && n < 5) {
+  while (reste >= 1000 / 60 && n < (config.mode === 'replay' ? 20 : 5)) {
     reste -= 1000 / 60;
     n += 1;
     pasDeCombat();
@@ -1276,8 +1337,14 @@ function boucle() {
 
 function pasDeCombat() {
   // En ligne : les entrées des deux appareils, image par image (ou on attend celles de l'adversaire).
-  const entrees = config.mode === 'enligne' ? EL.entreesDuPas(() => entreesJoueur(0)) : [entreesJoueur(0), config.mode === 'deux' ? entreesJoueur(1) : {}];
+  let entrees;
+  if (config.mode === 'replay') {
+    // Le replay : les entrées enregistrées (et l'allié, au bon moment).
+    for (const [, j, allie, degats] of lecture.allies()) assister(combat, j, allie, degats);
+    entrees = lecture.fini() ? [{}, {}] : lecture.suivantes();
+  } else entrees = config.mode === 'enligne' ? EL.entreesDuPas(() => entreesJoueur(0)) : [entreesJoueur(0), config.mode === 'deux' ? entreesJoueur(1) : {}];
   if (!entrees) { attenteEnLigne(); return; }
+  if (enregistrement) REPLAY.noter(enregistrement, entrees);
   pas(combat, entrees);
   if (config.mode === 'enligne') { EL.apresPas(combat); attenteEnLigne(); }
   const evs = evenements(combat);
@@ -1291,12 +1358,14 @@ function pasDeCombat() {
     if (ev.type === 'combo') stats.comboMax[ev.joueur] = Math.max(stats.comboMax[ev.joueur], ev.n);
     if (ev.type === 'ko-coup' && combat.cine?.type === 'ulti') stats.ultiKo = true;
     if (ev.type === 'annonce' && ev.texte === 'PERFECT !') stats.perfect = true;
+    if (ev.type === 'mur-brise' && config.mode !== 'replay' && ev.joueur !== (config.mode === 'enligne' ? config.n : 0) && config.mode !== 'deux') succes.debloquer('street-mur');
+    if (ev.type === 'zone-suivante') FX.traiter(fx, { type: 'annonce', texte: areneApres(config.areneId, ev.etage).nom, duree: 90 }, combat);
   }
   FX.avancerEffets(fx);
   majTactile();
   const moiVib = config.mode === 'enligne' ? config.n : 0;
   combat.joueurs.forEach((j, k) => {
-    if (j.hp < hpAvant[k] && k === moiVib && config.mode !== 'deux') vibrer(Math.min(1, 0.3 + (hpAvant[k] - j.hp) / 25), j.hp <= 0 ? 450 : 90);
+    if (j.hp < hpAvant[k] && k === moiVib && config.mode !== 'deux' && config.mode !== 'replay') vibrer(Math.min(1, 0.3 + (hpAvant[k] - j.hp) / 25), j.hp <= 0 ? 450 : 90);
     if (j.hp < hpAvant[k]) eclats[k] = 1;
     hpAvant[k] = j.hp;
     eclats[k] = Math.max(0, eclats[k] - 0.18);
@@ -1327,6 +1396,7 @@ function suivreTuto(evs) {
   if (r === 'suivante') { son('annonce'); majTuto(); }
   if (r === 'fini') {
     ecrire(CLE_TUTO, true);
+    succes.debloquer('street-tuto');
     son('victoire');
     majTuto('<b class="tuto-ok">🎓 Tutoriel terminé !</b><span>Vous savez tout. Les défis de combos vous attendent à l’entraînement.</span>');
     setTimeout(() => { combat = null; $('tuto').hidden = true; config.tuto = false; majMenu(); toast('🎓 Bravo ! Essayez maintenant les défis de combos de chaque combattant, à l’Entraînement.', 4500); }, 3000);
@@ -1351,6 +1421,8 @@ function suivreDefis(evs) {
   const tous = lire(CLE_DEFIS, {});
   tous[p.id] = [...new Set([...faits, ...nouveaux])].sort((a, b) => a - b);
   ecrire(CLE_DEFIS, tous);
+  if (tous[p.id].length >= 5) succes.debloquer('street-defis');
+  if (Object.values(tous).filter((l) => l.length >= 5).length >= 10) succes.debloquer('street-defis10');
   son('victoire');
   toast(`⭐ Défi réussi : ${esc(TUTO.defisDe(p)[nouveaux[0]].texte)}`, 2200);
   majDefis();
@@ -1389,6 +1461,7 @@ let allieUtilise = false;
 function appelerAllie() {
   if (!config?.allie || allieUtilise || !combat) return;
   if (!assister(combat, 0, config.allie, 18)) return;
+  if (enregistrement) REPLAY.noterAllie(enregistrement, 0, config.allie, 18);
   allieUtilise = true;
   $('allie-pret').hidden = true;
   $('b-allie').hidden = true;
@@ -1423,9 +1496,10 @@ function dessiner() {
   g.save();
   // La secousse.
   if (fx.secousse) g.translate((Math.random() - 0.5) * fx.secousse * 2, (Math.random() - 0.5) * fx.secousse * 2);
-  const arene = ARENE[config.areneId];
+  const arene = areneApres(config.areneId, c.etage || 0);
   g.drawImage(fondArene(arene), 0, 0, A.L, A.H);
   animerArene(g, arene, t);
+  if (c.murs) dessinerMurs(g, arene, c.murs, MUR_PV, t);
   FX.dessinerZones(g, c, t);
 
   // Les combattants : celui qui frappe passe devant.
@@ -1464,6 +1538,12 @@ function dessiner() {
   FX.dessinerAnnonces(g, fx);
   FX.dessinerPortraitUlti(g, fx);
   if (fx.flash) { g.fillStyle = rgba(fx.flash.c, (fx.flash.vie / fx.flash.max) * fx.flash.a); g.fillRect(0, 0, A.L, A.H); }
+  // Le mur a cédé : un fondu au noir, et l'on se retrouve à côté.
+  if (c.transition > 0) {
+    const m = MUR_TRANSITION / 2;
+    g.fillStyle = `rgba(0,0,0,${1 - Math.abs(c.transition - m) / m})`;
+    g.fillRect(0, 0, A.L, A.H);
+  }
   // Le ralenti du K.O. : un voile sur les bords.
   if (c.ralenti > 0) {
     const v = g.createRadialGradient(A.L / 2, A.H / 2, 200, A.L / 2, A.H / 2, 620);
@@ -1475,7 +1555,9 @@ function dessiner() {
 /* ---- la fin du combat ---- */
 
 function montrerFin() {
+  if (config.mode === 'replay') { montrerFinReplay(); return; }
   const c = combat;
+  if (enregistrement) { sauverReplay(c); enregistrement = null; }
   const gagnant = c.joueurs[c.vainqueur];
   const moi = config.mode === 'enligne' ? config.n : 0;
   const humainGagne = config.mode === 'deux' || config.mode === 'entrainement' ? true : c.vainqueur === moi;
@@ -1489,6 +1571,7 @@ function montrerFin() {
     succes.debloquer('street-victoire');
     if (stats.perfect) succes.debloquer('street-perfect');
     if (stats.ultiKo) succes.debloquer('street-ulti');
+    if (config.mode === 'enligne') succes.debloquer('street-enligne');
   }
   if (Math.max(...stats.comboMax) >= 8 && (config.mode !== 'versus' || stats.comboMax[0] >= 8)) succes.debloquer('street-combo');
 
@@ -1503,7 +1586,7 @@ function montrerFin() {
       ? '<button class="btn rouge" id="b-fin-suite">Continuer ›</button>'
       : config.perdable
         ? '<button class="btn" id="b-fin-retente">Réessayer</button><button class="btn rouge" id="b-fin-suite">Continuer l’histoire ›</button>'
-        : `<button class="btn" id="b-fin-menu">Menu</button><button class="btn rouge" id="b-fin-retente">${config.mode === 'histoire' ? 'Réessayer' : config.mode === 'tournoi' ? 'Recommencer le tournoi' : 'Recommencer la tour'}</button>`;
+        : `<button class="btn" id="b-fin-menu">Menu</button><button class="btn rouge" id="b-fin-retente">${{ histoire: 'Réessayer', tournoi: 'Recommencer le tournoi', arcade: '🪙 Remettre une pièce' }[config.mode] || 'Recommencer la tour'}</button>`;
   }
   if (config.mode === 'enligne') {
     titre = humainGagne ? 'VICTOIRE !' : 'DÉFAITE…';
@@ -1536,6 +1619,243 @@ function montrerFin() {
   if ($('b-fin-retente')) $('b-fin-retente').onclick = go(() => config.reessayer());
   if ($('b-fin-quitter-el')) $('b-fin-quitter-el').onclick = go(() => { EL.quitter(); majMenu(); });
   if ($('b-fin-revanche-el')) $('b-fin-revanche-el').onclick = () => { EL.revanche(); $('b-fin-revanche-el').disabled = true; $('b-fin-revanche-el').textContent = 'En attente de l’adversaire…'; };
+}
+
+/* ---- Les tenues ---- */
+
+/** Le combattant choisi, dans sa tenue. */
+const idChoisi = () => idTenue(prep.choix, prep.tenue || 0);
+const etoilesDe = (id) => defisFaits(baseDe(id)).length;
+function remplirTenues() {
+  const zone = $('tenues-choix');
+  const p = PERSO[prep.choix];
+  zone.hidden = prep.mode === 'histoire' || prep.mode === 'enligne' || !p || !disponible(p);
+  if (zone.hidden) { prep.tenue = 0; return; }
+  const ouvertes = tenuesOuvertes(etoilesDe(p.id));
+  if (!ouvertes.includes(prep.tenue)) prep.tenue = 0;
+  zone.innerHTML = TENUES_PERSO.map((t, k) => {
+    const ok = ouvertes.includes(k);
+    const c = PERSO[idTenue(p.id, k)].c.c1;
+    return `<button class="tenue${prep.tenue === k ? ' on' : ''}${ok ? '' : ' ferme'}" data-tenue="${k}" style="--c:${c}" title="${esc(ok ? t.nom : `${t.nom} : ${t.etoiles} défis de combos réussis (à l’Entraînement)`)}"><i></i>${ok ? esc(t.nom) : `🔒 ${t.etoiles} ⭐`}</button>`;
+  }).join('');
+}
+
+/* ------------------------------------------------------------------ */
+/* Les replays                                                          */
+/* ------------------------------------------------------------------ */
+
+let enregistrement = null;
+let lecture = null;
+let replayCourant = null;
+let replayVitesse = 1;
+const NOMS_MODES = { versus: 'Contre l’ordi', deux: 'Deux joueurs', histoire: 'Histoire', tournoi: 'Tournoi', tour: 'Tour des défis', enligne: 'En ligne', arcade: 'Arcade' };
+const dureeImages = (n) => { const s = Math.round(n / 60); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+
+/** Le combat est fini : on garde son replay. */
+function sauverReplay(c) {
+  const rep = {
+    ...enregistrement, id: Date.now().toString(36), date: Date.now(), mode: config.mode,
+    noms: c.joueurs.map((j) => PERSO[j.id].nom), vainqueur: c.vainqueur, score: c.joueurs.map((j) => j.victoires), duree: enregistrement.n,
+  };
+  let l = REPLAY.ajouter(lire(CLE_REPLAYS, []), rep);
+  // L'appareil manque de place : on oublie les plus anciens (jamais celui-ci).
+  for (;;) {
+    try { localStorage.setItem(CLE_REPLAYS, JSON.stringify(l)); return; } catch {
+      const k = l.map((x) => !x.favori && x.id !== rep.id).lastIndexOf(true);
+      if (k < 0) return;
+      l = l.filter((_, i) => i !== k);
+    }
+  }
+}
+
+function ouvrirReplays() {
+  const l = lire(CLE_REPLAYS, []);
+  $('etape').innerHTML = `<button class="rond fermer" data-ferme="ov-etape">✕</button><h2>📼 Replays</h2>
+    <p class="sous">Vos ${REPLAY.MAX_RECENTS} derniers combats. ☆ pour en garder un pour toujours (jusqu’à ${REPLAY.MAX_FAVORIS}).</p>
+    <div class="liste-replays">${l.length ? l.map((r) => `<div class="replay${r.favori ? ' favori' : ''}">
+      <canvas data-portrait="${esc(r.id)}" width="96" height="96"></canvas>
+      <div class="r-texte"><b>${esc(r.noms[0])} <small>contre</small> ${esc(r.noms[1])}</b>
+        <small>${esc(NOMS_MODES[r.mode] || r.mode)} · ${quand(r.date)} · ${dureeImages(r.duree)} · 🏆 ${esc(r.noms[r.vainqueur] ?? '—')} (${r.score.join('-')})</small></div>
+      <div class="r-boutons"><button class="btn rouge petit" data-voir="${esc(r.id)}" title="Regarder">▶</button><button class="btn petit" data-garder="${esc(r.id)}" title="Garder">${r.favori ? '★' : '☆'}</button><button class="btn petit" data-oublier="${esc(r.id)}" title="Effacer">🗑️</button></div>
+    </div>`).join('') : '<p class="sous">Aucun combat enregistré pour l’instant. Jouez un combat : il apparaîtra ici.</p>'}</div>`;
+  ouvrir('ov-etape');
+  $('etape').querySelectorAll('canvas[data-portrait]').forEach((cv) => {
+    const r = l.find((x) => x.id === cv.dataset.portrait);
+    const p = r.reglages.fiches?.[r.reglages.p1] || PERSO[r.reglages.p1];
+    if (p) dessinerPortrait(cv.getContext('2d'), p, 96, { t: 8 });
+  });
+  $('etape').querySelectorAll('[data-voir]').forEach((b) => b.addEventListener('click', () => { fermer('ov-etape'); lancerReplay(l.find((x) => x.id === b.dataset.voir)); }));
+  $('etape').querySelectorAll('[data-garder]').forEach((b) => b.addEventListener('click', () => { ecrire(CLE_REPLAYS, REPLAY.basculerFavori(lire(CLE_REPLAYS, []), b.dataset.garder)); son('choix'); ouvrirReplays(); }));
+  $('etape').querySelectorAll('[data-oublier]').forEach((b) => b.addEventListener('click', () => { ecrire(CLE_REPLAYS, lire(CLE_REPLAYS, []).filter((x) => x.id !== b.dataset.oublier)); ouvrirReplays(); }));
+}
+
+function lancerReplay(r) {
+  if (!r) return;
+  // Le héros créé n'est pas dans PERSO : sa fiche est gardée avec le replay.
+  for (const [id, fiche] of Object.entries(r.reglages.fiches || {})) PERSO[id] = fiche;
+  replayCourant = r;
+  lecture = REPLAY.lecteur(r);
+  replayVitesse = 1;
+  const g = r.reglages;
+  demarrerCombat({ p1: g.p1, p2: g.p2, ia: g.ia, graine: g.graine, victoires: g.victoires, vie: g.vie, survie: g.survie, murs: g.murs, arene: g.arene, corrompu: g.corrompu, echelle: g.echelle, mode: 'replay', musique: 'combat' });
+}
+
+function montrerFinReplay() {
+  const c = combat;
+  const p = PERSO[c.joueurs[c.vainqueur].id];
+  $('fin').innerHTML = `<h2 class="fin-titre victoire">FIN DU REPLAY</h2>
+    <p class="sous"><b style="color:${p.c.c1}">${esc(p.nom)}</b> l’emporte, ${c.joueurs.map((j) => j.victoires).join(' à ')}.</p>
+    <div class="ligne-boutons"><button class="btn" id="b-fin-menu">Menu</button><button class="btn" id="b-fin-replays">📼 Replays</button><button class="btn rouge" id="b-fin-revoir">↺ Revoir</button></div>`;
+  ouvrir('ov-fin');
+  $('b-fin-menu').onclick = () => { fermer('ov-fin'); majMenu(); };
+  $('b-fin-replays').onclick = () => { fermer('ov-fin'); majMenu(); ouvrirReplays(); };
+  $('b-fin-revoir').onclick = () => { fermer('ov-fin'); lancerReplay(replayCourant); };
+}
+
+/* ------------------------------------------------------------------ */
+/* Le mode Arcade                                                       */
+/* ------------------------------------------------------------------ */
+
+function lancerArcade(hero, difficulte) {
+  const a = ARCADE.planArcade(hero, difficulte);
+  const normales = ARENES.filter((x) => !x.boss).map((x) => x.id);
+  a.arenes = a.file.map((id, k) => (k === a.file.length - 1 ? ARENES.find((x) => x.boss === id)?.id || 'trone' : normales[Math.floor(Math.random() * normales.length)]));
+  ecrire(CLE_ARCADE, a);
+  montrerArcade();
+}
+
+function montrerArcade() {
+  const a = lire(CLE_ARCADE, null);
+  if (!a || !PERSO[a.hero]) { ecrire(CLE_ARCADE, null); majMenu(); return; }
+  const hero = PERSO[a.hero];
+  const n = a.file.length;
+  const adv = PERSO[a.file[a.etape]];
+  const lignes = [];
+  for (let k = n - 1; k >= 0; k--) {
+    const p = PERSO[a.file[k]];
+    lignes.push(`<div class="etage${k < a.etape ? ' fait' : k === a.etape ? ' ici' : ''}${k === n - 1 ? ' boss' : ''}${k === n - 2 ? ' rival' : ''}">
+      <span class="num">${k === n - 1 ? '👑' : k + 1}</span><b>${esc(p.nom)}</b>${k === a.etape ? '<i>◀ vous</i>' : ''}</div>`);
+  }
+  $('etape').innerHTML = `<h2>🕹️ Arcade</h2>
+    <div class="tour-corps"><div class="tour arcade-file">${lignes.join('')}</div>
+      <div class="tour-info"><canvas id="tour-portrait" width="160" height="160"></canvas>
+        <b>${esc(hero.nom)}</b>
+        <p class="sous">Combat ${a.etape + 1} sur ${n} : <b style="color:${adv.c.c1}">${esc(adv.nom)}</b> · ordinateur ${a.niveaux[a.etape]}${a.etape === n - 2 ? ' · votre rival !' : a.etape === n - 1 ? ' · le boss !' : ''}</p>
+        <p class="sous" style="font-size:.8rem">Deux rounds gagnants. Perdu ? Remettez une pièce et rejouez le combat. 🪙 Pièces remises : ${a.pieces}</p>
+      </div></div>
+    <div class="ligne-boutons"><button class="btn" id="b-etape-quitter">Abandonner</button><button class="btn rouge" id="b-etape-go">⚔️ Combattre !</button></div>`;
+  dessinerPortrait($('tour-portrait').getContext('2d'), hero, 160, { t: 8 });
+  ouvrir('ov-etape');
+  son('annonce');
+  $('b-etape-go').onclick = async () => {
+    fermer('ov-etape');
+    const fin = ARCADE.finArcade(baseDe(a.hero));
+    // Le rival a quelque chose à dire ; le boss aussi.
+    if (a.etape === n - 2) await cinematique([{ decor: a.arenes[a.etape] }, { entre: 'hero', cote: 'g', comment: 'marche' }, { entre: a.file[a.etape], cote: 'd', comment: 'apparait' }, { dit: a.file[a.etape], texte: fin.avant, p: 'garde' }], a.hero);
+    if (a.etape === n - 1) await cinematique([{ decor: a.arenes[a.etape] }, { entre: 'hero', cote: 'g', comment: 'marche' }, { entre: a.file[a.etape], cote: 'd', comment: 'apparait' }, { effet: 'secousse', duree: 40 }, { dit: a.file[a.etape], texte: 'Six combats. Six victoires. Il ne reste que moi entre toi et la coupe.', p: 'lance' }], a.hero, 'boss');
+    combatArcade(a);
+  };
+  $('b-etape-quitter').onclick = () => {
+    if (!confirm('Abandonner cette partie d’Arcade ?')) return;
+    ecrire(CLE_ARCADE, null);
+    fermer('ov-etape');
+    majMenu();
+  };
+}
+
+function combatArcade(a) {
+  const k = a.etape;
+  const boss = k === a.file.length - 1;
+  demarrerCombat({
+    p1: a.hero, p2: a.file[k], arene: a.arenes[k], mode: 'arcade', musique: boss ? 'boss' : 'combat', ia: { 1: a.niveaux[k] }, victoires: 2,
+    texteFin: (gagne) => (gagne ? `<p class="sous">Combat ${k + 1} sur ${a.file.length} : gagné !</p>` : '<p class="sous">🪙 INSERT COIN — remettez une pièce pour rejouer ce combat.</p>'),
+    suite: async (gagne) => {
+      if (!gagne) return;
+      a.etape += 1;
+      if (a.etape >= a.file.length) { await finirArcade(a); return; }
+      ecrire(CLE_ARCADE, a);
+      montrerArcade();
+    },
+    reessayer: () => { a.pieces += 1; ecrire(CLE_ARCADE, a); combatArcade(a); },
+    // Retourner au menu garde la partie : on la reprendra.
+    abandon: () => { ecrire(CLE_ARCADE, a); },
+  });
+}
+
+async function finirArcade(a) {
+  ecrire(CLE_ARCADE, null);
+  const r = records();
+  r.arcade = (r.arcade || 0) + 1;
+  ecrire(CLE_RECORDS, r);
+  const finis = new Set(lire(CLE_ARCADE_FINIS, []));
+  finis.add(baseDe(a.hero));
+  ecrire(CLE_ARCADE_FINIS, [...finis]);
+  succes.debloquer('street-arcade');
+  if (a.difficulte === 'difficile' && a.pieces === 0) succes.debloquer('street-arcade-pur');
+  const f = ARCADE.finArcade(baseDe(a.hero));
+  const pieces = a.pieces ? `${a.pieces} pièce${a.pieces > 1 ? 's' : ''} remise${a.pieces > 1 ? 's' : ''}` : 'sans remettre une seule pièce !';
+  await cinematique([
+    { decor: 'neon' }, { effet: 'aube', attendre: false },
+    { entre: 'hero', cote: 'c', comment: 'marche' }, { pose: 'hero', p: 'victoire' },
+    { effet: 'confettis', duree: 300, attendre: false },
+    ...f.fin.map((t) => ({ narre: t })),
+    { titre: 'FIN', sous: `${PERSO[a.hero].nom} — Mode Arcade, ${pieces}`, film: true },
+  ], a.hero, 'epique');
+  majMenu();
+}
+
+/* ---- Les commandes tactiles, réglables ---- */
+
+const TACTILE_DEFAUT = { dir: 1, btn: 1, op: 0.75, haut: 0, marge: 0, inverse: false };
+const reglagesTactile = () => ({ ...TACTILE_DEFAUT, ...lire(CLE_TACTILE, {}) });
+function appliquerTactile(el = $('tactile'), r = reglagesTactile()) {
+  if (!el) return;
+  el.style.setProperty('--t-dir', r.dir);
+  el.style.setProperty('--t-btn', r.btn);
+  el.style.setProperty('--t-op', r.op);
+  el.style.setProperty('--t-haut', r.haut);
+  el.style.setProperty('--t-marge', r.marge);
+  el.classList.toggle('inverse', !!r.inverse);
+}
+function ouvrirTactile() {
+  const r = reglagesTactile();
+  const curseur = (cle, nom, min, max, pas) => `<label for="t-${cle}">${nom}</label><input id="t-${cle}" type="range" data-t="${cle}" min="${min}" max="${max}" step="${pas}" value="${r[cle]}">`;
+  $('tactile-reglages').innerHTML = curseur('dir', '🕹️ Joystick', 0.6, 1.6, 0.05) + curseur('btn', '🔘 Boutons', 0.6, 1.6, 0.05)
+    + curseur('op', '👁️ Opacité', 0.2, 1, 0.05) + curseur('haut', '↕️ Hauteur', 0, 160, 5) + curseur('marge', '↔️ Écart des bords', 0, 120, 5)
+    + `<span>🔁 Côtés</span><button class="btn petit" id="t-inverse">${r.inverse ? 'Joystick à droite' : 'Joystick à gauche'}</button>`;
+  // L'aperçu : une copie des commandes (sans leurs identifiants ni leurs réactions).
+  const demo = $('tactile').cloneNode(true);
+  demo.hidden = false;
+  demo.removeAttribute('id');
+  demo.querySelectorAll('[id]').forEach((x) => x.removeAttribute('id'));
+  demo.querySelector('.allie')?.remove();
+  demo.querySelectorAll('.tb[data-b]').forEach((x) => x.classList.add('pret'));
+  $('tactile-apercu').replaceChildren(demo);
+  appliquerTactile(demo, r);
+  ouvrir('ov-tactile');
+  const maj = (cle, v) => {
+    const n = { ...reglagesTactile(), [cle]: v };
+    ecrire(CLE_TACTILE, n);
+    appliquerTactile(demo, n);
+    appliquerTactile($('tactile'), n);
+  };
+  $('tactile-reglages').querySelectorAll('[data-t]').forEach((i) => i.addEventListener('input', () => maj(i.dataset.t, Number(i.value))));
+  $('t-inverse').addEventListener('click', () => { maj('inverse', !reglagesTactile().inverse); $('t-inverse').textContent = reglagesTactile().inverse ? 'Joystick à droite' : 'Joystick à gauche'; });
+}
+
+/* ---- La progression du héros ---- */
+
+/** Le héros gagne de l'expérience ; rend ce qu'on affiche (niveau gagné, récompenses). */
+function donnerXp(h, gain) {
+  const avant = niveauHeros(h.xp || 0);
+  h.xp = (h.xp || 0) + gain;
+  const apres = niveauHeros(h.xp);
+  sauver(true);
+  if (apres >= 10) succes.debloquer('street-niveau10');
+  if (apres >= NIVEAU_MAX) succes.debloquer('street-niveau20');
+  const nouv = nouvellesRecompenses(avant, apres);
+  if (nouv.length) setTimeout(() => toast(`🎁 Débloqué pour votre héros : ${nouv.map((r) => esc(r.nom)).join(', ')} (✏️ Héros)`, 4200), 1200);
+  return `<p class="xp-gain">+${gain} XP · ${apres > avant ? `NIVEAU ${apres} ! 🎉` : `niveau ${apres}`}${nouv.map((r) => `<span>🎁 Débloqué : ${esc(r.nom)}</span>`).join('')}</p>`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -1716,6 +2036,7 @@ function brancher() {
   $('createur-options').addEventListener('click', (e) => {
     const b = e.target.closest('[data-champ]');
     if (!b) return;
+    if (b.classList.contains('ferme')) { toast(`🔒 ${esc(b.title)}`); return; }
     const d = createur.def;
     const { champ, val } = b.dataset;
     if (champ === 'accessoires') {
@@ -1743,6 +2064,24 @@ function brancher() {
     son('choix');
     if (lire(CLE_TOURNOI, null)) montrerTableau(); else ouvrirDifficultes('tournoi');
   });
+  $('b-arcade').addEventListener('click', () => {
+    son('choix');
+    if (lire(CLE_ARCADE, null)) montrerArcade(); else ouvrirDifficultes('arcade');
+  });
+  $('b-replays').addEventListener('click', () => { son('choix'); ouvrirReplays(); });
+  $('b-tactile-reglages').addEventListener('click', () => { son('choix'); ouvrirTactile(); });
+  $('b-tactile-defaut').addEventListener('click', () => { ecrire(CLE_TACTILE, null); appliquerTactile(); ouvrirTactile(); });
+  $('tenues-choix').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-tenue]');
+    if (!b) return;
+    if (b.classList.contains('ferme')) { toast(`🔒 ${esc(b.title)}`, 3200); return; }
+    prep.tenue = Number(b.dataset.tenue);
+    son('choix');
+    remplirTenues();
+  });
+  $('b-replay-pause').addEventListener('click', () => { enPause = !enPause; derniere = performance.now(); $('b-replay-pause').textContent = enPause ? '▶' : '⏸'; });
+  $('b-replay-vitesse').addEventListener('click', () => { replayVitesse = { 1: 2, 2: 4, 4: 0.5, 0.5: 1 }[replayVitesse]; $('b-replay-vitesse').textContent = `×${replayVitesse}`; });
+  $('b-replay-quitter').addEventListener('click', () => { enPause = false; combat = null; majMenu(); ouvrirReplays(); });
   $('b-tour').addEventListener('click', () => {
     son('choix');
     if (lire(CLE_TOUR, null)) montrerTour(); else commencerMode('tour');
@@ -1789,7 +2128,7 @@ function brancher() {
   });
   $('choix-retour').addEventListener('click', () => {
     if (prep.etape === 2) { prep.etape = 1; ouvrirChoix(); return; }
-    if (prep.mode === 'histoire' || prep.mode === 'tournoi') ouvrirDifficultes(prep.mode); else if (prep.mode === 'enligne') ouvrirEnLigne(); else majMenu();
+    if (['histoire', 'tournoi', 'arcade'].includes(prep.mode)) ouvrirDifficultes(prep.mode); else if (prep.mode === 'enligne') ouvrirEnLigne(); else majMenu();
   });
 
   $('niveaux-ia').addEventListener('click', (e) => {

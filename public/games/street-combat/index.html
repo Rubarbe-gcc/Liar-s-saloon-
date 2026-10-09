@@ -23,10 +23,11 @@
   <canvas class="fond-menu" id="fond-menu" aria-hidden="true"></canvas>
   <div class="menu">
     <h1 class="logo"><span class="l1">STREET</span><span class="l2">COMBAT</span></h1>
-    <p class="slogan">Histoire · Tournoi · Tour des défis · combos · ultimes</p>
+    <p class="slogan">Histoire · Arcade · Tournoi · Tour · en ligne</p>
     <div class="boutons-menu">
       <button class="btn rouge grand" id="b-histoire">📖 Mode Histoire<small id="histoire-info"></small></button>
       <div class="deux-col">
+        <button class="btn or" id="b-arcade">🕹️ Arcade<small id="arcade-info"></small></button>
         <button class="btn or" id="b-tournoi">🏆 Tournoi<small id="tournoi-info"></small></button>
         <button class="btn violet" id="b-tour">🗼 Tour des défis<small id="tour-info"></small></button>
         <button class="btn bleu" id="b-versus">🤖 Contre l’ordi</button>
@@ -43,7 +44,9 @@
       <a class="btn petit" href="/">‹ Arcade</a>
       <button class="btn petit" id="b-commandes">⌨️ Commandes</button>
       <button class="btn petit" id="b-codex">📚 Codex</button>
+      <button class="btn petit" id="b-replays">📼 Replays</button>
       <button class="btn petit" id="b-manette">🎮 Manette</button>
+      <button class="btn petit" id="b-tactile-reglages">📱 Tactile</button>
       <button class="btn petit" id="b-son-menu">🔊</button>
       <button class="btn petit" id="b-voix-menu">🗣️ Voix</button>
       <button class="btn petit" id="b-reset" title="Remettre à zéro les combattants débloqués et les sauvegardes">♻️ Réinitialiser</button>
@@ -132,6 +135,7 @@
       <div class="grille-persos" id="grille-persos"></div>
       <aside class="fiche" id="fiche">
         <canvas id="fiche-apercu" width="420" height="300"></canvas>
+        <div class="tenues-choix" id="tenues-choix"></div>
         <div class="fiche-texte" id="fiche-texte"></div>
         <button class="btn rouge btn-large" id="choix-ok">Combattre !</button>
       </aside>
@@ -177,6 +181,12 @@
     <div class="allie-pret" id="allie-pret" hidden></div>
     <div class="tuto" id="tuto" hidden></div>
     <div class="defis" id="defis" hidden></div>
+    <div class="replay-barre" id="replay-barre" hidden>
+      <b>📼 REPLAY</b>
+      <button class="btn petit" id="b-replay-pause">⏸</button>
+      <button class="btn petit" id="b-replay-vitesse">×1</button>
+      <button class="btn petit" id="b-replay-quitter">✕</button>
+    </div>
   </div>
   <div class="tactile" id="tactile" hidden>
     <div class="manette-dir" id="manette-dir"><div class="manette-base"></div><div class="manette-bouton" id="manette-bouton"></div></div>
@@ -237,6 +247,16 @@
     <button class="rond fermer" data-ferme="ov-manette">✕</button>
     <h2>🎮 Manette</h2>
     <div id="manette"></div>
+  </div>
+</div>
+<div class="ov" id="ov-tactile" hidden>
+  <div class="feuille">
+    <button class="rond fermer" data-ferme="ov-tactile">✕</button>
+    <h2>📱 Commandes tactiles</h2>
+    <p class="sous">Réglez la taille et la place des commandes. L’aperçu se met à jour.</p>
+    <div class="tactile-reglages" id="tactile-reglages"></div>
+    <div class="tactile-apercu" id="tactile-apercu"></div>
+    <div class="ligne-boutons"><button class="btn" id="b-tactile-defaut">Par défaut</button><button class="btn rouge" data-ferme="ov-tactile">OK</button></div>
   </div>
 </div>
 <div class="toast" id="toast" hidden></div>

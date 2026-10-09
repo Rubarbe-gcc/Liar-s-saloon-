@@ -454,3 +454,48 @@ kbd { display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4
 .manette-liste div { display: grid; grid-template-columns: 1fr 100px auto; gap: 8px; align-items: center; padding: 6px 10px; border-radius: 8px; background: rgba(255,255,255,.05); }
 .manette-liste b { color: var(--or); }
 @media (max-width: 560px) { .defis { display: none; } }
+
+/* Les tenues, au choix du combattant */
+.tenues-choix { display: flex; gap: 6px; justify-content: center; margin: 4px 0 8px; flex-wrap: wrap; }
+.tenue { border: 0; cursor: pointer; display: flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; font: inherit; font-size: .78rem; font-weight: 800; color: #fff; background: rgba(255,255,255,.07); }
+.tenue i { width: 14px; height: 14px; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 2px rgba(255,255,255,.35); }
+.tenue.on { background: rgba(255,200,61,.18); box-shadow: inset 0 0 0 2px var(--or); }
+.tenue.ferme { opacity: .45; cursor: not-allowed; }
+
+/* Le replay */
+.replay-barre { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 4; display: flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: rgba(8,4,15,.78); box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+.replay-barre b { font-family: var(--titre); font-weight: 400; letter-spacing: .1em; color: #ff5a7a; margin-right: 4px; }
+.liste-replays { display: flex; flex-direction: column; gap: 8px; max-height: 60vh; overflow: auto; }
+.replay { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.05); }
+.replay canvas { width: 48px; height: 48px; border-radius: 8px; flex: none; background: rgba(0,0,0,.3); }
+.replay .r-texte { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.replay .r-texte small { color: var(--pale); font-size: .75rem; }
+.replay .r-boutons { display: flex; gap: 4px; flex: none; }
+.replay.favori { box-shadow: inset 0 0 0 2px var(--or); }
+
+/* La progression du héros */
+.niveau-heros { display: flex; flex-direction: column; gap: 3px; margin: 0 0 6px; font-size: .8rem; font-weight: 800; color: var(--or); }
+.niveau-heros i { display: block; height: 6px; border-radius: 3px; background: rgba(255,255,255,.1); overflow: hidden; }
+.niveau-heros i b { display: block; height: 100%; background: linear-gradient(90deg, #ffd23f, #ff8a1a); }
+.puce.ferme, .teinte.ferme { opacity: .35; cursor: not-allowed; }
+.teinte.ferme::after { content: '🔒'; font-size: .6rem; }
+.xp-gain { margin: 6px 0 0; font-weight: 800; color: var(--or); }
+.xp-gain span { display: block; color: #7dffb0; font-size: .85rem; }
+
+/* L'Arcade */
+.arcade-file { display: flex; flex-direction: column; gap: 4px; }
+.arcade-file .etage.rival b::after { content: ' · RIVAL'; color: #ff5a7a; font-size: .7rem; letter-spacing: .1em; }
+
+/* Les commandes tactiles réglables */
+.tactile { --t-dir: 1; --t-btn: 1; --t-op: .75; --t-haut: 0; --t-marge: 0; }
+.tactile .manette-dir { width: calc(140px * var(--t-dir)); height: calc(140px * var(--t-dir)); }
+.tactile .manette-boutons { grid-template-columns: repeat(3, calc(62px * var(--t-btn))); grid-template-rows: repeat(2, calc(62px * var(--t-btn))); }
+.tactile .manette-dir, .tactile .manette-boutons { transform: translateY(calc(var(--t-haut) * -1px)); margin: 0 calc(var(--t-marge) * 1px); }
+.tactile.inverse { flex-direction: row-reverse; }
+@media (orientation: landscape) and (max-height: 560px) { .tactile .manette-dir, .tactile .manette-boutons { opacity: var(--t-op); } }
+.tactile-reglages { display: grid; grid-template-columns: auto 1fr; gap: 8px 12px; align-items: center; font-size: .85rem; font-weight: 700; }
+.tactile-reglages input[type=range] { width: 100%; }
+.tactile-apercu { position: relative; margin: 12px 0; height: 190px; border-radius: 12px; overflow: hidden; background: linear-gradient(180deg, #1a0e2a, #05020a); }
+/* L’aperçu : un écran de téléphone en petit (les commandes, réduites, sur toute la largeur). */
+.tactile-apercu .tactile { position: absolute; left: -45%; right: -45%; bottom: 0; background: none; pointer-events: none; transform: scale(.52); transform-origin: 50% 100%; }
+.tactile-apercu .tactile .manette-dir, .tactile-apercu .tactile .manette-boutons { opacity: var(--t-op); }
