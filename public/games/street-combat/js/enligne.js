@@ -98,7 +98,12 @@ function traiter(m) {
   }
 }
 
-export function envoyer(m) { net?.envoyer({ g: 'street', ...m }); }
+/** Une demande faite avant que la connexion soit ouverte (le serveur se réveille) : partie dès l'ouverture. */
+let enAttente = null;
+export function envoyer(m) {
+  if (net?.envoyer({ g: 'street', ...m })) return;
+  if (m.t === 'creer' || m.t === 'rejoindre') enAttente = m;
+}
 
 /** Se connecter, avec ce qu'il faut faire de chaque nouvelle. */
 export function connecter(r) {
@@ -108,6 +113,7 @@ export function connecter(r) {
       jeu: 'street', g: 'street', session: false,
       message: traiter,
       statut: (s) => rappels.statut?.(s),
+      ouverte: () => { if (enAttente) { const m = enAttente; enAttente = null; envoyer(m); } },
     });
   }
   net.ouvrir();
@@ -117,6 +123,7 @@ export const creer = (perso, nom) => envoyer({ t: 'creer', perso, nom, arene: 'h
 export const rejoindre = (code, perso, nom) => envoyer({ t: 'rejoindre', code, perso, nom });
 export const revanche = () => envoyer({ t: 'revanche' });
 export function quitter() {
+  enAttente = null;
   envoyer({ t: 'quitter' });
   salle.code = null;
   salle.enCombat = false;

@@ -12,7 +12,7 @@
  * jouent sur le même site que les pages (comme en local).
  */
 
-export const SERVEUR_JEUX = '';
+export const SERVEUR_JEUX = 'https://insert-coin-jeux.onrender.com';
 
 /** L'adresse WebSocket des parties en ligne. */
 export function adresseWS() {
