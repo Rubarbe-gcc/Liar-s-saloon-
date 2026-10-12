@@ -10,8 +10,13 @@
 
 import { PERSOS, PERSO, ROSTER, BOSS, SECRETS, JAUGE, STATUTS, lireEntree, aDebloquer } from '../../../shared/street/persos.js';
 import { creerCombat, pas, evenements, pose, assister, ARENE as A, MUR_PV, MUR_TRANSITION } from '../../../shared/street/combat.js';
-import { dessinerCombattant, dessinerPortrait, rgba, teinte } from './dessin.js';
-import { ARENES, ARENE, fondArene, animerArene, areneApres, dessinerMurs } from './arenes.js';
+import { dessinerCombattant, dessinerPortrait, rgba, teinte, brancher3D } from './dessin.js';
+import { creerRendu3D } from './trois/rendu3d.js';
+
+// La 3D : les combattants sont des modèles 3D (Three.js) ; sans WebGL, ou si on la coupe, le dessin 2D.
+if (localStorage.getItem('street.graphismes') !== '"2d"') { const r3 = creerRendu3D(); if (r3) { brancher3D(r3); brancherDecor3D(decor3D); } }
+import { ARENES, ARENE, fondArene, animerArene, areneApres, dessinerMurs, brancherDecor3D } from './arenes.js';
+import { decor3D } from './trois/decors3d.js';
 import * as FX from './effets.js';
 import { creerHud, dessinerHud } from './hud.js';
 import { jouer as son, estMuet, basculerSon } from './son.js';

@@ -45,9 +45,18 @@ function alea(graine) {
 
 const caches = new Map();
 
+/** Les décors en 3D (trois/decors3d.js), s'ils ont pu démarrer ; sinon, le dessin 2D. */
+let decor3D = null;
+export function brancherDecor3D(f) { decor3D = f; caches.clear(); }
+
 /** Le décor fixe de l'arène (mis en cache). */
 export function fondArene(a) {
   if (caches.has(a.id)) return caches.get(a.id);
+  if (decor3D) {
+    let cv3 = null;
+    try { cv3 = decor3D(a); } catch (e) { console.warn('décor 3D', a.id, e); }
+    if (cv3) { caches.set(a.id, cv3); return cv3; }
+  }
   const cv = typeof OffscreenCanvas !== 'undefined' ? new OffscreenCanvas(L, H) : Object.assign(document.createElement('canvas'), { width: L, height: H });
   const g = cv.getContext('2d');
   // Le ciel.

@@ -109,6 +109,54 @@ function poseDe(nom, t, p = 0) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Le squelette                                                        */
+/* ------------------------------------------------------------------ */
+
+/** Les longueurs des segments. */
+export const SEGMENTS = { cuisse: 36, tibia: 37, bras: 27, avantBras: 27 };
+
+/**
+ * Le squelette d'un combattant dans une pose, en coordonnées du combattant
+ * (pieds en (0, 0), l'avant vers la droite, y vers le bas). Le dessin 2D et
+ * le rendu 3D (trois/) le partagent.
+ */
+export function squelette(perso, o) {
+  const L = perso.look;
+  const car = CARRURES[L.corps] || CARRURES.normal;
+  let nomPose = o.pose || 'repos';
+  if (nomPose === 'victoire' || nomPose === 'victoire-round') nomPose = perso.victoire?.[nomPose === 'victoire' ? 1 : 0] || 'v-poing';
+  const pose = poseDe(nomPose, o.t || 0, o.p || 0);
+  const { cuisse, tibia, bras: brasH, avantBras } = SEGMENTS;
+  let hanche = { x: 0, y: -(cuisse + tibia) + (pose.dy || 0) };
+  const pieds = (h) => {
+    const ka = bout(h, pose.ja[0], cuisse); const fa = bout(ka, pose.ja[0] + pose.ja[1], tibia);
+    const kr = bout(h, pose.jr[0], cuisse); const fr = bout(kr, pose.jr[0] + pose.jr[1], tibia);
+    return { ka, fa, kr, fr };
+  };
+  let jambes = pieds(hanche);
+  // Au sol : les pieds touchent terre.
+  if (!o.enLAir && !pose.sol && !pose.flotte) {
+    const bas = Math.max(jambes.fa.y, jambes.fr.y);
+    hanche = { x: hanche.x, y: hanche.y - bas };
+    jambes = pieds(hanche);
+  }
+  const buste = (l) => bout(hanche, 180 + pose.b, l);
+  const epaule = buste(46);
+  const cou = buste(52);
+  const tete = bout(hanche, 180 + pose.b + (pose.tt || 0) * 0.3, 68);
+  const epA = { x: epaule.x + 4, y: epaule.y + 2 };
+  const epR = { x: epaule.x - 5, y: epaule.y + 1 };
+  const coudeA = bout(epA, pose.av[0], brasH); const mainA = bout(coudeA, pose.av[0] + pose.av[1], avantBras);
+  const coudeR = bout(epR, pose.ar[0], brasH); const mainR = bout(coudeR, pose.ar[0] + pose.ar[1], avantBras);
+  return { car, nomPose, pose, hanche, jambes, epaule, cou, tete, epA, epR, coudeA, mainA, coudeR, mainR };
+}
+
+/** Le rendu 3D, s'il a pu démarrer (voir trois/rendu3d.js) ; sinon, la 2D. */
+let rendu3D = null;
+export function brancher3D(r) { rendu3D = r; }
+export const en3D = () => !!rendu3D;
+
+/* ------------------------------------------------------------------ */
 /* Le combattant                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -157,11 +205,9 @@ export function dessinerCombattant(g, perso, o) {
   }
   const k = perso.c;
   const L = perso.look;
-  const car = CARRURES[L.corps] || CARRURES.normal;
+  const sq = squelette(perso, o);
+  const { car, pose } = sq;
   const e = (o.echelle || 1) * car.h;
-  let nomPose = o.pose || 'repos';
-  if (nomPose === 'victoire' || nomPose === 'victoire-round') nomPose = perso.victoire?.[nomPose === 'victoire' ? 1 : 0] || 'v-poing';
-  const pose = poseDe(nomPose, o.t || 0, o.p || 0);
   const t = o.t || 0;
 
   g.save();
@@ -180,32 +226,8 @@ export function dessinerCombattant(g, perso, o) {
     g.restore();
   }
 
-  // Les membres, par cinématique directe.
-  const cuisse = 36;
-  const tibia = 37;
-  const brasH = 27;
-  const avantBras = 27;
-  let hanche = { x: 0, y: -(cuisse + tibia) + (pose.dy || 0) };
-  const pieds = (h) => {
-    const ka = bout(h, pose.ja[0], cuisse); const fa = bout(ka, pose.ja[0] + pose.ja[1], tibia);
-    const kr = bout(h, pose.jr[0], cuisse); const fr = bout(kr, pose.jr[0] + pose.jr[1], tibia);
-    return { ka, fa, kr, fr };
-  };
-  let jambes = pieds(hanche);
-  // Au sol : les pieds touchent terre.
-  if (!o.enLAir && !pose.sol && !pose.flotte) {
-    const bas = Math.max(jambes.fa.y, jambes.fr.y);
-    hanche = { x: hanche.x, y: hanche.y - bas };
-    jambes = pieds(hanche);
-  }
-  const buste = (l) => bout(hanche, 180 + pose.b, l);
-  const epaule = buste(46);
-  const cou = buste(52);
-  const tete = bout(hanche, 180 + pose.b + (pose.tt || 0) * 0.3, 68);
-  const epA = { x: epaule.x + 4, y: epaule.y + 2 };
-  const epR = { x: epaule.x - 5, y: epaule.y + 1 };
-  const coudeA = bout(epA, pose.av[0], brasH); const mainA = bout(coudeA, pose.av[0] + pose.av[1], avantBras);
-  const coudeR = bout(epR, pose.ar[0], brasH); const mainR = bout(coudeR, pose.ar[0] + pose.ar[1], avantBras);
+  // Les membres, par cinématique directe (voir squelette).
+  const { hanche, jambes, epaule, cou, tete, epA, epR, coudeA, mainA, coudeR, mainR } = sq;
 
   // Rotation du corps entier (vol, à terre, tourbillon), autour des hanches.
   if (pose.rot) {
@@ -235,6 +257,17 @@ export function dessinerCombattant(g, perso, o) {
   }
   // Corrompu par la Fracture : des flammes violettes et noires qui montent derrière lui.
   if (o.corrompu) corruptionDerriere(g, t);
+
+  // En 3D : le corps vient du rendu 3D ; les effets (auras, éclats, flammes) restent dessinés ici, autour.
+  if (rendu3D && !o.force2D) {
+    if (L.extras.includes('aura-noire')) arriere(g, { ...perso, look: { ...L, extras: ['aura-noire'] } }, { hanche, epaule, cou, t, l: car.l, m: car.m, pose, e: o });
+    rendu3D.dessiner(g, perso, sq, o);
+    devant(g, { ...perso, look: { ...L, extras: L.extras.filter((x) => ['eclats', 'orbes', 'etoiles', 'flammes'].includes(x)) } }, { hanche, epaule, mainA, mainR, t, l: car.l, m: car.m });
+    if (o.statuts) statutsVisibles(g, o.statuts, t, hanche);
+    if (o.corrompu) eclatsFlottants(g, t);
+    g.restore();
+    return;
+  }
 
   const membre = (a, b, c, ep, couleur, ep2 = ep * 0.86) => {
     g.lineCap = 'round';
@@ -429,8 +462,8 @@ function genouillere(g, k, m, derriere = false) {
   g.fillStyle = derriere ? '#5a4410' : '#8a5a10';
   g.beginPath(); g.moveTo(k.x + 8 * m, k.y - 3); g.lineTo(k.x + 15 * m, k.y); g.lineTo(k.x + 8 * m, k.y + 3); g.fill();
 }
-const manche = (p) => (p.figurant || p.look.extras.includes('general') || ['ironclad', 'stoneback', 'lechaos', 'malvortex', 'shadowkira', 'voidreaper'].includes(p.id) ? p.c.tenue : p.c.peau);
-const gant = (p) => (p.look.extras.includes('gants-boxe') ? '#d8102a' : p.look.extras.includes('griffes') ? teinte(p.c.peau, -0.2) : p.id === 'stoneback' ? teinte(p.c.peau, -0.15) : p.c.c1);
+export const manche = (p) => (p.figurant || p.look.extras.includes('general') || ['ironclad', 'stoneback', 'lechaos', 'malvortex', 'shadowkira', 'voidreaper'].includes(p.id) ? p.c.tenue : p.c.peau);
+export const gant = (p) => (p.look.extras.includes('gants-boxe') ? '#d8102a' : p.look.extras.includes('griffes') ? teinte(p.c.peau, -0.2) : p.id === 'stoneback' ? teinte(p.c.peau, -0.15) : p.c.c1);
 
 /* ------------------------------------------------------------------ */
 /* La tête                                                             */

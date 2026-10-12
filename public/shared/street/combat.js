@@ -138,6 +138,12 @@ const perso = (j) => PERSO[j.id];
 
 /** Une image de combat. `entrees` : [entrées du joueur 1, entrées du joueur 2]. */
 export function pas(c, entrees = []) {
+  avancerImage(c, entrees);
+  // Quoi qu'il se soit passé (un coup, une saisie, un ultime), personne ne sort de l'arène.
+  for (const j of c.joueurs) j.x = Math.max(ARENE.BORD, Math.min(ARENE.L - ARENE.BORD, j.x));
+}
+
+function avancerImage(c, entrees) {
   c.f += 1;
   const fige = !!c.cine || c.gel > 0 || (c.ralenti > 0 && c.f % 3 !== 0);
   // Les appuis comptent même pendant un arrêt sur image : ils attendent leur tour.
@@ -440,8 +446,8 @@ function jouerBrique(c, j, a) {
         if (touche) {
           a.prete = false;
           a.coupsFaits += 1;
-          if (d.emporte) o.x = j.x + j.dir * 60;
-          if (d.attire) o.x = j.x + j.dir * 70;
+          if (d.emporte) coteACote(j, o, 60);
+          if (d.attire) coteACote(j, o, 70);
         }
       }
       if (t >= d.duree) j.cache = false;
@@ -605,7 +611,8 @@ function appliquerDegats(c, att, def, coup, sorte, dirCoup, hx, hy, p = perso(at
     def.vx = dirCoup * 2;
   } else {
     def.etat = 'touche';
-    def.stun = coup.stun || 15;
+    // Un long combo étourdit de moins en moins : on finit toujours par pouvoir en sortir.
+    def.stun = Math.max(6, Math.round((coup.stun || 15) * Math.max(0.4, 1 - Math.max(0, att.combo.n - 3) * 0.08)));
     def.vx = dirCoup * (coup.recul || 6);
   }
   if (coup.effet && STATUTS[coup.effet]) {
@@ -729,7 +736,7 @@ function tenterSaisie(c, j) {
   c.cine = { type: 'saisie', att: j.n, def: o.n, t: 0, pas: 0, pasT: 0, seq };
   j.etat = 'saisi-att'; o.etat = 'saisi';
   j.action = null; o.action = null;
-  o.x = j.x + j.dir * 62;
+  coteACote(j, o, 62);
   j.vx = o.vx = 0;
   evt(c, { type: 'saisie', joueur: j.n, nom: perso(j).saisie.nom });
   evt(c, { type: 'son', nom: 'saisie' });
@@ -753,7 +760,7 @@ function avancerCine(c) {
   const o = c.joueurs[k.def];
   k.t += 1;
   if (k.type === 'saisie') {
-    o.x = j.x + j.dir * 62;
+    coteACote(j, o, 62);
     o.y = j.y = ARENE.SOL;
     const [label, dur, dmg] = k.seq[k.pas];
     k.pasT += 1;
@@ -943,10 +950,27 @@ function pousser(c) {
   const hauteur = Math.abs(a.y - b.y);
   if (d < PUSH && hauteur < 90) {
     const p = (PUSH - d) / 2;
-    const s = a.x < b.x || (a.x === b.x && a.n === 0) ? -1 : 1;
+    const min = ARENE.BORD;
+    const max = ARENE.L - ARENE.BORD;
+    // Celui qui est le plus près du bord reste du côté du bord (même s'ils sont l'un sur l'autre).
+    const centre = (a.x + b.x) / 2;
+    const s = a.x !== b.x ? (a.x < b.x ? -1 : 1) : centre > ARENE.L / 2 ? (a.n === 0 ? 1 : -1) : (a.n === 0 ? -1 : 1);
     a.x += s * p; b.x -= s * p;
-    for (const j of [a, b]) j.x = Math.max(ARENE.BORD, Math.min(ARENE.L - ARENE.BORD, j.x));
+    // Contre un mur, celui qui n'y est pas prend toute la poussée.
+    for (const [j, o] of [[a, b], [b, a]]) {
+      if (j.x < min) { o.x += min - j.x; j.x = min; }
+      if (j.x > max) { o.x -= j.x - max; j.x = max; }
+    }
   }
+}
+
+/** L'adversaire juste devant soi (saisie, coup qui emporte) — sans jamais sortir de l'arène : contre un mur, c'est l'attaquant qui recule. */
+function coteACote(j, o, ecart) {
+  const min = ARENE.BORD;
+  const max = ARENE.L - ARENE.BORD;
+  o.x = j.x + j.dir * ecart;
+  if (o.x > max) { j.x -= o.x - max; o.x = max; }
+  if (o.x < min) { j.x += min - o.x; o.x = min; }
 }
 
 function orienterUn(j, o) { j.dir = o.x >= j.x ? 1 : -1; }
