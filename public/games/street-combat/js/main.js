@@ -15,7 +15,7 @@ import { creerRendu3D } from './trois/rendu3d.js';
 
 // La 3D : les combattants sont des modèles 3D (Three.js) ; sans WebGL, ou si on la coupe, le dessin 2D.
 if (localStorage.getItem('street.graphismes') !== '"2d"') { const r3 = creerRendu3D(); if (r3) { brancher3D(r3); brancherDecor3D(decor3D); } }
-import { ARENES, ARENE, fondArene, animerArene, areneApres, dessinerMurs, brancherDecor3D } from './arenes.js';
+import { ARENES, ARENE, fondArene, fondPret, animerArene, areneApres, dessinerMurs, brancherDecor3D } from './arenes.js';
 import { decor3D } from './trois/decors3d.js';
 import * as FX from './effets.js';
 import { creerHud, dessinerHud } from './hud.js';
@@ -446,6 +446,7 @@ function ouvrirArenes() {
   $('niveaux-ia').innerHTML = NIVEAUX.map(([id, nom]) => `<button data-niveau="${id}" class="${prep.niveau === id ? 'on' : ''}">${nom}</button>`).join('');
   const dispo = ARENES.filter((a) => !a.boss || debloques().has(a.boss));
   const grille = $('grille-arenes');
+  const aDessiner = [];
   grille.innerHTML = '<button class="carte-arene hasard" data-arene="hasard">🎲<span>AU HASARD</span></button>';
   for (const a of dispo) {
     const b = document.createElement('button');
@@ -454,12 +455,21 @@ function ouvrirArenes() {
     const cv = document.createElement('canvas');
     cv.width = 250; cv.height = 150;
     const g = cv.getContext('2d');
-    g.drawImage(fondArene(a), 0, 0, 250, 150);
+    // La vignette en 2D tout de suite ; la 3D, une arène après l'autre, sans bloquer l'écran.
+    g.drawImage(fondArene(a, !fondPret(a)), 0, 0, 250, 150);
+    if (!fondPret(a)) aDessiner.push([g, a]);
     b.append(cv);
     b.insertAdjacentHTML('beforeend', `<span>${esc(a.nom)}</span>`);
     grille.append(b);
   }
   aller('s-arenes');
+  const suivante = () => {
+    const x = aDessiner.shift();
+    if (!x || !$('s-arenes').classList.contains('is-active')) return;
+    x[0].drawImage(fondArene(x[1]), 0, 0, 250, 150);
+    setTimeout(suivante, 30);
+  };
+  setTimeout(suivante, 120);
 }
 
 /* ------------------------------------------------------------------ */

@@ -50,9 +50,12 @@ let decor3D = null;
 export function brancherDecor3D(f) { decor3D = f; caches.clear(); }
 
 /** Le décor fixe de l'arène (mis en cache). */
-export function fondArene(a) {
-  if (caches.has(a.id)) return caches.get(a.id);
-  if (decor3D) {
+export const fondPret = (a) => caches.has(a.id);
+/** `en2D` : le dessin 2D, tout de suite (les vignettes, en attendant la 3D). */
+export function fondArene(a, en2D = false) {
+  const cle = en2D && decor3D ? `${a.id}#2d` : a.id;
+  if (caches.has(cle)) return caches.get(cle);
+  if (decor3D && !en2D) {
     let cv3 = null;
     try { cv3 = decor3D(a); } catch (e) { console.warn('décor 3D', a.id, e); }
     if (cv3) { caches.set(a.id, cv3); return cv3; }
@@ -67,7 +70,7 @@ export function fondArene(a) {
   const R = alea(a.id.length * 7919 + a.id.charCodeAt(0));
   (DECORS[a.id] || (() => {}))(g, a, R);
   sol(g, a, R);
-  caches.set(a.id, cv);
+  caches.set(cle, cv);
   return cv;
 }
 
