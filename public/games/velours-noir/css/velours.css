@@ -559,3 +559,39 @@ body.hors-ligne .code-table { border-color: #ff6b7a; color: #ffb1bb; }
 .encaisser input[type=range] { flex: 1; min-width: 160px; accent-color: var(--or); }
 .encaisser #enc-val { font: 600 .86rem var(--ui); color: var(--or-clair); min-width: 170px; }
 .ecran-tpe.refuse { background: #e8a0a0; color: #4a0c17; font-weight: 800; }
+
+/* ---------- les tournois ---------- */
+.pastille-tournoi { margin-top: 10px; display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; cursor: pointer; border: 1px solid #f3dc9a;
+  background: linear-gradient(90deg, #6b1a2a, #3a0d17); color: var(--or-clair); font: 600 .86rem var(--ui); animation: appel 1.6s ease-in-out infinite; }
+.pastille-tournoi small { font-family: var(--ui); color: #fff; opacity: .8; }
+.pastille-tournoi.inscrit { animation: none; box-shadow: 0 0 0 2px #9ff0b8; }
+@keyframes appel { 50% { box-shadow: 0 0 0 4px rgba(243,220,154,.25), 0 0 24px rgba(243,220,154,.45); } }
+.panneau.affiche { text-align: center; width: min(100%, 440px); border: 2px solid #f3dc9a;
+  background: radial-gradient(120% 80% at 50% 0, #6b1a2a, #2a0a12 60%, #120509); box-shadow: 0 0 0 6px #120509, 0 0 0 7px rgba(243,220,154,.5), 0 0 60px rgba(243,220,154,.25), 0 30px 80px rgba(0,0,0,.7);
+  animation: affiche .7s cubic-bezier(.2,1.4,.4,1); }
+@keyframes affiche { from { transform: scale(.6) rotate(-4deg); opacity: 0; } }
+.affiche-sur { margin: 0; color: var(--doux); letter-spacing: .3em; text-transform: uppercase; font-size: .7rem; }
+.panneau.affiche h3 { font-size: clamp(1.6rem, 6vw, 2.2rem); margin: 6px 0; text-shadow: 0 0 18px rgba(243,220,154,.6); animation: neon 6s infinite; }
+.affiche-prix { margin: 6px 0 0; display: flex; align-items: baseline; justify-content: center; gap: 8px; font-family: var(--titre); }
+.affiche-prix span { color: var(--doux); text-transform: uppercase; letter-spacing: .2em; font-size: .75rem; }
+.affiche-prix b { font-size: clamp(2.2rem, 9vw, 3.4rem); color: #fff3d6; text-shadow: 0 0 22px rgba(243,220,154,.8), 0 3px 0 #6b4c12; }
+.affiche-prix small { color: var(--or); }
+.affiche-parts { margin: 0 0 10px; font-size: .8rem; color: var(--or); }
+.affiche-infos { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.affiche-infos li { padding: 8px 4px; border-radius: 10px; background: rgba(13,6,8,.55); border: 1px solid rgba(217,180,90,.25); font-size: .72rem; color: var(--doux); display: flex; flex-direction: column; gap: 2px; }
+.affiche-infos b { font: 700 .92rem var(--ui); color: var(--or-clair); }
+.affiche-regles { margin: 10px 0 0; font-size: .74rem; color: var(--doux); }
+#ov-tournoi.grand .panneau.affiche { border-color: #fff3d6; box-shadow: 0 0 0 6px #120509, 0 0 0 8px #f3dc9a, 0 0 90px rgba(243,220,154,.5), 0 30px 80px rgba(0,0,0,.7); }
+.toast-tournoi { position: fixed; z-index: 55; top: calc(var(--haut-barre) + 10px + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center;
+  padding: 8px 18px; border-radius: 14px; border: 1px solid #f3dc9a; background: linear-gradient(90deg, #6b1a2a, #3a0d17); color: var(--or-clair); cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0,0,0,.6), 0 0 24px rgba(243,220,154,.3); animation: monter .4s cubic-bezier(.3,1.6,.5,1); }
+.toast-tournoi b { font: 700 .9rem var(--titre); }
+.toast-tournoi small { font-size: .72rem; color: #fff; opacity: .8; }
+.bandeau-tournoi { position: relative; z-index: 3; margin: 0 0 4px; padding: 4px 14px; border-radius: 999px; background: rgba(13,6,8,.75); border: 1px solid rgba(243,220,154,.45);
+  font: 600 .8rem var(--ui); color: var(--or-clair); text-align: center; flex: none; }
+.bandeau-tournoi.monte { animation: pulse-txt .6s ease-in-out 4; }
+.salle:has(.bandeau-tournoi:not([hidden])) { flex-direction: column; }
+.panneau.tournoi-fin { text-align: center; }
+.tf-prix { font: 700 1.6rem var(--titre); color: var(--doux); }
+.tf-prix.gagne { color: #fff3d6; text-shadow: 0 0 18px rgba(243,220,154,.7); }
+#ov-tournoi-fin.vainqueur .panneau { border: 2px solid #f3dc9a; box-shadow: 0 0 80px rgba(243,220,154,.45), 0 30px 80px rgba(0,0,0,.7); }

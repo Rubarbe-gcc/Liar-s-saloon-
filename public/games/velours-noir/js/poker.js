@@ -54,6 +54,7 @@ export function monterPoker(app, aller) {
   let suivante = null;            // résolution de « main suivante »
   let file = Promise.resolve();
   let caveMode = { type: 'solo' };
+  let tournoi = null;            // la table est celle d'un tournoi (ses infos)
 
   const feutre = $('pk-feutre');
 
@@ -489,6 +490,8 @@ export function monterPoker(app, aller) {
     table = TABLES.find((x) => x.petite === m.petite) || TABLES[0];
     ui = { jetons: m.joueurs.map((j) => j.jetons), mise: m.joueurs.map((j) => j.mise || 0), pot: m.pot || 0 };
     $('pk-titre').textContent = `${table.nom} · en ligne`;
+    tournoi = m.tournoi || null;
+    bandeauTournoi();
     $('pk-code').hidden = false;
     $('pk-code').textContent = `Table ${m.code}`;
     $('pk-code').dataset.code = m.code;
@@ -503,9 +506,9 @@ export function monterPoker(app, aller) {
       if (j.couche) siegesEl[i].classList.add('couche');
     });
     if (m.bouton >= 0 && siegesEl[m.bouton]) { const d = document.createElement('span'); d.className = 'bouton-d'; d.textContent = 'D'; siegesEl[m.bouton].appendChild(d); }
-    if (!enAttente) garder(ui.jetons[moi]);
+    if (tournoi) { /* jetons de tournoi : rien à rendre à la caisse */ } else if (!enAttente) garder(ui.jetons[moi]);
     else { try { const r = JSON.parse(localStorage.getItem(CLE_TABLE)); if (r?.jetons) garder(r.jetons); } catch { /* ignore */ } }
-    $('pk-recave').hidden = !(!enAttente && ui.jetons[moi] <= 0 && !['preflop', 'flop', 'turn', 'river'].includes(m.phase));
+    $('pk-recave').hidden = !!tournoi || !(!enAttente && ui.jetons[moi] <= 0 && !['preflop', 'flop', 'turn', 'river'].includes(m.phase));
     $('pk-suivante').hidden = true;
     if (enAttente) message('Vous prendrez place à la prochaine main…');
     else if (ui.jetons[moi] <= 0 && !$('pk-recave').hidden) rangee('fin');
@@ -536,9 +539,9 @@ export function monterPoker(app, aller) {
         file = file.then(() => {
           ui.jetons = [...m.jetons];
           t.joueurs.forEach((j, i) => { j.jetons = m.jetons[i]; majSiege(i); });
-          garder(ui.jetons[moi]);
+          if (!tournoi) garder(ui.jetons[moi]);
           app.stat('mains');
-          const ruine = ui.jetons[moi] <= 0;
+          const ruine = ui.jetons[moi] <= 0 && !tournoi;
           $('pk-recave').hidden = !ruine;
           $('pk-suivante').hidden = true;
           if (ruine) { rangee('fin'); croupier.dire('Plus de jetons ? Vous pouvez vous recaver.', { voix: false }); }
@@ -551,8 +554,25 @@ export function monterPoker(app, aller) {
         if (m.part) croupier.dire(`${m.part} quitte la table.`, { voix: false });
         if (m.absent) croupier.dire(`${m.absent} a perdu la connexion.`, { voix: false });
         break;
+      case 'tournoi-info':
+        tournoi = m.tournoi;
+        t.petite = m.tournoi.petite; t.grosse = m.tournoi.grosse;
+        bandeauTournoi(m.monte);
+        if (m.monte) file = file.then(() => croupier.dire(`Les blindes montent : ${m.tournoi.petite} / ${m.tournoi.grosse}.`));
+        break;
+      case 'tournoi-elimine':
+        if (tournoi) tournoi.restants = m.restants;
+        bandeauTournoi();
+        file = file.then(() => croupier.dire(m.vainqueur ? `${m.nom === EL.identite().nom ? 'Vous remportez' : `${m.nom} remporte`} le tournoi !` : `${m.nom} est éliminé, ${m.place}e. Il reste ${m.restants} joueurs.`, { voix: !!m.vainqueur }));
+        break;
+      case 'tournoi-finale':
+        file = file.then(() => { croupier.dire('Table finale ! Bonne chance à tous.'); fx.flash(); });
+        break;
+      case 'tournoi-fin':
+        file = file.then(() => { humain = null; rangee('attente'); message('Tournoi terminé.'); });
+        break;
       case 'parti':
-        if (m.jetons > 0) app.crediter(m.jetons);
+        if (m.jetons > 0 && !m.tournoi) app.crediter(m.jetons);
         oublierTable();
         finEnLigne();
         break;
@@ -564,7 +584,21 @@ export function monterPoker(app, aller) {
     }
   });
 
+  /** Le bandeau du tournoi, au-dessus de la table. */
+  function bandeauTournoi(monte = false) {
+    const b = $('pk-tournoi');
+    b.hidden = !tournoi;
+    $('pk-quitter').textContent = tournoi ? '‹ Abandonner' : '‹ Quitter la table';
+    if (tournoi) $('pk-code').hidden = true;
+    if (!tournoi) return;
+    $('pk-titre').textContent = tournoi.nom;
+    b.textContent = `🏆 ${tournoi.finale ? 'Table finale · ' : ''}Niveau ${tournoi.niveau} · blindes ${fx.nombre(tournoi.petite)}/${fx.nombre(tournoi.grosse)} · ${tournoi.restants} joueur${tournoi.restants > 1 ? 's' : ''} en lice · 1er ${fx.nombre(tournoi.parts[0])}`;
+    b.classList.toggle('monte', monte);
+  }
+
   function finEnLigne() {
+    tournoi = null;
+    bandeauTournoi();
     enLigne = false; assis = false; moi = 0; enAttente = false;
     humain = null; opts = null;
     t = null;
@@ -612,6 +646,8 @@ export function monterPoker(app, aller) {
   return {
     /** Le hall choisit le mode avant d'ouvrir la table : seul, créer, ou rejoindre. */
     preparer(mode) { caveMode = mode; },
+    /** La file des événements en cours de lecture (les résultats d'un tournoi attendent la fin de la main). */
+    file: () => file,
     entrer() {
       if (enLigne) return;
       if (!assis) {

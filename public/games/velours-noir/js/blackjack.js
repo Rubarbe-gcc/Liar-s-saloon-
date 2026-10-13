@@ -16,8 +16,8 @@ import * as sfx from './sfx.js';
 import * as EL from './enligne.js';
 
 const $ = (id) => document.getElementById(id);
-const MIN = 5, MAX = 500;
-const JETONS = [5, 25, 100, 500];
+const MIN = 5;          // pas de mise maximum : seule la caisse limite
+const JETONS = [5, 25, 100, 500, 1000, 5000];
 const TEXTES = { blackjack: 'Blackjack !', gagne: 'Gagné', perdu: 'Perdu', egalite: 'Égalité', brule: 'Brûlé' };
 
 export function monterBlackjack(app) {
@@ -56,7 +56,7 @@ export function monterBlackjack(app) {
   function dessinerCercle() {
     cercle.querySelector('.pile')?.remove();
     if (mise > 0) cercle.appendChild(fx.pile(mise));
-    for (const j of plateau.children) j.classList.toggle('trop', mise + Number(j.dataset.v) > Math.min(MAX, app.solde()));
+    for (const j of plateau.children) j.classList.toggle('trop', mise + Number(j.dataset.v) > app.solde());
     $('bj-distribuer').disabled = mise < MIN;
     $('bj-effacer').disabled = mise === 0;
   }
@@ -65,8 +65,8 @@ export function monterBlackjack(app) {
 
   function ajouter(v, depuis) {
     if (occupe || phaseUI !== 'mise') return;
-    if (mise + v > Math.min(MAX, app.solde())) {
-      croupier.dire(app.solde() < mise + v ? 'Vous n’avez pas assez de jetons.' : `La mise est limitée à ${MAX}.`, { voix: false });
+    if (mise + v > app.solde()) {
+      croupier.dire('Vous n’avez pas assez de jetons.', { voix: false });
       fx.secouer(depuis, 4);
       return;
     }

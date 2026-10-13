@@ -38,6 +38,8 @@
         <button class="btn or" id="b-secours" hidden>🥂 La maison vous offre <b>200</b></button>
       </div>
       <p class="records" id="h-records"></p>
+      <p class="records" id="h-tournois"></p>
+      <button class="pastille-tournoi" id="b-tournoi" hidden>🏆 <b>Tournoi</b> <small>2:00</small></button>
     </div>
 
     <div class="portes">
@@ -45,7 +47,7 @@
         <span class="porte-art art-bj" aria-hidden="true"><i class="mini-carte">A<em>♠</em></i><i class="mini-carte r">R<em>♥</em></i></span>
         <b>Blackjack</b>
         <span>Céleste distribue. Approchez-vous de 21 sans le dépasser.</span>
-        <em>Mise de 5 à 500</em>
+        <em>Mise dès 5, sans plafond</em>
       </button>
       <button class="porte" data-jeu="roulette" style="--i:1">
         <span class="porte-art art-roulette" aria-hidden="true"><i class="mini-roue"></i></span>
@@ -170,6 +172,7 @@
     <p class="barre-solde" title="Votre caisse, hors table"><span class="piece" aria-hidden="true"></span><b class="solde" data-solde>0</b></p>
   </header>
   <div class="salle">
+    <p class="bandeau-tournoi" id="pk-tournoi" hidden></p>
     <div class="feutre feutre-poker" id="pk-feutre">
       <div class="croupier-place" id="pk-croupier"></div>
       <div class="pk-centre">
@@ -360,6 +363,34 @@
     <div class="ov-bas"><button class="btn or" data-ferme>D’accord</button></div>
   </div>
 </div>
+
+<div class="ov" id="ov-tournoi" hidden>
+  <div class="panneau affiche">
+    <p class="affiche-sur">Ce soir au Velours Noir</p>
+    <h3 id="tn-nom">Tournoi</h3>
+    <p class="affiche-prix"><span>Prix</span><b id="tn-prix">0</b><small>jetons</small></p>
+    <p class="affiche-parts" id="tn-parts"></p>
+    <ul class="affiche-infos">
+      <li>Entrée<b id="tn-entree"></b></li>
+      <li>Joueurs<b id="tn-places"></b></li>
+      <li>Début dans<b id="tn-compte">2:00</b></li>
+    </ul>
+    <p class="affiche-regles">Texas Hold’em · tapis de 1 500 pour tous · blindes qui montent toutes les 6 mains · pas de recave · les 3 premiers sont payés</p>
+    <p class="note" id="tn-note"></p>
+    <div class="ov-bas"><button class="btn" data-ferme>Plus tard</button><button class="btn or" id="tn-inscrire">S’inscrire</button></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-tournoi-fin" hidden>
+  <div class="panneau tournoi-fin">
+    <h3 id="tf-titre">Tournoi terminé</h3>
+    <p id="tf-place"></p>
+    <p class="tf-prix" id="tf-prix"></p>
+    <div class="ov-bas"><button class="btn or" data-ferme>Retour au hall</button></div>
+  </div>
+</div>
+
+<button class="toast-tournoi" id="toast-tournoi" hidden><b>🏆 Tournoi</b><small></small></button>
 
 <div class="rideau" id="rideau" aria-hidden="true"></div>
 

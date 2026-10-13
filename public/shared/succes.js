@@ -113,6 +113,8 @@ export const SUCCES = [
   s('velours-blackjack', 'velours', '🂡', 'Blackjack !', 'Obtenir un blackjack naturel.'),
   s('velours-plein', 'velours', '🎯', 'En plein', 'Gagner sur un numéro plein à la roulette.'),
   s('velours-poker', 'velours', '💰', 'Gros pot', 'Remporter un pot d’au moins 1 000 jetons au poker.'),
+  s('velours-tournoi', 'velours', '🏆', 'Champion du Velours', 'Gagner un tournoi de poker.'),
+  s('velours-grandprix', 'velours', '👑', 'Vainqueur du Grand Prix', 'Gagner le Grand Prix du Velours.'),
   s('velours-flambeur', 'velours', '🎩', 'Grand flambeur', 'Avoir 10 000 jetons dans sa caisse.'),
 
   s('echo-90', 'echo', '🎶', 'Imitation parfaite', 'Obtenir 90 / 100 ou plus à une imitation.'),

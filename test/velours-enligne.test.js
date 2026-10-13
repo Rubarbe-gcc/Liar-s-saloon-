@@ -182,3 +182,72 @@ test('le poker n’a pas de limite de temps : la table attend la décision du jo
   await quand(() => a.evts().some((e) => e.type === 'action' && e.i === moi));
   a.dit({ t: 'quitter' });
 });
+
+test('les tournois : affiche pour tous, inscription, désinscription remboursée, annulé sans inscrit', async () => {
+  V.arreterTournois();
+  const a = joueur('A');
+  const b = joueur('B');
+  a.dit({ t: 'bonjour' }); b.dit({ t: 'bonjour' });
+  const tn = V.annoncerTournoi('mardi');
+  assert.equal(a.dernier('tournoi-annonce').tournoi.prix, 500);
+  assert.deepEqual(a.dernier('tournoi-annonce').tournoi.parts, [250, 150, 100]);
+  a.dit({ t: 'tournoi-inscrire', id: tn.id, nom: 'A' });
+  assert.ok(a.dernier('tournoi-inscrit'));
+  assert.equal(b.dernier('tournoi-maj').tournoi.inscrits, 1);
+  a.dit({ t: 'tournoi-desinscrire', id: tn.id });
+  assert.equal(a.dernier('tournoi-rembourse').montant, 100);
+  V.demarrerTournoi(tn);
+  assert.ok(a.dernier('tournoi-annule'), 'personne d’inscrit : le tournoi est annulé');
+  V.arreterTournois();
+});
+
+/** Joue pour un joueur de tournoi jusqu'à sa fin : `style` 'tapis' ou 'prudent'. */
+function jouerTournoi(j, style) {
+  const o = j.dernier('options');
+  if (o && !o.vu) {
+    o.vu = true;
+    j.dit({ t: 'agir', a: { type: style === 'tapis' ? 'tapis' : o.parole ? 'parole' : 'coucher' } });
+  }
+  return !!j.dernier('tournoi-fin');
+}
+
+test('un tournoi à une table : deux vrais joueurs, trois habitués, les prix aux trois premiers', async () => {
+  V.arreterTournois();
+  const a = joueur('A');
+  const b = joueur('B');
+  a.dit({ t: 'bonjour' }); b.dit({ t: 'bonjour' });
+  const tn = V.annoncerTournoi('mardi');
+  a.dit({ t: 'tournoi-inscrire', id: tn.id, nom: 'Alice', jeton: 'jetonTournoiA' });
+  b.dit({ t: 'tournoi-inscrire', id: tn.id, nom: 'Bob', jeton: 'jetonTournoiB' });
+  V.demarrerTournoi(tn);
+  const e = a.dernier('etat');
+  assert.equal(e.joueurs.length, 5);
+  assert.equal(e.joueurs.filter((x) => x.humain).length, 2, 'les places vides vont aux habitués');
+  assert.ok(e.joueurs.every((x) => x.jetons === V.TAPIS_TOURNOI));
+  assert.equal(e.tournoi.petite, V.BLINDES[0]);
+  await quand(() => jouerTournoi(a, 'tapis') & jouerTournoi(b, 'tapis') && a.dernier('tournoi-fin') && b.dernier('tournoi-fin'), 30000);
+  const fa = a.dernier('tournoi-fin'), fb = b.dernier('tournoi-fin');
+  assert.notEqual(fa.place, fb.place);
+  for (const f of [fa, fb]) assert.equal(f.prix, V.prixDe(tn, f.place));
+  assert.ok(a.recu.some((m) => m.t === 'tournoi-info'));
+  await quand(() => !V.tournoiEnCours());
+  V.arreterTournois();
+});
+
+test('un tournoi à deux tables : les blindes montent, les tables fusionnent en table finale', async () => {
+  V.arreterTournois();
+  const a = joueur('A');
+  a.dit({ t: 'bonjour' });
+  const tn = V.annoncerTournoi('coupe');
+  a.dit({ t: 'tournoi-inscrire', id: tn.id, nom: 'Prudente', jeton: 'jetonTournoiP' });
+  V.demarrerTournoi(tn);
+  assert.equal(tn.tables.length, 2);
+  await quand(() => jouerTournoi(a, 'prudent'), 60000);
+  const fin = a.dernier('tournoi-fin');
+  assert.ok(fin.place >= 1 && fin.place <= 10);
+  const niveaux = a.recu.filter((m) => m.t === 'tournoi-info').map((m) => m.tournoi.petite);
+  assert.ok(Math.max(...niveaux) > V.BLINDES[0], 'les blindes ont monté');
+  if (fin.place <= 5) assert.ok(a.dernier('tournoi-finale'), 'arrivée à la table finale');
+  await quand(() => !V.tournoiEnCours(), 20000);
+  V.arreterTournois();
+});

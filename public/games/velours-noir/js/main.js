@@ -16,6 +16,7 @@ import { monterRoulette } from './roulette.js';
 import { monterPoker } from './poker.js';
 import { monterBoutique } from './boutique.js';
 import { monterCompte } from './moncompte.js';
+import { monterTournois } from './tournois.js';
 import * as EL from './enligne.js';
 
 const $ = (id) => document.getElementById(id);
@@ -70,6 +71,11 @@ const app = {
   /** Le compte en banque fictif (il voyage avec la caisse). */
   compte: () => banque.compte,
   sauverCompte() { sauver(); },
+  /** Un tournoi terminé, dans l'historique. */
+  noterTournoi(r) {
+    banque.tournois = [{ d: K.jour(), ...r }, ...(banque.tournois || [])].slice(0, 20);
+    sauver(); majCaisse();
+  },
 };
 
 function majCaisse() {
@@ -77,6 +83,9 @@ function majCaisse() {
   $('b-bonus').hidden = !bonus;
   $('b-secours').hidden = !K.secoursDispo(banque);
   const r = banque.records;
+  const tn = banque.tournois || [];
+  const meilleur = tn.reduce((b, x) => (!b || x.place < b.place ? x : b), null);
+  $('h-tournois').textContent = tn.length ? `🏆 ${tn.length} tournoi${tn.length > 1 ? 's' : ''} · meilleure place : ${meilleur.place === 1 ? '1er' : `${meilleur.place}e`} (${meilleur.nom}) · gains : ${fx.nombre(tn.reduce((s, x) => s + x.prix, 0))}` : '';
   $('h-records').textContent = r.solde > K.DEPART || r.gain ? `Record de caisse : ${fx.nombre(r.solde)} · Plus gros gain : ${fx.nombre(r.gain)}` : '';
 }
 
@@ -191,6 +200,7 @@ tables['s-roulette'] = monterRoulette(app);
 tables['s-poker'] = monterPoker(app, aller);
 const moncompte = monterCompte(app);
 const boutique = monterBoutique(app, moncompte);
+monterTournois(app, { aller, ecranCourant: () => courant, attendre: () => tables['s-poker'].file() });
 
 /* ------------------------------------------------------------------ */
 /* Seul ou en ligne                                                    */
@@ -279,7 +289,8 @@ EL.ecouter((m) => {
 });
 
 // une place à reprendre (page rechargée en pleine partie), ou un lien de table reçu
-if (EL.placeNotee()) EL.connecter();
+// toujours connecté au salon : les tournois s'annoncent à tout le monde
+EL.connecter();
 const lienTable = new URLSearchParams(location.search).get('table');
 if (lienTable) {
   history.replaceState(null, '', location.pathname);
@@ -292,4 +303,4 @@ Promise.race([Promise.resolve(synchroniserNuage()), new Promise((r) => setTimeou
 addEventListener('storage', (e) => { if (e.key === K.CLE) { banque = K.lire(localStorage); afficherSolde(false); } });
 
 /* outils de débogage */
-window.__velours = { app, banque: () => banque, aller, tables };
+window.__velours = { app, banque: () => banque, aller, tables, EL };

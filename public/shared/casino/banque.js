@@ -38,6 +38,7 @@ export function propre(d) {
     records: { solde: ent(r.solde), gain: ent(r.gain) },
     stats: { blackjacks: ent(s.blackjacks), pleins: ent(s.pleins), pots: ent(s.pots), mains: ent(s.mains) },
     compte: C.propre(x.compte),
+    tournois: Array.isArray(x.tournois) ? x.tournois.filter((t) => t && typeof t.nom === 'string').slice(0, 20).map((t) => ({ d: String(t.d || ''), nom: t.nom.slice(0, 40), place: ent(t.place, 99), sur: ent(t.sur), prix: ent(t.prix) })) : [],
     maj: ent(x.maj),
   };
 }

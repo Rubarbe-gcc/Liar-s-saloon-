@@ -29,7 +29,7 @@
 import * as BJ from '../public/shared/casino/blackjack.js';
 import * as P from '../public/shared/casino/poker.js';
 import * as R from '../public/shared/casino/roulette.js';
-import { makeRng } from '../public/shared/hasard.js';
+import { makeRng, melanger } from '../public/shared/hasard.js';
 
 const JEUX = ['blackjack', 'roulette', 'poker'];
 const MAX = { blackjack: BJ.PLACES, roulette: 8, poker: 5 };
@@ -53,6 +53,14 @@ export const HABITUES = [
   { nom: 'Gaston', avatar: '🥖', style: 'touriste' },
   { nom: 'Vera', avatar: '🦊', style: 'bluffeur' },
   { nom: 'Sergueï', avatar: '🐻', style: 'requin' },
+  { nom: 'Rocco', avatar: '🎲', style: 'flambeur' },
+  { nom: 'Jeanne', avatar: '🌹', style: 'prudent' },
+  { nom: 'Big Sam', avatar: '🤠', style: 'requin' },
+  { nom: 'Nadia', avatar: '💎', style: 'bluffeur' },
+  { nom: 'Hector', avatar: '🦉', style: 'prudent' },
+  { nom: 'Mila', avatar: '🐱', style: 'touriste' },
+  { nom: 'Oscar', avatar: '🎷', style: 'requin' },
+  { nom: 'Zoé', avatar: '🍀', style: 'flambeur' },
 ];
 
 /* Le temps : les tests le raccourcissent. */
@@ -121,7 +129,12 @@ function creerSalle(jeu, o) {
   const salle = { code, jeu, publique: o.publique !== false, hote: o.nom, membres: [], rng, cree: Date.now(), vu: Date.now(), minuteur: null, attente: [] };
   if (jeu === 'blackjack') salle.b = BJ.creerBlackjack({ rng, places: BJ.PLACES });
   if (jeu === 'roulette') { salle.paris = {}; salle.phase = 'mises'; salle.histo = []; }
-  if (jeu === 'poker') {
+  if (jeu === 'poker' && o.tournoi) {
+    salle.tournoi = o.tournoi;
+    salle.petite = BLINDES[0];
+    salle.t = P.creerTable({ rng, petite: BLINDES[0], sieges: o.sieges.map((j) => ({ nom: j.nom, avatar: j.avatar, style: j.style, jetons: j.jetons, humain: j.humain, inscrit: j.inscrit, membre: j.membre })) });
+    salle.t.bouton = Math.floor(rng() * o.sieges.length) - 1;
+  } else if (jeu === 'poker') {
     salle.petite = PETITES.includes(Number(o.petite)) ? Number(o.petite) : 5;
     const bots = [];
     for (let k = 0; k < 5; k++) bots.push(nouveauBot(salle, bots.map((b) => b.nom)));
@@ -146,6 +159,7 @@ const caveValide = (salle, v) => {
 };
 
 function entrer(c, salle, o) {
+  if (salle.tournoi) return envoyer(c, { t: 'erreur', msg: 'C’est une table de tournoi : on s’y inscrit quand le tournoi est annoncé.' });
   const libres = [...Array(MAX[salle.jeu]).keys()].filter((s) => !salle.membres.some((m) => m.s === s));
   if (salle.jeu === 'poker') {
     const humains = salle.t.joueurs.filter((j) => j.humain).length + salle.attente.length;
@@ -192,13 +206,13 @@ function partir(salle, m, rendre) {
     const j = m.s >= 0 ? salle.t.joueurs[m.s] : null;
     if (j && j.humain === m.jeton) {
       j.partant = true;
-      if (rendre) envoyer(m, { t: 'parti', jetons: j.jetons });
+      if (rendre) envoyer(m, salle.tournoi ? { t: 'parti', tournoi: true } : { t: 'parti', jetons: j.jetons });
       if (salle.t.aQui === m.s && !salle.t.joueurs[m.s].couche) { clearTimeout(salle.minuteur); salle.minuteur = null; jouerPour(salle, m.s); }
-      if (!enMain(salle)) placerPoker(salle);
+      if (!enMain(salle) && !salle.tournoi) placerPoker(salle);
     } else if (rendre) envoyer(m, { t: 'parti', jetons: m.cave || 0 });
   } else if (rendre) envoyer(m, { t: 'parti' });
   diffuser(salle, { t: 'membres', liste: listeMembres(salle), part: m.nom });
-  if (!salle.membres.length) fermer(salle);
+  if (!salle.membres.length && !salle.tournoi) fermer(salle);
 }
 
 function fermer(salle) {
@@ -230,6 +244,7 @@ function etat(salle, m) {
   return {
     ...base, petite: t.petite, grosse: t.grosse, bouton: t.bouton, phase: t.phase, board: t.board, pot: t.pot, aQui: t.aQui,
     attente: salle.attente.includes(m),
+    tournoi: salle.tournoi ? infoTournoi(salle) : null,
     joueurs: t.joueurs.map((j, i) => ({
       nom: j.nom, avatar: j.avatar, style: j.style || null, humain: !!j.humain, jetons: j.jetons, mise: j.mise,
       couche: j.couche, tapis: j.tapis, absent: j.absent, cartes: i === m.s ? j.cartes : j.cartes.map(() => null),
@@ -257,7 +272,7 @@ function diffuserEvts(salle) {
 function miserBlackjack(salle, m, mise) {
   const b = salle.b;
   if (b.phase !== 'mise' && b.phase !== 'fin') return;
-  if (!BJ.miser(b, m.s, entier(mise, 500))) return;
+  if (!BJ.miser(b, m.s, entier(mise, 10 ** 9))) return;   // pas de mise maximum
   diffuser(salle, { t: 'mise', s: m.s, mise: b.sieges[m.s].mise });
   const misent = b.sieges.some((x) => x?.mise > 0);
   if (misent && !salle.finMises && !seul(salle)) {
@@ -393,11 +408,12 @@ function placerPoker(salle) {
 
 function etapePoker(salle) {
   const t = salle.t;
-  if (!salle.membres.length) return;
+  if (!salle.membres.length && !salle.tournoi) return;
+  if (salle.tournoi && !salles.has(salle.code)) return;
   if (!enMain(salle)) {
     if (t.phase === 'fin' && !salle.pause) { salle.pause = true; return programmer(salle, 3000, () => etapePoker(salle)); }
     salle.pause = false;
-    placerPoker(salle);
+    if (salle.tournoi) { if (!entreMainsTournoi(salle)) return; } else placerPoker(salle);
     P.nouvelleMain(t);
     if (t.phase === 'fin-partie') { t.phase = 'attente'; return; }
     return programmer(salle, diffuserEvts(salle), () => etapePoker(salle));
@@ -447,6 +463,291 @@ function recavePoker(salle, m, montant) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Les tournois de poker                                               */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Un tournoi surgit au hasard (un seul à la fois) : une affiche est envoyée
+ * à tous ceux qui sont au Velours Noir, les inscriptions restent ouvertes
+ * deux minutes, puis les places vides sont prises par les habitués. Tables
+ * de cinq ; plusieurs tables fusionnent en une table finale quand il ne
+ * reste que cinq joueurs. Même tapis pour tous, blindes qui montent toutes
+ * les six mains, pas de recave ; les trois premiers se partagent le prix.
+ */
+export const TOURNOIS = [
+  { id: 'mardi', nom: 'Partie du mardi', entree: 100, places: 5, prix: 500, poids: 50 },
+  { id: 'coupe', nom: 'Coupe du Velours', entree: 500, places: 10, prix: 4000, poids: 30 },
+  { id: 'nuit', nom: 'Nuit des Flambeurs', entree: 2000, places: 10, prix: 15000, poids: 15 },
+  { id: 'grand', nom: 'Grand Prix du Velours', entree: 10000, places: 15, prix: 100000, poids: 5 },
+];
+export const TAPIS_TOURNOI = 1500;
+export const MAINS_PAR_NIVEAU = 6;
+export const BLINDES = [10, 15, 25, 50, 75, 100, 150, 200, 300, 500, 800, 1000, 1500, 2000];
+export const PARTS = [0.5, 0.3, 0.2];
+const INSCRIPTION_MS = 2 * 60 * 1000;
+const ENTRE_TOURNOIS = [10 * 60 * 1000, 20 * 60 * 1000];
+
+let tournoi = null;
+let prochain = null;
+let numero = 0;
+
+export const prixDe = (tn, place) => (place >= 1 && place <= PARTS.length ? Math.round(tn.prix * PARTS[place - 1]) : 0);
+
+/** Tous ceux qui sont au Velours Noir. */
+function aTous(msg) { for (const c of clients.values()) if (c.conn) c.conn.send({ g: 'velours', ...msg }); }
+
+const affiche = (tn) => ({
+  id: tn.id, nom: tn.nom, entree: tn.entree, prix: tn.prix, places: tn.places, parts: PARTS.map((p) => Math.round(tn.prix * p)),
+  inscrits: tn.inscrits.length, reste: Math.max(0, tn.debut - Date.now()), phase: tn.phase,
+});
+
+/** Le prochain tournoi, dans 10 à 20 minutes. */
+export function planifierTournoi(ms = ENTRE_TOURNOIS[0] + Math.random() * (ENTRE_TOURNOIS[1] - ENTRE_TOURNOIS[0])) {
+  clearTimeout(prochain);
+  prochain = setTimeout(() => {
+    // personne au casino : on repasse plus tard
+    if (![...clients.values()].some((c) => c.velours)) return planifierTournoi();
+    annoncerTournoi();
+  }, ms * vitesse);
+  if (typeof prochain.unref === 'function') prochain.unref();
+}
+
+/** Un tournoi est annoncé (au hasard parmi les types, les gros plus rares). */
+export function annoncerTournoi(type = null, inscriptionMs = INSCRIPTION_MS) {
+  if (tournoi) return tournoi;
+  let modele = TOURNOIS.find((x) => x.id === type);
+  if (!modele) {
+    let x = Math.random() * TOURNOIS.reduce((s, t) => s + t.poids, 0);
+    modele = TOURNOIS.find((t) => (x -= t.poids) <= 0) || TOURNOIS[0];
+  }
+  tournoi = { ...modele, type: modele.id, id: `T${++numero}${Date.now().toString(36)}`, inscrits: [], phase: 'inscription', debut: Date.now() + inscriptionMs * vitesse, tables: [], restants: 0, classement: [], rng: makeRng(rnd(2 ** 31)) };
+  const tn = tournoi;
+  tn.minuteur = setTimeout(() => demarrerTournoi(tn), inscriptionMs * vitesse);
+  if (typeof tn.minuteur.unref === 'function') tn.minuteur.unref();
+  aTous({ t: 'tournoi-annonce', tournoi: affiche(tn) });
+  return tn;
+}
+
+function inscrire(c, msg) {
+  const tn = tournoi;
+  if (!tn || tn.id !== msg.id || tn.phase !== 'inscription') return c.conn.send({ g: 'velours', t: 'tournoi-refus', id: msg.id, msg: 'Les inscriptions sont fermées.' });
+  if (tn.inscrits.some((x) => x.c === c)) return;
+  if (tn.inscrits.length >= tn.places) return c.conn.send({ g: 'velours', t: 'tournoi-refus', id: msg.id, msg: 'Le tournoi est complet.' });
+  tn.inscrits.push({ c, nom: nettoyerNom(msg.nom), avatar: nettoyerAvatar(msg.avatar), jeton: jetonValide(msg.jeton) ? msg.jeton : `t${rnd(1e12)}` });
+  c.conn.send({ g: 'velours', t: 'tournoi-inscrit', id: tn.id });
+  aTous({ t: 'tournoi-maj', tournoi: affiche(tn) });
+}
+
+function desinscrire(c, msg) {
+  const tn = tournoi;
+  if (!tn || tn.id !== msg.id || tn.phase !== 'inscription') return;
+  const k = tn.inscrits.findIndex((x) => x.c === c);
+  if (k < 0) return;
+  tn.inscrits.splice(k, 1);
+  c.conn.send({ g: 'velours', t: 'tournoi-rembourse', id: tn.id, montant: tn.entree });
+  aTous({ t: 'tournoi-maj', tournoi: affiche(tn) });
+}
+
+/** Les inscriptions se ferment : les places vides vont aux habitués, et on s'assoit. */
+export function demarrerTournoi(tn = tournoi) {
+  if (!tn || tn.phase !== 'inscription' || tournoi !== tn) return;
+  clearTimeout(tn.minuteur);
+  const humains = tn.inscrits.filter((x) => x.c.conn && clients.get(x.c.conn.id) === x.c);
+  if (!humains.length) {
+    tournoi = null;
+    aTous({ t: 'tournoi-annule', id: tn.id });
+    planifierTournoi();
+    return;
+  }
+  tn.phase = 'jeu';
+  const noms = humains.map((h) => h.nom);
+  const joueurs = humains.map((h) => ({ nom: h.nom, avatar: h.avatar, jetons: TAPIS_TOURNOI, humain: h.jeton, inscrit: h }));
+  while (joueurs.length < tn.places) {
+    const libres = HABITUES.filter((h) => !noms.includes(h.nom));
+    const h = libres[Math.floor(tn.rng() * libres.length)] || HABITUES[joueurs.length % HABITUES.length];
+    noms.push(h.nom);
+    joueurs.push({ ...h, jetons: TAPIS_TOURNOI });
+  }
+  melanger(joueurs, tn.rng);
+  tn.restants = joueurs.length;
+  const nb = Math.ceil(joueurs.length / 5);
+  const groupes = Array.from({ length: nb }, () => []);
+  joueurs.forEach((j, k) => groupes[k % nb].push(j));
+  aTous({ t: 'tournoi-debut', id: tn.id });
+  for (const g of groupes) ouvrirTableTournoi(tn, g);
+}
+
+/** Une table du tournoi, avec ses joueurs (les humains y sont installés). */
+function ouvrirTableTournoi(tn, joueurs) {
+  const salle = creerSalle('poker', { publique: false, nom: tn.nom, tournoi: tn, sieges: joueurs });
+  tn.tables.push(salle);
+  joueurs.forEach((j, i) => {
+    if (!j.humain) return;
+    const ins = j.inscrit;
+    const c = ins?.c;
+    const ancien = j.membre;
+    const m = ancien || { jeton: j.humain, nom: j.nom, avatar: j.avatar, conn: c?.conn || null, depuis: 0, pret: false };
+    m.s = i;
+    if (ancien) for (const x of clients.values()) if (x.membre === ancien) x.code = salle.code;
+    if (c && c.membre !== m) {
+      const avant = c.code && salles.get(c.code);
+      if (avant && avant !== salle && !avant.tournoi) sortir(c);
+      c.membre = m; c.code = salle.code;
+    }
+    salle.membres.push(m);
+    envoyer(m, { t: 'entre', code: salle.code, jeu: 'poker', jeton: m.jeton });
+    envoyer(m, etat(salle, m));
+  });
+  salle.t.joueurs.forEach((j) => { delete j.inscrit; delete j.membre; });
+  if (salle.membres.length) etapePoker(salle);
+  else programmer(salle, 300, () => etapePoker(salle));
+  return salle;
+}
+
+const vivants = (salle) => salle.t.joueurs.filter((j) => j.jetons > 0 && !j.elimine);
+
+/** Ce que les écrans affichent du tournoi. */
+export function infoTournoi(salle) {
+  const tn = salle.tournoi;
+  const n = salle.mainsTournoi || 0;
+  return {
+    id: tn.id, nom: tn.nom, prix: tn.prix, parts: PARTS.map((p) => Math.round(tn.prix * p)), places: tn.places, restants: tn.restants,
+    niveau: Math.min(BLINDES.length, Math.floor(n / MAINS_PAR_NIVEAU) + 1), petite: salle.t.petite, grosse: salle.t.grosse,
+    avantNiveau: MAINS_PAR_NIVEAU - (n % MAINS_PAR_NIVEAU), finale: tn.tables.length === 1 && tn.places > 5,
+  };
+}
+const aLaTable = (tn, msg) => { for (const s of tn.tables) diffuser(s, typeof msg === 'function' ? (m) => msg(s, m) : msg); };
+
+/**
+ * Entre deux mains d'une table du tournoi : les éliminés, la montée des
+ * blindes, la fusion des tables, la fin. Vrai si la table peut redistribuer.
+ */
+function entreMainsTournoi(salle) {
+  const tn = salle.tournoi;
+  const t = salle.t;
+  // les éliminés (ou ceux qui ont quitté le tournoi)
+  const tombes = t.joueurs.filter((j) => !j.elimine && (j.jetons <= 0 || j.partant));
+  tombes.sort((a, b) => (a.jetonsAvant || 0) - (b.jetonsAvant || 0));
+  for (const j of tombes) {
+    j.elimine = true;
+    j.jetons = 0;
+    const place = tn.restants;
+    tn.restants--;
+    tn.classement.push({ nom: j.nom, place });
+    const m = j.humain && salle.membres.find((x) => x.jeton === j.humain);
+    if (m) {
+      envoyer(m, { t: 'tournoi-fin', id: tn.id, nom: tn.nom, place, sur: tn.places, prix: j.partant ? 0 : prixDe(tn, place) });
+      salle.membres.splice(salle.membres.indexOf(m), 1);
+      for (const c of clients.values()) if (c.membre === m) { c.membre = null; c.code = null; }
+    }
+    aLaTable(tn, { t: 'tournoi-elimine', nom: j.nom, place, restants: tn.restants });
+  }
+  // plus aucun vrai joueur dans le tournoi : les habitués n'ont pas besoin de finir
+  if (!tn.tables.some((s) => s.membres.length)) { finirTournoi(tn); return false; }
+  if (tombes.length) for (const s of tn.tables) if (s !== salle && s.enAttente && !s.minuteur) programmer(s, 50, () => etapePoker(s));
+  // le vainqueur
+  if (tn.restants <= 1) {
+    const tous = tn.tables.flatMap((s) => s.t.joueurs);
+    const v = tous.find((j) => !j.elimine && j.jetons > 0);
+    if (v) {
+      tn.classement.push({ nom: v.nom, place: 1 });
+      const s = tn.tables.find((x) => x.t.joueurs.includes(v));
+      const m = v.humain && s.membres.find((x) => x.jeton === v.humain);
+      if (m) envoyer(m, { t: 'tournoi-fin', id: tn.id, nom: tn.nom, place: 1, sur: tn.places, prix: prixDe(tn, 1), vainqueur: true });
+      aLaTable(tn, { t: 'tournoi-elimine', nom: v.nom, place: 1, restants: 0, vainqueur: true });
+    }
+    finirTournoi(tn);
+    return false;
+  }
+  // plusieurs tables : fusion quand il ne reste que cinq joueurs, ou quand une table est seule
+  if (tn.tables.length > 1) {
+    salle.enAttente = false;
+    if (tn.restants <= 5 || vivants(salle).length < 2) {
+      salle.enAttente = true;
+      if (tn.restants <= 5) {
+        if (tn.tables.every((s) => s.enAttente || !enMain(s))) { fusionnerTables(tn); return false; }
+        return false;
+      }
+      // une table d'un seul joueur : il rejoint une table qui a une place (à sa prochaine donne)
+      const seul = vivants(salle)[0];
+      const cible = tn.tables.find((s) => s !== salle && s.t.joueurs.some((j) => j.elimine) && !s.transfert);
+      if (seul && cible) {
+        cible.transfert = { joueur: seul, depuis: salle };
+        if (!enMain(cible) && !cible.minuteur) etapePoker(cible);
+      }
+      return false;
+    }
+  }
+  // un joueur transféré d'une autre table s'assoit à une place libérée
+  if (salle.transfert) {
+    const { joueur, depuis } = salle.transfert;
+    salle.transfert = null;
+    const i = t.joueurs.findIndex((j) => j.elimine);
+    if (i >= 0) {
+      const m = joueur.humain && depuis.membres.find((x) => x.jeton === joueur.humain);
+      P.asseoir(t, i, { nom: joueur.nom, avatar: joueur.avatar, style: joueur.style, jetons: joueur.jetons, humain: joueur.humain });
+      joueur.jetons = 0; joueur.elimine = true; joueur.transfere = true;
+      if (m) {
+        depuis.membres.splice(depuis.membres.indexOf(m), 1);
+        m.s = i;
+        salle.membres.push(m);
+        for (const c of clients.values()) if (c.membre === m) c.code = salle.code;
+        envoyer(m, { t: 'entre', code: salle.code, jeu: 'poker', jeton: m.jeton });
+      }
+      clearTimeout(depuis.minuteur);
+      tn.tables = tn.tables.filter((s) => s !== depuis);
+      salles.delete(depuis.code);
+      diffuser(salle, (x) => etat(salle, x));
+    }
+  }
+  // les blindes
+  const niveau = Math.min(BLINDES.length - 1, Math.floor((salle.mainsTournoi || 0) / MAINS_PAR_NIVEAU));
+  if (t.petite !== BLINDES[niveau]) {
+    t.petite = BLINDES[niveau]; t.grosse = t.petite * 2; t.relanceMin = t.grosse;
+    diffuser(salle, { t: 'tournoi-info', tournoi: infoTournoi(salle), monte: true });
+  } else diffuser(salle, { t: 'tournoi-info', tournoi: infoTournoi(salle) });
+  salle.mainsTournoi = (salle.mainsTournoi || 0) + 1;
+  for (const j of t.joueurs) j.jetonsAvant = j.jetons;
+  return true;
+}
+
+/** La table finale : tous ceux qui restent, avec leurs jetons. */
+function fusionnerTables(tn) {
+  const anciennes = tn.tables;
+  const joueurs = [];
+  for (const s of anciennes) {
+    clearTimeout(s.minuteur);
+    for (const j of vivants(s)) {
+      const m = j.humain && s.membres.find((x) => x.jeton === j.humain);
+      joueurs.push({ nom: j.nom, avatar: j.avatar, style: j.style, jetons: j.jetons, humain: j.humain, membre: m || null });
+    }
+    salles.delete(s.code);
+  }
+  tn.tables = [];
+  const finale = ouvrirTableTournoi(tn, joueurs);
+  finale.mainsTournoi = Math.max(...anciennes.map((s) => s.mainsTournoi || 0));
+  diffuser(finale, { t: 'tournoi-finale' });
+}
+
+function finirTournoi(tn) {
+  for (const s of tn.tables) {
+    clearTimeout(s.minuteur);
+    for (const m of s.membres) for (const c of clients.values()) if (c.membre === m) { c.membre = null; c.code = null; }
+    salles.delete(s.code);
+  }
+  tn.tables = [];
+  tn.phase = 'fin';
+  if (tournoi === tn) tournoi = null;
+  planifierTournoi();
+}
+
+/** Pour les tests : plus de tournoi programmé. */
+export function arreterTournois() { clearTimeout(prochain); if (tournoi) clearTimeout(tournoi.minuteur); tournoi = null; }
+export const tournoiEnCours = () => tournoi;
+
+planifierTournoi();
+
+/* ------------------------------------------------------------------ */
 /* Le routeur                                                          */
 /* ------------------------------------------------------------------ */
 
@@ -462,7 +763,17 @@ export function handleMessage(conn, msg) {
   const salle = c.code ? salles.get(c.code) : null;
   const m = c.membre;
   if (salle) salle.vu = Date.now();
+  c.velours = true;
   switch (msg.t) {
+    case 'bonjour':
+      if (tournoi?.phase === 'inscription') conn.send({ g: 'velours', t: 'tournoi-annonce', tournoi: affiche(tournoi), inscrit: tournoi.inscrits.some((x) => x.c === c) });
+      return;
+    case 'tournoi-inscrire': return inscrire(c, msg);
+    // en développement seulement (ni Render ni Vercel) : un tournoi tout de suite, pour essayer
+    case 'tournoi-demo':
+      if (typeof process !== 'undefined' && !process.env.RENDER && !process.env.VERCEL) annoncerTournoi(msg.type, 15000);
+      return;
+    case 'tournoi-desinscrire': return desinscrire(c, msg);
     case 'ping': return conn.send({ t: 'pong' });
     case 'tables':
       return conn.send({ g: 'velours', t: 'tables', liste: [...salles.values()]
@@ -535,6 +846,9 @@ export function handleMessage(conn, msg) {
 export function handleClose(conn) {
   const c = clients.get(conn.id);
   clients.delete(conn.id);
+  // une inscription à un tournoi qui n'a pas commencé : la place se libère (l'écran rembourse en revenant)
+  const k = tournoi?.phase === 'inscription' ? tournoi.inscrits.findIndex((x) => x.c === c) : -1;
+  if (k >= 0) { tournoi.inscrits.splice(k, 1); aTous({ t: 'tournoi-maj', tournoi: affiche(tournoi) }); }
   if (!c?.membre) return;
   const salle = salles.get(c.code);
   const m = c.membre;
@@ -555,7 +869,7 @@ export function sweep() {
 }
 
 export function stats() {
-  return { veloursTables: salles.size };
+  return { veloursTables: salles.size, veloursTournoi: tournoi ? tournoi.phase : null };
 }
 
 /** Pour les tests. */
