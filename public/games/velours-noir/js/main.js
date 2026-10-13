@@ -222,11 +222,6 @@ document.querySelectorAll('.porte').forEach((p) => p.addEventListener('click', (
   sfx.clic();
   ouvrirMode(p.dataset.jeu);
 }));
-$('mode-seul').addEventListener('click', () => {
-  $('ov-mode').hidden = true;
-  if (jeuChoisi === 'poker') tables['s-poker'].preparer({ type: 'solo' });
-  aller(`s-${jeuChoisi}`);
-});
 $('mode-creer').addEventListener('click', () => {
   const publique = $('mode-publique').checked;
   if (jeuChoisi === 'poker') {

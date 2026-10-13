@@ -458,7 +458,7 @@ body.hors-ligne .code-table { border-color: #ff6b7a; color: #ffb1bb; }
 /* fenêtre « seul ou en ligne » */
 .panneau.mode { text-align: center; }
 .btn.large { width: 100%; padding: 14px; font-size: 1.1rem; }
-.mode-ligne { margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(217,180,90,.2); }
+.mode-ligne { margin-top: 4px; }
 .mode-ligne h4 { margin: 10px 0 8px; font: 400 1rem var(--titre); color: var(--or); }
 .ligne-ov { display: flex; gap: 8px; justify-content: center; align-items: center; margin: 8px 0; flex-wrap: wrap; }
 .coche { display: inline-flex; align-items: center; gap: 6px; font-size: .86rem; color: var(--doux); cursor: pointer; }
