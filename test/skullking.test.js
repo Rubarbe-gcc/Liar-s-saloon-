@@ -294,3 +294,83 @@ test('le Poisson dégueulasse : qui ramasse le pli change son pari, d’un cran'
   assert.equal(G.phase, 'jeu');
   assert.equal(G.tour, 2, 'le gagnant ouvre le pli suivant');
 });
+
+test('le Canon posé en dernier bat aussi le Kraken, la Baleine et le Hollandais', () => {
+  assert.equal(S.resoudre(pliX('kra', 'Y5', 'canon')).gagnant, 2);
+  assert.equal(S.resoudre(pliX('wha', 'Y14', 'canon')).gagnant, 2);
+  assert.equal(S.resoudre(pliX('holl', 'Y1', 'canon')).gagnant, 2);
+  // pas en dernier : c'est une fuite, et le Kraken engloutit le pli
+  assert.equal(S.resoudre(pliX('canon', 'kra', 'Y5')).gagnant, null);
+});
+
+test('les règles officielles, cas par cas', () => {
+  // ouverture avec une Fuite : la première carte de couleur fixe la couleur
+  assert.equal(gagne('esc1', 'G3', 'Y14'), 1);
+  // ouverture avec un personnage : plus de couleur à suivre
+  assert.deepEqual(S.legales([carte('Y2'), carte('G9')], pli('pir1')).map((c) => c.id), ['Y2', 'G9']);
+  // Sirène + pirate + Skull King : la Sirène gagne (+40)
+  const r = S.resoudre(pli('pir1', 'sk', 'sir1'));
+  assert.equal(r.gagnant, 2);
+  assert.equal(r.bonus, 40);
+  // tout le monde fuit : la première Fuite gagne ; la Tigresse en fuite compte comme une fuite
+  assert.equal(gagne('esc1', 'tig:esc', 'esc2'), 0);
+  // deux sirènes sans pirate ni Skull King : la première gagne
+  assert.equal(gagne('Y14', 'sir1', 'sir2'), 1);
+  // la Tigresse en pirate est un pirate : le Skull King la capture (+30)
+  assert.equal(S.resoudre(pli('tig:pir', 'sk')).bonus, 30);
+  // Kraken puis Baleine : c'est la Baleine (la dernière) qui compte
+  assert.equal(gagne('kra', 'Y3', 'wha', 'G9'), 3);
+  // Baleine puis Kraken : le pli est englouti
+  assert.equal(gagne('wha', 'Y3', 'kra', 'G9'), null);
+  // la Baleine sans aucun chiffre : pli défaussé, le joueur de la Baleine ouvre
+  const b = S.resoudre(pli('sk', 'wha', 'pir1'));
+  assert.deepEqual([b.gagnant, b.meneur], [null, 1]);
+  // l'atout noir bat la couleur demandée, mais on ne coupe pas si on a la couleur
+  assert.equal(gagne('Y14', 'B1'), 1);
+  assert.deepEqual(S.legales([carte('Y2'), carte('B9'), carte('esc1')], pli('Y5')).map((c) => c.id), ['Y2', 'esc1']);
+});
+
+test('le moteur suit exactement les règles officielles sur 20 000 plis au hasard', () => {
+  function ref(pl) {
+    const E = pl.map((j) => (j.c.t === 'tig' ? j.as : j.c.t));
+    let mi = -1;
+    E.forEach((e, i) => { if (e === 'kra' || e === 'wha') mi = i; });
+    const normal = (cs) => {
+      const e = cs.map((j) => (j.c.t === 'tig' ? j.as : j.c.t));
+      const idx = (t) => e.indexOf(t);
+      if (idx('sk') >= 0 && idx('sir') >= 0) return idx('sir');
+      for (const t of ['sk', 'pir', 'sir']) if (idx(t) >= 0) return idx(t);
+      const nums = cs.map((j, i) => i).filter((i) => cs[i].c.t === 'n');
+      if (!nums.length) return cs.length ? 0 : -1;
+      const tr = nums.filter((i) => cs[i].c.s === 'B');
+      const pool = tr.length ? tr : nums.filter((i) => cs[i].c.s === cs[nums[0]].c.s);
+      return pool.reduce((a, i) => (cs[i].c.n > cs[a].c.n ? i : a));
+    };
+    if (mi >= 0 && E[mi] === 'kra') {
+      const reste = pl.filter((j) => j.c.t !== 'kra' && j.c.t !== 'wha');
+      const w = normal(reste);
+      return [null, w >= 0 ? reste[w].p : pl[mi].p];
+    }
+    if (mi >= 0) {
+      let m = -1;
+      pl.forEach((j, i) => { if (j.c.t === 'n' && (m < 0 || j.c.n > pl[m].c.n)) m = i; });
+      return m < 0 ? [null, pl[mi].p] : [pl[m].p, pl[m].p];
+    }
+    const w = normal(pl);
+    return [pl[w].p, pl[w].p];
+  }
+  const rng = makeRng(42);
+  for (let k = 0; k < 20000; k++) {
+    const n = 2 + Math.floor(rng() * 6);
+    const d = S.paquet().sort(() => rng() - 0.5);
+    const mains = Array.from({ length: n }, () => d.splice(0, 1 + Math.floor(rng() * 6)));
+    const pl = [];
+    for (let p = 0; p < n; p++) {
+      const leg = S.legales(mains[p], pl);
+      const c = leg[Math.floor(rng() * leg.length)];
+      pl.push({ p, c, as: c.t === 'tig' ? (rng() < 0.5 ? 'pir' : 'esc') : null });
+    }
+    const r = S.resoudre(pl, n);
+    assert.deepEqual([r.gagnant, r.meneur], ref(pl), pl.map((j) => j.c.id + (j.as ? `:${j.as}` : '')).join(' '));
+  }
+});

@@ -46,9 +46,9 @@ export const CUSTOM = {
   maudit: { nom: 'Trésor maudit', glyphe: '💀', nb: 1,
     regle: 'Une fuite empoisonnée : celui qui remporte le pli où elle tombe prend −20, pari réussi ou pas.' },
   cors: { nom: 'Corsaire', glyphe: '🦎', nb: 2,
-    regle: 'Vaut un 15 de la couleur demandée : il bat toute cette couleur, mais perd contre l’atout noir et les personnages. Il se joue toujours, et ne fixe pas la couleur.' },
+    regle: 'Vaut un 15 de la couleur demandée : il bat toute cette couleur (le noir aussi, si c’est le noir qui est demandé), mais perd contre l’atout noir et les personnages. Il se joue toujours, et ne fixe pas la couleur.' },
   canon: { nom: 'Canon', glyphe: '💣', nb: 1,
-    regle: 'Joué en tout dernier dans le pli, il bat tout — Skull King compris. Joué avant, c’est une fuite.' },
+    regle: 'Joué en tout dernier dans le pli, il bat tout — Skull King, Kraken et Baleine compris. Joué avant, c’est une fuite.' },
   holl: { nom: 'Hollandais volant', glyphe: '👻', nb: 1,
     regle: 'Si aucun personnage n’est joué dans le pli, c’est la plus PETITE carte numérotée qui gagne, toutes couleurs confondues. Sinon, c’est une fuite.' },
   ancre: { nom: 'Ancre', glyphe: '⚓', nb: 1,
@@ -174,7 +174,9 @@ export function resoudre(pli, n = pli.length) {
     if (j.c.t === 'kra' || j.c.t === 'wha' || (j.c.t === 'holl' && !personnage)) mi = i;
   });
   const monstre = mi >= 0 ? pli[mi].c.t : null;
-  const r = monstre ? resoudreMonstre(pli, mi, monstre, n) : resoudreNormal(pli, n);
+  // Le Canon posé en tout dernier bat tout, monstres compris.
+  const canon = pli.length > 0 && pli.length === n && pli[n - 1].c.t === 'canon';
+  const r = monstre && !canon ? resoudreMonstre(pli, mi, monstre, n) : resoudreNormal(pli, n);
 
   // Les cartes custom qui touchent d'autres joueurs que le gagnant.
   r.extras = [];

@@ -170,3 +170,15 @@ test('seul à une table : pas de compte à rebours, la partie part dès qu’on 
   await quand(() => r.dernier('lance'));
   r.dit({ t: 'quitter' });
 });
+
+test('le poker n’a pas de limite de temps : la table attend la décision du joueur', async () => {
+  const a = joueur('Patient');
+  a.dit({ t: 'creer', jeu: 'poker', nom: 'Patient', cave: 400 });
+  await quand(() => a.dernier('options'), 15000);
+  const moi = a.dernier('etat').moi;
+  await attendre(400);   // l'équivalent de plusieurs minutes à vitesse normale
+  assert.ok(!a.evts().some((e) => e.type === 'action' && e.i === moi), 'personne ne joue à sa place');
+  a.dit({ t: 'agir', a: { type: 'coucher' } });
+  await quand(() => a.evts().some((e) => e.type === 'action' && e.i === moi));
+  a.dit({ t: 'quitter' });
+});

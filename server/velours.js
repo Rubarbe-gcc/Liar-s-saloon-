@@ -36,7 +36,7 @@ const MAX = { blackjack: BJ.PLACES, roulette: 8, poker: 5 };
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const ABSENCE_MS = 2 * 60 * 1000;
 const MISES_MS = { blackjack: 15000, roulette: 30000 };
-const TOUR_MS = { blackjack: 25000, poker: 30000 };
+const TOUR_MS = { blackjack: 25000 };   // au poker, pas de limite : la table attend le joueur
 const ASSURANCE_MS = 10000;
 const LANCER_MS = 7600;
 const PETITES = [5, 25];
@@ -171,7 +171,7 @@ function entrer(c, salle, o) {
   envoyer(m, etat(salle, m));
   diffuser(salle, { t: 'membres', liste: listeMembres(salle), arrive: m.nom });
   if (salle.jeu === 'roulette' && !salle.minuteur && salle.phase === 'mises') tourRoulette(salle);
-  if (salle.jeu === 'poker' && !salle.minuteur) etapePoker(salle);
+  if (salle.jeu === 'poker' && !salle.minuteur && !(salle.attendu >= 0)) etapePoker(salle);
 }
 
 /** Un membre s'en va pour de bon (il est parti, ou n'est pas revenu à temps). */
@@ -413,14 +413,16 @@ function etapePoker(salle) {
   }
   const m = salle.membres.find((x) => x.jeton === j.humain);
   if (!m?.conn || j.partant) return programmer(salle, 700, () => jouerPour(salle, i));
-  envoyer(m, { t: 'options', ...P.options(t, i), miseCourante: t.miseCourante, delai: TOUR_MS.poker * vitesse });
+  // pas de limite de temps : la table attend sa décision (elle ne joue pour lui que s'il se déconnecte)
+  salle.attendu = i;
+  envoyer(m, { t: 'options', ...P.options(t, i), miseCourante: t.miseCourante });
   diffuser(salle, { t: 'reflechit', i });
-  programmer(salle, TOUR_MS.poker, () => jouerPour(salle, i));
 }
 
 /** La table joue à la place d'un absent : parole si c'est gratuit, sinon il se couche. */
 function jouerPour(salle, i) {
   const t = salle.t;
+  salle.attendu = -1;
   if (t.aQui !== i || !enMain(salle) || t.phase === 'fin') return etapePoker(salle);
   P.agir(t, { type: P.options(t, i).parole ? 'parole' : 'coucher' });
   programmer(salle, diffuserEvts(salle), () => etapePoker(salle));
@@ -431,6 +433,7 @@ function agirPoker(salle, m, a) {
   if (!enMain(salle) || t.phase === 'fin' || t.aQui !== m.s || t.joueurs[m.s]?.humain !== m.jeton) return;
   const type = ['coucher', 'parole', 'suivre', 'relancer', 'tapis'].includes(a?.type) ? a.type : 'coucher';
   clearTimeout(salle.minuteur); salle.minuteur = null;
+  salle.attendu = -1;
   P.agir(t, { type, total: entier(a?.total, 10 ** 9) });
   programmer(salle, diffuserEvts(salle), () => etapePoker(salle));
 }
@@ -440,7 +443,7 @@ function recavePoker(salle, m, montant) {
   if (!j || j.humain !== m.jeton || j.jetons > 0) return;
   j.jetons = caveValide(salle, montant);
   diffuser(salle, (x) => etat(salle, x));
-  if (!salle.minuteur) etapePoker(salle);
+  if (!salle.minuteur && !(salle.attendu >= 0)) etapePoker(salle);
 }
 
 /* ------------------------------------------------------------------ */

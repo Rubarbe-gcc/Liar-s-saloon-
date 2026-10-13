@@ -469,7 +469,7 @@ export function monterPoker(app, aller) {
     rangee('fin');
     await new Promise((r) => {
       suivante = r;
-      if (!ruine) setTimeout(() => { if (suivante === r) { suivante = null; r(); } }, 5000);
+      // pas de limite de temps : la main suivante attend le joueur
     });
     message('Nouvelle donne…');
     siegesEl.forEach((el) => el.querySelectorAll('.carte').forEach((c) => c.classList.remove('terne', 'gagnante')));
