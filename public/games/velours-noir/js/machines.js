@@ -25,19 +25,97 @@ export function monterMachines(app) {
   let mise = 1, lignes = 1;
   let occupe = false, auto = 0;
 
-  /* ---------- la rangée de machines ---------- */
-  function dessinerChoix() {
-    $('mc-choix').innerHTML = Object.values(MS.MACHINES).map((x, k) => `
-      <button class="carte-machine m-${x.id}" data-machine="${x.id}" style="--i:${k}">
-        <span class="mini-rouleaux">${x.bandes.slice(0, 3).map((b) => `<i>${afficher(x, b[3 * k + 1])}</i>`).join('')}</span>
-        <b>${x.nom}</b><span>${x.sous}</span>
-        <em>${x.id === 'jackpot' ? `Jackpot : ${fx.nombre(app.jackpot())}` : `Mise de ${x.mises[0]} à ${x.mises.at(-1) * x.lignesMax}`}</em>
+  /* ---------- l'allée : on se promène devant les machines ---------- */
+  const LISTE = Object.values(MS.MACHINES);
+  let focus = 0;
+  const gainMax = (x) => Math.max(...Object.values(x.gains).flatMap((t) => Object.values(t))) * x.mises.at(-1);
+  const VOLATILITE = { calme: '🟢 Calme', moyenne: '🟡 Équilibrée', explosive: '🔴 Explosive' };
+
+  function dessinerAllee() {
+    $('mc-piste').innerHTML = LISTE.map((x, k) => `
+      <button class="borne m-${x.id}" data-k="${k}" style="--c1:${x.couleurs[0]};--c2:${x.couleurs[1]};--c3:${x.couleurs[2]}" aria-label="${x.nom}">
+        <span class="borne-ampoules" aria-hidden="true">${'<i></i>'.repeat(8)}</span>
+        <span class="borne-nom">${x.nom}</span>
+        <span class="borne-vitre">${x.bandes.slice(0, 3).map((b, r) => `<i>${afficher(x, b[(k * 5 + r * 3) % b.length])}</i>`).join('')}</span>
+        <span class="borne-plaque"><b>${x.id === 'jackpot' ? `Jackpot ${fx.nombre(app.jackpot())}` : `Jusqu’à ${fx.nombre(gainMax(x))}`}</b><small>Mise ${x.mises[0]} à ${fx.nombre(x.mises.at(-1) * x.lignesMax)} · ${VOLATILITE[x.volatilite]}</small></span>
       </button>`).join('');
+    $('mc-carte').innerHTML = LISTE.map((x, k) => `<button data-k="${k}" style="--c:${x.couleurs[0]}" aria-label="${x.nom}"></button>`).join('');
+    placer(false);
   }
-  $('mc-choix').addEventListener('click', (e) => {
-    const b = e.target.closest('[data-machine]');
-    if (b) { sfx.clic(); ouvrir(b.dataset.machine); }
+
+  /** La caméra glisse jusqu'à la machine choisie ; le décor suit en parallaxe. */
+  function placer(anime = true) {
+    const piste = $('mc-piste');
+    const bornes = piste.children;
+    if (!bornes.length) return;
+    const b = bornes[focus];
+    const vue = $('mc-allee').clientWidth;
+    const x = vue / 2 - (b.offsetLeft + b.offsetWidth / 2);
+    for (const [el, f] of [[piste, 1], [$('mc-fond'), 0.35], [$('mc-silhouettes'), 0.65]]) {
+      el.style.transition = anime ? 'transform .65s cubic-bezier(.3,.1,.2,1)' : 'none';
+      el.style.transform = `translateX(${x * f}px)`;
+    }
+    [...bornes].forEach((el, k) => el.classList.toggle('devant', k === focus));
+    [...$('mc-carte').children].forEach((el, k) => el.classList.toggle('ici', k === focus));
+    const x0 = LISTE[focus];
+    $('mc-plaque-nom').textContent = x0.nom;
+    $('mc-plaque-sous').textContent = x0.sous;
+  }
+
+  function aller(k) {
+    const n = Math.max(0, Math.min(LISTE.length - 1, k));
+    if (n === focus) return;
+    focus = n;
+    sfx.clic();
+    placer();
+  }
+
+  $('mc-piste').addEventListener('click', (e) => {
+    const b = e.target.closest('.borne');
+    if (!b || glisse) return;
+    const k = Number(b.dataset.k);
+    if (k === focus) asseoir(); else aller(k);
   });
+  $('mc-carte').addEventListener('click', (e) => { const b = e.target.closest('[data-k]'); if (b) aller(Number(b.dataset.k)); });
+  $('mc-allee-cmd').addEventListener('click', (e) => {
+    const b = e.target.closest('[data-allee]');
+    if (!b) return;
+    if (b.dataset.allee === 'gauche') aller(focus - 1);
+    if (b.dataset.allee === 'droite') aller(focus + 1);
+    if (b.dataset.allee === 'asseoir') asseoir();
+  });
+  // glisser du doigt (ou de la souris) pour se promener
+  let glisse = false, depart = null;
+  $('mc-allee').addEventListener('pointerdown', (e) => { depart = e.clientX; glisse = false; });
+  $('mc-allee').addEventListener('pointermove', (e) => { if (depart !== null && Math.abs(e.clientX - depart) > 12) glisse = true; });
+  $('mc-allee').addEventListener('pointerup', (e) => {
+    if (depart === null) return;
+    const d = e.clientX - depart;
+    depart = null;
+    if (glisse && Math.abs(d) > 40) aller(focus + (d < 0 ? 1 : -1) * Math.max(1, Math.round(Math.abs(d) / 220)));
+    setTimeout(() => { glisse = false; }, 0);
+  });
+  addEventListener('keydown', (e) => {
+    if (!$('s-machines').classList.contains('is-active') || document.querySelector('.ov:not([hidden])')) return;
+    if (m) { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); lancer(); } return; }
+    if (e.key === 'ArrowLeft') aller(focus - 1);
+    if (e.key === 'ArrowRight') aller(focus + 1);
+    if (e.key === 'Enter') asseoir();
+  });
+  addEventListener('resize', () => { if (!m) placer(false); });
+
+  function asseoir() { sfx.clic(); ouvrir(LISTE[focus].id); }
+
+  function modeAllee() {
+    m = null; auto = 0;
+    $('mc-cabinet').hidden = true;
+    $('mc-allee').hidden = false;
+    $('mc-allee-cmd').hidden = false;
+    $('mc-commandes').hidden = true;
+    $('mc-titre').textContent = 'Les Machines';
+    $('mc-retour').textContent = '‹ Salle';
+    dessinerAllee();
+  }
 
   const afficher = (x, s) => {
     const g = x.symboles[s];
@@ -52,9 +130,12 @@ export function monterMachines(app) {
     mise = m.mises[0];
     lignes = m.lignesMax;
     grille = MS.tirer(m, rng).grille;
-    $('mc-choix').hidden = true;
+    $('mc-allee').hidden = true;
+    $('mc-allee-cmd').hidden = true;
+    $('mc-retour').textContent = '‹ Se lever';
     $('mc-cabinet').hidden = false;
     $('mc-cabinet').className = `cabinet m-${m.id}`;
+    $('mc-cabinet').style.cssText = `--c1:${m.couleurs[0]};--c2:${m.couleurs[1]};--c3:${m.couleurs[2]}`;
     $('mc-nom').textContent = m.nom;
     $('mc-titre').textContent = m.nom;
     $('mc-jackpot').hidden = !m.jackpot;
@@ -114,7 +195,7 @@ export function monterMachines(app) {
   });
   $('mc-retour').addEventListener('click', () => {
     if (occupe) return;
-    if (m) { m = null; auto = 0; $('mc-cabinet').hidden = true; $('mc-choix').hidden = false; $('mc-commandes').hidden = true; $('mc-titre').textContent = 'Les Machines'; dessinerChoix(); return; }
+    if (m) { modeAllee(); return; }
     app.hall();
   });
 
@@ -282,9 +363,13 @@ export function monterMachines(app) {
 
   return {
     entrer() {
-      if (!m) { dessinerChoix(); $('mc-choix').hidden = false; $('mc-cabinet').hidden = true; $('mc-commandes').hidden = true; $('mc-titre').textContent = 'Les Machines'; }
+      if (!m) modeAllee();
       majCommandes();
     },
     sortir() { auto = 0; },
+    /** La musique du moment : celle de la machine devant laquelle on est (ou assis). */
+    theme: () => (m || LISTE[focus]).musique,
+    /** Plus douce en se promenant, pleine une fois assis. */
+    volume: () => (m ? 1 : 0.55),
   };
 }

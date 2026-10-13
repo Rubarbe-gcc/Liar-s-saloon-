@@ -62,6 +62,87 @@ export const THEMES = {
       [11, _, 9, _, 7, _, 4, _], [6, _, _, 4, _, 1, _, _], [2, _, 5, _, 9, _, 7, _], [7, _, _, _, 11, _, _, _],
     ],
   },
+  /* Les machines à sous du Velours Noir : un air par machine. */
+  'machine-fruit': {   // fête foraine rétro
+    bpm: 132, pas: 8, ton: 261.63, volume: 0.045,
+    onde: 'square', tenue: 0.9, filtre: 2400, nappe: 0,
+    accords: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]],
+    basse: [0, _, 'c', _, 2, _, 'c', _],
+    batterie: 'k.h.s.h.',
+    melodie: [[0, _, 4, _, 7, _, 4, _], [5, _, 9, _, 12, _, 9, _], [7, _, 11, _, 14, _, 11, 7], [12, _, _, 7, 4, _, 0, _]],
+  },
+  'machine-royal': {   // valse élégante
+    bpm: 96, pas: 6, ton: 174.61, volume: 0.05,
+    onde: 'triangle', tenue: 1.8, filtre: 1800, nappe: 0.6,
+    accords: [[0, 4, 7, 11], [2, 5, 9, 12], [-5, -1, 2, 5], [0, 4, 7, 11]],
+    basse: [0, _, 'c', _, 'c', _],
+    batterie: 'k...h.',
+    melodie: [[12, _, 11, _, 7, _], [9, _, _, 7, 5, _], [7, _, 5, _, 2, _], [4, _, _, _, _, _]],
+  },
+  'machine-jackpot': { // big band qui swingue
+    bpm: 120, pas: 8, ton: 146.83, volume: 0.045, swing: 0.3,
+    onde: 'sawtooth', tenue: 1.2, filtre: 1600, nappe: 0.3,
+    accords: [[0, 4, 7, 10], [5, 9, 12, 15], [0, 4, 7, 10], [7, 11, 14, 17]],
+    basse: [0, _, 1, _, 2, _, 3, _],
+    batterie: 'k.hsk.hs',
+    melodie: [[7, _, 10, _, 12, _, 10, 7], [9, _, 12, _, 14, _, 12, _], [7, _, 10, _, 12, _, 15, _], [14, _, 12, _, 11, _, 7, _]],
+  },
+  'machine-pharaons': { // gamme orientale
+    bpm: 100, pas: 8, ton: 146.83, volume: 0.05,
+    onde: 'triangle', tenue: 1.4, filtre: 1700, nappe: 0.4,
+    accords: [[0, 4, 7], [1, 5, 8], [0, 4, 7], [-2, 1, 5]],
+    basse: [0, _, _, 0, 2, _, _, _],
+    batterie: 'k..s.k.h',
+    melodie: [[7, 8, 7, 5, 4, _, 1, _], [4, 5, 7, _, 8, 7, 5, _], [7, 8, 10, 8, 7, 5, 4, _], [5, 4, 1, _, 0, _, _, _]],
+  },
+  'machine-pirates': { // chant de marins
+    bpm: 112, pas: 6, ton: 146.83, volume: 0.05,
+    onde: 'square', tenue: 1, filtre: 1400, nappe: 0,
+    accords: [[0, 3, 7], [-2, 2, 5], [-4, 0, 3], [-5, -1, 2]],
+    basse: [0, _, _, 2, _, _],
+    batterie: 'k..s..',
+    melodie: [[7, _, 7, 10, _, 7], [5, _, 5, 9, _, 5], [3, _, 3, 7, _, 3], [2, _, 5, 7, _, _]],
+  },
+  'machine-vegas': {   // disco
+    bpm: 118, pas: 8, ton: 164.81, volume: 0.045,
+    onde: 'sawtooth', tenue: 0.9, filtre: 2200, nappe: 0.2,
+    accords: [[0, 3, 7, 10], [5, 8, 12, 15], [0, 3, 7, 10], [3, 7, 10, 14]],
+    basse: [0, 0, _, 0, 2, _, 0, 3],
+    batterie: 'khshkhsh',
+    melodie: [[12, _, 10, 12, _, 15, _, 12], [17, _, 15, _, 12, _, 10, _], [12, _, 10, 12, _, 15, 17, _], [19, _, 17, 15, _, 12, _, _]],
+  },
+  'machine-dragon': {  // pentatonique, paisible
+    bpm: 84, pas: 8, ton: 220, volume: 0.05,
+    onde: 'triangle', tenue: 2.2, filtre: 1500, nappe: 0.5,
+    accords: [[0, 4, 7], [-3, 0, 4], [2, 7, 9], [0, 4, 7]],
+    basse: [0, _, _, _, 2, _, _, _],
+    batterie: 'k...h...',
+    melodie: [[9, _, 7, _, 4, _, 2, _], [4, _, 7, _, 9, _, _, _], [12, _, 9, _, 7, _, 4, _], [2, _, 4, _, 0, _, _, _]],
+  },
+  'machine-ruee': {    // banjo du Far West
+    bpm: 140, pas: 8, ton: 196, volume: 0.045,
+    onde: 'square', tenue: 0.7, filtre: 2600, nappe: 0,
+    accords: [[0, 4, 7], [5, 9, 12], [7, 11, 14], [0, 4, 7]],
+    basse: [0, _, 'c', _, 2, _, 'c', _],
+    batterie: 'k.h.k.h.',
+    melodie: [[7, 9, 11, 12, _, 11, 9, 7], [9, _, 12, _, 9, _, 5, _], [11, 12, 14, _, 11, _, 7, _], [12, _, 7, _, 4, _, 0, _]],
+  },
+  'machine-galaxie': { // synthé spatial, arpèges
+    bpm: 100, pas: 8, ton: 110, volume: 0.045,
+    onde: 'sawtooth', tenue: 1, filtre: 1200, nappe: 0.8,
+    accords: [[0, 3, 7], [-4, 0, 3], [-7, -3, 0], [-2, 2, 5]],
+    basse: [0, 0, 0, 0, 0, 0, 0, 0],
+    batterie: 'k...s...',
+    melodie: [[12, 15, 19, 15, 12, 15, 19, 24], [8, 12, 15, 12, 8, 12, 15, 20], [5, 8, 12, 8, 5, 8, 12, 17], [10, 14, 17, 14, 10, 14, 17, 22]],
+  },
+  'machine-petite': {  // boîte à musique
+    bpm: 90, pas: 8, ton: 261.63, volume: 0.05,
+    onde: 'triangle', tenue: 1.6, filtre: 3000, nappe: 0,
+    accords: [[0, 4, 7], [5, 9, 12], [0, 4, 7], [7, 11, 14]],
+    basse: [0, _, _, _, _, _, _, _],
+    batterie: '........',
+    melodie: [[12, _, 16, _, 19, _, 16, _], [17, _, 16, _, 14, _, 12, _], [12, _, 16, _, 19, _, 24, _], [19, _, _, _, 12, _, _, _]],
+  },
   saloon: {
     bpm: 100, pas: 8, ton: 130.81, volume: 0.07, swing: 0.3,
     onde: 'square', tenue: 1.1, filtre: 2200, nappe: 0,
@@ -244,7 +325,7 @@ const hz = (ton, demiTons) => ton * 2 ** (demiTons / 12);
  * @param {() => boolean} [o.permis]  le moment s'y prête-t-il ? (pas pendant une prise de son)
  * @param {() => string|null} [o.theme]  le thème du moment (clé de `THEMES`), ou null pour le silence
  */
-export function installerMusique(nom, { actif = () => true, permis = () => true, theme = null } = {}) {
+export function installerMusique(nom, { actif = () => true, permis = () => true, theme = null, volume = () => 1 } = {}) {
   let th = THEMES[nom];
   if (!th || typeof window === 'undefined') return;
   const AC = window.AudioContext || window.webkitAudioContext;
@@ -253,6 +334,7 @@ export function installerMusique(nom, { actif = () => true, permis = () => true,
   let ctx = null, sortie = null, bruit = null;
   let geste = false, joue = false, pas = 0, prochain = 0;
   let courant = nom;
+  let facteur = 1;
   let duree = 60 / th.bpm / 2;                 // un pas = une croche
   let total = th.accords.length * th.pas;
 
@@ -267,7 +349,7 @@ export function installerMusique(nom, { actif = () => true, permis = () => true,
     sortie.gain.cancelScheduledValues(ctx.currentTime);
     sortie.gain.setTargetAtTime(0.0001, ctx.currentTime, 0.15);
     prochain = ctx.currentTime + 0.6;
-    sortie.gain.setTargetAtTime(th.volume, prochain, 0.5);
+    sortie.gain.setTargetAtTime(th.volume * facteur, prochain, 0.5);
   }
 
   function monter() {
@@ -368,9 +450,14 @@ export function installerMusique(nom, { actif = () => true, permis = () => true,
     if (ctx.state === 'suspended') { ctx.resume().catch(() => {}); return; }
     if (!joue) {
       joue = true;
+      facteur = volume();
       prochain = ctx.currentTime + 0.1;
       sortie.gain.cancelScheduledValues(ctx.currentTime);
-      sortie.gain.setTargetAtTime(th.volume, ctx.currentTime, 0.4);
+      sortie.gain.setTargetAtTime(th.volume * facteur, ctx.currentTime, 0.4);
+    } else if (volume() !== facteur) {
+      // plus fort ou plus doux (devant une machine, ou assis à elle) : en fondu
+      facteur = volume();
+      sortie.gain.setTargetAtTime(th.volume * facteur, ctx.currentTime, 0.5);
     }
     // Un onglet qui a pris du retard reprend au présent, sans rafale de notes.
     if (prochain < ctx.currentTime) prochain = ctx.currentTime + 0.05;

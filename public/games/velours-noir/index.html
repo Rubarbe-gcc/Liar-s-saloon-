@@ -64,7 +64,7 @@
       <button class="porte" data-jeu="machines" style="--i:3">
         <span class="porte-art art-machines" aria-hidden="true"><i class="mini-machine"><b>7</b><b>7</b><b>7</b></i></span>
         <b>Les Machines</b>
-        <span>Trois machines à sous, un jackpot qui grossit à chaque mise.</span>
+        <span>Une allée de dix machines à sous, chacune avec son univers et sa musique.</span>
         <em>En solo</em>
       </button>
     </div>
@@ -220,13 +220,18 @@
 <!-- ============================ MACHINES ============================ -->
 <section class="ecran ecran-table" id="s-machines">
   <header class="barre">
-    <button class="btn petit" id="mc-retour">‹ Retour</button>
+    <button class="btn petit" id="mc-retour">‹ Salle</button>
     <h2 id="mc-titre">Les Machines</h2>
     <button class="btn petit b-boutique" data-ouvre="ov-boutique" aria-label="Boutique">🛍️</button>
     <p class="barre-solde"><span class="piece" aria-hidden="true"></span><b class="solde" data-solde>0</b></p>
   </header>
   <div class="salle salle-machines">
-    <div class="rangee-machines" id="mc-choix"></div>
+    <div class="allee" id="mc-allee">
+      <div class="allee-fond" id="mc-fond" aria-hidden="true"></div>
+      <div class="allee-silhouettes" id="mc-silhouettes" aria-hidden="true"></div>
+      <div class="allee-piste" id="mc-piste"></div>
+      <div class="allee-moquette" aria-hidden="true"></div>
+    </div>
     <div class="cabinet" id="mc-cabinet" hidden>
       <div class="fronton">
         <div class="ampoules" id="mc-ampoules" aria-hidden="true"></div>
@@ -241,6 +246,15 @@
       <div class="levier" id="mc-levier" role="button" aria-label="Tirer le levier"><i class="tige"></i><i class="boule"></i></div>
     </div>
   </div>
+  <footer class="commandes" id="mc-allee-cmd">
+    <div class="minicarte" id="mc-carte" aria-label="Où vous êtes dans l’allée"></div>
+    <div class="rangee">
+      <button class="btn" data-allee="gauche" aria-label="Machine précédente">‹</button>
+      <div class="plaque-allee"><b id="mc-plaque-nom"></b><small id="mc-plaque-sous"></small></div>
+      <button class="btn" data-allee="droite" aria-label="Machine suivante">›</button>
+    </div>
+    <div class="rangee"><button class="btn or" data-allee="asseoir">S’asseoir</button></div>
+  </footer>
   <footer class="commandes" id="mc-commandes" hidden>
     <div class="rangee">
       <span class="reglage">Mise <button class="btn petit" data-mc="mise-">−</button><b id="mc-mise">1</b><button class="btn petit" data-mc="mise+">+</button></span>

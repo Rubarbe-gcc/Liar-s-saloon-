@@ -298,16 +298,20 @@ test('les machines à sous : les gains se lisent bien sur les lignes', () => {
   assert.equal(MS.palier(150, 10), 'big');
 });
 
-test('les machines à sous rendent environ 95 % sur la durée', () => {
-  const rng = makeRng(2026);
+test('les dix machines rendent entre 92 et 97 % (calcul exact, toutes les combinaisons)', () => {
+  assert.equal(Object.keys(MS.MACHINES).length, 10);
   for (const m of Object.values(MS.MACHINES)) {
-    let mise = 0, gain = 0;
-    for (let k = 0; k < 150000; k++) {
-      const { grille } = MS.tirer(m, rng);
-      gain += MS.evaluer(m, grille, 1, m.lignesMax).total;
-      mise += MS.miseTotale(m, 1, m.lignesMax);
-    }
-    const retour = gain / mise + (m.jackpot ? m.jackpot.part : 0);
-    assert.ok(retour > 0.9 && retour < 0.99, `${m.nom} : ${(retour * 100).toFixed(1)} %`);
+    // une ligne, mise 1 : chaque rouleau tombe sur un symbole selon sa fréquence sur la bande
+    const probas = m.bandes.map((b) => { const c = {}; for (const s of b) c[s] = (c[s] || 0) + 1 / b.length; return Object.entries(c); });
+    const une = { ...m, lignes: [m.lignes[0]] };
+    let retour = 0;
+    const rec = (r, combo, p) => {
+      if (r === m.rouleaux) { retour += p * MS.evaluer(une, combo.map((s) => [s, s, s]), 1, 1).total; return; }
+      for (const [s, q] of probas[r]) rec(r + 1, [...combo, s], p * q);
+    };
+    rec(0, [], 1);
+    if (m.jackpot) retour += m.jackpot.part;
+    assert.ok(retour > 0.92 && retour < 0.97, `${m.nom} : ${(retour * 100).toFixed(2)} %`);
+    assert.ok(m.musique && m.couleurs?.length === 3 && ['calme', 'moyenne', 'explosive'].includes(m.volatilite), `${m.nom} : thème complet`);
   }
 });

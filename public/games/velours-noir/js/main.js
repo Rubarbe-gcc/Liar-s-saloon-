@@ -197,7 +197,12 @@ $('r-son').addEventListener('change', () => { sfx.basculerSon(); });
 $('r-voix').addEventListener('change', () => { sfx.basculerVoix(); });
 $('r-musique').addEventListener('change', (e) => { musique = e.target.checked; try { localStorage.setItem(CLE_MUSIQUE, musique ? '1' : '0'); } catch { /* ignore */ } });
 $('r-nuage').textContent = `☁️ Vos jetons sont sauvegardés avec votre profil de l’arcade (code ${succes.joliCode(succes.codeProfil())}).`;
-installerMusique('velours', { actif: () => sfx.sonActif() && musique });
+// aux machines, la musique est celle de la machine devant laquelle on se trouve
+installerMusique('velours', {
+  actif: () => sfx.sonActif() && musique,
+  theme: () => (courant === 's-machines' && tables['s-machines'] ? tables['s-machines'].theme() : 'velours'),
+  volume: () => (courant === 's-machines' && tables['s-machines'] ? tables['s-machines'].volume() : 1),
+});
 
 /* ------------------------------------------------------------------ */
 /* Les tables                                                          */
