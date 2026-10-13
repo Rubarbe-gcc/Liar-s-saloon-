@@ -521,7 +521,7 @@ body.hors-ligne .code-table { border-color: #ff6b7a; color: #ffb1bb; }
 
 /* ---------- le compte en banque ---------- */
 .b-compte b { font-family: var(--ui); font-size: .82rem; color: #9ff0b8; }
-.b-compte b.rouge, .rouge { color: #ff9aa6 !important; }
+.b-compte b.rouge, .cpt-solde.rouge, .jr-total .rouge, .solde-banque .rouge, #bq-solde.rouge, .op .rouge { color: #ff9aa6 !important; }
 .vert { color: #9ff0b8; }
 .panneau.compte { width: min(100%, 560px); }
 .releve-haut { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: 14px;
@@ -787,3 +787,16 @@ body.moderateur .portes { grid-template-columns: repeat(auto-fit, minmax(200px, 
 .cabinet { background: linear-gradient(180deg, var(--c2, #6b1a2a), var(--c3, #1e060c) 80%) !important; border-color: var(--c1, #d9b45a) !important; }
 .cabinet .neon-machine { text-shadow: 0 0 10px #ffd97a, 0 0 26px var(--c1, #ff9a3a); }
 @media (max-width: 560px) { #mc-allee-cmd .rangee { flex-wrap: nowrap; } .plaque-allee { min-width: 0; flex: 1; } .plaque-allee small { font-size: .7rem; } }
+
+/* ---------- des cartes bien lisibles ---------- */
+.carte .face { background: #fffdf8; color: #121014; box-shadow: 0 4px 10px rgba(0,0,0,.45), inset 0 0 0 1px rgba(0,0,0,.18); }
+.carte .face.rouge { color: #d0102c; }
+.carte .coin { left: 6%; top: 4%; font: 800 calc(var(--cw) * .3)/.95 var(--ui); letter-spacing: -.05em; }
+.carte .coin i { font-size: 1em; margin-top: 1px; }
+.carte .milieu { font-size: calc(var(--cw) * .58); }
+.carte .as .milieu { font-size: calc(var(--cw) * .78); }
+.carte .figure .milieu { inset: 20% 18% 14%; border: 2px solid currentColor; border-radius: 6px; gap: 0;
+  background: linear-gradient(180deg, color-mix(in srgb, currentColor 12%, #fffdf8), #fffdf8); }
+.carte .figure .milieu b { font: 900 calc(var(--cw) * .52)/1 Georgia, 'Times New Roman', serif; }
+.carte .figure .milieu small { font-size: calc(var(--cw) * .24); line-height: 1; }
+.carte .figure .milieu .couronne { font-size: calc(var(--cw) * .2); color: #b8913c; min-height: .6em; }

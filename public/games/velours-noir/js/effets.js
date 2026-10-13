@@ -29,7 +29,8 @@ export const nombre = (n) => fmt.format(n);
 /* Les cartes                                                          */
 /* ------------------------------------------------------------------ */
 
-const FIGURES = { 11: '♞', 12: '♛', 13: '♚' };
+/** Les figures : une grande lettre (V, D, R) sous une couronne, plus lisible qu'un dessin. */
+const COURONNES = { 11: '', 12: '♕', 13: '♔' };
 
 /** Une carte en DOM ; sans `c`, on ne voit que son dos. */
 export function elCarte(c, { petite = false } = {}) {
@@ -48,7 +49,7 @@ export function remplir(el, c) {
   el.querySelector('.face').className = `face ${coul}${c.r >= 11 && c.r <= 13 ? ' figure' : ''}${c.r === 14 ? ' as' : ''}`;
   el.querySelector('.face').innerHTML =
     `<span class="coin">${r}<i>${c.c}</i></span>` +
-    `<span class="milieu">${c.r >= 11 && c.r <= 13 ? `<b>${FIGURES[c.r]}</b><small>${c.c}</small>` : c.c}</span>` +
+    `<span class="milieu">${c.r >= 11 && c.r <= 13 ? `<small class="couronne">${COURONNES[c.r]}</small><b>${r}</b><small>${c.c}</small>` : c.c}</span>` +
     `<span class="coin bas">${r}<i>${c.c}</i></span>`;
 }
 
