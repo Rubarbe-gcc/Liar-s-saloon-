@@ -13,6 +13,7 @@ import { makeRng } from '../../../shared/hasard.js';
 import { creerCroupier } from './croupier.js';
 import * as fx from './effets.js';
 import * as sfx from './sfx.js';
+import * as EL from './enligne.js';
 
 const $ = (id) => document.getElementById(id);
 const JETONS = [1, 5, 25, 100, 500];
@@ -129,7 +130,7 @@ const easeOut3 = (k) => 1 - (1 - k) ** 3;
 
 export function monterRoulette(app) {
   const rng = makeRng(Date.now() ^ 0x0de1);
-  let croupier = null;
+  const croupier = creerCroupier($('rl-croupier'), 'henri');
   const toile = $('rl-roue');
   toile.width = toile.height = T;
   const g = toile.getContext('2d');
@@ -209,6 +210,7 @@ export function monterRoulette(app) {
     const d = Object.values(derniers).reduce((s, v) => s + v, 0);
     $('rl-remiser').disabled = occupe || d === 0 || d + t > app.solde();
     for (const j of $('rl-jetons').children) j.classList.toggle('trop', Number(j.dataset.v) + t > app.solde());
+    if (enLigne && !occupe) envoyerParis();
   }
 
   function poser(id, v = jeton, { anime = true } = {}) {
@@ -311,9 +313,19 @@ export function monterRoulette(app) {
       // la caméra : où sera la bille à la fin
       const aFin = W(1) + rFin;
       const ox = 50 + (Math.cos(aFin) * RAYON_CASE / T) * 100, oy = 50 + (Math.sin(aFin) * RAYON_CASE / T) * 100;
-      let zoome = false, rienNeVaPlus = false;
+      let zoome = false, rienNeVaPlus = false, fini = false;
+      // un onglet en arrière-plan ne dessine plus : la bille arrive quand même
+      const terminer = () => {
+        if (fini) return;
+        fini = true;
+        angle = W(1);
+        dessiner(g, angle, { a: angle + rFin, r: RAYON_CASE });
+        fin();
+      };
+      setTimeout(terminer, D + 400);
       const t0 = performance.now();
       const pas = (t) => {
+        if (fini) return;
         const u = Math.min(1, (t - t0) / D);
         const a = W(u);
         const ur = Math.min(1, u / Tl);
@@ -339,7 +351,7 @@ export function monterRoulette(app) {
           cadre.style.transform = 'scale(1.75)';
         }
         if (u < 1) requestAnimationFrame(pas);
-        else fin();
+        else terminer();
       };
       requestAnimationFrame(pas);
       sfx.bille(D / 1000);
@@ -355,14 +367,31 @@ export function monterRoulette(app) {
   }
 
   async function lancer() {
-    const total = totalMise();
-    if (occupe || !total) return;
-    if (!app.debiter(total)) { croupier.dire('Vous n’avez pas assez de jetons.', { voix: false }); return; }
+    if (occupe || !totalMise()) return;
+    if (enLigne) {
+      EL.envoyer({ t: 'pret' });
+      $('rl-lancer').disabled = true;
+      $('rl-lancer').textContent = 'Prêt ✓';
+      return;
+    }
+    await tourner(R.tirer(rng));
+  }
+
+  /** Un tour de roue jusqu'à `numero` (tiré ici quand on joue seul, par le serveur en ligne). */
+  async function tourner(numero) {
+    let total = totalMise();
+    if (total && !app.debiter(total)) {
+      croupier.dire('Vous n’avez pas assez de jetons : vos mises sont retirées.', { voix: false });
+      const ids = Object.keys(paris);
+      paris = {}; actions = [];
+      ids.forEach(dessinerPile);
+      total = 0;
+    }
     occupe = true;
     cancelAnimationFrame(oisive);
     majCommandes();
     nettoyerResultat();
-    derniers = { ...paris };
+    if (total) derniers = { ...paris };
     croupier.lance();
     croupier.dire('Les jeux sont faits.');
     sfx.jetons(4);
@@ -373,7 +402,6 @@ export function monterRoulette(app) {
     scene.querySelector('.annonce')?.remove();
     scene.appendChild(cadre);
     cadre.style.transform = '';
-    const numero = R.tirer(rng);
     await animerLancer(numero);
 
     const coul = R.couleurDe(numero);
@@ -389,7 +417,7 @@ export function monterRoulette(app) {
     // le résultat sur le tapis
     histo.unshift(numero);
     histo = histo.slice(0, 40);
-    try { localStorage.setItem(CLE_HISTO, JSON.stringify(histo)); } catch { /* ignore */ }
+    if (!enLigne) { try { localStorage.setItem(CLE_HISTO, JSON.stringify(histo)); } catch { /* ignore */ } }
     majHisto();
     const caseG = zonesEl[`p${numero}`];
     const dolly = document.createElement('i');
@@ -398,11 +426,22 @@ export function monterRoulette(app) {
     caseG.classList.add('gagnante');
     sfx.retourne();
 
+    // les mises des autres joueurs : ramassées ou payées, sans toucher à ma caisse
+    for (const [s, p] of Object.entries(autres)) {
+      for (const [id, v] of Object.entries(p)) {
+        const el = zonesEl[id]?.querySelector(`.autre[data-s="${s}"]`);
+        if (!el) continue;
+        if (R.PAR_ID[id].nums.includes(numero)) { fx.volerJetons(v * (R.paiement(R.PAR_ID[id].nums) + 1), zonesEl[id], $('rl-joueurs'), { max: 3 }); }
+        else fx.volerJetons(v, zonesEl[id], croupier.el, { max: 2 });
+        el.remove();
+      }
+    }
+
     const { retour, gagnants, perdants } = R.regler(paris, numero);
     await fx.attendre(500);
     if (perdants.length) {
       croupier.ramasse();
-      perdants.forEach((id, n) => { fx.volerJetons(paris[id], zonesEl[id], croupier.el, { max: 3, duree: 500, etalement: 30 }); zonesEl[id].querySelector('.pile')?.remove(); });
+      perdants.forEach((id) => { fx.volerJetons(paris[id], zonesEl[id], croupier.el, { max: 3, duree: 500, etalement: 30 }); zonesEl[id].querySelector('.pile')?.remove(); });
       sfx.jetons(Math.min(10, perdants.length * 2), 0.6);
       await fx.attendre(700);
     }
@@ -436,15 +475,18 @@ export function monterRoulette(app) {
       } else {
         croupier.dire(net === 0 ? 'Vous retrouvez votre mise.' : 'Un petit gain, pas assez cette fois.', { voix: false });
       }
-    } else {
+    } else if (total) {
       sfx.perte();
       if (total >= 200) croupier.desole();
       croupier.dire('Faites vos jeux.', { duree: 1800 });
     }
     paris = {}; actions = [];
-    occupe = false;
-    majCommandes();
-    ralenti(performance.now());
+    envoye = '{}';
+    if (!enLigne) {
+      occupe = false;
+      majCommandes();
+      ralenti(performance.now());
+    } else majCommandes();
   }
 
   $('rl-lancer').addEventListener('click', lancer);
@@ -456,14 +498,147 @@ export function monterRoulette(app) {
 
   majHisto();
 
+  /* ---------- en ligne ---------- */
+  const COULEURS = ['#e8c35a', '#5ab4e8', '#e85a9b', '#7be85a', '#b38bff', '#ff8a4c', '#4ce8d0', '#f4ead6'];
+  let enLigne = false, moi = 0, membres = [], autres = {}, envoye = '{}', envoiT = 0;
+  let compteFin = 0, compteT = 0, file = Promise.resolve();
+
+  function envoyerParis() {
+    clearTimeout(envoiT);
+    envoiT = setTimeout(() => {
+      const j = JSON.stringify(paris);
+      if (j === envoye || occupe) return;
+      envoye = j;
+      EL.envoyer({ t: 'paris', paris });
+    }, 200);
+  }
+
+  function dessinerAutres() {
+    tapis.querySelectorAll('.autre').forEach((x) => x.remove());
+    for (const [s, p] of Object.entries(autres)) {
+      if (Number(s) === moi) continue;
+      for (const [id, v] of Object.entries(p)) {
+        const z = zonesEl[id];
+        if (!z) continue;
+        const k = z.querySelectorAll('.autre').length;
+        const el = document.createElement('span');
+        el.className = 'autre';
+        el.dataset.s = s;
+        el.style.cssText = `--c:${COULEURS[Number(s) % COULEURS.length]};--k:${k}`;
+        el.textContent = v >= 1000 ? `${Math.round(v / 100) / 10}k` : v;
+        z.appendChild(el);
+      }
+    }
+  }
+
+  function dessinerJoueurs() {
+    const el = $('rl-joueurs');
+    el.hidden = !enLigne;
+    el.innerHTML = membres.map((m) => {
+      const t = Object.values(autres[m.s] || {}).reduce((a, v) => a + v, 0);
+      return `<span class="joueur${m.s === moi ? ' moi' : ''}${m.absent ? ' absent' : ''}" style="--c:${COULEURS[m.s % COULEURS.length]}">${m.avatar} ${m.s === moi ? 'Vous' : m.nom}${t && m.s !== moi ? ` <b>${fx.nombre(t)}</b>` : ''}</span>`;
+    }).join('');
+  }
+
+  function compte(reste) {
+    clearInterval(compteT);
+    compteFin = reste > 0 ? Date.now() + reste : 0;
+    const el = $('rl-compte');
+    const maj = () => {
+      const s = Math.max(0, Math.ceil((compteFin - Date.now()) / 1000));
+      el.hidden = !compteFin || !enLigne || s === 0;
+      el.textContent = s > 3 ? `Rien ne va plus dans ${s} s` : `Dernières mises… ${s}`;
+      el.classList.toggle('urgent', s <= 5);
+      if (!s) clearInterval(compteT);
+    };
+    maj();
+    if (compteFin) compteT = setInterval(maj, 250);
+  }
+
+  function libellerLancer() {
+    $('rl-lancer').textContent = enLigne ? 'Je suis prêt' : 'Lancer la bille';
+  }
+
+  EL.ecouter((m) => {
+    if (m.jeu && m.jeu !== 'roulette') return;
+    if (m.t === 'etat' && m.jeu === 'roulette') {
+      enLigne = true;
+      moi = m.moi; membres = m.membres;
+      autres = { ...m.paris };
+      paris = { ...(m.paris[moi] || {}) };
+      envoye = JSON.stringify(paris);
+      Object.keys(zonesEl).forEach(dessinerPile);
+      histo = [...m.histo];
+      majHisto();
+      occupe = m.phase !== 'mises';
+      libellerLancer();
+      dessinerAutres(); dessinerJoueurs();
+      compte(m.compte);
+      majCommandes();
+      $('rl-code').hidden = false;
+      $('rl-code').textContent = `Table ${m.code}`;
+      $('rl-code').dataset.code = m.code;
+      return;
+    }
+    if (!enLigne) return;
+    switch (m.t) {
+      case 'membres':
+        membres = m.liste;
+        for (const s of Object.keys(autres)) if (!membres.some((x) => x.s === Number(s))) delete autres[s];
+        dessinerAutres(); dessinerJoueurs();
+        if (m.arrive && m.arrive !== EL.identite().nom) croupier.dire(`Bienvenue, ${m.arrive}.`, { voix: false });
+        break;
+      case 'paris':
+        if (m.s === moi) break;
+        autres[m.s] = m.paris;
+        dessinerAutres(); dessinerJoueurs();
+        sfx.jeton();
+        break;
+      case 'compte': compte(m.reste); break;
+      case 'lance':
+        compte(0);
+        clearTimeout(envoiT);
+        file = file.then(() => tourner(m.numero));
+        break;
+      case 'tour':
+        file = file.then(() => {
+          autres = {};
+          occupe = false;
+          libellerLancer();
+          dessinerAutres(); dessinerJoueurs();
+          majCommandes();
+          ralenti(performance.now());
+        });
+        break;
+      case 'parti': sortirEnLigne(); break;
+      case 'erreur': croupier.dire(m.msg, { voix: false }); break;
+    }
+  });
+
+  function sortirEnLigne() {
+    enLigne = false; moi = 0; membres = []; autres = {};
+    occupe = false;
+    compte(0);
+    $('rl-code').hidden = true;
+    try { histo = JSON.parse(localStorage.getItem(CLE_HISTO)) || []; } catch { histo = []; }
+    majHisto();
+    libellerLancer();
+    dessinerAutres(); dessinerJoueurs();
+    majCommandes();
+  }
+
   return {
     entrer() {
-      if (!croupier) croupier = creerCroupier($('rl-croupier'), 'henri');
       dessiner(g, angle, null);
       if (!occupe) ralenti(performance.now());
+      libellerLancer();
       majCommandes();
-      setTimeout(() => croupier.dire(app.solde() < 1 ? 'Bonsoir. Il vous faut des jetons : passez à la caisse.' : 'Bonsoir. Mesdames et messieurs, faites vos jeux.'), 500);
+      if (!enLigne) setTimeout(() => croupier.dire(app.solde() < 1 ? 'Bonsoir. Il vous faut des jetons : passez à la boutique.' : 'Bonsoir. Mesdames et messieurs, faites vos jeux.'), 500);
     },
-    sortir() { croupier?.taire(); cancelAnimationFrame(oisive); oisive = 0; },
+    sortir() {
+      croupier?.taire(); cancelAnimationFrame(oisive); oisive = 0;
+      if (enLigne) { EL.quitter(); sortirEnLigne(); }
+    },
+    enLigne: () => enLigne,
   };
 }

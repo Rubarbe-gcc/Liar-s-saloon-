@@ -72,38 +72,62 @@ test('le blackjack : totaux, blackjack payé 3 pour 2, le croupier reste à 17',
   assert.deepEqual(BJ.valeur(c('As 6h')), { total: 17, souple: true });
   assert.deepEqual(BJ.valeur(c('As 6h Xd')), { total: 17, souple: false });
   assert.equal(BJ.valeur(c('As Ah Ad')).total, 13);
-  const b = BJ.creerBlackjack({ rng: makeRng(1), solde: 100 });
+  const b = BJ.creerBlackjack({ rng: makeRng(1) });
+  BJ.asseoir(b, 0, { nom: 'Moi' });
+  BJ.miser(b, 0, 10);
   // donne truquée (le sabot se tire par la fin) : le joueur reçoit A + R, le croupier 9 + 7
   b.sabot.splice(b.sabot.length - 4, 4, ...c('7c Rh 9d As'));
-  BJ.distribuer(b, 10);
+  BJ.distribuer(b);
   assert.equal(b.phase, 'fin');
-  assert.equal(b.mains[0].resultat, 'blackjack');
-  assert.equal(b.solde, 100 - 10 + 25);
+  const r = BJ.prendre(b).find((e) => e.type === 'resultat');
+  assert.deepEqual([r.res, r.retour], ['blackjack', 25]);
 });
 
-test('le blackjack : mille donnes jouées au hasard, le solde suit les résultats', () => {
-  const rng = makeRng(3);
-  const b = BJ.creerBlackjack({ rng, solde: 100000 });
-  for (let k = 0; k < 1000; k++) {
-    const avant = b.solde;
-    BJ.distribuer(b, 10);
-    if (b.phase === 'assurance') BJ.assurer(b, rng() < 0.5);
+/** Joue des donnes au hasard ; la caisse de chaque place suit les événements. */
+function jouerDonnes(places, donnes, graine) {
+  const rng = makeRng(graine);
+  const b = BJ.creerBlackjack({ rng, places });
+  const caisse = new Array(places).fill(100000);
+  for (let s = 0; s < places; s++) BJ.asseoir(b, s, { nom: `J${s}` });
+  const appliquer = () => {
+    for (const e of BJ.prendre(b)) {
+      if (e.type === 'donne') for (const [s, m] of Object.entries(e.mises)) caisse[s] -= m;
+      if (e.type === 'double' || e.type === 'separe') caisse[e.s] -= e.ajout;
+      if (e.type === 'assurance-prise') caisse[e.s] -= e.montant;
+      if (e.type === 'assurance-reglee' || e.type === 'resultat') caisse[e.s] += e.retour;
+      if (e.type === 'fin') return e;
+    }
+    return null;
+  };
+  for (let k = 0; k < donnes; k++) {
+    const avant = [...caisse];
+    for (let s = 0; s < places; s++) BJ.miser(b, s, rng() < 0.8 ? 10 + s : 0);
+    if (!BJ.distribuer(b)) continue;
+    let fin = appliquer();
     let garde = 0;
-    while (b.phase === 'jeu') {
-      const a = BJ.actions(b);
-      const v = BJ.valeur(b.mains[b.active].cartes).total;
-      if (a.separer && rng() < 0.5) BJ.separer(b);
-      else if (a.doubler && v >= 9 && v <= 11) BJ.doubler(b);
-      else if (v < 17) BJ.carte(b);
-      else BJ.rester(b);
-      assert.ok(++garde < 50);
+    while (!fin) {
+      if (b.phase === 'assurance') { for (let s = 0; s < places; s++) BJ.assurer(b, s, rng() < 0.5); }
+      else {
+        const s = b.tour.s;
+        const a = BJ.actions(b, s);
+        const v = BJ.valeur(b.sieges[s].mains[b.tour.m].cartes).total;
+        if (rng() < 0.03) BJ.lever(b, s);
+        else if (a.separer && rng() < 0.5) BJ.separer(b, s);
+        else if (a.doubler && v >= 9 && v <= 11) BJ.doubler(b, s);
+        else if (v < 17) BJ.carte(b, s);
+        else BJ.rester(b, s);
+      }
+      fin = appliquer();
+      assert.ok(++garde < 200);
     }
     assert.equal(b.phase, 'fin');
-    assert.equal(b.solde - avant, b.net);
-    if (b.mains.some((m) => m.resultat !== 'brule') && b.croupier.length > 2) assert.ok(BJ.valeur(b.croupier).total >= 17);
-    BJ.prendre(b);
+    for (let s = 0; s < places; s++) assert.equal(caisse[s] - avant[s], fin.nets[s] ?? 0, `donne ${k}, place ${s}`);
+    for (let s = 0; s < places; s++) if (!b.sieges[s]) BJ.asseoir(b, s, { nom: `J${s}` });
   }
-});
+}
+
+test('le blackjack seul : mille donnes, la caisse suit les résultats', () => jouerDonnes(1, 1000, 3));
+test('le blackjack à cinq : chacun sa main, la même table, des départs en pleine donne', () => jouerDonnes(5, 500, 9));
 
 test('la roulette : la roue, le tapis et les paiements', () => {
   assert.equal(R.ROUE.length, 37);

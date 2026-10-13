@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v95';
+const VERSION = 'v96';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -44,6 +44,8 @@ const SHELL = [
   '/games/velours-noir/js/blackjack.js',
   '/games/velours-noir/js/roulette.js',
   '/games/velours-noir/js/poker.js',
+  '/games/velours-noir/js/enligne.js',
+  '/games/velours-noir/js/boutique.js',
   '/games/velours-noir/icons/icon-192.png',
   '/shared/casino/cartes.js',
   '/shared/casino/poker.js',

@@ -14,6 +14,8 @@ import * as fx from './effets.js';
 import { monterBlackjack } from './blackjack.js';
 import { monterRoulette } from './roulette.js';
 import { monterPoker } from './poker.js';
+import { monterBoutique } from './boutique.js';
+import * as EL from './enligne.js';
 
 const $ = (id) => document.getElementById(id);
 const CLE_MUSIQUE = 'velours.musique';
@@ -146,14 +148,13 @@ async function aller(id) {
   tables[id]?.entrer?.();
 }
 
-document.querySelectorAll('.porte').forEach((p) => p.addEventListener('click', () => {
-  sfx.clic();
-  aller(`s-${p.dataset.jeu}`);
-}));
 document.querySelectorAll('[data-hall]').forEach((b) => b.addEventListener('click', () => aller('s-hall')));
 
 /* fenêtres */
-document.querySelectorAll('[data-ouvre]').forEach((b) => b.addEventListener('click', () => { $(b.dataset.ouvre).hidden = false; sfx.clic(); }));
+document.querySelectorAll('[data-ouvre]').forEach((b) => b.addEventListener('click', () => {
+  sfx.clic();
+  if (b.dataset.ouvre === 'ov-boutique') boutique.ouvrir(); else $(b.dataset.ouvre).hidden = false;
+}));
 document.querySelectorAll('.ov').forEach((ov) => {
   ov.addEventListener('click', (e) => { if (e.target === ov || e.target.closest('[data-ferme]')) ov.hidden = true; });
 });
@@ -181,6 +182,106 @@ installerMusique('velours', { actif: () => sfx.sonActif() && musique });
 tables['s-blackjack'] = monterBlackjack(app);
 tables['s-roulette'] = monterRoulette(app);
 tables['s-poker'] = monterPoker(app, aller);
+const boutique = monterBoutique(app);
+
+/* ------------------------------------------------------------------ */
+/* Seul ou en ligne                                                    */
+/* ------------------------------------------------------------------ */
+
+const NOMS = { blackjack: 'Blackjack', roulette: 'Roulette', poker: 'Texas Hold’em' };
+let jeuChoisi = null, listeT = 0, codeVoulu = null;
+
+function ouvrirMode(jeu) {
+  jeuChoisi = jeu;
+  $('mode-titre').textContent = NOMS[jeu];
+  $('mode-note').textContent = '';
+  $('mode-liste').innerHTML = '<p class="note">Recherche des tables…</p>';
+  $('ov-mode').hidden = false;
+  EL.lister(jeu);
+  clearInterval(listeT);
+  listeT = setInterval(() => { if ($('ov-mode').hidden) clearInterval(listeT); else EL.lister(jeu); }, 4000);
+}
+
+function rejoindreCode(code) {
+  code = String(code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (code.length < 4) { $('mode-note').textContent = 'Le code d’une table a quatre caractères.'; return; }
+  codeVoulu = code;
+  $('mode-note').textContent = 'Connexion à la table…';
+  EL.info(code);
+}
+
+document.querySelectorAll('.porte').forEach((p) => p.addEventListener('click', () => {
+  sfx.clic();
+  ouvrirMode(p.dataset.jeu);
+}));
+$('mode-seul').addEventListener('click', () => {
+  $('ov-mode').hidden = true;
+  if (jeuChoisi === 'poker') tables['s-poker'].preparer({ type: 'solo' });
+  aller(`s-${jeuChoisi}`);
+});
+$('mode-creer').addEventListener('click', () => {
+  const publique = $('mode-publique').checked;
+  if (jeuChoisi === 'poker') {
+    $('ov-mode').hidden = true;
+    tables['s-poker'].preparer({ type: 'creer', publique });
+    aller('s-poker');
+    return;
+  }
+  $('mode-note').textContent = 'Ouverture de la table…';
+  EL.creer(jeuChoisi, { publique });
+});
+$('mode-rejoindre').addEventListener('click', () => rejoindreCode($('mode-code').value));
+$('mode-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') rejoindreCode(e.target.value); });
+$('mode-liste').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-code]');
+  if (b) rejoindreCode(b.dataset.code);
+});
+
+/* le lien d'une table : on le copie pour l'envoyer à ses amis */
+document.querySelectorAll('.code-table').forEach((b) => b.addEventListener('click', async () => {
+  const lien = `${location.origin}/games/velours-noir/?table=${b.dataset.code}`;
+  try { await navigator.clipboard.writeText(lien); fx.texte('Lien copié !', b); } catch { fx.texte(`Code : ${b.dataset.code}`, b); }
+}));
+
+EL.ecouter((m) => {
+  switch (m.t) {
+    case 'tables': {
+      if ($('ov-mode').hidden) return;
+      const liste = m.liste.filter((x) => x.jeu === jeuChoisi);
+      $('mode-liste').innerHTML = liste.length
+        ? liste.map((x) => `<button class="table-ligne" data-code="${x.code}"><b>Table de ${x.hote.replace(/[<>&]/g, '')}</b><span>${x.joueurs} / ${x.max} joueur${x.max > 1 ? 's' : ''}${x.petite ? ` · blindes ${x.petite}/${x.petite * 2}` : ''}</span><em>${x.code}</em></button>`).join('')
+        : '<p class="note">Aucune table ouverte pour l’instant. Créez la vôtre !</p>';
+      break;
+    }
+    case 'info':
+      if (m.code !== codeVoulu) return;
+      codeVoulu = null;
+      $('ov-mode').hidden = true;
+      if (m.jeu === 'poker') { tables['s-poker'].preparer({ type: 'rejoindre', code: m.code, petite: m.petite }); aller('s-poker'); }
+      else EL.rejoindre(m.code);
+      break;
+    case 'etat':
+      $('ov-mode').hidden = true;
+      if (courant !== `s-${m.jeu}`) aller(`s-${m.jeu}`);
+      break;
+    case 'erreur':
+      codeVoulu = null;
+      $('mode-note').textContent = m.msg;
+      break;
+    case 'statut':
+      document.body.classList.toggle('hors-ligne', m.s === 'injoignable');
+      if (m.s === 'injoignable' && !$('ov-mode').hidden) $('mode-note').textContent = 'Le serveur des parties en ligne ne répond pas. Réessayez dans un instant.';
+      break;
+  }
+});
+
+// une place à reprendre (page rechargée en pleine partie), ou un lien de table reçu
+if (EL.placeNotee()) EL.connecter();
+const lienTable = new URLSearchParams(location.search).get('table');
+if (lienTable) {
+  history.replaceState(null, '', location.pathname);
+  rejoindreCode(lienTable);
+}
 
 afficherSolde(false);
 synchroniserNuage();

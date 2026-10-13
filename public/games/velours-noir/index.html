@@ -33,6 +33,7 @@
       <p class="solde-gros"><span class="piece" aria-hidden="true"></span><b class="solde" data-solde>1 000</b><small>jetons</small></p>
       <div class="caisse-boutons">
         <button class="btn or" id="b-bonus">🎁 Bonus du jour <b>+500</b></button>
+        <button class="btn" data-ouvre="ov-boutique">🛍️ Boutique</button>
         <button class="btn or" id="b-secours" hidden>🥂 La maison vous offre <b>200</b></button>
       </div>
       <p class="records" id="h-records"></p>
@@ -73,6 +74,8 @@
   <header class="barre">
     <button class="btn petit" data-hall>‹ Salle</button>
     <h2>Blackjack</h2>
+    <button class="code-table" id="bj-code" hidden title="Copier le lien de la table"></button>
+    <button class="btn petit b-boutique" data-ouvre="ov-boutique" aria-label="Boutique">🛍️</button>
     <p class="barre-solde"><span class="piece" aria-hidden="true"></span><b class="solde" data-solde>0</b></p>
   </header>
   <div class="salle">
@@ -92,6 +95,7 @@
     </div>
   </div>
   <footer class="commandes" id="bj-commandes">
+    <p class="compte" id="bj-compte" hidden></p>
     <div class="rangee" data-phase="mise">
       <div class="plateau-jetons" id="bj-jetons"></div>
       <button class="btn" id="bj-effacer">Effacer</button>
@@ -121,6 +125,8 @@
   <header class="barre">
     <button class="btn petit" data-hall>‹ Salle</button>
     <h2>Roulette</h2>
+    <button class="code-table" id="rl-code" hidden title="Copier le lien de la table"></button>
+    <button class="btn petit b-boutique" data-ouvre="ov-boutique" aria-label="Boutique">🛍️</button>
     <p class="barre-solde"><span class="piece" aria-hidden="true"></span><b class="solde" data-solde>0</b></p>
   </header>
   <div class="salle salle-roulette">
@@ -131,11 +137,13 @@
       </div>
       <div class="historique" id="rl-historique" aria-label="Derniers numéros"></div>
     </div>
+    <div class="joueurs-rl" id="rl-joueurs" hidden></div>
     <div class="tapis-place">
       <div class="tapis" id="rl-tapis"></div>
     </div>
   </div>
   <footer class="commandes" id="rl-commandes">
+    <p class="compte" id="rl-compte" hidden></p>
     <div class="rangee">
       <div class="plateau-jetons" id="rl-jetons"></div>
       <span class="total-mise" id="rl-total">Mise : 0</span>
@@ -156,6 +164,8 @@
   <header class="barre">
     <button class="btn petit" id="pk-quitter">‹ Quitter la table</button>
     <h2 id="pk-titre">Texas Hold'em</h2>
+    <button class="code-table" id="pk-code" hidden title="Copier le lien de la table"></button>
+    <button class="btn petit b-boutique" data-ouvre="ov-boutique" aria-label="Boutique">🛍️</button>
     <p class="barre-solde" title="Votre caisse, hors table"><span class="piece" aria-hidden="true"></span><b class="solde" data-solde>0</b></p>
   </header>
   <div class="salle">
@@ -263,6 +273,52 @@
     <label class="interrupteur"><input type="checkbox" id="r-voix"> Voix des croupiers</label>
     <p class="note" id="r-nuage"></p>
     <div class="ov-bas"><button class="btn or" data-ferme>Fermer</button></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-mode" hidden>
+  <div class="panneau mode">
+    <h3 id="mode-titre">Blackjack</h3>
+    <button class="btn or large" id="mode-seul">🎩 Jouer seul</button>
+    <div class="mode-ligne">
+      <h4>En ligne, avec d’autres joueurs</h4>
+      <div class="ligne-ov">
+        <button class="btn" id="mode-creer">Créer une table</button>
+        <label class="coche"><input type="checkbox" id="mode-publique" checked> publique</label>
+      </div>
+      <div class="ligne-ov">
+        <input id="mode-code" maxlength="4" placeholder="CODE" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Code de la table">
+        <button class="btn" id="mode-rejoindre">Rejoindre</button>
+      </div>
+      <p class="note" id="mode-note"></p>
+      <h4>Tables ouvertes</h4>
+      <div class="liste-tables" id="mode-liste"><p class="note">Recherche des tables…</p></div>
+    </div>
+    <div class="ov-bas"><button class="btn" data-ferme>Retour</button></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-boutique" hidden>
+  <div class="panneau boutique">
+    <h3>La Boutique</h3>
+    <p class="fictif">🎭 Boutique fictive : aucun paiement réel, rien n’est débité. Les jetons n’ont aucune valeur.</p>
+    <div class="packs" id="packs"></div>
+    <div class="paiement" id="paiement" hidden>
+      <div class="carte-bancaire" aria-label="Carte de démonstration du casino">
+        <span class="cb-puce"></span>
+        <span class="cb-logo">VN</span>
+        <span class="cb-numero">4970 •••• •••• 1926</span>
+        <span class="cb-nom" id="cb-nom">JOUEUR</span>
+        <span class="cb-exp">12/99</span>
+        <span class="cb-demo">CARTE DE DÉMONSTRATION</span>
+      </div>
+      <div class="terminal" id="terminal">
+        <div class="ecran-tpe" id="tpe-ecran">Montant : <b id="tpe-montant">0,99 €</b></div>
+        <div class="touches-tpe" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="v"></i><i></i><i class="r"></i></div>
+      </div>
+      <button class="btn or" id="b-payer">Payer</button>
+    </div>
+    <div class="ov-bas"><button class="btn" data-ferme>Fermer</button></div>
   </div>
 </div>
 

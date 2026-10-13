@@ -422,3 +422,99 @@ button { font: inherit; color: inherit; }
 .tapis-place { width: min(100%, 980px, (100dvh - 390px) * 2.8); padding-bottom: 18px; }
 .tapis .z.douzaine, .tapis .z.simple, .tapis .z.colonne { border: 1px solid rgba(243,220,154,.55); }
 @media (max-aspect-ratio: 4/5) { .tapis-place { width: min(100%, 420px, (100dvh - 300px) * .48); } }
+
+/* ---------- en ligne ---------- */
+.code-table { border: 1px dashed rgba(243,220,154,.6); background: rgba(13,6,8,.6); color: var(--or-clair); border-radius: 8px; padding: 4px 10px; font: 700 .82rem var(--ui); letter-spacing: .12em; cursor: pointer; white-space: nowrap; }
+.code-table:hover { background: rgba(217,180,90,.15); }
+.code-table::after { content: " 🔗"; letter-spacing: 0; }
+.b-boutique { padding: 6px 10px; }
+.compte { margin: 0; font: 700 .95rem var(--titre); color: var(--or-clair); letter-spacing: .04em; }
+.compte.urgent { color: #ffb1bb; animation: pulse-txt .8s ease-in-out infinite; }
+@keyframes pulse-txt { 50% { opacity: .55; } }
+.joueurs-rl { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; width: min(100%, 980px); flex: none; }
+.joueurs-rl .joueur { padding: 3px 10px; border-radius: 999px; background: rgba(13,6,8,.7); border: 2px solid var(--c); font-size: .8rem; }
+.joueurs-rl .joueur.moi { background: rgba(217,180,90,.18); }
+.joueurs-rl .joueur.absent { opacity: .45; }
+.joueurs-rl b { color: var(--or-clair); }
+.tapis .autre { position: absolute; z-index: 3; right: calc(4% + var(--k) * 10px); top: 4%; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 999px; background: var(--c); color: #1a1012;
+  font: 800 .58rem/18px var(--ui); text-align: center; box-shadow: 0 0 0 2px rgba(255,255,255,.7), 0 2px 4px rgba(0,0,0,.5); pointer-events: none; animation: dolly .3s cubic-bezier(.3,1.6,.5,1); }
+.tapis .z.point .autre { right: auto; left: 60%; top: -40%; }
+body.hors-ligne .code-table { border-color: #ff6b7a; color: #ffb1bb; }
+
+/* blackjack à plusieurs */
+.place-bj { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: calc(var(--cw) * 1.6); padding: 4px; border-radius: 14px; transition: background .25s, box-shadow .25s; }
+.place-bj .mains { display: flex; gap: 8px; align-items: flex-end; }
+.place-bj .nom-place { font: 600 .74rem var(--ui); color: var(--doux); white-space: nowrap; max-width: 120px; overflow: hidden; text-overflow: ellipsis; }
+.place-bj .nom-place:empty { display: none; }
+.place-bj.moi .nom-place { color: var(--or-clair); }
+.place-bj.a-son-tour { background: rgba(243,220,154,.07); box-shadow: 0 0 0 2px rgba(243,220,154,.45); }
+.place-bj.absent { opacity: .5; }
+.feutre-bj.multi { --cw: clamp(34px, 5.6vmin, 60px); }
+.feutre-bj.multi .mains-joueur { gap: clamp(4px, 1.5vw, 18px); }
+
+/* poker : un vrai joueur */
+.siege.humain .avatar { box-shadow: inset 0 0 0 2px #5ab4e8; }
+
+/* fenêtre « seul ou en ligne » */
+.panneau.mode { text-align: center; }
+.btn.large { width: 100%; padding: 14px; font-size: 1.1rem; }
+.mode-ligne { margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(217,180,90,.2); }
+.mode-ligne h4 { margin: 10px 0 8px; font: 400 1rem var(--titre); color: var(--or); }
+.ligne-ov { display: flex; gap: 8px; justify-content: center; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+.coche { display: inline-flex; align-items: center; gap: 6px; font-size: .86rem; color: var(--doux); cursor: pointer; }
+.coche input { accent-color: var(--or); width: 18px; height: 18px; }
+#mode-code { width: 110px; padding: 10px 12px; border-radius: 999px; border: 1px solid rgba(217,180,90,.45); background: rgba(13,6,8,.7); color: var(--or-clair);
+  font: 700 1.05rem var(--ui); letter-spacing: .3em; text-align: center; text-transform: uppercase; }
+.liste-tables { display: grid; gap: 6px; max-height: 220px; overflow-y: auto; }
+.table-ligne { display: grid; grid-template-columns: 1fr auto; grid-template-rows: auto auto; text-align: left; gap: 0 10px; padding: 9px 12px; border-radius: 10px;
+  border: 1px solid rgba(217,180,90,.3); background: rgba(13,6,8,.5); cursor: pointer; }
+.table-ligne:hover { border-color: var(--or-clair); }
+.table-ligne b { font-family: var(--titre); color: var(--or-clair); }
+.table-ligne span { font-size: .78rem; color: var(--doux); grid-row: 2; }
+.table-ligne em { grid-row: 1 / 3; grid-column: 2; align-self: center; font: 800 .9rem var(--ui); font-style: normal; letter-spacing: .15em; color: var(--or); }
+
+/* ---------- la boutique ---------- */
+.panneau.boutique { width: min(100%, 640px); }
+.fictif { margin: 0 0 12px; padding: 8px 12px; border-radius: 10px; background: rgba(90,180,232,.1); border: 1px solid rgba(90,180,232,.35); font-size: .82rem; text-align: center; }
+.packs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.pack { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 14px 8px 12px; border-radius: 14px; cursor: pointer;
+  border: 1px solid rgba(217,180,90,.35); background: linear-gradient(180deg, #3a0d17, #1a070c); transition: transform .2s cubic-bezier(.3,1.6,.5,1), box-shadow .2s;
+  animation: monter .5s calc(var(--i) * 70ms) both cubic-bezier(.2,.8,.2,1); }
+.pack:hover { transform: translateY(-4px); }
+.pack.is-on { box-shadow: 0 0 0 2px var(--or-clair), 0 0 26px rgba(217,180,90,.35); }
+.pack b { font: 700 1.25rem var(--titre); color: var(--or-clair); }
+.pack small { color: var(--doux); font-size: .72rem; }
+.pack-nom { font-size: .74rem; color: var(--texte); opacity: .85; text-align: center; min-height: 2.2em; }
+.pack em { font-style: normal; margin-top: 4px; padding: 3px 12px; border-radius: 999px; background: var(--or); color: #2a1606; font: 800 .86rem var(--ui); }
+.pack-badge { position: absolute; top: -9px; left: 50%; transform: translateX(-50%); padding: 2px 8px; border-radius: 999px; background: #b3243a; color: #fff; font: 700 .62rem var(--ui); white-space: nowrap; text-transform: uppercase; letter-spacing: .05em; }
+.pack-art { position: relative; height: 34px; width: 60px; }
+.pack-art i { position: absolute; bottom: 0; left: 0; width: 26px; height: 26px; border-radius: 50%; background: #d9b45a; box-shadow: 0 -3px 0 #8a6a24, 0 -6px 0 #f3dc9a; }
+.pack-art i:nth-child(2) { left: 10px; background: #b3243a; box-shadow: 0 -3px 0 #7b1a2a, 0 -6px 0 #e86b7a; }
+.pack-art i:nth-child(3) { left: 20px; background: #1f8a5a; box-shadow: 0 -3px 0 #145c3c, 0 -6px 0 #5ad89a; }
+.pack-art i:nth-child(4) { left: 30px; bottom: 6px; background: #7b3fc4; box-shadow: 0 -3px 0 #4a2380, 0 -6px 0 #b38bff; }
+.pack-art i:nth-child(5) { left: 16px; bottom: 12px; background: #1c1a20; box-shadow: 0 -3px 0 #000, 0 -6px 0 #f3dc9a; }
+.paiement { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(217,180,90,.2); animation: monter .35s both; }
+.paiement #b-payer { grid-column: 1 / -1; justify-self: center; min-width: 200px; }
+.carte-bancaire { position: relative; aspect-ratio: 1.586; width: min(100%, 300px); border-radius: 14px; padding: 14px; color: #f3dc9a; overflow: hidden;
+  background: radial-gradient(120% 90% at 0 0, #6b1a2a, #2a0a12 60%, #0d0608); box-shadow: 0 14px 30px rgba(0,0,0,.55), inset 0 0 0 1px rgba(243,220,154,.35);
+  transition: transform .6s cubic-bezier(.4,0,.2,1); user-select: none; }
+.carte-bancaire::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(115deg, transparent 0 18px, rgba(243,220,154,.05) 18px 19px); }
+.carte-bancaire.inseree { transform: translateX(30%) rotate(-4deg) scale(.92); }
+.cb-puce { position: absolute; left: 16px; top: 38%; width: 40px; height: 30px; border-radius: 6px; background: linear-gradient(135deg, #f3dc9a, #b8913c); box-shadow: inset 0 0 0 1px #8a6a24; }
+.cb-logo { position: absolute; right: 16px; top: 12px; font: italic 700 1.4rem var(--titre); }
+.cb-numero { position: absolute; left: 16px; bottom: 34%; font: 700 1rem var(--ui); letter-spacing: .14em; }
+.cb-nom { position: absolute; left: 16px; bottom: 12px; font: 600 .78rem var(--ui); letter-spacing: .1em; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cb-exp { position: absolute; right: 16px; bottom: 12px; font: 600 .78rem var(--ui); }
+.cb-demo { position: absolute; right: -32px; top: 22px; transform: rotate(35deg); padding: 2px 34px; background: rgba(90,180,232,.85); color: #071420; font: 800 .5rem var(--ui); letter-spacing: .08em; }
+.terminal { width: 128px; padding: 10px; border-radius: 16px 16px 22px 22px; background: linear-gradient(180deg, #2b2b31, #141418); box-shadow: 0 12px 24px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.1); }
+.ecran-tpe { min-height: 56px; padding: 6px; border-radius: 6px; background: #b8d8a8; color: #16301a; font: 600 .72rem/1.3 ui-monospace, Consolas, monospace; display: grid; place-items: center; text-align: center; box-shadow: inset 0 2px 6px rgba(0,0,0,.35); }
+.ecran-tpe.ok { background: #8fe0a0; font-weight: 800; }
+.touches-tpe { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 8px; }
+.touches-tpe i { height: 12px; border-radius: 4px; background: #3c3c44; box-shadow: 0 2px 0 #0a0a0c; }
+.touches-tpe i.v { background: #2f8a4a; } .touches-tpe i.r { background: #b3243a; }
+@media (max-width: 560px) {
+  .packs { grid-template-columns: repeat(2, 1fr); }
+  .paiement { grid-template-columns: 1fr; justify-items: center; }
+  .barre .code-table { padding: 3px 6px; font-size: .7rem; letter-spacing: .05em; }
+  .barre .b-boutique { display: none; }
+}

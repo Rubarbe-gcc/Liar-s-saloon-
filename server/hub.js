@@ -35,8 +35,9 @@ import * as brasier from './brasier.js';
 import * as skullking from './skullking.js';
 import * as fiesta from './fiesta.js';
 import * as street from './street.js';
+import * as velours from './velours.js';
 
-const GAMES = { saloon, zenith, echo, brasier, skullking, fiesta, street };
+const GAMES = { saloon, zenith, echo, brasier, skullking, fiesta, street, velours };
 const DEFAULT_GAME = 'saloon';
 
 /** Temps pendant lequel une place attend son joueur après une coupure. */

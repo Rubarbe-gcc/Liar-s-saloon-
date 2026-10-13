@@ -16,7 +16,9 @@ export const SERVEUR_JEUX = 'https://insert-coin-jeux.onrender.com';
 
 /** L'adresse WebSocket des parties en ligne. */
 export function adresseWS() {
-  if (SERVEUR_JEUX) return `${SERVEUR_JEUX.replace(/^http/, 'ws').replace(/\/+$/, '')}/api/ws`;
+  // En développement (localhost), le serveur local fait aussi les parties en ligne.
+  const local = typeof location !== 'undefined' && /^(localhost|127.0.0.1)$/.test(location.hostname);
+  if (SERVEUR_JEUX && !local) return `${SERVEUR_JEUX.replace(/^http/, 'ws').replace(/\/+$/, '')}/api/ws`;
   return `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/api/ws`;
 }
 
