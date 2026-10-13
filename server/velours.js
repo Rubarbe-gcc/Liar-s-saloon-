@@ -35,7 +35,7 @@ const JEUX = ['blackjack', 'roulette', 'poker'];
 const MAX = { blackjack: BJ.PLACES, roulette: 8, poker: 5 };
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 export const ABSENCE_MS = 2 * 60 * 1000;
-const MISES_MS = { blackjack: 15000, roulette: 20000 };
+const MISES_MS = { blackjack: 15000, roulette: 30000 };
 const TOUR_MS = { blackjack: 25000, poker: 30000 };
 const ASSURANCE_MS = 10000;
 const LANCER_MS = 7600;
@@ -106,6 +106,8 @@ export function duree(jeu, evts) {
   return d;
 }
 
+/** Un seul joueur connecté à la table : pas de compte à rebours, la partie part quand il est prêt. */
+const seul = (salle) => salle.membres.filter((m) => m.conn).length <= 1;
 const membreDe = (salle, s) => salle.membres.find((m) => m.s === s) || null;
 const listeMembres = (salle) => salle.membres.map((m) => ({ s: m.s, nom: m.nom, avatar: m.avatar, absent: !m.conn }));
 
@@ -168,7 +170,7 @@ function entrer(c, salle, o) {
   envoyer(m, { t: 'entre', code: salle.code, jeu: salle.jeu, jeton: m.jeton });
   envoyer(m, etat(salle, m));
   diffuser(salle, { t: 'membres', liste: listeMembres(salle), arrive: m.nom });
-  if (salle.jeu === 'roulette' && !salle.minuteur) tourRoulette(salle);
+  if (salle.jeu === 'roulette' && !salle.minuteur && salle.phase === 'mises') tourRoulette(salle);
   if (salle.jeu === 'poker' && !salle.minuteur) etapePoker(salle);
 }
 
@@ -258,7 +260,7 @@ function miserBlackjack(salle, m, mise) {
   if (!BJ.miser(b, m.s, entier(mise, 500))) return;
   diffuser(salle, { t: 'mise', s: m.s, mise: b.sieges[m.s].mise });
   const misent = b.sieges.some((x) => x?.mise > 0);
-  if (misent && !salle.finMises) {
+  if (misent && !salle.finMises && !seul(salle)) {
     salle.finMises = Date.now() + MISES_MS.blackjack * vitesse;
     diffuser(salle, { t: 'compte', reste: MISES_MS.blackjack * vitesse });
     programmer(salle, MISES_MS.blackjack, () => donnerBlackjack(salle));
@@ -321,6 +323,12 @@ function actionBlackjack(salle, m, msg) {
 
 function tourRoulette(salle) {
   salle.phase = 'mises';
+  if (seul(salle)) {
+    salle.finMises = 0;
+    clearTimeout(salle.minuteur); salle.minuteur = null;
+    for (const m of salle.membres) m.pret = false;
+    return diffuser(salle, { t: 'compte', reste: 0, phase: 'mises' });
+  }
   salle.finMises = Date.now() + MISES_MS.roulette * vitesse;
   for (const m of salle.membres) m.pret = false;
   diffuser(salle, { t: 'compte', reste: MISES_MS.roulette * vitesse, phase: 'mises' });

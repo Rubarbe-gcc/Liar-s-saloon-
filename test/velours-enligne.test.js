@@ -152,3 +152,21 @@ test('le poker : des habitués autour du joueur, les cartes des autres restent c
   await attendre(50);
   assert.ok(!V._salles.has(code));
 });
+
+test('seul à une table : pas de compte à rebours, la partie part dès qu’on est prêt', async () => {
+  const a = joueur('Solo');
+  a.dit({ t: 'creer', jeu: 'blackjack', nom: 'Solo' });
+  a.dit({ t: 'miser', mise: 10 });
+  assert.ok(!a.tous('compte').some((m) => m.reste > 0), 'pas de compte à rebours quand on est seul');
+  a.dit({ t: 'pret' });
+  await quand(() => a.evts().some((e) => e.type === 'donne'));
+  a.dit({ t: 'quitter' });
+
+  const r = joueur('Solo');
+  r.dit({ t: 'creer', jeu: 'roulette', nom: 'Solo' });
+  assert.ok(!r.tous('compte').some((m) => m.reste > 0));
+  r.dit({ t: 'paris', paris: { rouge: 5 } });
+  r.dit({ t: 'pret' });
+  await quand(() => r.dernier('lance'));
+  r.dit({ t: 'quitter' });
+});

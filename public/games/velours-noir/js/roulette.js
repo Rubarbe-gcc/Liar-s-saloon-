@@ -556,7 +556,7 @@ export function monterRoulette(app) {
   }
 
   function libellerLancer() {
-    $('rl-lancer').textContent = enLigne ? 'Je suis prêt' : 'Lancer la bille';
+    $('rl-lancer').textContent = enLigne && membres.filter((m) => !m.absent).length > 1 ? 'Je suis prêt' : 'Lancer la bille';
   }
 
   EL.ecouter((m) => {
@@ -584,6 +584,7 @@ export function monterRoulette(app) {
     switch (m.t) {
       case 'membres':
         membres = m.liste;
+        if (!occupe) libellerLancer();
         for (const s of Object.keys(autres)) if (!membres.some((x) => x.s === Number(s))) delete autres[s];
         dessinerAutres(); dessinerJoueurs();
         if (m.arrive && m.arrive !== EL.identite().nom) croupier.dire(`Bienvenue, ${m.arrive}.`, { voix: false });

@@ -104,7 +104,7 @@ export function monterBlackjack(app) {
     }
     if (p === 'mise') {
       dessinerCercle();
-      $('bj-distribuer').textContent = enLigne ? 'Je suis prêt' : 'Distribuer';
+      $('bj-distribuer').textContent = enLigne && accompagne() ? 'Je suis prêt' : 'Distribuer';
     }
     if (p === 'fin') $('bj-rejouer').textContent = derniere <= app.solde() ? `Rejouer ${fx.nombre(derniere)}` : 'Rejouer';
   }
@@ -210,6 +210,8 @@ export function monterBlackjack(app) {
     return el;
   }
 
+  /** D'autres joueurs connectés à la table ? */
+  const accompagne = () => membres.filter((m) => !m.absent).length > 1;
   const nomDe = (s) => (s === moi ? 'vous' : membres.find((m) => m.s === s)?.nom || 'un joueur');
 
   /** Rejoue des événements de la table (les uns après les autres, même s'ils arrivent pendant qu'on joue les précédents). */
@@ -454,7 +456,7 @@ export function monterBlackjack(app) {
       dessinerCercle();
       EL.envoyer({ t: 'miser', mise });
       EL.envoyer({ t: 'pret' });
-      phase('attente', 'Vous êtes prêt. On attend les autres…');
+      phase('attente', accompagne() ? 'Vous êtes prêt. On attend les autres…' : 'Distribution…');
       return;
     }
     BJ.miser(b, 0, montant);
@@ -565,6 +567,7 @@ export function monterBlackjack(app) {
       case 'membres': {
         membres = m.liste;
         dessinerPlaces();
+        if (phaseUI === 'mise') phase('mise');
         if (m.arrive && m.arrive !== EL.identite().nom) croupier?.dire(`Bienvenue, ${m.arrive}.`, { voix: false });
         if (m.part) croupier?.dire(`${m.part} quitte la table.`, { voix: false });
         break;

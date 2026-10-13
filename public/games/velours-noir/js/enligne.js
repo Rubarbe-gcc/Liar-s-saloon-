@@ -51,7 +51,7 @@ export function connecter() {
         const p = placeNotee();
         if (p) cx.envoyer({ t: 'revenir', code: p.code, jeton: p.jeton });
         const a = enAttente; enAttente = [];
-        for (const m of a) cx.envoyer(m);
+        for (const { _t, ...m } of a) if (!_t || Date.now() - _t < 30000) cx.envoyer(m);
         emettre({ t: 'ouverte' });
       },
     });
@@ -62,7 +62,13 @@ export function connecter() {
 
 export const connecte = () => !!cx?.ouverte();
 export const etatConnexion = () => statut;
-export function envoyer(m) { return !!cx?.envoyer(m); }
+/** Envoie ; pendant une coupure, le message attend la reconnexion (30 s au plus). */
+export function envoyer(m) {
+  if (cx?.ouverte()) return cx.envoyer(m);
+  enAttente.push({ ...m, _t: Date.now() });
+  connecter();
+  return true;
+}
 /** Envoie dès que possible (la connexion peut être en train de s'ouvrir, le serveur de se réveiller). */
 function demander(m) {
   connecter();
