@@ -105,9 +105,15 @@ export function monterModerateur(app, { ouvrirCroupier } = {}) {
     const f = new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
     $('mod-journal').innerHTML = lire(CLE_JOURNAL, []).slice(0, 12).map((x) => `<li><time>${f.format(x.t)}</time> ${x.action}${x.montant ? ` <b>${x.montant}</b>` : ''}</li>`).join('') || '<li>Rien pour l’instant.</li>';
   }
+  /** Ce qu'on a en ce moment (pour savoir combien on peut rendre). */
+  function majSoldes() {
+    $('mod-soldes').textContent = `En ce moment : ${fx.nombre(app.solde())} jetons dans la caisse · ${C.euros(app.compte().solde)} sur le compte.`;
+  }
+
   function ouvrirMarche() {
     if (!actif) return;
     dessinerJournal();
+    majSoldes();
     $('ov-marche').hidden = false;
   }
 
@@ -122,6 +128,7 @@ export function monterModerateur(app, { ouvrirCroupier } = {}) {
       sfx.jetons(10);
       fx.texte(`+${fx.nombre(n)}`, b);
       noter('Jetons', `+${fx.nombre(n)}`);
+      majSoldes();
     }
     if (b.dataset.euros) {
       const n = b.dataset.euros === 'libre' ? montantLibre('mod-euros') : Number(b.dataset.euros);
@@ -131,6 +138,28 @@ export function monterModerateur(app, { ouvrirCroupier } = {}) {
       sfx.gain();
       fx.texte(`+${n} €`, b);
       noter('Euros', `+${fx.nombre(n)} €`);
+      majSoldes();
+    }
+    // rendre à la direction : jamais plus que ce qu'on a
+    if (b.dataset.rendreJetons) {
+      const voulu = b.dataset.rendreJetons === 'libre' ? montantLibre('mod-rendre-jetons') : Number(b.dataset.rendreJetons);
+      const n = Math.min(voulu, app.solde());
+      if (!n || !app.debiter(n)) { fx.texte('Caisse vide', b, 'perte'); return; }
+      sfx.jetons(6);
+      fx.texte(`−${fx.nombre(n)}`, b, 'perte');
+      noter('Jetons rendus', `−${fx.nombre(n)}`);
+      majSoldes();
+    }
+    if (b.dataset.rendreEuros) {
+      const voulu = (b.dataset.rendreEuros === 'libre' ? montantLibre('mod-rendre-euros') : Number(b.dataset.rendreEuros)) * 100;
+      const compte = app.compte();
+      const n = Math.min(voulu, Math.max(0, compte.solde));
+      if (!n || !C.payer(compte, n, 'Remboursement à la direction')) { fx.texte('Compte vide', b, 'perte'); return; }
+      app.sauverCompte();
+      sfx.clic();
+      fx.texte(`−${C.euros(n)}`, b, 'perte');
+      noter('Euros rendus', `−${C.euros(n)}`);
+      majSoldes();
     }
     if (b.dataset.tournoi) {
       EL.envoyer({ t: 'tournoi-demo', type: b.dataset.tournoi });

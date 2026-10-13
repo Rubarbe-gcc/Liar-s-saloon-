@@ -438,6 +438,16 @@
       <button class="btn" data-euros="100">+100 €</button><button class="btn" data-euros="1000">+1 000 €</button><button class="btn" data-euros="10000">+10 000 €</button>
       <input type="number" id="mod-euros" min="0" placeholder="Montant" aria-label="Euros, montant libre"><button class="btn or" data-euros="libre">Virer</button>
     </div>
+    <h4>Rendre à la direction</h4>
+    <div class="ligne-ov">
+      <button class="btn rouge" data-rendre-jetons="1000">−1 000 jetons</button><button class="btn rouge" data-rendre-jetons="10000">−10 000</button><button class="btn rouge" data-rendre-jetons="100000">−100 000</button>
+      <input type="number" id="mod-rendre-jetons" min="0" placeholder="Jetons" aria-label="Jetons à rendre"><button class="btn rouge" data-rendre-jetons="libre">Rendre</button>
+    </div>
+    <div class="ligne-ov">
+      <button class="btn rouge" data-rendre-euros="100">−100 €</button><button class="btn rouge" data-rendre-euros="1000">−1 000 €</button><button class="btn rouge" data-rendre-euros="10000">−10 000 €</button>
+      <input type="number" id="mod-rendre-euros" min="0" placeholder="Euros" aria-label="Euros à rendre"><button class="btn rouge" data-rendre-euros="libre">Rendre</button>
+    </div>
+    <p class="note" id="mod-soldes"></p>
     <h4>Lancer un tournoi maintenant</h4>
     <div class="ligne-ov">
       <button class="btn" data-tournoi="mardi">Partie du mardi</button><button class="btn" data-tournoi="coupe">Coupe du Velours</button>
