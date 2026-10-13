@@ -211,6 +211,28 @@
   </footer>
 </section>
 
+<!-- ======================= CROUPIER D'UN SOIR ======================= -->
+<section class="ecran ecran-table" id="s-service">
+  <header class="barre">
+    <button class="btn petit" id="sv-quitter">‹ Fin du service</button>
+    <h2 id="sv-titre">Croupier d’un soir</h2>
+    <p class="sv-score"><span id="sv-tour"></span><span>💰 <b id="sv-pourboires">0</b></span><span>✗ <b id="sv-erreurs">0</b></span></p>
+  </header>
+  <div class="salle salle-fp">
+    <div class="clients-fp" id="sv-clients"></div>
+    <div class="scene-fp">
+      <div class="plateau-fp" id="sv-plateau"></div>
+    </div>
+    <div class="roue-fp" id="sv-roue-place" hidden><canvas id="sv-roue" width="1440" height="1440"></canvas></div>
+    <p class="consigne" id="sv-consigne"></p>
+    <div class="bras-fp" aria-hidden="true">
+      <svg class="bras bras-g" viewBox="0 0 200 260"><path d="M40 260 L70 120 Q76 96 100 96 L132 98 Q150 100 146 124 L120 260 Z" fill="#16151a"/><path d="M70 120 Q76 96 100 96 L132 98" stroke="#d9b45a" stroke-width="5" fill="none"/><rect x="64" y="84" width="84" height="22" rx="9" fill="#f4ead6"/><path d="M80 86 C70 50 96 18 122 24 C150 30 156 60 146 86 Z" fill="#e8b896"/><path d="M96 30 L92 6 M110 24 L110 0 M124 26 L130 4 M138 34 L148 16" stroke="#e8b896" stroke-width="12" stroke-linecap="round"/></svg>
+      <svg class="bras bras-d" viewBox="0 0 200 260"><path d="M160 260 L130 120 Q124 96 100 96 L68 98 Q50 100 54 124 L80 260 Z" fill="#16151a"/><path d="M130 120 Q124 96 100 96 L68 98" stroke="#d9b45a" stroke-width="5" fill="none"/><rect x="52" y="84" width="84" height="22" rx="9" fill="#f4ead6"/><path d="M120 86 C130 50 104 18 78 24 C50 30 44 60 54 86 Z" fill="#e8b896"/><path d="M104 30 L108 6 M90 24 L90 0 M76 26 L70 4 M62 34 L52 16" stroke="#e8b896" stroke-width="12" stroke-linecap="round"/></svg>
+    </div>
+  </div>
+  <footer class="commandes" id="sv-commandes"></footer>
+</section>
+
 <!-- ============================ FENÊTRES ============================ -->
 <div class="ov" id="ov-cave" hidden>
   <div class="panneau">
@@ -391,6 +413,61 @@
 </div>
 
 <button class="toast-tournoi" id="toast-tournoi" hidden><b>🏆 Tournoi</b><small></small></button>
+
+<div class="ov" id="ov-mod-entree" hidden>
+  <div class="panneau mod-entree">
+    <h3>🗝️ Réservé</h3>
+    <p class="note">Code de la direction</p>
+    <input type="password" id="mod-code" autocomplete="off" aria-label="Code de modérateur">
+    <p class="note" id="mod-msg"></p>
+    <div class="ov-bas"><button class="btn" data-ferme>Fermer</button><button class="btn or" id="mod-valider">Entrer</button></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-marche" hidden>
+  <div class="panneau marche">
+    <p class="neon-reserve">Réservé</p>
+    <h3>Le Marché secret</h3>
+    <h4>Jetons pour ma caisse</h4>
+    <div class="ligne-ov">
+      <button class="btn" data-jetons="1000">+1 000</button><button class="btn" data-jetons="10000">+10 000</button><button class="btn" data-jetons="100000">+100 000</button>
+      <input type="number" id="mod-jetons" min="0" placeholder="Montant" aria-label="Jetons, montant libre"><button class="btn or" data-jetons="libre">Créditer</button>
+    </div>
+    <h4>Euros sur mon compte</h4>
+    <div class="ligne-ov">
+      <button class="btn" data-euros="100">+100 €</button><button class="btn" data-euros="1000">+1 000 €</button><button class="btn" data-euros="10000">+10 000 €</button>
+      <input type="number" id="mod-euros" min="0" placeholder="Montant" aria-label="Euros, montant libre"><button class="btn or" data-euros="libre">Virer</button>
+    </div>
+    <h4>Lancer un tournoi maintenant</h4>
+    <div class="ligne-ov">
+      <button class="btn" data-tournoi="mardi">Partie du mardi</button><button class="btn" data-tournoi="coupe">Coupe du Velours</button>
+      <button class="btn" data-tournoi="nuit">Nuit des Flambeurs</button><button class="btn or" data-tournoi="grand">Grand Prix</button>
+    </div>
+    <div class="ligne-ov"><button class="btn" id="mod-succes">Débloquer les succès du casino</button></div>
+    <h4>Journal</h4>
+    <ul class="journal" id="mod-journal"></ul>
+    <p class="note">La caisse est gardée dans le navigateur : ce marché est un outil de modération, pas une protection contre la triche.</p>
+    <div class="ov-bas"><button class="btn" id="mod-sortir">Quitter le mode modérateur</button><button class="btn or" data-ferme>Fermer</button></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-service-choix" hidden>
+  <div class="panneau">
+    <h3>Croupier d’un soir</h3>
+    <p class="note">Dix donnes ou dix tours face aux habitués. Les pourboires vont dans votre caisse.</p>
+    <div class="ligne-ov"><button class="btn or" data-service="bj">🂡 Table de blackjack</button><button class="btn or" data-service="rl">🎡 Table de roulette</button></div>
+    <div class="ov-bas"><button class="btn" data-ferme>Retour</button></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-service-bilan" hidden>
+  <div class="panneau tournoi-fin">
+    <h3>Fin du service</h3>
+    <p class="etoiles" id="sb-etoiles">★★★☆☆</p>
+    <p id="sb-details"></p>
+    <div class="ov-bas"><button class="btn or" data-ferme>Retour au hall</button></div>
+  </div>
+</div>
 
 <div class="rideau" id="rideau" aria-hidden="true"></div>
 

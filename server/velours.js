@@ -26,6 +26,7 @@
  *     mise, paris, lance { numero }, tour, piles { jetons }, erreur { msg }
  */
 
+import crypto from 'node:crypto';
 import * as BJ from '../public/shared/casino/blackjack.js';
 import * as P from '../public/shared/casino/poker.js';
 import * as R from '../public/shared/casino/roulette.js';
@@ -745,6 +746,87 @@ function finirTournoi(tn) {
 export function arreterTournois() { clearTimeout(prochain); if (tournoi) clearTimeout(tournoi.minuteur); tournoi = null; }
 export const tournoiEnCours = () => tournoi;
 
+/* ------------------------------------------------------------------ */
+/* Le modérateur                                                       */
+/* ------------------------------------------------------------------ */
+
+/*
+ * Le code du modérateur vit dans une variable d'environnement du serveur
+ * (MODERATEUR_CODE, sur Render) — jamais dans le code du site. Le bon code
+ * donne un jeton signé (HMAC), valable 30 jours, que l'écran garde et
+ * présente à chaque connexion. Sans code configuré, personne n'est
+ * modérateur — sauf en développement (ni Render ni Vercel), où le code
+ * « moderateur » permet d'essayer.
+ *
+ * Le compte : MODERATEUR_PROFIL (le code de profil de l'arcade du modérateur).
+ * Réglé, il réserve tout à ce seul profil ; le jeton est lié au profil.
+ *
+ * Messages : → moderateur { code, profil } ou { jeton, profil }   ← moderateur { ok, jeton?, msg? }
+ */
+
+const JOUR = 24 * 60 * 60 * 1000;
+const DUREE_JETON = 30 * JOUR;
+const ESSAIS_MAX = 5;            // par connexion et par minute
+
+function codeModerateur() {
+  const env = typeof process !== 'undefined' ? process.env : {};
+  if (env.MODERATEUR_CODE) return String(env.MODERATEUR_CODE);
+  return !env.RENDER && !env.VERCEL ? 'moderateur' : null;
+}
+
+/**
+ * Le compte du modérateur : son code de profil de l'arcade (MODERATEUR_PROFIL).
+ * S'il est réglé, aucun autre profil ne peut devenir modérateur, même avec le code.
+ */
+function profilModerateur() {
+  const env = typeof process !== 'undefined' ? process.env : {};
+  return env.MODERATEUR_PROFIL ? normaliserProfil(env.MODERATEUR_PROFIL) : null;
+}
+const normaliserProfil = (p) => String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 20);
+
+/** Le jeton est lié au profil : il ne sert à rien sur un autre compte. */
+function signer(exp, code, profil) {
+  return crypto.createHmac('sha256', code).update(`velours-moderateur|${exp}|${profil}`).digest('base64url');
+}
+
+const egaux = (a, b) => {
+  const x = Buffer.from(String(a)), y = Buffer.from(String(b));
+  return x.length === y.length && crypto.timingSafeEqual(x, y);
+};
+
+/** Un jeton de modérateur encore valable ? */
+export function jetonValideModerateur(jeton, profil) {
+  const code = codeModerateur();
+  const p = normaliserProfil(profil);
+  if (!code || typeof jeton !== 'string' || !p) return false;
+  const attendu = profilModerateur();
+  if (attendu && p !== attendu) return false;
+  const [exp, sig] = jeton.split('.');
+  return Number(exp) > Date.now() && egaux(sig || '', signer(exp, code, p));
+}
+
+function moderateur(c, msg) {
+  const code = codeModerateur();
+  const repondre = (o) => c.conn.send({ g: 'velours', t: 'moderateur', ...o });
+  if (!code) return repondre({ ok: false, msg: 'Aucun code de modérateur n’est configuré sur le serveur.' });
+  const profil = normaliserProfil(msg.profil);
+  if (msg.jeton !== undefined) {
+    c.moderateur = jetonValideModerateur(msg.jeton, profil);
+    return repondre({ ok: c.moderateur, verif: true });
+  }
+  const maintenant = Date.now();
+  c.essais = (c.essais || []).filter((t) => maintenant - t < 60000);
+  if (c.essais.length >= ESSAIS_MAX) return repondre({ ok: false, msg: 'Trop d’essais. Réessayez dans une minute.' });
+  c.essais.push(maintenant);
+  // sur un autre compte que celui de la direction : refusé, et on ne dit pas si le code était bon
+  const attendu = profilModerateur();
+  if (!profil || (attendu && profil !== attendu)) { c.moderateur = false; return repondre({ ok: false, msg: 'Accès refusé.' }); }
+  if (typeof msg.code !== 'string' || !egaux(msg.code.trim(), code)) { c.moderateur = false; return repondre({ ok: false, msg: 'Accès refusé.' }); }
+  c.moderateur = true;
+  const exp = String(maintenant + DUREE_JETON);
+  repondre({ ok: true, jeton: `${exp}.${signer(exp, code, profil)}` });
+}
+
 planifierTournoi();
 
 /* ------------------------------------------------------------------ */
@@ -770,8 +852,13 @@ export function handleMessage(conn, msg) {
       return;
     case 'tournoi-inscrire': return inscrire(c, msg);
     // en développement seulement (ni Render ni Vercel) : un tournoi tout de suite, pour essayer
+    case 'moderateur': return moderateur(c, msg);
+    // un tournoi tout de suite : pour le modérateur (ou en développement)
     case 'tournoi-demo':
-      if (typeof process !== 'undefined' && !process.env.RENDER && !process.env.VERCEL) annoncerTournoi(msg.type, 15000);
+      if (c.moderateur || (typeof process !== 'undefined' && !process.env.RENDER && !process.env.VERCEL)) {
+        if (tournoi) conn.send({ g: 'velours', t: 'erreur', msg: 'Un tournoi est déjà en cours.' });
+        else annoncerTournoi(msg.type, c.moderateur ? 30000 : 15000);
+      }
       return;
     case 'tournoi-desinscrire': return desinscrire(c, msg);
     case 'ping': return conn.send({ t: 'pong' });

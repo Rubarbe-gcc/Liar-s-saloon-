@@ -248,3 +248,31 @@ test('le compte reste logique : abonnements une fois par mois, pas de doublon da
   // les jours de la semaine : pas de « pizza du vendredi » un mardi
   for (const o of c.ops) if (/vendredi/.test(o.l)) assert.equal(new Date(`${o.d}T12:00`).getDay(), 5, o.l);
 });
+
+import * as SV from '../public/shared/casino/service.js';
+
+test('croupier d’un soir : ce que le croupier doit faire et payer', () => {
+  // le croupier tire à 16, reste à 17 (même souple)
+  assert.equal(SV.croupierTire(c('Xs 6h')), true);
+  assert.equal(SV.croupierTire(c('As 6h')), false);
+  // les règlements : blackjack 3 pour 2, gagné 1 pour 1, égalité, perdu, brûlé
+  assert.deepEqual(SV.reglementBJ(c('As Rh'), 20, c('Xs 9h')), { geste: 'payer', gain: 30, res: 'blackjack' });
+  assert.deepEqual(SV.reglementBJ(c('Xs 9h'), 20, c('Xs 8h')), { geste: 'payer', gain: 20, res: 'gagne' });
+  assert.deepEqual(SV.reglementBJ(c('Xs 8h'), 20, c('9s 9h')), { geste: 'egalite', gain: 0, res: 'egalite' });
+  assert.equal(SV.reglementBJ(c('Xs 7h'), 20, c('Xs 8h')).geste, 'ramasser');
+  assert.equal(SV.reglementBJ(c('Xs 7h 9d'), 20, c('Xs 6h Xd')).geste, 'ramasser', 'brûlé perd même si le croupier saute');
+  assert.equal(SV.reglementBJ(c('Xs 7h'), 20, c('Xs 6h Xd')).geste, 'payer', 'le croupier saute');
+  // les clients jouent avec bon sens
+  assert.equal(SV.decisionClient(c('Xs 2h'), c('7d')[0]), 'carte');
+  assert.equal(SV.decisionClient(c('Xs 2h'), c('5d')[0]), 'reste');
+  assert.equal(SV.decisionClient(c('6s 5h'), c('5d')[0]), 'double');
+  assert.equal(SV.decisionClient(c('Xs 8h'), c('Xd')[0]), 'reste');
+  // la roulette : gains et mises des clients bien formées
+  assert.equal(SV.gainRoulette('p17', 10, 17), 350);
+  assert.equal(SV.gainRoulette('rouge', 10, 0), 0);
+  const rng = makeRng(5);
+  for (let k = 0; k < 200; k++) for (const [id, v] of Object.entries(SV.parisClient(rng, 'flambeur'))) { assert.ok(R.PAR_ID[id], id); assert.ok(v > 0); }
+  // la note du service
+  assert.equal(SV.etoiles({ gestes: 40, erreurs: 0, secondes: 60 }), 5);
+  assert.ok(SV.etoiles({ gestes: 40, erreurs: 20, secondes: 400 }) <= 2);
+});

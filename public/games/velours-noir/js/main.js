@@ -17,6 +17,8 @@ import { monterPoker } from './poker.js';
 import { monterBoutique } from './boutique.js';
 import { monterCompte } from './moncompte.js';
 import { monterTournois } from './tournois.js';
+import { monterModerateur } from './moderateur.js';
+import { monterService } from './service.js';
 import * as EL from './enligne.js';
 
 const $ = (id) => document.getElementById(id);
@@ -200,6 +202,8 @@ tables['s-roulette'] = monterRoulette(app);
 tables['s-poker'] = monterPoker(app, aller);
 const moncompte = monterCompte(app);
 const boutique = monterBoutique(app, moncompte);
+tables['s-service'] = monterService(app, aller);
+const moderation = monterModerateur(app, { ouvrirCroupier: () => { $('ov-service-choix').hidden = false; } });
 monterTournois(app, { aller, ecranCourant: () => courant, attendre: () => tables['s-poker'].file() });
 
 /* ------------------------------------------------------------------ */
@@ -232,6 +236,13 @@ document.querySelectorAll('.porte').forEach((p) => p.addEventListener('click', (
   sfx.clic();
   ouvrirMode(p.dataset.jeu);
 }));
+$('ov-service-choix').addEventListener('click', (e) => {
+  const b = e.target.closest('[data-service]');
+  if (!b || !moderation.actif()) return;
+  $('ov-service-choix').hidden = true;
+  tables['s-service'].preparer(b.dataset.service);
+  aller('s-service');
+});
 $('mode-creer').addEventListener('click', () => {
   const publique = $('mode-publique').checked;
   if (jeuChoisi === 'poker') {

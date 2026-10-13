@@ -124,6 +124,9 @@ function dessiner(g, angleRoue, bille) {
 const easeOut2 = (k) => 1 - (1 - k) ** 2;
 const easeOut3 = (k) => 1 - (1 - k) ** 3;
 
+/** La roue, pour d'autres écrans (le mode croupier). */
+export const ROUE_DESSIN = { dessiner, T, C, PAS, RAYON_PISTE, RAYON_CASE, easeOut2, easeOut3 };
+
 /* ------------------------------------------------------------------ */
 /* La table                                                            */
 /* ------------------------------------------------------------------ */

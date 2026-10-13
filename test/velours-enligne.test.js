@@ -251,3 +251,37 @@ test('un tournoi à deux tables : les blindes montent, les tables fusionnent en 
   await quand(() => !V.tournoiEnCours(), 20000);
   V.arreterTournois();
 });
+
+test('le modérateur : code vérifié par le serveur, jeton lié au compte, essais limités', () => {
+  V.arreterTournois();
+  const a = joueur('Mod');
+  a.dit({ t: 'moderateur', code: 'faux', profil: 'MONPROFIL1' });
+  assert.equal(a.dernier('moderateur').ok, false);
+  a.dit({ t: 'moderateur', code: 'moderateur', profil: 'MONPROFIL1' });   // le code de développement
+  const r = a.dernier('moderateur');
+  assert.equal(r.ok, true);
+  assert.ok(V.jetonValideModerateur(r.jeton, 'MONPROFIL1'));
+  assert.ok(!V.jetonValideModerateur(r.jeton, 'AUTREPROF2'), 'le jeton ne vaut rien sur un autre compte');
+  assert.ok(!V.jetonValideModerateur(r.jeton.replace(/.$/, (x) => (x === 'A' ? 'B' : 'A')), 'MONPROFIL1'), 'un jeton retouché ne vaut rien');
+  assert.ok(!V.jetonValideModerateur(`${Date.now() - 1000}.${r.jeton.split('.')[1]}`, 'MONPROFIL1'), 'un jeton périmé ne vaut rien');
+  const b = joueur('Autre');
+  b.dit({ t: 'moderateur', jeton: r.jeton, profil: 'AUTREPROF2' });
+  assert.equal(b.dernier('moderateur').ok, false);
+  b.dit({ t: 'moderateur', jeton: r.jeton, profil: 'MONPROFIL1' });
+  assert.equal(b.dernier('moderateur').ok, true);
+  b.dit({ t: 'tournoi-demo', type: 'nuit' });
+  assert.equal(V.tournoiEnCours().nom, 'Nuit des Flambeurs');
+  V.arreterTournois();
+  // le compte du modérateur réglé sur le serveur : un autre profil est refusé, même avec le bon code
+  process.env.MODERATEUR_PROFIL = 'MONPROFIL1';
+  try {
+    const x = joueur('Intrus');
+    x.dit({ t: 'moderateur', code: 'moderateur', profil: 'INTRUS9999' });
+    assert.equal(x.dernier('moderateur').ok, false);
+    x.dit({ t: 'moderateur', code: 'moderateur', profil: 'monprofil1' });
+    assert.equal(x.dernier('moderateur').ok, true);
+  } finally { delete process.env.MODERATEUR_PROFIL; }
+  const c = joueur('Curieux');
+  for (let k = 0; k < 6; k++) c.dit({ t: 'moderateur', code: `essai${k}`, profil: 'CURIEUX123' });
+  assert.match(c.dernier('moderateur').msg, /Trop d’essais/);
+});
