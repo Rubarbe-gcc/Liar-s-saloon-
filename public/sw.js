@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v94';
+const VERSION = 'v95';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -34,6 +34,22 @@ const SHELL = [
   '/games/liars-saloon/icons/icon-192.png',
   '/shared/engine.js',
   '/shared/ai.js',
+  '/games/velours-noir/',
+  '/games/velours-noir/manifest.webmanifest',
+  '/games/velours-noir/css/velours.css',
+  '/games/velours-noir/js/main.js',
+  '/games/velours-noir/js/sfx.js',
+  '/games/velours-noir/js/effets.js',
+  '/games/velours-noir/js/croupier.js',
+  '/games/velours-noir/js/blackjack.js',
+  '/games/velours-noir/js/roulette.js',
+  '/games/velours-noir/js/poker.js',
+  '/games/velours-noir/icons/icon-192.png',
+  '/shared/casino/cartes.js',
+  '/shared/casino/poker.js',
+  '/shared/casino/blackjack.js',
+  '/shared/casino/roulette.js',
+  '/shared/casino/banque.js',
   '/games/zenith/',
   '/games/zenith/manifest.webmanifest',
   '/games/zenith/css/zenith.css',

@@ -24,8 +24,8 @@ export const CHARGE_MAX = 200 * 1024;
 const DUREE_S = 180 * 24 * 3600;
 
 const CLE_VALIDE = /^[A-HJ-NP-Z2-9]{10}$/;
-/** Les espaces de rangement : la partie de RAID, le profil de l'arcade, la progression de STREET COMBAT. */
-const ESPACES = ['raid', 'profil', 'street'];
+/** Les espaces de rangement : la partie de RAID, le profil de l'arcade, la progression de STREET COMBAT, la caisse du VELOURS NOIR. */
+const ESPACES = ['raid', 'profil', 'street', 'velours'];
 const espaceDe = (e) => (ESPACES.includes(e) ? e : 'raid');
 export const normaliser = (cle) => String(cle || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
 

@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#120709">
+<meta name="description" content="LE VELOURS NOIR — un casino de jetons fictifs : blackjack, roulette européenne et Texas Hold'em, avec leurs croupiers.">
+<title>Le Velours Noir</title>
+<link rel="icon" href="/games/velours-noir/icons/icon-192.png">
+<link rel="manifest" href="/games/velours-noir/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/games/velours-noir/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Velours Noir">
+<link rel="stylesheet" href="/games/velours-noir/css/velours.css">
+<script src="/maj.js" defer></script>
+</head>
+<body>
+
+<div class="ambiance" aria-hidden="true"><i class="lustre l1"></i><i class="lustre l2"></i><i class="fumee"></i><i class="grain"></i></div>
+
+<!-- ============================ LE HALL ============================ -->
+<section class="ecran is-active" id="s-hall">
+  <div class="hall">
+    <header class="enseigne">
+      <p class="presente">Insert Coin présente</p>
+      <h1>Le Velours <span>Noir</span></h1>
+      <p class="devise"><i></i>Casino · Salon de jeux<i></i></p>
+    </header>
+
+    <div class="caisse">
+      <p class="solde-gros"><span class="piece" aria-hidden="true"></span><b class="solde" data-solde>1 000</b><small>jetons</small></p>
+      <div class="caisse-boutons">
+        <button class="btn or" id="b-bonus">🎁 Bonus du jour <b>+500</b></button>
+        <button class="btn or" id="b-secours" hidden>🥂 La maison vous offre <b>200</b></button>
+      </div>
+      <p class="records" id="h-records"></p>
+    </div>
+
+    <div class="portes">
+      <button class="porte" data-jeu="blackjack" style="--i:0">
+        <span class="porte-art art-bj" aria-hidden="true"><i class="mini-carte">A<em>♠</em></i><i class="mini-carte r">R<em>♥</em></i></span>
+        <b>Blackjack</b>
+        <span>Margot distribue. Approchez-vous de 21 sans le dépasser.</span>
+        <em>Mise de 5 à 500</em>
+      </button>
+      <button class="porte" data-jeu="roulette" style="--i:1">
+        <span class="porte-art art-roulette" aria-hidden="true"><i class="mini-roue"></i></span>
+        <b>Roulette</b>
+        <span>Henri lance la bille. Pleins, chevaux, carrés, chances simples.</span>
+        <em>Roulette européenne</em>
+      </button>
+      <button class="porte" data-jeu="poker" style="--i:2">
+        <span class="porte-art art-poker" aria-hidden="true"><i class="mini-jetons"></i><i class="mini-carte">A<em>♣</em></i><i class="mini-carte r">A<em>♦</em></i></span>
+        <b>Texas Hold'em</b>
+        <span>Victor tient la table. Quatre adversaires, quatre caractères.</span>
+        <em>Blindes 5/10 ou 25/50</em>
+      </button>
+    </div>
+
+    <nav class="hall-bas">
+      <a class="btn petit" href="/">‹ Arcade</a>
+      <button class="btn petit" data-ouvre="ov-regles">📜 Règles</button>
+      <button class="btn petit" data-ouvre="ov-reglages">⚙️ Réglages</button>
+    </nav>
+    <p class="mention">Jetons fictifs, pour le plaisir : rien à acheter, rien à gagner en vrai.</p>
+  </div>
+</section>
+
+<!-- ============================ BLACKJACK ============================ -->
+<section class="ecran ecran-table" id="s-blackjack">
+  <header class="barre">
+    <button class="btn petit" data-hall>‹ Salle</button>
+    <h2>Blackjack</h2>
+    <p class="barre-solde"><span class="piece" aria-hidden="true"></span><b class="solde" data-solde>0</b></p>
+  </header>
+  <div class="salle">
+    <div class="feutre feutre-bj" id="bj-feutre">
+      <div class="croupier-place" id="bj-croupier"></div>
+      <div class="sabot" id="bj-sabot" aria-hidden="true"><i></i></div>
+      <div class="ratelier" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      <div class="zone-croupier"><div class="cartes" id="bj-cartes-croupier"></div><span class="total" id="bj-total-croupier" hidden></span></div>
+      <svg class="devises" viewBox="0 0 600 200" aria-hidden="true">
+        <path id="arc-bj" d="M60 40 Q300 190 540 40" fill="none"/>
+        <text><textPath href="#arc-bj" startOffset="50%" text-anchor="middle">LE BLACKJACK PAIE 3 POUR 2</textPath></text>
+        <path id="arc-bj2" d="M110 72 Q300 200 490 72" fill="none"/>
+        <text class="petit"><textPath href="#arc-bj2" startOffset="50%" text-anchor="middle">Le croupier tire à 16 et reste à 17 · L’assurance paie 2 pour 1</textPath></text>
+      </svg>
+      <div class="mains-joueur" id="bj-mains"></div>
+      <div class="cercle-mise" id="bj-cercle"><span>MISE</span></div>
+    </div>
+  </div>
+  <footer class="commandes" id="bj-commandes">
+    <div class="rangee" data-phase="mise">
+      <div class="plateau-jetons" id="bj-jetons"></div>
+      <button class="btn" id="bj-effacer">Effacer</button>
+      <button class="btn or" id="bj-distribuer">Distribuer</button>
+    </div>
+    <div class="rangee" data-phase="jeu" hidden>
+      <button class="btn action" id="bj-tirer">Carte<small>Tirer</small></button>
+      <button class="btn action" id="bj-rester">Je reste<small>Rester</small></button>
+      <button class="btn action" id="bj-doubler">Doubler<small>Une carte, mise ×2</small></button>
+      <button class="btn action" id="bj-separer">Séparer<small>Deux mains</small></button>
+    </div>
+    <div class="rangee" data-phase="assurance" hidden>
+      <p class="question">Le croupier montre un As. Assurance ?</p>
+      <button class="btn" id="bj-assur-non">Non merci</button>
+      <button class="btn or" id="bj-assur-oui">Assurance</button>
+    </div>
+    <div class="rangee" data-phase="fin" hidden>
+      <button class="btn" id="bj-changer">Changer la mise</button>
+      <button class="btn or" id="bj-rejouer">Rejouer</button>
+    </div>
+    <div class="rangee" data-phase="attente" hidden><p class="question attente">…</p></div>
+  </footer>
+</section>
+
+<!-- ============================ ROULETTE ============================ -->
+<section class="ecran ecran-table" id="s-roulette">
+  <header class="barre">
+    <button class="btn petit" data-hall>‹ Salle</button>
+    <h2>Roulette</h2>
+    <p class="barre-solde"><span class="piece" aria-hidden="true"></span><b class="solde" data-solde>0</b></p>
+  </header>
+  <div class="salle salle-roulette">
+    <div class="rl-haut">
+      <div class="croupier-place" id="rl-croupier"></div>
+      <div class="roue-place" id="rl-roue-place">
+        <div class="roue-cadre" id="rl-roue-cadre"><canvas id="rl-roue" width="520" height="520"></canvas></div>
+      </div>
+      <div class="historique" id="rl-historique" aria-label="Derniers numéros"></div>
+    </div>
+    <div class="tapis-place">
+      <div class="tapis" id="rl-tapis"></div>
+    </div>
+  </div>
+  <footer class="commandes" id="rl-commandes">
+    <div class="rangee">
+      <div class="plateau-jetons" id="rl-jetons"></div>
+      <span class="total-mise" id="rl-total">Mise : 0</span>
+    </div>
+    <div class="rangee">
+      <button class="btn" id="rl-annuler">↶ Annuler</button>
+      <button class="btn" id="rl-effacer">Effacer</button>
+      <button class="btn" id="rl-remiser">Remiser</button>
+      <button class="btn" id="rl-doubler">×2</button>
+      <button class="btn or" id="rl-lancer">Lancer la bille</button>
+    </div>
+  </footer>
+  <div class="roue-scene" id="rl-scene" hidden></div>
+</section>
+
+<!-- ============================ POKER ============================ -->
+<section class="ecran ecran-table" id="s-poker">
+  <header class="barre">
+    <button class="btn petit" id="pk-quitter">‹ Quitter la table</button>
+    <h2 id="pk-titre">Texas Hold'em</h2>
+    <p class="barre-solde" title="Votre caisse, hors table"><span class="piece" aria-hidden="true"></span><b class="solde" data-solde>0</b></p>
+  </header>
+  <div class="salle">
+    <div class="feutre feutre-poker" id="pk-feutre">
+      <div class="croupier-place" id="pk-croupier"></div>
+      <div class="pk-centre">
+        <div class="pot" id="pk-pot"><span>Pot</span><b>0</b></div>
+        <div class="board" id="pk-board"></div>
+        <p class="annonce-main" id="pk-annonce"></p>
+      </div>
+      <div class="pk-sabot" id="pk-sabot" aria-hidden="true"></div>
+      <div id="pk-sieges"></div>
+    </div>
+  </div>
+  <footer class="commandes" id="pk-commandes">
+    <div class="rangee" data-phase="agir" hidden>
+      <button class="btn action rouge" id="pk-coucher">Se coucher</button>
+      <button class="btn action" id="pk-suivre">Parole</button>
+      <button class="btn action or" id="pk-relancer">Relancer</button>
+    </div>
+    <div class="rangee relance" data-phase="relance" hidden>
+      <div class="presets">
+        <button class="btn petit" data-part="0.5">½ pot</button>
+        <button class="btn petit" data-part="0.75">¾ pot</button>
+        <button class="btn petit" data-part="1">Pot</button>
+        <button class="btn petit" data-part="tapis">Tapis</button>
+      </div>
+      <input type="range" id="pk-curseur" min="0" max="100" step="5" aria-label="Montant de la relance">
+      <div class="relance-bas">
+        <button class="btn" id="pk-relance-annuler">Retour</button>
+        <button class="btn or" id="pk-relance-ok">Relancer à <b id="pk-relance-val">0</b></button>
+      </div>
+    </div>
+    <div class="rangee" data-phase="attente"><p class="question attente" id="pk-message">…</p></div>
+    <div class="rangee" data-phase="fin" hidden>
+      <button class="btn" id="pk-recave" hidden>Se recaver</button>
+      <button class="btn or" id="pk-suivante">Main suivante</button>
+    </div>
+  </footer>
+</section>
+
+<!-- ============================ FENÊTRES ============================ -->
+<div class="ov" id="ov-cave" hidden>
+  <div class="panneau">
+    <h3>Choisissez votre table</h3>
+    <div class="tables-poker" id="pk-tables"></div>
+    <label class="cave">Votre cave : <b id="pk-cave-val">0</b> jetons
+      <input type="range" id="pk-cave" min="0" max="0" step="10">
+    </label>
+    <p class="note" id="pk-cave-note"></p>
+    <div class="ov-bas">
+      <button class="btn" data-ferme>Retour</button>
+      <button class="btn or" id="pk-asseoir">S’asseoir</button>
+    </div>
+  </div>
+</div>
+
+<div class="ov" id="ov-regles" hidden>
+  <div class="panneau regles">
+    <h3>Règles de la maison</h3>
+    <div class="onglets" role="tablist">
+      <button class="onglet is-on" data-onglet="r-bj">Blackjack</button>
+      <button class="onglet" data-onglet="r-rl">Roulette</button>
+      <button class="onglet" data-onglet="r-pk">Poker</button>
+    </div>
+    <div class="texte-regles" id="r-bj">
+      <p>Le but : battre le croupier en s’approchant de <b>21</b> sans le dépasser. Les figures valent 10, l’As 1 ou 11.</p>
+      <ul>
+        <li><b>Blackjack</b> (As + figure ou 10 d’emblée) : payé <b>3 pour 2</b>.</li>
+        <li><b>Carte</b> : on tire. <b>Je reste</b> : on s’arrête.</li>
+        <li><b>Doubler</b> : sur vos deux premières cartes, la mise double et vous recevez une seule carte.</li>
+        <li><b>Séparer</b> : deux cartes de même valeur font deux mains (jusqu’à quatre). Des As séparés ne reçoivent qu’une carte.</li>
+        <li><b>Assurance</b> : quand le croupier montre un As, une demi-mise qui paie 2 pour 1 s’il a blackjack.</li>
+        <li>Le croupier tire jusqu’à 16 et reste à 17. Sabot de six jeux.</li>
+      </ul>
+    </div>
+    <div class="texte-regles" id="r-rl" hidden>
+      <p>Roulette européenne : 37 cases, un seul zéro. Posez vos jetons, puis lancez la bille.</p>
+      <ul>
+        <li><b>Plein</b> (un numéro) : 35 fois la mise. <b>Cheval</b> (deux, sur le trait) : 17. <b>Transversale</b> (trois, au bas d’une colonne) : 11.</li>
+        <li><b>Carré</b> (quatre, au coin) : 8. <b>Sixain</b> (six, au coin du bas) : 5.</li>
+        <li><b>Douzaine</b> ou <b>colonne</b> (« 2 pour 1 ») : 2. <b>Chances simples</b> (rouge, noir, pair, impair, manque 1-18, passe 19-36) : 1.</li>
+        <li>Le zéro fait perdre les chances simples.</li>
+      </ul>
+    </div>
+    <div class="texte-regles" id="r-pk" hidden>
+      <p>Texas Hold’em sans limite. Deux cartes à vous, cinq au milieu pour tout le monde : la meilleure main de cinq cartes gagne le pot.</p>
+      <ul>
+        <li>Les blindes, puis quatre tours d’enchères : avant le flop, le flop (3 cartes), la turn, la river.</li>
+        <li><b>Parole</b> si personne n’a misé, <b>Suivre</b> sinon, <b>Relancer</b>, ou <b>Se coucher</b>.</li>
+        <li>Un joueur à <b>tapis</b> ne peut gagner que ce qu’il a pu couvrir : le reste fait un pot annexe.</li>
+        <li>Des mains, de la plus forte à la plus faible : quinte flush, carré, full, couleur, quinte, brelan, deux paires, paire, hauteur.</li>
+        <li>Vos jetons de table reviennent dans votre caisse quand vous quittez la table.</li>
+      </ul>
+    </div>
+    <div class="ov-bas"><button class="btn or" data-ferme>Compris</button></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-reglages" hidden>
+  <div class="panneau">
+    <h3>Réglages</h3>
+    <label class="interrupteur"><input type="checkbox" id="r-son"> Sons et ambiance de la salle</label>
+    <label class="interrupteur"><input type="checkbox" id="r-musique"> Musique (jazz lounge)</label>
+    <label class="interrupteur"><input type="checkbox" id="r-voix"> Voix des croupiers</label>
+    <p class="note" id="r-nuage"></p>
+    <div class="ov-bas"><button class="btn or" data-ferme>Fermer</button></div>
+  </div>
+</div>
+
+<div class="rideau" id="rideau" aria-hidden="true"></div>
+
+<script type="module" src="/games/velours-noir/js/main.js"></script>
+</body>
+</html>

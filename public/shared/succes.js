@@ -29,6 +29,7 @@ export const JEUX = {
   fiesta: { nom: 'Fiesta', glyphe: '🎉', url: '/games/fiesta/' },
   street: { nom: 'Street Combat', glyphe: '🥊', url: '/games/street-combat/' },
   echo: { nom: 'ÉCHO', glyphe: '🎤', url: '/games/echo/' },
+  velours: { nom: 'Le Velours Noir', glyphe: '🎰', url: '/games/velours-noir/' },
 };
 /** Les jeux qu'il faut avoir ouverts pour le succès « Touche-à-tout ». */
 const A_VISITER = Object.keys(JEUX).filter((j) => j !== 'arcade');
@@ -109,6 +110,11 @@ export const SUCCES = [
 
   s('echo-partie', 'echo', '🎤', 'Première scène', 'Finir une partie d’ÉCHO.'),
   s('echo-victoire', 'echo', '🏅', 'La plus belle voix', 'Gagner une partie d’ÉCHO.'),
+  s('velours-blackjack', 'velours', '🂡', 'Blackjack !', 'Obtenir un blackjack naturel.'),
+  s('velours-plein', 'velours', '🎯', 'En plein', 'Gagner sur un numéro plein à la roulette.'),
+  s('velours-poker', 'velours', '💰', 'Gros pot', 'Remporter un pot d’au moins 1 000 jetons au poker.'),
+  s('velours-flambeur', 'velours', '🎩', 'Grand flambeur', 'Avoir 10 000 jetons dans sa caisse.'),
+
   s('echo-90', 'echo', '🎶', 'Imitation parfaite', 'Obtenir 90 / 100 ou plus à une imitation.'),
 ];
 export const PAR_ID = Object.fromEntries(SUCCES.map((x) => [x.id, x]));

@@ -50,6 +50,18 @@ export const THEMES = {
     ],
   },
   /* Un saloon : un piano bastringue, la basse qui fait « poum-tchak ». */
+  /* Un casino : jazz lounge, accords de septième, balais sur la caisse claire. */
+  velours: {
+    bpm: 88, pas: 8, ton: 146.83, volume: 0.055, swing: 0.33,
+    onde: 'triangle', tenue: 1.9, filtre: 1700, nappe: 0.55,
+    accords: [[0, 4, 7, 11], [-3, 0, 4, 7], [2, 5, 9, 12], [-5, -1, 2, 5], [-8, -5, -1, 2], [-3, 1, 4, 7], [2, 5, 9, 12], [-5, -1, 2, 5]],
+    basse: [0, _, 2, _, 1, _, 3, _],
+    batterie: '..h..hh.',
+    melodie: [
+      [9, _, 7, _, 4, _, _, 2], [4, _, _, _, 2, _, 0, _], [7, _, 5, _, 2, _, _, 5], [4, _, 2, _, -1, _, _, _],
+      [11, _, 9, _, 7, _, 4, _], [6, _, _, 4, _, 1, _, _], [2, _, 5, _, 9, _, 7, _], [7, _, _, _, 11, _, _, _],
+    ],
+  },
   saloon: {
     bpm: 100, pas: 8, ton: 130.81, volume: 0.07, swing: 0.3,
     onde: 'square', tenue: 1.1, filtre: 2200, nappe: 0,

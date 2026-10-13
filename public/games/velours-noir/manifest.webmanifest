@@ -1,0 +1,37 @@
+{
+  "name": "LE VELOURS NOIR — le casino",
+  "short_name": "Velours Noir",
+  "description": "Blackjack, roulette européenne et Texas Hold’em, avec leurs croupiers. Jetons fictifs.",
+  "id": "/games/velours-noir/",
+  "start_url": "/games/velours-noir/",
+  "scope": "/games/velours-noir/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#120709",
+  "theme_color": "#120709",
+  "lang": "fr",
+  "dir": "ltr",
+  "categories": [
+    "games"
+  ],
+  "icons": [
+    {
+      "src": "/games/velours-noir/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/games/velours-noir/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/games/velours-noir/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
