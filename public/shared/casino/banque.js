@@ -34,6 +34,7 @@ export function propre(d) {
   return {
     solde: x.solde === undefined ? DEPART : ent(x.solde, DEPART),
     bonus: typeof x.bonus === 'string' ? x.bonus : '',
+    secours: typeof x.secours === 'string' ? x.secours : '',
     records: { solde: ent(r.solde), gain: ent(r.gain) },
     stats: { blackjacks: ent(s.blackjacks), pleins: ent(s.pleins), pots: ent(s.pots), mains: ent(s.mains) },
     compte: C.propre(x.compte),
@@ -52,8 +53,8 @@ export function ecrire(st, b) {
 }
 
 export const bonusDispo = (b, t = Date.now()) => b.bonus !== jour(t);
-/** Plus de quoi miser, et le bonus du jour déjà pris : la maison offre un secours. */
-export const secoursDispo = (b, t = Date.now()) => b.solde < MISE_MIN && !bonusDispo(b, t);
+/** Plus de quoi miser, et le bonus du jour déjà pris : la maison offre un secours, une fois par jour. */
+export const secoursDispo = (b, t = Date.now()) => b.solde < MISE_MIN && !bonusDispo(b, t) && b.secours !== jour(t);
 
 export function prendreBonus(b, t = Date.now()) {
   if (!bonusDispo(b, t)) return 0;
@@ -63,6 +64,7 @@ export function prendreBonus(b, t = Date.now()) {
 }
 export function prendreSecours(b, t = Date.now()) {
   if (!secoursDispo(b, t)) return 0;
+  b.secours = jour(t);
   b.solde += SECOURS;
   return SECOURS;
 }
@@ -75,6 +77,7 @@ export function fusionner(a, b) {
   return {
     ...recent,
     bonus: a.bonus > b.bonus ? a.bonus : b.bonus,
+    secours: a.secours > b.secours ? a.secours : b.secours,
     records: { solde: max('solde', 'records'), gain: max('gain', 'records') },
     stats: Object.fromEntries(Object.keys(recent.stats).map((k) => [k, max(k, 'stats')])),
     compte: C.fusionner(a.compte, b.compte),

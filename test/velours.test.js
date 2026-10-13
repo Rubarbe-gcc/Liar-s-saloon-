@@ -165,6 +165,8 @@ test('la caisse : bonus du jour, secours, et deux appareils qui se mettent d’a
   assert.equal(K.prendreBonus(b, t), 0);
   b.solde = 0;
   assert.equal(K.prendreSecours(b, t), K.SECOURS);
+  b.solde = 0;
+  assert.equal(K.prendreSecours(b, t), 0, 'un seul secours par jour');
   assert.equal(K.prendreBonus(b, t + 86400000), K.BONUS);
   const a = { ...K.propre({ solde: 50, maj: 10, records: { solde: 9000 } }) };
   const z = { ...K.propre({ solde: 700, maj: 20, records: { solde: 800, gain: 300 } }) };
