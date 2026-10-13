@@ -221,3 +221,49 @@ export function dire(texte, { hauteur = 1, vitesse = 1.02 } = {}) {
     speechSynthesis.speak(u);
   } catch { /* pas de voix */ }
 }
+
+/* ------------------------------------------------------------------ */
+/* Les machines à sous                                                 */
+/* ------------------------------------------------------------------ */
+
+/** Le levier qu'on tire : un grincement, puis le déclic. */
+export function levier() {
+  if (!pret()) return;
+  const t = ctx.currentTime;
+  ton(140, t, 0.25, { type: 'sawtooth', vol: 0.05, glisse: 0.6 });
+  souffle(t + 0.18, 0.06, { type: 'bandpass', f: 1200, q: 2, vol: 0.3 });
+  ton(90, t + 0.2, 0.15, { type: 'square', vol: 0.06 });
+}
+
+/** Les rouleaux qui défilent : un cliquetis régulier pendant `duree` secondes. */
+export function rouleaux(duree) {
+  if (!pret()) return;
+  const t = ctx.currentTime;
+  for (let k = 0; k < duree / 0.055; k++) souffle(t + k * 0.055, 0.025, { type: 'bandpass', f: 2400 + (k % 3) * 300, q: 3, vol: 0.06 });
+}
+
+/** Un rouleau qui s'arrête : un « clonk » mécanique. */
+export function arret(k = 0) {
+  if (!pret()) return;
+  const t = ctx.currentTime;
+  ton(180 - k * 12, t, 0.12, { type: 'triangle', vol: 0.18, glisse: 0.6 });
+  souffle(t, 0.05, { type: 'lowpass', f: 900, vol: 0.25 });
+}
+
+/** Le roulement de tambour du suspense. */
+export function tambour(duree) {
+  if (!pret()) return;
+  const t = ctx.currentTime;
+  for (let k = 0; k < duree / 0.06; k++) souffle(t + k * 0.06, 0.05, { type: 'bandpass', f: 220, q: 1.2, vol: 0.12 + (k / (duree / 0.06)) * 0.15 });
+}
+
+/** La sirène du jackpot. */
+export function sirene() {
+  if (!pret()) return;
+  const t = ctx.currentTime;
+  for (let k = 0; k < 4; k++) {
+    ton(600, t + k * 0.5, 0.25, { type: 'square', vol: 0.06, glisse: 1.6 });
+    ton(960, t + k * 0.5 + 0.25, 0.25, { type: 'square', vol: 0.06, glisse: 0.62 });
+  }
+  gain(true);
+}

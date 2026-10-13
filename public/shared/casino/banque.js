@@ -17,6 +17,7 @@ export const DEPART = 1000;
 export const BONUS = 500;
 export const SECOURS = 200;
 export const MISE_MIN = 5;
+export const JACKPOT_DEPART = 10000;
 
 /** Le jour, en heure locale : « 2026-10-13 ». */
 export const jour = (t = Date.now()) => {
@@ -36,7 +37,9 @@ export function propre(d) {
     bonus: typeof x.bonus === 'string' ? x.bonus : '',
     secours: typeof x.secours === 'string' ? x.secours : '',
     records: { solde: ent(r.solde), gain: ent(r.gain) },
-    stats: { blackjacks: ent(s.blackjacks), pleins: ent(s.pleins), pots: ent(s.pots), mains: ent(s.mains) },
+    stats: { blackjacks: ent(s.blackjacks), pleins: ent(s.pleins), pots: ent(s.pots), mains: ent(s.mains), tours: ent(s.tours), jackpots: ent(s.jackpots) },
+    /** Le jackpot progressif de la machine « Le Jackpot du Velours ». */
+    jackpot: Number(x.jackpot) >= JACKPOT_DEPART && Number.isFinite(Number(x.jackpot)) ? Math.round(Number(x.jackpot) * 100) / 100 : JACKPOT_DEPART,
     compte: C.propre(x.compte),
     tournois: Array.isArray(x.tournois) ? x.tournois.filter((t) => t && typeof t.nom === 'string').slice(0, 20).map((t) => ({ d: String(t.d || ''), nom: t.nom.slice(0, 40), place: ent(t.place, 99), sur: ent(t.sur), prix: ent(t.prix) })) : [],
     maj: ent(x.maj),

@@ -276,3 +276,38 @@ test('croupier d’un soir : ce que le croupier doit faire et payer', () => {
   assert.equal(SV.etoiles({ gestes: 40, erreurs: 0, secondes: 60 }), 5);
   assert.ok(SV.etoiles({ gestes: 40, erreurs: 20, secondes: 400 }) <= 2);
 });
+
+import * as MS from '../public/shared/casino/machines.js';
+
+test('les machines à sous : les gains se lisent bien sur les lignes', () => {
+  const f = MS.MACHINES.fruit;
+  const col = (s) => ['citron', s, 'citron'];
+  assert.equal(MS.evaluer(f, [col('sept'), col('sept'), col('sept')], 2).total, 1500);
+  assert.equal(MS.evaluer(f, [col('cerise'), col('cerise'), col('prune')], 1).total, 5, 'deux cerises depuis la gauche');
+  assert.equal(MS.evaluer(f, [col('prune'), col('cerise'), col('cerise')], 1).total, 0, 'les cerises comptent depuis la gauche');
+  const r = MS.MACHINES.royal;
+  const c5 = (s) => ['rose', s, 'rose'];
+  // l'étoile remplace le symbole : couronne, étoile, couronne, rose… = 3 couronnes sur la ligne du milieu
+  const g = MS.evaluer(r, [c5('couronne'), c5('etoile'), c5('couronne'), c5('rose'), c5('cocktail')], 1, 1);
+  assert.deepEqual([g.gains[0].symbole, g.gains[0].n, g.total], ['couronne', 3, 60]);
+  const j = MS.MACHINES.jackpot;
+  const sacs = MS.evaluer(j, [c5('sac'), c5('sac'), c5('sac'), c5('sac'), c5('sac')], 1);
+  assert.equal(sacs.jackpot, true);
+  assert.equal(MS.miseTotale(j, 2, 1), 10, 'le jackpot joue toujours ses cinq lignes');
+  assert.equal(MS.palier(500, 10), 'mega');
+  assert.equal(MS.palier(150, 10), 'big');
+});
+
+test('les machines à sous rendent environ 95 % sur la durée', () => {
+  const rng = makeRng(2026);
+  for (const m of Object.values(MS.MACHINES)) {
+    let mise = 0, gain = 0;
+    for (let k = 0; k < 150000; k++) {
+      const { grille } = MS.tirer(m, rng);
+      gain += MS.evaluer(m, grille, 1, m.lignesMax).total;
+      mise += MS.miseTotale(m, 1, m.lignesMax);
+    }
+    const retour = gain / mise + (m.jackpot ? m.jackpot.part : 0);
+    assert.ok(retour > 0.9 && retour < 0.99, `${m.nom} : ${(retour * 100).toFixed(1)} %`);
+  }
+});

@@ -19,6 +19,7 @@ import { monterCompte } from './moncompte.js';
 import { monterTournois } from './tournois.js';
 import { monterModerateur } from './moderateur.js';
 import { monterService } from './service.js';
+import { monterMachines } from './machines.js';
 import * as EL from './enligne.js';
 
 const $ = (id) => document.getElementById(id);
@@ -73,6 +74,11 @@ const app = {
   /** Le compte en banque fictif (il voyage avec la caisse). */
   compte: () => banque.compte,
   sauverCompte() { sauver(); },
+  /** Le jackpot progressif (gardé avec la caisse). */
+  jackpot: () => Math.floor(banque.jackpot),
+  /** Les centimes de jackpot comptent : avec de petites mises, il monte quand même. */
+  majJackpot(n) { banque.jackpot = Math.max(K.JACKPOT_DEPART, Math.round(n * 100) / 100); sauver(); },
+  ajouterJackpot(n) { banque.jackpot = Math.round((banque.jackpot + n) * 100) / 100; sauver(); },
   /** Un tournoi terminé, dans l'historique. */
   noterTournoi(r) {
     banque.tournois = [{ d: K.jour(), ...r }, ...(banque.tournois || [])].slice(0, 20);
@@ -203,6 +209,7 @@ tables['s-poker'] = monterPoker(app, aller);
 const moncompte = monterCompte(app);
 const boutique = monterBoutique(app, moncompte);
 tables['s-service'] = monterService(app, aller);
+tables['s-machines'] = monterMachines(app);
 const moderation = monterModerateur(app, { ouvrirCroupier: () => { $('ov-service-choix').hidden = false; } });
 monterTournois(app, { aller, ecranCourant: () => courant, attendre: () => tables['s-poker'].file() });
 
@@ -234,6 +241,7 @@ function rejoindreCode(code) {
 
 document.querySelectorAll('.porte').forEach((p) => p.addEventListener('click', () => {
   sfx.clic();
+  if (p.dataset.jeu === 'machines') return aller('s-machines');
   ouvrirMode(p.dataset.jeu);
 }));
 $('ov-service-choix').addEventListener('click', (e) => {

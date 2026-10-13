@@ -668,3 +668,78 @@ body.moderateur .portes { grid-template-columns: repeat(4, minmax(0, 240px)); }
   .tapis-fp { left: 2%; top: 2%; }
   .roue-fp { width: 120px; left: 50%; transform: translateX(-50%); bottom: 2%; }
 }
+
+/* ---------- les machines à sous ---------- */
+.portes { grid-template-columns: repeat(auto-fit, minmax(200px, 245px)); }
+body.moderateur .portes { grid-template-columns: repeat(auto-fit, minmax(200px, 245px)); }
+@media (max-width: 760px) { .portes, body.moderateur .portes { grid-template-columns: 1fr; } }
+.mini-machine { display: flex; gap: 3px; padding: 10px 8px; border-radius: 12px; background: linear-gradient(180deg, #d9b45a, #8a6a24); box-shadow: 0 8px 18px rgba(0,0,0,.5), inset 0 0 0 3px #f3dc9a; font-style: normal; }
+.mini-machine b { width: 26px; height: 36px; display: grid; place-items: center; border-radius: 4px; background: #fffaf0; color: #b3243a; font: 900 1.3rem var(--titre); }
+.porte:hover .mini-machine b { animation: defile .25s linear infinite; }
+@keyframes defile { 50% { transform: translateY(-3px); filter: blur(1px); } }
+.salle-machines { flex-direction: column; overflow-y: auto; justify-content: center; }
+.rangee-machines { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; padding: 10px; }
+.carte-machine { width: 230px; display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 18px 14px; border-radius: 26px 26px 14px 14px; cursor: pointer; text-align: center;
+  border: 2px solid #d9b45a; background: linear-gradient(180deg, #5a1422, #2a0a12); box-shadow: 0 16px 34px rgba(0,0,0,.55), inset 0 0 0 5px rgba(13,6,8,.5);
+  transition: transform .25s cubic-bezier(.2,.9,.3,1.3); animation: monter .5s calc(var(--i) * 90ms) both; }
+.carte-machine:hover { transform: translateY(-6px) rotate(-1deg); }
+.carte-machine.m-royal { background: linear-gradient(180deg, #2a1e5a, #120a2a); border-color: #b38bff; }
+.carte-machine.m-jackpot { background: linear-gradient(180deg, #4a3608, #1e1404); border-color: #f3dc9a; box-shadow: 0 16px 34px rgba(0,0,0,.55), 0 0 30px rgba(243,220,154,.3); }
+.carte-machine b { font: 400 1.25rem var(--titre); color: var(--or-clair); }
+.carte-machine > span:not(.mini-rouleaux) { font-size: .8rem; opacity: .85; }
+.carte-machine em { font-style: normal; font: 700 .78rem var(--ui); color: var(--or); }
+.mini-rouleaux { display: flex; gap: 4px; }
+.mini-rouleaux i { width: 44px; height: 54px; display: grid; place-items: center; border-radius: 6px; background: #fffaf0; font-style: normal; font-size: 1.6rem; box-shadow: inset 0 6px 8px rgba(0,0,0,.25), inset 0 -6px 8px rgba(0,0,0,.25); }
+
+.cabinet { position: relative; width: min(94vw, 640px); padding: 16px 18px 18px; border-radius: 40px 40px 20px 20px; margin: 0 auto;
+  background: linear-gradient(180deg, #6b1a2a, #3a0d17 40%, #1e060c); border: 3px solid #d9b45a;
+  box-shadow: 0 0 0 6px #2a1508, 0 0 0 8px #8a6a24, 0 30px 60px rgba(0,0,0,.6), inset 0 0 40px rgba(0,0,0,.5); }
+.cabinet.m-royal { background: linear-gradient(180deg, #3a2a7a, #1e1448 40%, #0c0820); border-color: #b38bff; }
+.cabinet.m-jackpot { background: linear-gradient(180deg, #6b4c12, #3a280a 40%, #1a1204); }
+.fronton { position: relative; text-align: center; padding: 14px 10px 8px; }
+.ampoules { position: absolute; inset: 0; display: flex; justify-content: space-between; pointer-events: none; }
+.ampoules i { width: 10px; height: 10px; border-radius: 50%; background: #fff3c8; box-shadow: 0 0 8px #ffd97a; animation: ampoule 1.2s infinite; }
+.ampoules i:nth-child(odd) { animation-delay: .6s; }
+@keyframes ampoule { 0%,100% { opacity: 1; } 50% { opacity: .25; } }
+.cabinet.fete .ampoules i { animation-duration: .25s; background: #fff; }
+.neon-machine { margin: 8px 0 2px; font: 400 clamp(1.3rem, 5vw, 2rem) var(--titre); color: #fff3d6; text-shadow: 0 0 10px #ffd97a, 0 0 26px #ff9a3a; }
+.jackpot-affiche { margin: 4px auto 0; width: max-content; padding: 4px 16px; border-radius: 8px; background: #120509; border: 2px solid #f3dc9a; font: 700 .8rem var(--ui); letter-spacing: .2em; color: #ffd97a; }
+.jackpot-affiche b { font: 800 1.2rem ui-monospace, Consolas, monospace; color: #ff6b3a; letter-spacing: .05em; text-shadow: 0 0 10px #ff6b3a; }
+.vitre { position: relative; margin-top: 10px; padding: 8px; border-radius: 14px; background: #0c0608; box-shadow: inset 0 0 0 3px #8a6a24, inset 0 10px 30px rgba(0,0,0,.8); }
+.rouleaux { --h: clamp(56px, 11vmin, 92px); display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 6px; }
+.rouleau { position: relative; height: calc(var(--h) * 3); overflow: hidden; border-radius: 8px;
+  background: linear-gradient(180deg, #cfc4b4, #fffaf0 18%, #fffaf0 82%, #cfc4b4); box-shadow: inset 0 14px 16px -8px rgba(0,0,0,.55), inset 0 -14px 16px -8px rgba(0,0,0,.55); }
+.rouleau .bande { position: absolute; left: 0; right: 0; top: 0; height: calc(var(--h) * var(--cases)); display: flex; flex-direction: column; will-change: transform; }
+.rouleau .sym { height: var(--h); flex: none; display: grid; place-items: center; font-size: calc(var(--h) * .58); line-height: 1; }
+.rouleau.tourne .bande { filter: blur(2px); }
+.rouleau.suspense { box-shadow: inset 0 0 0 3px #ff6b3a, 0 0 24px #ff6b3a; animation: pulse-txt .3s infinite; }
+.sym-bar { font: 900 calc(var(--h) * .32) var(--ui); color: #fff; background: #1a1418; padding: .1em .3em; border-radius: 6px; letter-spacing: .05em; }
+.sym-sept { font: 900 calc(var(--h) * .7) var(--titre); color: #d21f3c; text-shadow: 2px 2px 0 #7a0a1c; }
+.rouleau .sym.gagnant { animation: symbole .6s ease-in-out infinite; background: radial-gradient(circle, rgba(255,217,122,.55), transparent 70%); }
+@keyframes symbole { 50% { transform: scale(1.14); } }
+.lignes-gain { position: absolute; inset: 8px; width: calc(100% - 16px); height: calc(100% - 16px); pointer-events: none; overflow: visible; }
+.lignes-gain .trace { fill: none; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 6px currentColor); opacity: .9;
+  stroke-dasharray: 2000; stroke-dashoffset: 2000; animation: tracer .7s ease-out forwards; vector-effect: non-scaling-stroke; }
+@keyframes tracer { to { stroke-dashoffset: 0; } }
+.gain-affiche { min-height: 48px; margin-top: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.gain-affiche b { font: 800 1.6rem ui-monospace, Consolas, monospace; color: #ffd97a; text-shadow: 0 0 12px #ffb03a; }
+.gain-affiche small { font: 600 .8rem var(--ui); color: var(--doux); }
+.gain-affiche em { font: italic .9rem var(--titre); color: var(--doux); }
+.levier { --tire: 0px; position: absolute; right: -34px; top: 34%; width: 30px; height: 140px; cursor: grab; touch-action: none; }
+.levier .tige { position: absolute; left: 12px; top: 18px; width: 7px; height: calc(110px - var(--tire) * .6); transform-origin: bottom; border-radius: 4px; background: linear-gradient(90deg, #8a8f99, #f2f4f8, #8a8f99); transition: height .25s; }
+.levier .boule { position: absolute; left: 0; top: calc(var(--tire)); width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #ff9aa6, #d21f3c 55%, #6b0a18); box-shadow: 0 4px 10px rgba(0,0,0,.5); transition: top .25s cubic-bezier(.3,1.6,.5,1); }
+.levier.tire .boule { animation: levier .4s ease-in-out; }
+@keyframes levier { 50% { top: 90px; } }
+.reglage { display: inline-flex; align-items: center; gap: 6px; font: 600 .86rem var(--ui); color: var(--doux); }
+.reglage b { min-width: 34px; text-align: center; color: var(--or-clair); font-size: 1rem; }
+.btn-lancer { min-width: 130px; font-size: 1.1rem; }
+.grosgain { position: fixed; inset: 0; z-index: 48; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; background: radial-gradient(circle, rgba(13,6,8,.35), rgba(13,6,8,.85)); animation: entrer .3s; }
+.gg-titre { margin: 0; font: 900 clamp(2.6rem, 12vw, 6rem) var(--titre); color: #fff3d6; letter-spacing: .05em; text-shadow: 0 0 20px #ffd97a, 0 0 60px #ff9a3a, 0 6px 0 #6b4c12; animation: affiche .7s cubic-bezier(.2,1.6,.4,1), neon 1.2s infinite; }
+.grosgain.mega .gg-titre { color: #ffe0f0; text-shadow: 0 0 20px #ff6bd0, 0 0 60px #b33aff, 0 6px 0 #4a0a5a; }
+.grosgain.jackpot .gg-titre { color: #fff; text-shadow: 0 0 24px #ffd97a, 0 0 80px #ff3a3a, 0 6px 0 #6b0a0a; }
+.gg-montant { font: 800 clamp(2rem, 9vw, 4rem) ui-monospace, Consolas, monospace; color: #ffd97a; text-shadow: 0 0 18px #ffb03a; }
+.table-gains table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+.table-gains td { padding: 6px 4px; border-bottom: 1px solid rgba(217,180,90,.15); }
+.sym-table { font-size: 1.5rem; width: 50px; text-align: center; }
+.table-gains .sym-bar { font-size: .8rem; } .table-gains .sym-sept { font-size: 1.4rem; }
+@media (max-width: 560px) { .levier { right: -6px; top: auto; bottom: -30px; height: 90px; transform: scale(.8); } .cabinet { padding: 12px 10px 30px; } }
