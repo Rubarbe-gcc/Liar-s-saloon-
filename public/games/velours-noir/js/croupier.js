@@ -10,7 +10,7 @@ import * as sfx from './sfx.js';
 import { fini } from './effets.js';
 
 export const CROUPIERS = {
-  margot: { nom: 'Margot', peau: '#f1c7a5', ombre: '#d9a283', cheveux: '#2a1712', coiffure: 'chignon', gilet: '#5a1422', voix: 1.15, femme: true },
+  celeste: { nom: 'Céleste', peau: '#f1c7a5', ombre: '#d9a283', cheveux: '#2a1712', coiffure: 'chignon', gilet: '#5a1422', voix: 1.15, femme: true },
   henri: { nom: 'Henri', peau: '#e8b896', ombre: '#c99272', cheveux: '#8d8a86', coiffure: 'gomina', gilet: '#16151a', moustache: true, voix: 0.85 },
   victor: { nom: 'Victor', peau: '#b9825e', ombre: '#966343', cheveux: '#1b1210', coiffure: 'court', gilet: '#1d3a2c', visiere: true, voix: 0.98 },
 };
@@ -51,7 +51,7 @@ function svgCroupier(p) {
       <path d="M0 0 L-17 -8 L-17 8 Z M0 0 L17 -8 L17 8 Z" fill="${p.femme ? '#d9b45a' : '#0b0709'}"/>
       <rect x="-4" y="-5" width="8" height="10" rx="2" fill="${p.femme ? '#b8913c' : '#26202a'}"/>
     </g>
-    <rect x="62" y="184" width="30" height="11" rx="2" fill="#d9b45a"/>
+    <rect x="58" y="184" width="38" height="11" rx="2" fill="#d9b45a"/>
     <text x="77" y="192.5" text-anchor="middle" font-size="7.5" font-family="Georgia,serif" font-weight="700" fill="#2a1a08">${p.nom.toUpperCase()}</text>
     <path d="M30 236 L210 236 L210 190 L30 190 Z" fill="url(#fond-${p.nom})"/>
   </g>

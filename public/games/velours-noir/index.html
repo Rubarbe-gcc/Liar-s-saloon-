@@ -33,6 +33,7 @@
       <p class="solde-gros"><span class="piece" aria-hidden="true"></span><b class="solde" data-solde>1 000</b><small>jetons</small></p>
       <div class="caisse-boutons">
         <button class="btn or" id="b-bonus">🎁 Bonus du jour <b>+500</b></button>
+        <button class="btn b-compte" data-ouvre="ov-compte">🏦 Mon compte <b id="b-compte-solde">0,00 €</b></button>
         <button class="btn" data-ouvre="ov-boutique">🛍️ Boutique</button>
         <button class="btn or" id="b-secours" hidden>🥂 La maison vous offre <b>200</b></button>
       </div>
@@ -43,7 +44,7 @@
       <button class="porte" data-jeu="blackjack" style="--i:0">
         <span class="porte-art art-bj" aria-hidden="true"><i class="mini-carte">A<em>♠</em></i><i class="mini-carte r">R<em>♥</em></i></span>
         <b>Blackjack</b>
-        <span>Margot distribue. Approchez-vous de 21 sans le dépasser.</span>
+        <span>Céleste distribue. Approchez-vous de 21 sans le dépasser.</span>
         <em>Mise de 5 à 500</em>
       </button>
       <button class="porte" data-jeu="roulette" style="--i:1">
@@ -301,7 +302,8 @@
 <div class="ov" id="ov-boutique" hidden>
   <div class="panneau boutique">
     <h3>La Boutique</h3>
-    <p class="fictif">🎭 Boutique fictive : aucun paiement réel, rien n’est débité. Les jetons n’ont aucune valeur.</p>
+    <p class="fictif">🎭 Banque et argent fictifs : aucun paiement réel. Les jetons et les euros du jeu n’ont aucune valeur.</p>
+    <p class="solde-banque">Ton compte : <b id="bq-solde">0,00 €</b></p>
     <div class="packs" id="packs"></div>
     <div class="paiement" id="paiement" hidden>
       <div class="carte-bancaire" aria-label="Carte de démonstration du casino">
@@ -318,7 +320,46 @@
       </div>
       <button class="btn or" id="b-payer">Payer</button>
     </div>
+    <div class="encaisser">
+      <h4>Encaisser des jetons</h4>
+      <p class="note">La caisse rachète tes jetons : 1 000 jetons = 5,00 €, versés sur ton compte.</p>
+      <div class="ligne-ov">
+        <input type="range" id="enc-curseur" min="0" max="0" step="1000" aria-label="Jetons à encaisser">
+        <span id="enc-val">0 jeton → 0,00 €</span>
+      </div>
+      <button class="btn" id="b-encaisser" disabled>Encaisser</button>
+    </div>
     <div class="ov-bas"><button class="btn" data-ferme>Fermer</button></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-compte" hidden>
+  <div class="panneau compte">
+    <div class="releve-haut">
+      <div>
+        <p class="banque-nom">Banque du Velours</p>
+        <p class="cpt-solde" id="cpt-solde">0,00 €</p>
+        <p class="note">RIB : <span id="cpt-rib"></span></p>
+      </div>
+      <span class="banque-logo" aria-hidden="true">🏦</span>
+    </div>
+    <p class="note" id="cpt-salaire"></p>
+    <div id="cpt-courbe"></div>
+    <label class="anniv">🎂 Ton anniversaire : <input type="date" id="cpt-anniv"></label>
+    <h4>Relevé des opérations</h4>
+    <ul class="ops" id="cpt-ops"></ul>
+    <p class="fictif">Compte fictif : de l’argent pour de faux, qui ne sert qu’à acheter des jetons dans la Boutique.</p>
+    <div class="ov-bas"><button class="btn" data-ferme>Fermer</button></div>
+  </div>
+</div>
+
+<div class="ov" id="ov-journee" hidden>
+  <div class="panneau journee">
+    <h3 id="jr-titre">Aujourd’hui sur ton compte</h3>
+    <p class="note" id="jr-sous"></p>
+    <ul class="ops recap" id="jr-liste"></ul>
+    <p class="jr-total" id="jr-total"></p>
+    <div class="ov-bas"><button class="btn or" data-ferme>D’accord</button></div>
   </div>
 </div>
 

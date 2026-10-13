@@ -11,6 +11,7 @@ import * as P from '../public/shared/casino/poker.js';
 import * as BJ from '../public/shared/casino/blackjack.js';
 import * as R from '../public/shared/casino/roulette.js';
 import * as K from '../public/shared/casino/banque.js';
+import * as CPT from '../public/shared/casino/compte.js';
 import { sabot } from '../public/shared/casino/cartes.js';
 
 const c = (s) => s.split(' ').map((x) => ({ r: { A: 14, R: 13, D: 12, V: 11, X: 10 }[x[0]] || Number(x[0]), c: { s: '♠', h: '♥', d: '♦', c: '♣' }[x[1]] }));
@@ -170,4 +171,78 @@ test('la caisse : bonus du jour, secours, et deux appareils qui se mettent d’a
   const f = K.fusionner(a, z);
   assert.equal(f.solde, 700);
   assert.deepEqual(f.records, { solde: 9000, gain: 300 });
+});
+
+test('le compte : de 1 à 4 événements par jour, le salaire le 1er, le loyer le 5, l’anniversaire', () => {
+  const c = CPT.propre({ rib: 'FR76 TEST', anniv: '03-14' });
+  assert.equal(c.solde, CPT.DEPART);
+  let j = '2026-03-01';
+  for (let d = 0; d < 31; d++) {
+    const ops = CPT.jouerJour(c, j);
+    const fixes = ['salaire', 'loyer', 'anniv', 'frais', ...CPT.prelevements(c).map((f) => f.k)];
+    const hasard = ops.filter((o) => !fixes.includes(o.k));
+    assert.ok(hasard.length >= 1 && hasard.length <= 4, `${j} : ${hasard.length} événements`);
+    if (j.endsWith('-01')) assert.ok(ops.some((o) => o.k === 'salaire'));
+    if (j.endsWith('-05')) assert.ok(ops.some((o) => o.k === 'loyer' && o.m === -CPT.LOYER));
+    assert.equal(ops.some((o) => o.k === 'anniv'), j === '2026-03-14');
+    j = CPT.lendemain(j);
+  }
+  assert.equal(c.solde, CPT.DEPART + c.ops.reduce((s, o) => s + o.m, 0));
+  // le même compte, le même jour : les mêmes événements (deux appareils sont d'accord)
+  const a = CPT.propre({ rib: 'FR76 X' }), b = CPT.propre({ rib: 'FR76 X' });
+  assert.deepEqual(CPT.jouerJour(a, '2026-10-13'), CPT.jouerJour(b, '2026-10-13'));
+});
+
+test('le compte : les jours manqués sont rattrapés (sept au plus), un compte neuf commence aujourd’hui', () => {
+  const c = CPT.propre({ rib: 'FR76 R' });
+  assert.deepEqual(CPT.rattraper(c, '2026-10-13').map((x) => x.jour), ['2026-10-13']);
+  assert.deepEqual(CPT.rattraper(c, '2026-10-13'), [], 'rien de plus le même jour');
+  assert.equal(CPT.rattraper(c, '2026-10-16').length, 3);
+  const jours = CPT.rattraper(c, '2026-11-30');
+  assert.equal(jours.length, CPT.RATTRAPAGE);
+  assert.equal(jours.at(-1).jour, '2026-11-30');
+  assert.equal(c.dernier, '2026-11-30');
+});
+
+test('le compte : découvert, frais, carte refusée, encaisser', () => {
+  const c = CPT.propre({ rib: 'FR76 D', solde: 1000 });
+  assert.ok(CPT.payer(c, 30000, 'Jetons'));
+  assert.equal(c.solde, -29000);
+  assert.ok(!CPT.payer(c, 2000, 'Jetons'), 'au-delà du découvert autorisé, refusé');
+  assert.equal(c.solde, -29000);
+  const ops = CPT.jouerJour(c, '2026-10-20');
+  assert.equal(ops[0].k, 'frais');
+  assert.equal(ops[0].m, -CPT.FRAIS_DECOUVERT);
+  assert.ok(CPT.encaisser(c, 500, 'Jetons encaissés'));
+  // un appareil neuf a ouvert un autre compte : on garde l'ancien
+  const neuf = CPT.propre({ rib: 'FR76 NEUF', maj: Date.now() + 1000 });
+  assert.equal(CPT.fusionner(c, neuf).rib, 'FR76 D');
+  assert.equal(CPT.euros(-123456), '-1 234,56 €'.replace(' ', ' '));
+});
+
+test('le compte reste logique : abonnements une fois par mois, pas de doublon dans la journée, chaque imprévu à son rythme', () => {
+  let c = CPT.propre({ rib: 'FR76 LOGIQUE' });
+  const vus = {}, derniers = {};
+  let j = '2026-01-01';
+  for (let d = 0; d < 400; d++) {
+    const ops = CPT.jouerJour(c, j);
+    const ks = ops.map((o) => o.k);
+    assert.equal(new Set(ks).size, ks.length, `${j} : deux fois le même événement`);
+    for (const o of ops) {
+      const cle = `${o.k}|${j.slice(0, 7)}`;
+      vus[cle] = (vus[cle] || 0) + 1;
+      const e = CPT.EVENEMENTS.find((x) => x.id === o.k);
+      if (e && derniers[o.k]) assert.ok((new Date(j) - new Date(derniers[o.k])) / 864e5 >= e.pause, `${o.k} revenu trop vite (${derniers[o.k]} → ${j})`);
+      if (e?.mois) assert.ok(e.mois.includes(Number(j.slice(5, 7))), `${o.k} hors saison`);
+      derniers[o.k] = j;
+    }
+    c = CPT.propre(JSON.parse(JSON.stringify(c)));   // comme une sauvegarde rechargée
+    j = CPT.lendemain(j);
+  }
+  for (const k of ['salaire', 'loyer', 'internet', 'electricite', 'assurance', 'mobile', 'streaming', 'musique', 'sport']) {
+    for (const [cle, n] of Object.entries(vus)) if (cle.startsWith(`${k}|`)) assert.equal(n, 1, `${cle} : ${n} fois dans le mois`);
+  }
+  assert.ok(Object.keys(vus).filter((x) => x.startsWith('heritage|')).length <= 1, 'un seul héritage');
+  // les jours de la semaine : pas de « pizza du vendredi » un mardi
+  for (const o of c.ops) if (/vendredi/.test(o.l)) assert.equal(new Date(`${o.d}T12:00`).getDay(), 5, o.l);
 });

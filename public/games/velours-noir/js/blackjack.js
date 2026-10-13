@@ -1,5 +1,5 @@
 /**
- * LE VELOURS NOIR — la table de blackjack, avec Margot.
+ * LE VELOURS NOIR — la table de blackjack, avec Céleste.
  *
  * Seul, le moteur (shared/casino/blackjack.js, une place) tourne ici ; en
  * ligne, le serveur fait tourner la même table à cinq places et envoie ses
@@ -40,7 +40,7 @@ export function monterBlackjack(app) {
   const zoneCroupier = $('bj-cartes-croupier');
   const totalCroupier = $('bj-total-croupier');
   const soldeBarre = document.querySelector('#s-blackjack .barre-solde');
-  croupier = creerCroupier($('bj-croupier'), 'margot');
+  croupier = creerCroupier($('bj-croupier'), 'celeste');
 
   /* ---------- les jetons à miser ---------- */
   const plateau = $('bj-jetons');

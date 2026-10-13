@@ -6,7 +6,11 @@
  * de quoi rejouer. Le solde voyage avec le profil de l'arcade (espace
  * « velours » de /api/sauvegarde) : entre deux appareils, le plus récent
  * gagne, les records gardent le meilleur.
+ *
+ * Le compte en banque fictif (compte.js) voyage avec elle : `b.compte`.
  */
+
+import * as C from './compte.js';
 
 export const CLE = 'velours.banque';
 export const DEPART = 1000;
@@ -32,6 +36,7 @@ export function propre(d) {
     bonus: typeof x.bonus === 'string' ? x.bonus : '',
     records: { solde: ent(r.solde), gain: ent(r.gain) },
     stats: { blackjacks: ent(s.blackjacks), pleins: ent(s.pleins), pots: ent(s.pots), mains: ent(s.mains) },
+    compte: C.propre(x.compte),
     maj: ent(x.maj),
   };
 }
@@ -41,6 +46,7 @@ export function lire(st) {
 }
 export function ecrire(st, b) {
   b.maj = Date.now();
+  b.compte.maj = b.maj;
   b.records.solde = Math.max(b.records.solde, b.solde);
   try { st.setItem(CLE, JSON.stringify(b)); } catch { /* plein ou interdit */ }
 }
@@ -71,6 +77,7 @@ export function fusionner(a, b) {
     bonus: a.bonus > b.bonus ? a.bonus : b.bonus,
     records: { solde: max('solde', 'records'), gain: max('gain', 'records') },
     stats: Object.fromEntries(Object.keys(recent.stats).map((k) => [k, max(k, 'stats')])),
+    compte: C.fusionner(a.compte, b.compte),
   };
 }
 

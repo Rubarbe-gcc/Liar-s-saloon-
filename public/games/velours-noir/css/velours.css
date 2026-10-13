@@ -518,3 +518,44 @@ body.hors-ligne .code-table { border-color: #ff6b7a; color: #ffb1bb; }
   .barre .code-table { padding: 3px 6px; font-size: .7rem; letter-spacing: .05em; }
   .barre .b-boutique { display: none; }
 }
+
+/* ---------- le compte en banque ---------- */
+.b-compte b { font-family: var(--ui); font-size: .82rem; color: #9ff0b8; }
+.b-compte b.rouge, .rouge { color: #ff9aa6 !important; }
+.vert { color: #9ff0b8; }
+.panneau.compte { width: min(100%, 560px); }
+.releve-haut { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; padding: 14px 16px; border-radius: 14px;
+  background: radial-gradient(120% 120% at 0 0, #6b1a2a, #2a0a12 65%); box-shadow: inset 0 0 0 1px rgba(243,220,154,.3); }
+.releve-haut .note { text-align: left; margin: 4px 0 0; font-size: .72rem; }
+.banque-nom { margin: 0; font: italic 600 .9rem var(--titre); color: var(--or); letter-spacing: .05em; }
+.cpt-solde { margin: 2px 0 0; font: 700 2rem var(--titre); color: #9ff0b8; }
+.banque-logo { font-size: 2.2rem; filter: drop-shadow(0 4px 8px rgba(0,0,0,.5)); }
+.courbe { display: block; width: 100%; height: 100px; margin: 8px 0; }
+.courbe .trait { fill: none; stroke: #f3dc9a; stroke-width: 2; stroke-linejoin: round; }
+.courbe .point { fill: #f3dc9a; }
+.courbe .zero { stroke: #ff6b7a; stroke-dasharray: 4 4; stroke-width: 1; }
+.anniv { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: .86rem; color: var(--doux); margin: 6px 0; }
+.anniv input { background: rgba(13,6,8,.7); color: var(--texte); border: 1px solid rgba(217,180,90,.4); border-radius: 8px; padding: 4px 8px; color-scheme: dark; }
+.panneau.compte h4 { margin: 14px 0 6px; font: 400 1rem var(--titre); color: var(--or); }
+.ops { list-style: none; margin: 0; padding: 0; max-height: 300px; overflow-y: auto; }
+.ops .jour h5 { margin: 10px 0 4px; font: 600 .76rem var(--ui); color: var(--doux); text-transform: uppercase; letter-spacing: .08em; }
+.ops ul { list-style: none; margin: 0; padding: 0; }
+.op { display: grid; grid-template-columns: 26px 1fr auto; gap: 8px; align-items: center; padding: 7px 8px; border-radius: 8px; font-size: .86rem; }
+.op:nth-child(odd) { background: rgba(255,255,255,.03); }
+.op b { font-family: var(--ui); white-space: nowrap; }
+.op.plus b { color: #9ff0b8; } .op.moins b { color: #ff9aa6; }
+.op.rare { background: linear-gradient(90deg, rgba(217,180,90,.22), rgba(217,180,90,.04)); box-shadow: inset 3px 0 0 var(--or); }
+.op-ic { font-size: 1.1rem; text-align: center; }
+.recap .op { animation: entrer-op .45s calc(var(--k) * 70ms + 150ms) both cubic-bezier(.2,.8,.2,1); }
+@keyframes entrer-op { from { opacity: 0; transform: translateX(-24px); } to { opacity: 1; transform: none; } }
+.recap .jour-sep { margin: 10px 0 2px; font: 600 .74rem var(--ui); color: var(--doux); text-transform: uppercase; letter-spacing: .08em; }
+.panneau.journee { width: min(100%, 480px); }
+.panneau.journee h3 { margin-bottom: 2px; }
+.jr-total { text-align: center; margin: 12px 0 0; font-family: var(--titre); }
+.solde-banque { text-align: center; margin: 0 0 12px; font-family: var(--titre); color: var(--doux); }
+.solde-banque b { color: #9ff0b8; }
+.encaisser { margin-top: 16px; padding-top: 12px; border-top: 1px solid rgba(217,180,90,.2); text-align: center; }
+.encaisser h4 { margin: 0 0 4px; font: 400 1rem var(--titre); color: var(--or); }
+.encaisser input[type=range] { flex: 1; min-width: 160px; accent-color: var(--or); }
+.encaisser #enc-val { font: 600 .86rem var(--ui); color: var(--or-clair); min-width: 170px; }
+.ecran-tpe.refuse { background: #e8a0a0; color: #4a0c17; font-weight: 800; }

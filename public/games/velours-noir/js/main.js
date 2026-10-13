@@ -15,6 +15,7 @@ import { monterBlackjack } from './blackjack.js';
 import { monterRoulette } from './roulette.js';
 import { monterPoker } from './poker.js';
 import { monterBoutique } from './boutique.js';
+import { monterCompte } from './moncompte.js';
 import * as EL from './enligne.js';
 
 const $ = (id) => document.getElementById(id);
@@ -66,6 +67,9 @@ const app = {
   stat(k, n = 1) { banque.stats[k] = (banque.stats[k] || 0) + n; sauver(); },
   succes: (id) => succes.debloquer(id),
   hall: () => aller('s-hall'),
+  /** Le compte en banque fictif (il voyage avec la caisse). */
+  compte: () => banque.compte,
+  sauverCompte() { sauver(); },
 };
 
 function majCaisse() {
@@ -119,6 +123,7 @@ function synchroniserNuage() {
       banque = K.propre(tout);
       try { localStorage.setItem(K.CLE, JSON.stringify(banque)); } catch { /* ignore */ }
       afficherSolde(false);
+      moncompte?.majBouton();
     }
     if (!distant || !K.memes(tout, distant)) {
       const date = Math.max(Date.now(), (Number(r.json?.date) || 0) + 1);
@@ -153,7 +158,9 @@ document.querySelectorAll('[data-hall]').forEach((b) => b.addEventListener('clic
 /* fenêtres */
 document.querySelectorAll('[data-ouvre]').forEach((b) => b.addEventListener('click', () => {
   sfx.clic();
-  if (b.dataset.ouvre === 'ov-boutique') boutique.ouvrir(); else $(b.dataset.ouvre).hidden = false;
+  if (b.dataset.ouvre === 'ov-boutique') boutique.ouvrir();
+  else if (b.dataset.ouvre === 'ov-compte') moncompte.ouvrir();
+  else $(b.dataset.ouvre).hidden = false;
 }));
 document.querySelectorAll('.ov').forEach((ov) => {
   ov.addEventListener('click', (e) => { if (e.target === ov || e.target.closest('[data-ferme]')) ov.hidden = true; });
@@ -182,7 +189,8 @@ installerMusique('velours', { actif: () => sfx.sonActif() && musique });
 tables['s-blackjack'] = monterBlackjack(app);
 tables['s-roulette'] = monterRoulette(app);
 tables['s-poker'] = monterPoker(app, aller);
-const boutique = monterBoutique(app);
+const moncompte = monterCompte(app);
+const boutique = monterBoutique(app, moncompte);
 
 /* ------------------------------------------------------------------ */
 /* Seul ou en ligne                                                    */
@@ -284,7 +292,8 @@ if (lienTable) {
 }
 
 afficherSolde(false);
-synchroniserNuage();
+// la journée sur le compte en banque : après la sauvegarde en ligne (un appareil neuf retrouve d'abord le vrai compte)
+Promise.race([Promise.resolve(synchroniserNuage()), new Promise((r) => setTimeout(r, 5000))]).finally(() => moncompte.nouveauxJours());
 addEventListener('storage', (e) => { if (e.key === K.CLE) { banque = K.lire(localStorage); afficherSolde(false); } });
 
 /* outils de débogage */
