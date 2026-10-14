@@ -2203,11 +2203,11 @@ function brancher() {
     document.querySelectorAll('.reserve-moderateur').forEach((el) => el.remove());
     if (oui) {
       const b = document.createElement('button');
-      b.className = 'btn petit reserve-moderateur';
+      b.className = 'lien-discret reserve-moderateur';
       b.textContent = '🗝️ Modérateur';
       b.title = 'Mode modérateur : tout est ouvert. Cliquer pour le quitter (jusqu’à la prochaine visite).';
       b.addEventListener('click', () => { MOD.quitter(); toast('Mode modérateur quitté : votre vraie progression est revenue.'); });
-      document.querySelector('#s-menu .menu-bas').append(b);
+      document.querySelector('#s-menu .menu-pied').append(b);
     }
     if (document.querySelector('#s-menu.is-active')) majMenu();
   });
@@ -2218,7 +2218,7 @@ function brancher() {
     try { localStorage.setItem('street.graphismes', JSON.stringify(e.target.value)); } catch { /* rien */ }
     location.reload();
   });
-  const majVoix = () => { for (const id of ['b-voix-menu', 'b-voix']) $(id).textContent = voixActives() ? '🗣️ Voix' : '🤐 Voix coupées'; };
+  const majVoix = () => { $('b-voix').textContent = voixActives() ? '🗣️ Voix' : '🤐 Voix coupées'; $('b-voix-menu').textContent = voixActives() ? '🗣️' : '🤐'; };
   for (const id of ['b-voix-menu', 'b-voix']) $(id).addEventListener('click', () => { basculerVoix(); majVoix(); if (voixActives()) dire('Voix activées !', voixDe({ id: 'annonceur' })); });
   majVoix();
   $('createur-options').addEventListener('click', (e) => {

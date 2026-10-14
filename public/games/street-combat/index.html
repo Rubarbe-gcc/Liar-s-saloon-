@@ -41,21 +41,27 @@
     </div>
     <p class="secrets-info" id="secrets-info"></p>
     <div class="menu-bas">
-      <a class="btn petit" href="/">‹ Arcade</a>
-      <button class="btn petit" id="b-commandes">⌨️ Commandes</button>
-      <button class="btn petit" id="b-codex">📚 Codex</button>
-      <button class="btn petit" id="b-replays">📼 Replays</button>
-      <button class="btn petit" id="b-manette">🎮 Manette</button>
-      <button class="btn petit" id="b-tactile-reglages">📱 Tactile</button>
-      <button class="btn petit" id="b-son-menu">🔊</button>
-      <button class="btn petit" id="b-voix-menu">🗣️ Voix</button>
-      <select class="btn petit" id="b-graphismes" aria-label="Qualité graphique">
-        <option value="haute">✨ Graphismes : haute</option>
-        <option value="moyenne">✨ Graphismes : moyenne</option>
-        <option value="basse">✨ Graphismes : basse</option>
-        <option value="2d">✨ Graphismes : 2D</option>
-      </select>
-      <button class="btn petit" id="b-reset" title="Remettre à zéro les combattants débloqués et les sauvegardes">♻️ Réinitialiser</button>
+      <nav class="menu-outils" aria-label="Outils">
+        <button class="outil" id="b-commandes"><span aria-hidden="true">⌨️</span>Commandes</button>
+        <button class="outil" id="b-codex"><span aria-hidden="true">📚</span>Codex</button>
+        <button class="outil" id="b-replays"><span aria-hidden="true">📼</span>Replays</button>
+        <button class="outil" id="b-manette"><span aria-hidden="true">🎮</span>Manette</button>
+        <button class="outil" id="b-tactile-reglages"><span aria-hidden="true">📱</span>Tactile</button>
+      </nav>
+      <div class="menu-reglages">
+        <button class="reglage" id="b-son-menu" title="Son" aria-label="Son">🔊</button>
+        <button class="reglage" id="b-voix-menu" title="Voix des combattants" aria-label="Voix des combattants">🗣️</button>
+        <select class="reglage" id="b-graphismes" aria-label="Qualité graphique" title="Qualité graphique">
+          <option value="haute">✨ Graphismes : haute</option>
+          <option value="moyenne">✨ Graphismes : moyenne</option>
+          <option value="basse">✨ Graphismes : basse</option>
+          <option value="2d">✨ Graphismes : 2D</option>
+        </select>
+      </div>
+      <div class="menu-pied">
+        <a class="lien-discret" href="/">‹ Retour à l’arcade</a>
+        <button class="lien-discret" id="b-reset" title="Remettre à zéro les combattants débloqués et les sauvegardes">Réinitialiser</button>
+      </div>
     </div>
     <p class="records" id="records"></p>
   </div>

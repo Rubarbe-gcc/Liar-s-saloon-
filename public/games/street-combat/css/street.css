@@ -59,7 +59,27 @@ button { font: inherit; color: inherit; }
 .slogan { margin: 6px 0 10px; color: var(--pale); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: .8rem; }
 .boutons-menu { display: flex; flex-direction: column; gap: 12px; width: 100%; }
 .boutons-menu .btn { width: 100%; padding: 15px; font-size: 1.3rem; }
-.menu-bas { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; justify-content: center; }
+/* Le bas du menu : les outils (cinq tuiles égales), les réglages, puis les liens discrets. */
+.menu-bas { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; margin-top: 6px; }
+.menu-outils { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; width: 100%; }
+.outil { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 8px 2px 7px; border: 0; border-radius: 8px; cursor: pointer;
+  font: 800 .66rem/1 var(--ui); letter-spacing: .04em; text-transform: uppercase; color: var(--pale);
+  background: linear-gradient(180deg, rgba(58,46,78,.85), rgba(36,26,52,.85)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.1), 0 3px 0 #0d0816;
+  transition: transform .12s, filter .12s, color .12s; }
+.outil span { font-size: 1.25rem; line-height: 1.1; }
+.outil:hover, .outil:focus-visible { color: #fff; filter: brightness(1.2); transform: translateY(-2px); }
+.outil:active { transform: translateY(1px); }
+.menu-reglages { display: flex; align-items: center; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(13,8,22,.6); box-shadow: inset 0 0 0 1px rgba(255,255,255,.08); }
+.reglage { height: 32px; min-width: 32px; padding: 0 10px; border: 0; border-radius: 999px; cursor: pointer; color: var(--pale); background: rgba(255,255,255,.07);
+  font: 700 .78rem var(--ui); transition: background .12s, color .12s; }
+.reglage:hover, .reglage:focus-visible { background: rgba(255,255,255,.16); color: #fff; }
+select.reglage { appearance: none; -webkit-appearance: none; padding-right: 26px;
+  background: rgba(255,255,255,.07) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23c8b8e8' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat right 10px center; }
+select.reglage option { color: #fff; background: #241a34; }
+.menu-pied { display: flex; justify-content: space-between; align-items: center; gap: 12px; width: 100%; padding: 0 4px; }
+.lien-discret { border: 0; padding: 4px 2px; background: none; cursor: pointer; text-decoration: none; color: rgba(200,184,232,.7); font: 700 .74rem var(--ui); letter-spacing: .03em; }
+.lien-discret:hover, .lien-discret:focus-visible { color: #fff; text-decoration: underline; }
+#b-reset:hover { color: #ff8095; }
 .records { min-height: 1.2em; color: var(--or); font-weight: 800; font-size: .85rem; margin: 4px 0 0; }
 
 /* Panneaux */
