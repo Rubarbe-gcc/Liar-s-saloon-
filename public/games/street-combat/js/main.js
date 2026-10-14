@@ -21,6 +21,8 @@ import { ARENES, ARENE, fondArene, fondPret, animerArene, areneApres, dessinerMu
 import { decor3D } from './trois/decors3d.js';
 import * as FX from './effets.js';
 import { animerSaisie } from './saisie.js';
+import { animerUlti } from './choregraphie.js';
+import * as MOD from './moderateur.js';
 import { creerHud, dessinerHud } from './hud.js';
 import { jouer as son, estMuet, basculerSon } from './son.js';
 import { installerMusique } from '../../../shared/musique.js';
@@ -100,12 +102,15 @@ const CLE_REPLAYS = 'street.replays';
 const CLE_TACTILE = 'street.tactile';
 const NIVEAUX = [['facile', 'Facile'], ['normal', 'Normal'], ['difficile', 'Difficile'], ['impossible', 'Impossible']];
 
-const debloques = () => new Set(lire(CLE_DEBLOQUES, []));
+/** Ce qu'on a vraiment débloqué en jouant. */
+const vraisDebloques = () => new Set(lire(CLE_DEBLOQUES, []));
+/** Ce qui est ouvert : en mode modérateur, tous les combattants (et leurs arènes), sans rien enregistrer. */
+const debloques = () => (MOD.estModerateur() ? new Set(PERSOS.map((p) => p.id)) : vraisDebloques());
 /** Un combattant qu'on peut choisir : de base, ou déjà débloqué. */
 const disponible = (p) => !aDebloquer(p) || debloques().has(p.id);
 /** Débloque un combattant (et son arène). Rend vrai s'il est nouveau. */
 function debloquer(id) {
-  const d = debloques();
+  const d = vraisDebloques();
   if (d.has(id)) return false;
   d.add(id);
   ecrire(CLE_DEBLOQUES, [...d]);
@@ -207,6 +212,38 @@ function dessinerFondMenu() {
   g.fillStyle = voile; g.fillRect(0, 0, w, h);
 }
 
+/** La fenêtre secrète du modérateur : un code, que seul le serveur sait vérifier. */
+function ouvrirModerateur() {
+  let ov = $('ov-moderateur');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.className = 'ov';
+    ov.id = 'ov-moderateur';
+    ov.innerHTML = `<div class="feuille"><h2>🗝️ Accès modérateur</h2>
+      <p class="sous">Tous les combattants, leurs arènes et leurs tenues, sans rien gagner.</p>
+      <div class="enligne-rejoindre" style="justify-content:center"><input id="mod-code" type="password" autocomplete="off" placeholder="CODE" style="width:200px"><button class="btn or" id="mod-valider">Valider</button></div>
+      <p class="sous" id="mod-msg"></p>
+      <div class="ligne-boutons"><button class="btn" data-ferme="ov-moderateur">Annuler</button></div></div>`;
+    document.body.append(ov);
+    const valider = async () => {
+      const code = $('mod-code').value.trim();
+      if (!code) return;
+      $('mod-msg').textContent = 'Vérification…';
+      const r = await MOD.essayer(code);
+      if (!r.ok) { $('mod-msg').textContent = r.msg || 'Accès refusé.'; return; }
+      $('mod-code').value = '';
+      ov.hidden = true;
+      toast('🗝️ Mode modérateur : tous les combattants sont ouverts !', 3200);
+    };
+    $('mod-valider').addEventListener('click', valider);
+    $('mod-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') valider(); });
+    ov.addEventListener('click', (e) => { if (e.target === ov) ov.hidden = true; });
+  }
+  $('mod-msg').textContent = '';
+  ov.hidden = false;
+  setTimeout(() => $('mod-code').focus(), 50);
+}
+
 function majMenu() {
   const h = sauvegardes().filter((x) => x && !x.fini).sort((a, b) => b.maj - a.maj)[0];
   $('histoire-info').textContent = h ? `Reprendre : ${HIST.ACTES[sceneDe(h).acte].num} · ${sceneDe(h).sous}` : '';
@@ -217,9 +254,11 @@ function majMenu() {
   $('tour-info').textContent = to ? `Reprendre : étage ${to.etage + 1}` : r.tour ? `Record : étage ${r.tour}` : '';
   const ar = lire(CLE_ARCADE, null);
   $('arcade-info').textContent = ar ? `Reprendre : combat ${ar.etape + 1} sur ${ar.file.length}` : r.arcade ? `Terminé ${r.arcade} fois` : '';
-  const caches = PERSOS.filter((p) => !disponible(p)).length;
+  const vrais = vraisDebloques();
+  const caches = PERSOS.filter((p) => aDebloquer(p) && !vrais.has(p.id)).length;
   if (!caches) succes.debloquer('street-tous');
-  $('secrets-info').textContent = caches ? `🔒 ${caches} combattant${caches > 1 ? 's' : ''} à découvrir` : '✨ Tous les combattants sont débloqués !';
+  $('secrets-info').textContent = MOD.estModerateur() ? '🗝️ Mode modérateur : tous les combattants, leurs arènes et leurs tenues sont ouverts'
+    : caches ? `🔒 ${caches} combattant${caches > 1 ? 's' : ''} à découvrir` : '✨ Tous les combattants sont débloqués !';
   $('records').textContent = r.combats ? `🏆 ${r.victoires} victoire${r.victoires > 1 ? 's' : ''} · meilleur combo ${r.combo}` : '';
   $('b-son-menu').textContent = estMuet() ? '🔇' : '🔊';
   aller('s-menu');
@@ -1527,9 +1566,11 @@ function dessiner() {
 
   // Les combattants : celui qui frappe passe devant.
   const ordre = [...c.joueurs].sort((a, b) => (a.action ? 1 : 0) - (b.action ? 1 : 0));
-  // Une saisie : celui qui tient passe devant, et chacun joue sa part de l'animation.
-  const saisie = animerSaisie(c, PERSO);
+  // Une saisie ou un ultime : celui qui frappe passe devant, et chacun joue sa part de l'animation.
+  const saisie = animerSaisie(c, PERSO) || animerUlti(c, PERSO);
   if (saisie) ordre.sort((a) => (a.n === saisie.joueurs[0] ? 1 : -1));
+  // L'aura d'un ultime, derrière celui qui le lance.
+  if (fx.cine) FX.dessinerCineDerriere(g, fx, c, saisie?.att);
   for (const j of ordre) {
     const p = PERSO[j.id];
     const a = j.action;
@@ -1542,9 +1583,10 @@ function dessiner() {
     const nomPose = pose(j) === 'victoire' && !finale ? 'victoire-round' : pose(j);
     const s = saisie && (j.n === saisie.joueurs[0] ? saisie.att : j.n === saisie.joueurs[1] ? saisie.def : null);
     dessinerCombattant(g, p, {
-      x: j.x, y: j.y, dir: j.dir, pose: nomPose, t: j.anim, p: progres, enLAir: !j.sol, alpha, ...s, cle: `combat-${j.n}`,
+      x: j.x, y: j.y, dir: j.dir, pose: nomPose, t: j.anim, p: progres, enLAir: !j.sol, alpha, cle: `combat-${j.n}`,
       aura: j.etat === 'ulti' ? 1 : j.etat === 'victoire' && finale ? 0.75 + Math.sin(t / 6) * 0.2 : j.sp >= 100 ? 0.45 + Math.sin(t / 6) * 0.2 : 0,
       statuts: Object.keys(j.statuts).length ? j.statuts : null, eclat: eclats[j.n] * 0.8, corrompu: !!config.corrompu?.[j.n], echelle: config.echelle?.[j.n] || 1,
+      ...s,
     });
     // Le sillage du poing ou du pied qui frappe.
     const frappe = QUALITE !== 'basse' && a && !s && ['poing', 'poing-bas', 'poing-air', 'uppercut', 'ruee', 'lance', 'pied', 'pied-air', 'balayage'].includes(nomPose);
@@ -1680,7 +1722,7 @@ function remplirTenues() {
   const p = PERSO[prep.choix];
   zone.hidden = prep.mode === 'histoire' || prep.mode === 'enligne' || !p || !disponible(p);
   if (zone.hidden) { prep.tenue = 0; return; }
-  const ouvertes = tenuesOuvertes(etoilesDe(p.id));
+  const ouvertes = MOD.estModerateur() ? TENUES_PERSO.map((t, k) => k) : tenuesOuvertes(etoilesDe(p.id));
   if (!ouvertes.includes(prep.tenue)) prep.tenue = 0;
   zone.innerHTML = TENUES_PERSO.map((t, k) => {
     const ok = ouvertes.includes(k);
@@ -2079,6 +2121,30 @@ function brancher() {
   });
   $('enligne-annuler').addEventListener('click', () => { EL.quitter(); $('enligne-attente').hidden = true; $('enligne-actions').hidden = false; });
   $('enligne-retour').addEventListener('click', () => { if (EL.salle.code) EL.quitter(); majMenu(); });
+  // Le mode modérateur : cinq clics rapides sur le logo ouvrent la fenêtre du code (vérifié par le serveur).
+  let clicsLogo = [];
+  document.querySelector('#s-menu .logo').addEventListener('click', () => {
+    const t = Date.now();
+    clicsLogo = clicsLogo.filter((x) => t - x < 3000);
+    clicsLogo.push(t);
+    if (clicsLogo.length < 5) return;
+    clicsLogo = [];
+    if (MOD.estModerateur()) { toast('🗝️ Le mode modérateur est déjà actif.'); return; }
+    ouvrirModerateur();
+  });
+  MOD.surChangement((oui) => {
+    document.querySelectorAll('.reserve-moderateur').forEach((el) => el.remove());
+    if (oui) {
+      const b = document.createElement('button');
+      b.className = 'btn petit reserve-moderateur';
+      b.textContent = '🗝️ Modérateur';
+      b.title = 'Mode modérateur : tout est ouvert. Cliquer pour le quitter (jusqu’à la prochaine visite).';
+      b.addEventListener('click', () => { MOD.quitter(); toast('Mode modérateur quitté : votre vraie progression est revenue.'); });
+      document.querySelector('#s-menu .menu-bas').append(b);
+    }
+    if (document.querySelector('#s-menu.is-active')) majMenu();
+  });
+  MOD.verifier();
   // La qualité graphique : elle s'applique en relançant l'affichage.
   $('b-graphismes').value = QUALITE;
   $('b-graphismes').addEventListener('change', (e) => {
@@ -2299,6 +2365,17 @@ window.__street = {
   cine: (etapes, hero) => cinematique(etapes, hero),
   histoire: HIST,
   musique: () => musiqueDuMoment(),
+  /** Un ultime tout de suite, à bonne distance (pour l'aperçu) ; puis jusqua(t) avance la cinématique. */
+  essaiUlti(p1, p2, arene = 'dojo') {
+    demarrerCombat({ p1, p2, mode: 'entrainement', arene });
+    enPause = true;
+    const c = combat;
+    c.joueurs[0].x = 390; c.joueurs[1].x = 570; c.joueurs[0].sp = 100;
+    this.avancer(2); this.avancer(1, ['t']);
+    for (let n = 0; !fx.cine && n < 80; n++) this.avancer(1);
+    return !!fx.cine;
+  },
+  jusqua(t) { for (let n = 0; fx.cine && fx.cine.t < t && n < 200; n++) this.avancer(1); return fx.cine?.t; },
   avancer(n, tenues = []) { for (const k of tenues) touches.add(k); for (let i = 0; i < n; i++) pasDeCombat(); for (const k of tenues) touches.delete(k); dessiner(); },
 };
 void STATUTS; void BOSS; void SECRETS;

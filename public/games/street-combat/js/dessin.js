@@ -124,6 +124,10 @@ function poseBrute(nom, t, p = 0) {
     case 'uppercut': return { ...GARDE, b: -6, av: [172, 0], ar: [-10, 90], ja: [70, -110], jr: [-6, -4], dy: 0 };
     case 'tourne': return { ...GARDE, b: 0, av: [100, 10], ar: [-100, -10], ja: [92, 0], jr: [-10, -30], rot: (t * 30) % 360 };
     case 'ulti': return { ...GARDE, b: -8, tt: -10, av: [96, 4], ar: [90, 10], ja: [34, -6], jr: [-34, -6], dy: 6 + s };
+    /* Les poses des ultimes (voir choregraphie.js). */
+    case 'ulti-charge': return { ...GARDE, b: 12 + s, tt: 8, av: [-28 - p * 6, 104], ar: [-38 - p * 6, 112], ja: [32, -16], jr: [-36, -10], dy: 12 + p * 4 };
+    case 'invoque': return { ...GARDE, flotte: true, b: -6, tt: -22, av: [166 + s * 3, 8], ar: [150 - s * 3, 14], ja: [14, -24], jr: [-8, -30] };
+    case 'frappe-sol': return { ...GARDE, b: 42, tt: 14, av: [36, 8], ar: [-34, 64], ja: [92, -112], jr: [-18, -118], dy: 46 };
 
     /* La saisie : celui qui tient (sa main arrière reste sur le col de l'autre : voir `saisir`), et frappe de l'autre. p : l'avancée de l'étape. */
     case 'saisie': return { ...GARDE, b: 16, av: [36, 112], ar: [80, 12], ja: [26, -10], jr: [-28, -6] };
@@ -176,7 +180,7 @@ function poseBrute(nom, t, p = 0) {
 /** Toutes les poses du corps (pour les tests et l'atelier). */
 export const POSES = ['repos', 'marche', 'saut', 'accroupi', 'garde', 'garde-bas', 'poing', 'pied', 'poing-bas', 'balayage', 'poing-air', 'pied-air', 'touche', 'vol', 'sol', 'ko',
   'v-poing', 'v-deux-poings', 'v-bras-croises', 'v-salut', 'v-salut-mili', 'v-pointe', 'v-flex', 'v-meditation', 'v-rire', 'v-sautille', 'v-levitation', 'v-genou', 'v-bras-ecartes', 'v-poing-sol', 'v-garde-honneur',
-  'lance', 'ruee', 'uppercut', 'tourne', 'ulti', 'saisie', 'saisie-poing', 'saisie-crochet', 'saisie-genou', 'saisie-uppercut', 'saisie-ecrase', 'saisie-griffe', 'saisie-souffle', 'saisie-jet', 'tenu', 'tenu-plie', 'tenu-leve', 'projete'];
+  'lance', 'ruee', 'uppercut', 'tourne', 'ulti', 'ulti-charge', 'invoque', 'frappe-sol', 'saisie', 'saisie-poing', 'saisie-crochet', 'saisie-genou', 'saisie-uppercut', 'saisie-ecrase', 'saisie-griffe', 'saisie-souffle', 'saisie-jet', 'tenu', 'tenu-plie', 'tenu-leve', 'projete'];
 export { poseDe };
 
 /* ------------------------------------------------------------------ */

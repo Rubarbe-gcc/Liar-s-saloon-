@@ -8,7 +8,9 @@
 
 import { PERSO } from '../../../shared/street/persos.js';
 import { ARENE } from '../../../shared/street/combat.js';
-import { rgba, teinte, etoile, dessinerPortrait, dessinerCombattant } from './dessin.js';
+import { rgba, dessinerPortrait } from './dessin.js';
+import * as K from './anime.js';
+import { ULTIMES, ULTIMES_HEROS, FONDS } from './ultimes.js';
 
 const L = ARENE.L;
 const H = ARENE.H;
@@ -41,6 +43,8 @@ export function traiter(fx, ev, c) {
       etincelles(fx, ev.x, ev.y, n, ev.couleur, ev.force >= 2 ? 9 : 6);
       etincelles(fx, ev.x, ev.y, Math.ceil(n / 3), '#ffffff', 5);
       fx.anneaux.push({ x: ev.x, y: ev.y, r: 8, max: ev.force >= 2 ? 90 : 50, vie: 16, c: ev.couleur });
+      // L'étoile d'impact, comme dans un anime : elle jaillit et s'efface en quelques images.
+      fx.anneaux.push({ x: ev.x, y: ev.y, r: 0, max: ev.force >= 3 ? 120 : ev.force >= 2 ? 80 : 52, vie: 9, c: ev.couleur, etoile: true, rot: fx.t * 0.7 });
       if (ev.force >= 2) fx.secousse = Math.max(fx.secousse, ev.force * 3);
       if (ev.effet === 'gel') for (let i = 0; i < 8; i++) fx.parts.push({ x: ev.x, y: ev.y, vx: (Math.random() - 0.5) * 6, vy: -Math.random() * 5, vie: 30, max: 30, r: 3, c: '#e6faff', grav: 0.2, type: 'eclat' });
       break;
@@ -183,15 +187,6 @@ function halo(g, x, y, r, c, a = 1) {
   g.fillStyle = gr;
   g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
 }
-function eclair(g, x0, y0, x1, y1, c, ep = 3, seg = 9, graine = 0) {
-  g.strokeStyle = c; g.lineWidth = ep; g.lineCap = 'round'; g.lineJoin = 'round';
-  g.beginPath(); g.moveTo(x0, y0);
-  for (let i = 1; i < seg; i++) {
-    const f = i / seg;
-    g.lineTo(x0 + (x1 - x0) * f + (hasardFixe(graine + i) - 0.5) * 40, y0 + (y1 - y0) * f + (hasardFixe(graine + i * 3) - 0.5) * 20);
-  }
-  g.lineTo(x1, y1); g.stroke();
-}
 const lumiere = (g, f) => { g.save(); g.globalCompositeOperation = 'lighter'; f(); g.restore(); };
 
 /* ------------------------------------------------------------------ */
@@ -204,85 +199,71 @@ export function dessinerProjectiles(g, c, t) {
     const d = p.def;
     const r = d.rayon || 18;
     const dir = Math.sign(p.vx) || p.dir;
+    const P = K.palette(k.faisceau);
     g.save();
     g.translate(p.x, p.y);
     switch (d.forme) {
       case 'heros-eclat': case 'heros-phenix': case 'heros-flocon': case 'heros-corbeau': case 'heros-meteore': case 'heros-anneau': case 'heros-oiseau':
         dessinerProjHeros(g, d.forme, r, teinteK(k, d.teinte), dir, t, p);
         break;
-      case 'flamme': case 'rocher': case 'goutte': case 'boule': case 'orbe': case 'bulle': case 'ame': case 'balle': case 'trou-noir': case 'etoile': case 'plume':
-      default:
-        dessinerBoule(g, d.forme, r, k, dir, t, p);
-        break;
       case 'onde':
-        lumiere(g, () => {
-          for (let i = 0; i < 3; i++) { g.fillStyle = rgba(k.c1, 0.35 - i * 0.1); g.beginPath(); g.ellipse(-dir * i * 18, 0, r * 0.8, r * 1.4 - i * 6, 0, 0, TAU); g.fill(); }
-          halo(g, 0, 0, r * 1.8, k.faisceau, 0.6);
-        });
+        // Une onde d'ombre : trois croissants dressés, le premier net, les autres qui s'effacent.
+        g.scale(dir, 1);
+        for (let i = 2; i >= 0; i--) K.croissant(g, -i * 18, 0, r * 1.6 - i * 5, K.palette(k.c1), 1 - i * 0.3, 0.32);
         break;
       case 'aiguille':
-        lumiere(g, () => {
-          g.scale(dir, 1);
-          halo(g, 0, 0, 34, k.c1, 0.6);
-          g.fillStyle = '#ffd23f';
-          g.beginPath(); g.moveTo(-40, -3); g.lineTo(18, -6); g.lineTo(34, 0); g.lineTo(18, 6); g.lineTo(-40, 3); g.fill();
-          g.fillStyle = '#ffffff'; g.beginPath(); g.arc(-40, 0, 5, 0, TAU); g.fill();
-        });
+        // Une flèche du temps : une aiguille d'or, des éclats derrière.
+        for (let i = 1; i < 4; i++) K.losange(g, -dir * i * 16, 0, -dir * 6, 0, 2.2, K.OR, 1 - i * 0.25);
+        K.lance(g, dir * 24, 0, dir > 0 ? 0 : Math.PI, 56, K.OR, 1, '#fff0a0');
         break;
       case 'sablier':
         g.rotate(t / 8);
-        lumiere(g, () => halo(g, 0, 0, 30, k.c1, 0.5));
-        g.fillStyle = '#ffd23f'; g.fillRect(-12, -16, 24, 4); g.fillRect(-12, 12, 24, 4);
-        g.fillStyle = rgba('#e8f8ff', 0.8);
-        g.beginPath(); g.moveTo(-10, -12); g.lineTo(10, -12); g.lineTo(2, 0); g.lineTo(10, 12); g.lineTo(-10, 12); g.lineTo(-2, 0); g.closePath(); g.fill();
-        g.fillStyle = '#e8c070'; g.beginPath(); g.moveTo(-6, 12); g.lineTo(6, 12); g.lineTo(0, 5); g.fill();
+        K.lueur(g, 0, 0, 30, K.SABLE.base, 0.5);
+        K.couches(g, (s) => { g.moveTo(-11 * s, -14 * s); g.lineTo(11 * s, -14 * s); g.lineTo(2 * s, 0); g.lineTo(11 * s, 14 * s); g.lineTo(-11 * s, 14 * s); g.lineTo(-2 * s, 0); g.closePath(); }, K.SABLE, [1.2, 1, 0.6, 0.25]);
+        K.couches(g, (s) => { g.rect(-14 * s, -18, 28 * s, 4); g.rect(-14 * s, 14, 28 * s, 4); }, K.OR, [1.1, 1, 0.5, 0]);
         break;
-      case 'poing':
-        lumiere(g, () => {
-          g.scale(dir, 1);
-          for (let i = 1; i < 5; i++) halo(g, -i * 16, 0, r * (1.4 - i * 0.2), '#ffe680', 0.5 - i * 0.1);
-          halo(g, 0, 0, r * 2.2, '#ffd23f', 0.8);
-          g.strokeStyle = rgba('#ffffff', 0.8); g.lineWidth = 3;
-          for (let i = 0; i < 3; i++) { g.beginPath(); g.arc(-10 - i * 12, 0, r + i * 6, -1, 1); g.stroke(); }
-        });
+      case 'poing': {
+        // Un poing supersonique : des anneaux de vitesse, le gant rouge.
         g.scale(dir, 1);
-        g.fillStyle = '#d8102a'; g.beginPath(); g.ellipse(2, 0, r * 0.75, r * 0.65, 0, 0, TAU); g.fill();
-        g.fillStyle = 'rgba(255,255,255,0.35)'; g.beginPath(); g.ellipse(-2, -5, r * 0.3, r * 0.2, 0, 0, TAU); g.fill();
+        for (let i = 0; i < 3; i++) { g.save(); g.translate(-12 - i * 14, 0); g.scale(0.4, 1); K.onde(g, 0, 0, r + i * 6, 3, K.OR, 0.8 - i * 0.25); g.restore(); }
+        const GANT = K.palette('#d8102a');
+        K.couches(g, (s) => { g.ellipse(2, 0, r * 0.8 * s, r * 0.68 * s, 0, 0, TAU); }, GANT, [1.12, 1, 0.6, 0.25]);
+        g.strokeStyle = GANT.encre; g.lineWidth = 2;
+        for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(r * 0.3, (-0.35 + i * 0.35) * r); g.lineTo(r * 0.75, (-0.35 + i * 0.35) * r); g.stroke(); }
         break;
+      }
       case 'eclat':
+        // Un éclat de miroir qui tourne.
         g.rotate(t / 4);
-        lumiere(g, () => halo(g, 0, 0, r * 2.2, '#c0d8ff', 0.6));
-        g.fillStyle = '#ffffff';
-        g.beginPath(); g.moveTo(0, -r); g.lineTo(r * 0.5, 0); g.lineTo(0, r); g.lineTo(-r * 0.5, 0); g.closePath(); g.fill();
-        g.strokeStyle = '#7a8ac8'; g.lineWidth = 1; g.stroke();
+        K.cristal(g, 0, r * 0.9, r * 1.8, r * 1.1, 0, K.MIROIR);
+        K.etoileImpact(g, 0, -r * 0.6, 8, t / 3, K.MIROIR, 0.9, 4);
         break;
-      case 'lame': case 'lance':
-        lumiere(g, () => {
-          g.scale(dir, 1);
-          const l = d.forme === 'lance' ? 70 : 34;
-          const gr = g.createLinearGradient(-l, 0, l * 0.4, 0);
-          gr.addColorStop(0, rgba(k.faisceau, 0)); gr.addColorStop(1, '#ffffff');
-          g.fillStyle = gr;
-          g.beginPath(); g.moveTo(-l, -3); g.lineTo(l * 0.4, -5); g.lineTo(l * 0.4 + 18, 0); g.lineTo(l * 0.4, 5); g.lineTo(-l, 3); g.fill();
-          halo(g, l * 0.3, 0, 26, k.faisceau, 0.6);
-        });
+      case 'lame': case 'lance': {
+        const l = d.forme === 'lance' ? 76 : 40;
+        for (let i = 1; i < 4; i++) K.losange(g, -dir * (l * 0.4 + i * 14), 0, -dir * 5, 0, 2, P, 1 - i * 0.25);
+        K.lance(g, dir * l * 0.5, 0, dir > 0 ? 0 : Math.PI, l, P, 1, P.clair);
         break;
-      case 'croissant': case 'lame-geante': case 'vent':
-        lumiere(g, () => {
-          g.scale(dir, 1);
-          const R = d.forme === 'lame-geante' ? r * 1.6 : r;
-          g.fillStyle = d.forme === 'vent' ? rgba('#e6f8ff', 0.7) : rgba(k.faisceau, 0.85);
-          g.beginPath(); g.arc(0, 0, R, -1.3, 1.3); g.arc(-R * 0.45, 0, R * 0.85, 1.2, -1.2, true); g.closePath(); g.fill();
-          halo(g, 0, 0, R * 1.5, k.c1, 0.4);
-          if (d.forme === 'vent') { g.strokeStyle = rgba('#ffffff', 0.5); g.lineWidth = 2; for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(-R - 10 - i * 14, -8 + i * 8); g.lineTo(-R * 2.4 - i * 14, -8 + i * 8); g.stroke(); } }
-        });
+      }
+      case 'croissant': case 'lame-geante': case 'vent': {
+        g.scale(dir, 1);
+        const R = d.forme === 'lame-geante' ? r * 1.6 : r;
+        const PP = d.forme === 'vent' ? K.VENT : P;
+        for (let i = 2; i >= 1; i--) K.croissant(g, -i * 14, 0, R * (1 - i * 0.12), PP, 0.35 - i * 0.1);
+        K.croissant(g, 0, 0, R, PP);
         break;
-      case 'missile':
+      }
+      case 'missile': {
         g.rotate(Math.atan2(p.vy, p.vx));
-        lumiere(g, () => { for (let i = 0; i < 5; i++) halo(g, -18 - i * 10, (Math.random() - 0.5) * 4, 10 - i, '#ff9a2a', 0.7 - i * 0.12); });
-        g.fillStyle = '#d0d0e0'; g.beginPath(); g.roundRect(-16, -5, 28, 10, 4); g.fill();
-        g.fillStyle = '#ff3a3a'; g.beginPath(); g.moveTo(12, -5); g.lineTo(22, 0); g.lineTo(12, 5); g.fill();
-        g.fillStyle = '#8a8aa0'; g.beginPath(); g.moveTo(-16, -5); g.lineTo(-22, -10); g.lineTo(-12, -5); g.moveTo(-16, 5); g.lineTo(-22, 10); g.lineTo(-12, 5); g.fill();
+        g.save(); g.rotate(-Math.PI / 2); K.flamme(g, 0, 14, 30, 11, t, K.FEU, 3); g.restore();
+        g.fillStyle = '#1a1c28'; g.beginPath(); g.roundRect(-17, -7, 32, 14, 6); g.fill();
+        g.fillStyle = '#d8dce8'; g.beginPath(); g.roundRect(-15, -5, 28, 10, 5); g.fill();
+        g.fillStyle = '#ff3a3a'; g.beginPath(); g.moveTo(13, -5); g.lineTo(23, 0); g.lineTo(13, 5); g.fill();
+        g.fillStyle = '#ffffff'; g.fillRect(-11, -3, 18, 2);
+        g.fillStyle = '#8a8aa0'; g.beginPath(); g.moveTo(-15, -5); g.lineTo(-22, -11); g.lineTo(-10, -5); g.moveTo(-15, 5); g.lineTo(-22, 11); g.lineTo(-10, 5); g.fill();
+        break;
+      }
+      default:
+        dessinerBoule(g, d.forme, r, k, dir, t, p);
         break;
     }
     g.restore();
@@ -290,165 +271,219 @@ export function dessinerProjectiles(g, c, t) {
 }
 
 function dessinerBoule(g, forme, r, k, dir, t, p) {
+  if (forme === 'boule' || forme === 'orbe') {
+    // Une boule de ki : son sillage en boules de plus en plus petites, puis la boule.
+    const P = K.palette(k.faisceau);
+    for (let i = 3; i >= 1; i--) K.orbe(g, -dir * i * r * 0.8, Math.sin(t / 2 + i) * 2, r * (1 - i * 0.2), t + i * 3, P, 0.5 - i * 0.12);
+    K.orbe(g, 0, 0, r, t, P);
+    return;
+  }
+  if (forme === 'flamme') {
+    // Une boule de feu : une flamme couchée qui traîne derrière, un cœur rond.
+    g.save(); g.rotate(dir > 0 ? -Math.PI / 2 : Math.PI / 2);
+    K.flamme(g, 0, r * 0.5, r * 3.2, r * 1.9, t, K.FEU, 3);
+    K.flamme(g, r * 0.3, r * 0.4, r * 2.2, r * 1.1, t + 5, K.FEU, 7, 0.9);
+    g.restore();
+    K.orbe(g, 0, 0, r * 0.75, t, K.FEU);
+    return;
+  }
   if (forme === 'rocher') {
-    g.rotate(t / 6 * dir);
-    g.fillStyle = '#6a5038';
-    g.beginPath(); for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU; const rr = r * (0.8 + hasardFixe(i) * 0.3); g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } g.closePath(); g.fill();
-    g.fillStyle = 'rgba(255,255,255,0.18)'; g.beginPath(); g.arc(-r * 0.3, -r * 0.3, r * 0.35, 0, TAU); g.fill();
-    if (p.def.effet === 'brulure') lumiere(g, () => halo(g, 0, 0, r * 1.6, '#ff6a00', 0.6));
+    // Un rocher qui tourne, sa poussière ; en feu s'il brûle.
+    const feu = p.def.effet === 'brulure';
+    for (let i = 1; i < 4; i++) K.fumee(g, -dir * i * r * 0.7, i * 3, r * (0.5 - i * 0.08), feu ? K.FEU : { ...K.SABLE, base: '#b8a080' }, 0.5 - i * 0.12, i);
+    K.eclat(g, 0, 0, r, (t / 6) * dir, K.ROCHE);
     return;
   }
   if (forme === 'trou-noir') {
-    lumiere(g, () => {
-      for (let i = 0; i < 3; i++) {
-        g.strokeStyle = rgba(i % 2 ? '#ff50ff' : '#c814ff', 0.6); g.lineWidth = 3;
-        g.beginPath(); g.ellipse(0, 0, r * 1.6 + i * 6, r * 0.5 + i * 2, t / 10 + i, 0, TAU); g.stroke();
-      }
-      halo(g, 0, 0, r * 2.2, '#c814ff', 0.6);
-    });
-    g.fillStyle = '#000'; g.beginPath(); g.arc(0, 0, r * 0.75, 0, TAU); g.fill();
+    for (let i = 0; i < 3; i++) {
+      g.save(); g.rotate(t / 10 + i); g.scale(1, 0.32);
+      for (const [c, w] of [[K.VIDE.encre, 7], [i % 2 ? K.VIDE.base : K.VIDE.clair, 4], [K.VIDE.coeur, 1.2]]) { g.strokeStyle = c; g.lineWidth = w; g.beginPath(); g.arc(0, 0, r * 1.5 + i * 7, 0.2, 4.6); g.stroke(); }
+      g.restore();
+    }
+    K.lueur(g, 0, 0, r * 2.4, K.VIDE.base, 0.5);
+    g.fillStyle = K.VIDE.clair; g.beginPath(); g.arc(0, 0, r * 0.8 + 3, 0, TAU); g.fill();
+    g.fillStyle = '#000'; g.beginPath(); g.arc(0, 0, r * 0.8, 0, TAU); g.fill();
     return;
   }
-  if (forme === 'etoile' || forme === 'plume') {
-    lumiere(g, () => halo(g, 0, 0, r * 2, k.c1, 0.6));
-    if (forme === 'etoile') etoile(g, 0, 0, r, '#ffffff', t / 5);
-    else { g.rotate(Math.atan2(p.vy, p.vx)); g.fillStyle = '#fff6c8'; g.beginPath(); g.ellipse(0, 0, r * 1.4, r * 0.45, 0, 0, TAU); g.fill(); }
+  if (forme === 'etoile') {
+    for (let i = 1; i < 4; i++) K.losange(g, -dir * i * r * 0.8, 0, -dir * 5, 0, 2.5, K.palette(k.c1), 1 - i * 0.25);
+    K.etoileImpact(g, 0, 0, r * 1.2, t / 5, K.palette(k.c1), 1, 5);
+    return;
+  }
+  if (forme === 'plume') {
+    g.rotate(Math.atan2(p.vy, p.vx));
+    K.couches(g, (s) => g.ellipse(0, 0, r * 1.4 * s, r * 0.45 * s, 0, 0, TAU), K.palette('#fff6c8'), [1.15, 1, 0.55, 0.2]);
     return;
   }
   if (forme === 'bulle') {
-    g.strokeStyle = rgba('#c8f4ff', 0.9); g.lineWidth = 2.5; g.beginPath(); g.arc(0, 0, r, 0, TAU); g.stroke();
-    g.fillStyle = rgba('#5ad8ff', 0.2); g.fill();
-    g.fillStyle = 'rgba(255,255,255,0.8)'; g.beginPath(); g.arc(-r * 0.35, -r * 0.35, r * 0.18, 0, TAU); g.fill();
+    const P = K.EAU;
+    g.fillStyle = 'rgba(30,168,232,0.25)'; g.beginPath(); g.arc(0, 0, r, 0, TAU); g.fill();
+    g.strokeStyle = P.encre; g.lineWidth = 3.5; g.stroke();
+    g.strokeStyle = P.clair; g.lineWidth = 2; g.beginPath(); g.arc(0, 0, r - 2, 0, TAU); g.stroke();
+    g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(-r * 0.35, -r * 0.35, r * 0.22, r * 0.14, -0.6, 0, TAU); g.fill();
     return;
   }
   if (forme === 'ame') {
-    lumiere(g, () => { halo(g, 0, 0, r * 2, k.c1, 0.7); g.fillStyle = rgba('#e8d4ff', 0.8); g.beginPath(); g.arc(0, 0, r * 0.6, 0, TAU); g.fill(); g.beginPath(); g.moveTo(-r * 0.6, 0); g.quadraticCurveTo(-r * 2 * dir, Math.sin(t / 3) * 8, -r * 2.6 * dir, 0); g.lineTo(-r * 0.4, r * 0.4); g.fill(); });
-    g.fillStyle = '#1a0030'; g.beginPath(); g.arc(-3, -2, 2.5, 0, TAU); g.arc(4, -2, 2.5, 0, TAU); g.fill();
+    // Une âme : un fantôme pâle, sa traîne qui ondule, ses yeux sombres.
+    const P = K.palette('#e8d4ff');
+    K.lueur(g, 0, 0, r * 2.2, k.c1, 0.5);
+    K.couches(g, (s) => { g.arc(0, 0, r * 0.7 * s, Math.PI, 0); g.quadraticCurveTo(r * 0.7 * s, r * 0.5, -dir * r * 2.4 * s, Math.sin(t / 3) * 8); g.quadraticCurveTo(-r * 0.7 * s, r * 0.5, -r * 0.7 * s, 0); }, P, [1.15, 1, 0.6, 0.25]);
+    g.fillStyle = '#1a0030'; g.beginPath(); g.arc(-3, -3, 2.5, 0, TAU); g.arc(5, -3, 2.5, 0, TAU); g.fill();
     return;
   }
-  const couleur = forme === 'flamme' ? '#ff7a1a' : forme === 'goutte' ? '#5cff6a' : forme === 'balle' ? '#ffe680' : k.faisceau;
-  lumiere(g, () => {
-    // La traînée.
-    for (let i = 1; i < 6; i++) halo(g, -dir * i * r * 0.55, Math.sin(t / 2 + i) * 2, r * (1.2 - i * 0.14), couleur, 0.45 - i * 0.06);
-    halo(g, 0, 0, r * 2.1, couleur, 0.85);
-    if (forme === 'boule' || forme === 'orbe') {
-      g.strokeStyle = rgba('#ffffff', 0.7); g.lineWidth = 2;
-      for (let i = 0; i < 2; i++) { g.beginPath(); g.ellipse(0, 0, r * 0.9, r * 0.35, t / 4 + i * 1.6, 0, TAU); g.stroke(); }
-    }
-  });
-  g.fillStyle = '#ffffff';
-  g.beginPath(); g.arc(0, 0, r * (forme === 'balle' ? 0.5 : 0.45), 0, TAU); g.fill();
+  // Une goutte (de venin), une balle, le reste : une boule d'énergie aux couleurs de l'effet.
+  const P = forme === 'goutte' ? K.POISON : forme === 'balle' ? K.palette('#ffe680') : K.palette(k.faisceau);
+  if (forme === 'goutte') {
+    for (let i = 1; i < 4; i++) K.couches(g, (s) => g.arc(-dir * i * r * 0.7, i * 2, r * (0.35 - i * 0.06) * s, 0, TAU), P, [1.2, 1, 0.6, 0.3], 1 - i * 0.25);
+    g.save(); g.rotate(dir > 0 ? Math.PI / 2 : -Math.PI / 2);
+    K.couches(g, (s) => { g.moveTo(0, -r * 1.3 * s); g.quadraticCurveTo(r * 0.9 * s, 0, 0, r * 0.8 * s); g.quadraticCurveTo(-r * 0.9 * s, 0, 0, -r * 1.3 * s); }, P, [1.15, 1, 0.6, 0.3]);
+    g.restore();
+    return;
+  }
+  K.orbe(g, 0, 0, r * (forme === 'balle' ? 0.6 : 0.9), t, P);
 }
 
 export function dessinerZones(g, c, t) {
   for (const z of c.zones) {
     const d = z.def;
     const k = PERSO[c.joueurs[z.j].id].c;
+    const P = K.palette(k.c1);
     const avant = z.t < d.delai;
     const actif = z.t - d.delai;
     const fin = Math.max(0, 1 - Math.max(0, actif - d.duree) / 20);
     const x = z.x;
     if (avant) {
-      // Le présage : un cercle au sol qui se resserre.
+      // Le présage : un cercle au sol qui se resserre (une colonne pâle si la zone tombe du ciel).
       const p = z.t / d.delai;
-      g.save();
-      g.strokeStyle = rgba(k.c1, 0.4 + p * 0.5); g.lineWidth = 2 + p * 2;
-      g.beginPath(); g.ellipse(x, SOL, d.rayon * (1.4 - p * 0.4), 10, 0, 0, TAU); g.stroke();
-      if (d.hauteur >= 500) { g.fillStyle = rgba(k.c1, 0.08 + p * 0.1); g.fillRect(x - d.rayon * 0.5, 0, d.rayon, SOL); }
-      g.restore();
+      K.onde(g, x, SOL, d.rayon * (1.4 - p * 0.4), 2 + p * 3, P, 0.4 + p * 0.5, 0.14);
+      if (d.hauteur >= 500) { g.fillStyle = rgba(k.c1, 0.06 + p * 0.1); g.fillRect(x - d.rayon * 0.5, 0, d.rayon, SOL); }
       if (d.forme?.startsWith('heros-')) lumiere(g, () => sceau(g, x, SOL, d.rayon * (0.4 + p * 0.6), d.teinte || k.c1, 0.4 + p * 0.6, z.t / 10));
-      if (d.forme === 'lune') { const y = -80 + p * (SOL - 120); lumiere(g, () => halo(g, x, y, 70, '#dcebff', 0.9)); g.fillStyle = '#eef6ff'; g.beginPath(); g.arc(x, y, 38, 0, TAU); g.fill(); g.fillStyle = '#c8d8f0'; g.beginPath(); g.arc(x - 10, y - 8, 7, 0, TAU); g.arc(x + 12, y + 10, 5, 0, TAU); g.fill(); }
+      if (d.forme === 'lune') K.lune(g, x, -80 + p * (SOL - 120), 40);
       continue;
     }
     g.save();
     g.globalAlpha = fin;
     switch (d.forme) {
-      case 'eclair': case 'rayon-ciel':
-        lumiere(g, () => {
-          const c1 = d.forme === 'eclair' ? '#fff3a0' : '#fff8d2';
-          if (d.forme === 'eclair') { eclair(g, x + 20, 0, x, SOL, rgba(c1, 0.9), 6, 10, z.t); eclair(g, x - 10, 0, x, SOL, '#ffffff', 2.5, 10, z.t + 50); }
-          else { const gr = g.createLinearGradient(x - d.rayon, 0, x + d.rayon, 0); gr.addColorStop(0, rgba(c1, 0)); gr.addColorStop(0.5, rgba(c1, 0.9)); gr.addColorStop(1, rgba(c1, 0)); g.fillStyle = gr; g.fillRect(x - d.rayon, 0, d.rayon * 2, SOL); }
-          halo(g, x, SOL - 10, 90, c1, 0.8);
-        });
+      case 'eclair':
+        K.foudre(g, x + 30, 0, x, SOL, 9, K.FOUDRE, Math.floor(z.t / 2) * 7, 2);
+        if (actif < 8) K.etoileImpact(g, x, SOL - 8, 60, z.t, K.FOUDRE, 1 - actif / 8, 8);
         break;
-      case 'feu': case 'pilier':
-        lumiere(g, () => {
-          for (let i = 0; i < 18; i++) {
-            const v = (z.t * 4 + i * 23) % d.hauteur;
-            halo(g, x + Math.sin(z.t / 4 + i) * d.rayon * 0.4, SOL - v, 34 - v / d.hauteur * 22, i % 2 ? '#ff9a1a' : '#ff3a00', 0.6);
-          }
-        });
+      case 'rayon-ciel':
+        g.save(); g.translate(x, -20); g.rotate(Math.PI / 2);
+        K.rayon(g, SOL + 24, d.rayon * 0.42, z.t, K.palette('#fff0b0'));
+        g.restore();
+        if (actif < 8) K.etoileImpact(g, x, SOL - 8, 70, z.t, K.OR, 1 - actif / 8, 8);
         break;
-      case 'blizzard':
-        g.fillStyle = rgba('#c8f0ff', 0.18); g.beginPath(); g.ellipse(x, SOL - 100, d.rayon, 110, 0, 0, TAU); g.fill();
-        for (let i = 0; i < 40; i++) { const a = z.t / 8 + i; const rr = (i * 7) % d.rayon; g.fillStyle = '#ffffff'; g.beginPath(); g.arc(x + Math.cos(a) * rr, SOL - 100 + Math.sin(a * 1.3) * rr * 0.8, 2, 0, TAU); g.fill(); }
+      case 'feu': case 'pilier': {
+        // Un brasier qui jaillit du sol : des langues de feu, des braises qui montent.
+        const PF = d.forme === 'feu' ? K.FEU : K.palette(k.faisceau);
+        const monte = K.lisse(actif / 6);
+        K.brasier(g, x, SOL + 4, d.rayon * 1.5, d.hauteur * monte, z.t, PF, 2, 1, 8);
+        for (let i = 0; i < 10; i++) {
+          const v = ((z.t * 5 + i * 37) % d.hauteur) / d.hauteur;
+          K.losange(g, x + (K.hasard(i) - 0.5) * d.rayon * 1.6 + Math.sin(z.t / 5 + i) * 10, SOL - v * d.hauteur * 1.1, 0, -3, 2.5, PF, 1 - v);
+        }
+        K.onde(g, x, SOL, d.rayon * (0.8 + monte * 0.6), 4 * (1 - monte) + 1, PF, 1 - monte, 0.16);
         break;
-      case 'seisme':
-        g.strokeStyle = rgba(k.c1, 0.9); g.lineWidth = 4;
-        for (let i = -3; i <= 3; i++) { g.beginPath(); g.moveTo(x, SOL); g.lineTo(x + i * d.rayon * 0.3 + (hasardFixe(i) - 0.5) * 20, SOL + 10 + Math.abs(i) * 6); g.stroke(); }
-        for (let i = 0; i < 8; i++) { const sx = x + (hasardFixe(i + z.t) - 0.5) * d.rayon * 2; g.fillStyle = '#8a6a48'; g.fillRect(sx, SOL - 8 - (actif % 12) * 2, 8, 8); }
-        lumiere(g, () => halo(g, x, SOL, d.rayon, k.c1, 0.4));
+      }
+      case 'blizzard': {
+        // Un tourbillon de neige : des volutes cernées, des éclats de glace qui tournent, des cristaux au sol.
+        const PG = K.GLACE;
+        K.lueur(g, x, SOL - 100, d.rayon * 1.3, PG.base, 0.35);
+        g.save();
+        for (let i = 0; i < 4; i++) {
+          const ry = 110 - i * 18;
+          g.strokeStyle = i % 2 ? PG.clair : PG.coeur; g.lineWidth = 10 - i * 1.6;
+          g.beginPath(); g.ellipse(x, SOL - 100 + i * 6, d.rayon * (1 - i * 0.16), ry, 0, z.t / 6 + i * 1.3, z.t / 6 + i * 1.3 + 2.4); g.stroke();
+          g.strokeStyle = PG.encre; g.lineWidth = 1.5;
+          g.beginPath(); g.ellipse(x, SOL - 100 + i * 6, d.rayon * (1 - i * 0.16) + 5, ry + 5, 0, z.t / 6 + i * 1.3, z.t / 6 + i * 1.3 + 2.4); g.stroke();
+        }
+        g.restore();
+        for (let i = 0; i < 6; i++) {
+          const a = z.t / 9 + i * 1.05;
+          K.fumee(g, x + Math.cos(a) * d.rayon * 0.75, SOL - 100 + Math.sin(a) * 70, 20 + K.hasard(i) * 14, PG, 0.55, i);
+        }
+        for (let i = 0; i < 16; i++) {
+          const a = z.t / 7 + i * 0.9;
+          const rr = d.rayon * (0.3 + 0.7 * K.hasard(i));
+          K.eclat(g, x + Math.cos(a) * rr, SOL - 100 + Math.sin(a * 1.3) * rr * 0.7, 3 + K.hasard(i * 3) * 4, a * 2, PG, 0.95);
+        }
+        for (let i = 0; i < 5; i++) K.cristal(g, x + (i - 2) * d.rayon * 0.32, SOL + 2, (28 + K.hasard(i) * 26) * K.lisse(actif / 10), 14, (i - 2) * 0.18, PG);
         break;
-      case 'flaque':
-        g.fillStyle = rgba('#3cdc64', 0.55); g.beginPath(); g.ellipse(x, SOL + 4, d.rayon, 12, 0, 0, TAU); g.fill();
-        for (let i = 0; i < 6; i++) { const v = (z.t + i * 10) % 40; g.fillStyle = rgba('#8aff8a', 0.6 * (1 - v / 40)); g.beginPath(); g.arc(x + (hasardFixe(i) - 0.5) * d.rayon * 1.6, SOL - v, 4, 0, TAU); g.fill(); }
+      }
+      case 'seisme': {
+        // Le sol se fend, des pics de roche jaillissent, la poussière monte.
+        const m = K.lisse(actif / 5);
+        g.save();
+        for (const [cl, w] of [[K.FEU.encre, 7], [K.FEU.base, 3.5]]) {
+          g.strokeStyle = cl; g.lineWidth = w;
+          for (let i = -3; i <= 3; i++) { g.beginPath(); g.moveTo(x, SOL); g.lineTo(x + i * d.rayon * 0.3 * m + (K.hasard(i + 9) - 0.5) * 20, SOL + 4 + Math.abs(i) * 3); g.stroke(); }
+        }
+        g.restore();
+        for (let i = 0; i < 5; i++) K.cristal(g, x + (i - 2) * d.rayon * 0.4, SOL + 6, (40 + K.hasard(i) * 50) * m, 22, (i - 2) * 0.2, K.ROCHE);
+        for (let i = 0; i < 4; i++) K.fumee(g, x + (i - 1.5) * d.rayon * 0.5, SOL - 14 - actif * 0.8, 16 + actif * 0.5, { ...K.SABLE, base: '#b8a080' }, 0.6 * (1 - actif / 30), i);
         break;
+      }
+      case 'flaque': {
+        // Une flaque de venin (ou de sable mouvant) qui bouillonne.
+        const PF = d.effet === 'poison' ? K.POISON : K.palette(k.c1);
+        K.couches(g, (s) => g.ellipse(x, SOL + 4, d.rayon * s, 13 * s, 0, 0, TAU), PF, [1.06, 1, 0.65, 0.2], 0.9);
+        for (let i = 0; i < 7; i++) {
+          const v = ((z.t + i * 10) % 40) / 40;
+          K.couches(g, (s) => g.arc(x + (K.hasard(i) - 0.5) * d.rayon * 1.6, SOL - v * 50, (3 + v * 4) * s, 0, TAU), PF, [1.3, 1, 0.5, 0.25], 1 - v);
+        }
+        break;
+      }
       case 'champ':
-        lumiere(g, () => {
-          g.strokeStyle = rgba(k.c1, 0.7); g.lineWidth = 3;
-          for (let i = 0; i < 4; i++) { g.beginPath(); g.ellipse(x, SOL - 60, d.rayon * (1 - i * 0.2), 60 - i * 12 + Math.sin(z.t / 4 + i) * 4, 0, 0, TAU); g.stroke(); }
-          halo(g, x, SOL - 80, d.rayon * 1.2, k.c1, 0.35);
-          if (d.souleve) for (let i = 0; i < 10; i++) { g.fillStyle = rgba('#e8d4ff', 0.6); g.fillRect(x + (hasardFixe(i) - 0.5) * d.rayon * 2, SOL - ((z.t * 3 + i * 20) % 200), 3, 10); }
-        });
+        // Un champ de gravité : des anneaux qui écrasent, des pierres qui flottent.
+        for (let i = 0; i < 4; i++) {
+          g.save(); g.translate(x, SOL - 60); g.scale(1, 0.4);
+          K.onde(g, 0, 0, d.rayon * (1 - i * 0.2) + Math.sin(z.t / 4 + i) * 4, 5 - i, P, 0.85);
+          g.restore();
+        }
+        K.lueur(g, x, SOL - 80, d.rayon * 1.2, k.c1, 0.3);
+        if (d.souleve) for (let i = 0; i < 10; i++) K.eclat(g, x + (K.hasard(i) - 0.5) * d.rayon * 2, SOL - ((z.t * 3 + i * 20) % 200), 4 + K.hasard(i) * 4, z.t / 6 + i, K.ROCHE);
         break;
       case 'lune':
-        lumiere(g, () => { halo(g, x, SOL - 40, 160, '#dcebff', Math.max(0, 0.9 - actif / 30)); });
+        K.explosion(g, x, SOL - 40, 150, Math.min(1, actif / 30), K.LUNE, 7);
         break;
       case 'nova': case 'onde': case 'vague': {
         const p = Math.min(1, actif / d.duree);
-        lumiere(g, () => {
-          if (d.forme === 'vague') {
-            g.fillStyle = rgba('#4fd8ff', 0.6);
-            g.beginPath(); g.moveTo(x - d.rayon * 0.3, SOL); g.quadraticCurveTo(x, SOL - d.hauteur, x + d.rayon * 0.5, SOL - d.hauteur * 0.6); g.quadraticCurveTo(x + d.rayon * 0.2, SOL - 30, x + d.rayon * 0.6, SOL); g.fill();
-          } else {
-            g.strokeStyle = rgba(k.c1, 0.9 * (1 - p)); g.lineWidth = 10 * (1 - p) + 2;
-            g.beginPath(); g.ellipse(x, SOL - 90, d.rayon * (0.3 + p), d.rayon * (0.3 + p) * 0.8, 0, 0, TAU); g.stroke();
-            halo(g, x, SOL - 90, d.rayon * (0.4 + p * 0.8), k.c1, 0.5 * (1 - p));
-            if (d.forme === 'nova') for (let i = 0; i < 6; i++) etoile(g, x + Math.cos(i + p * 3) * d.rayon * p, SOL - 90 + Math.sin(i + p * 3) * d.rayon * p * 0.7, 6, '#ffffff', p * 5);
-          }
-        });
+        if (d.forme === 'vague') {
+          const PE = K.EAU;
+          K.couches(g, (s) => { g.moveTo(x - d.rayon * 0.3, SOL); g.quadraticCurveTo(x, SOL - d.hauteur * s, x + d.rayon * 0.5 * s, SOL - d.hauteur * 0.6 * s); g.quadraticCurveTo(x + d.rayon * 0.2, SOL - 30, x + d.rayon * 0.6, SOL); g.closePath(); }, PE, [1, 0.92, 0.6, 0.25]);
+          K.fumee(g, x + d.rayon * 0.4, SOL - d.hauteur * 0.6, 18, { ...PE, base: '#ffffff' }, 0.9, 3);
+        } else {
+          K.onde(g, x, SOL - 90, d.rayon * (0.3 + p), 10 * (1 - p) + 2, P, 1 - p);
+          if (d.forme === 'nova') for (let i = 0; i < 6; i++) K.etoileImpact(g, x + Math.cos(i + p * 3) * d.rayon * p, SOL - 90 + Math.sin(i + p * 3) * d.rayon * p * 0.7, 10 * (1 - p) + 4, p * 5, P, 1 - p, 5);
+        }
         break;
       }
       case 'pic': {
-        const p = Math.min(1, actif / 6);
-        const h = d.hauteur * p;
-        const gr = g.createLinearGradient(0, SOL - h, 0, SOL);
-        gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, k.c1);
-        g.fillStyle = gr;
-        for (const [dx, f] of [[-18, 0.6], [0, 1], [16, 0.7]]) { g.beginPath(); g.moveTo(x + dx - 12, SOL); g.lineTo(x + dx, SOL - h * f); g.lineTo(x + dx + 12, SOL); g.fill(); }
+        const h = d.hauteur * Math.min(1, actif / 6);
+        for (const [dx, f] of [[-20, 0.6], [0, 1], [18, 0.7]]) K.cristal(g, x + dx, SOL + 4, h * f, 24, dx * 0.008, P);
         break;
       }
       case 'etoiles':
         for (let i = 0; i < 6; i++) {
           const v = ((actif * 14 + i * 90) % (SOL + 40));
-          lumiere(g, () => { halo(g, x + (hasardFixe(i) - 0.5) * d.rayon * 2, v - 40, 24, k.c1, 0.7); });
-          etoile(g, x + (hasardFixe(i) - 0.5) * d.rayon * 2, v - 40, 8, '#ffffff', v / 20);
+          const sx = x + (K.hasard(i) - 0.5) * d.rayon * 2;
+          for (let j = 1; j < 4; j++) K.losange(g, sx - j * 6, v - 40 - j * 14, 2, 6, 2, P, 1 - j * 0.25);
+          K.etoileImpact(g, sx, v - 40, 12, v / 20, P, 1, 5);
         }
         break;
       case 'horloge': {
         const p = Math.min(1, actif / 8);
         g.fillStyle = rgba('#b8f4ec', 0.12 * fin); g.fillRect(0, 0, L, H);
         g.save(); g.translate(x, SOL - 110);
-        lumiere(g, () => halo(g, 0, 0, d.rayon * 1.3, k.c1, 0.4));
-        g.strokeStyle = rgba('#ffd23f', 0.9); g.lineWidth = 4;
-        g.beginPath(); g.arc(0, 0, d.rayon * p, 0, TAU); g.stroke();
-        g.strokeStyle = rgba(k.c1, 0.8); g.lineWidth = 2;
-        for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU; g.beginPath(); g.moveTo(Math.cos(a) * d.rayon * 0.82 * p, Math.sin(a) * d.rayon * 0.82 * p); g.lineTo(Math.cos(a) * d.rayon * 0.95 * p, Math.sin(a) * d.rayon * 0.95 * p); g.stroke(); }
-        // Les aiguilles se figent.
+        K.couches(g, (s) => g.arc(0, 0, d.rayon * p * s, 0, TAU), { ...K.OR, clair: '#0e3a40', coeur: '#0a2a30' }, [1.06, 1, 0.94, 0.9], 0.85);
         const fige = Math.max(0, 1 - actif / 14);
-        g.strokeStyle = '#ffd23f'; g.lineWidth = 5; g.lineCap = 'round';
-        g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(-1.4 + fige * 6) * d.rayon * 0.5, Math.sin(-1.4 + fige * 6) * d.rayon * 0.5); g.stroke();
-        g.lineWidth = 3; g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(0.3 + fige * 20) * d.rayon * 0.75, Math.sin(0.3 + fige * 20) * d.rayon * 0.75); g.stroke();
+        for (const [an, l, w] of [[-1.4 + fige * 6, 0.5, 7], [0.3 + fige * 20, 0.75, 4]]) {
+          g.strokeStyle = '#1a1206'; g.lineWidth = w + 3; g.lineCap = 'round';
+          g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(an) * d.rayon * l * p, Math.sin(an) * d.rayon * l * p); g.stroke();
+          g.strokeStyle = '#ffd23f'; g.lineWidth = w;
+          g.beginPath(); g.moveTo(0, 0); g.lineTo(Math.cos(an) * d.rayon * l * p, Math.sin(an) * d.rayon * l * p); g.stroke();
+        }
         g.restore();
         break;
       }
@@ -456,10 +491,12 @@ export function dessinerZones(g, c, t) {
         dessinerZoneHeros(g, d, x, actif, teinteK(k, d.teinte), z);
         break;
       case 'fissure':
-        lumiere(g, () => { eclair(g, x - d.rayon, SOL - 20, x + d.rayon, SOL - 160, rgba('#ff50ff', 0.9), 5, 8, z.t); halo(g, x, SOL - 90, d.rayon * 1.3, '#c814ff', 0.5); });
+        K.faille(g, x, SOL - 100, 200, 40 * Math.min(1, actif / 6), z.t, K.VIDE, 5);
+        K.foudre(g, x - d.rayon, SOL - 20, x + d.rayon, SOL - 160, 4, K.VIDE, z.t, 1);
         break;
       default:
-        lumiere(g, () => halo(g, x, SOL - 60, d.rayon, k.c1, 0.6));
+        K.lueur(g, x, SOL - 60, d.rayon, k.c1, 0.5);
+        K.onde(g, x, SOL - 4, d.rayon, 4, P, 0.8, 0.18);
     }
     g.restore();
   }
@@ -481,18 +518,34 @@ export function dessinerFaisceaux(g, fx, c) {
     g.scale(j.dir, 1);
     lumiere(g, () => {
       if (d.cone) {
-        const gr = g.createLinearGradient(0, 0, long, 0);
-        gr.addColorStop(0, rgba('#ffffff', 0.9 * p)); gr.addColorStop(0.3, rgba(couleur, 0.8 * p)); gr.addColorStop(1, rgba(couleur, 0));
-        g.fillStyle = gr;
-        g.beginPath(); g.moveTo(0, -8); g.lineTo(long, -ep); g.lineTo(long, ep); g.lineTo(0, 8); g.fill();
-        for (let i = 0; i < 6; i++) halo(g, ((f.t * 14 + i * 50) % long), Math.sin(f.t + i) * ep * 0.5, 24, '#ffb000', 0.5 * p);
+        // Un souffle : un cône en couches qui s'élargit, ses bords qui ondulent, des boules qui filent dedans.
+        g.restore(); g.save();
+        const P = d.effet === 'brulure' || !d.couleur ? K.FEU : K.palette(couleur);
+        K.couches(g, (s) => {
+          g.moveTo(0, -8 * s);
+          for (let x = 0; x <= long; x += 14) g.lineTo(x, -(8 + (ep - 8) * x / long) * s * (1 + 0.1 * Math.sin(x / 16 - f.t / 1.4)));
+          for (let x = long; x >= 0; x -= 14) g.lineTo(x, (8 + (ep - 8) * x / long) * s * (1 + 0.1 * Math.sin(x / 16 - f.t / 1.4 + 2)));
+          g.closePath();
+        }, P, [1.15, 1, 0.66, 0.32], p);
+        for (let i = 0; i < 5; i++) { const xx = (f.t * 14 + i * 60) % Math.max(1, long); K.orbe(g, xx, Math.sin(f.t + i) * ep * 0.3, 8 + (xx / Math.max(1, long)) * ep * 0.4, f.t + i, P, p); }
+        g.restore(); g.save(); g.globalCompositeOperation = 'lighter';
       } else {
-        const gr = g.createLinearGradient(0, -ep, 0, ep);
-        gr.addColorStop(0, rgba(couleur, 0)); gr.addColorStop(0.35, rgba(couleur, 0.8 * p)); gr.addColorStop(0.5, rgba('#ffffff', p)); gr.addColorStop(0.65, rgba(couleur, 0.8 * p)); gr.addColorStop(1, rgba(couleur, 0));
-        g.fillStyle = gr;
-        g.fillRect(0, -ep, long, ep * 2);
-        halo(g, 0, 0, ep * 1.6, couleur, p);
-        halo(g, long, 0, ep * 1.4, couleur, 0.8 * p);
+        // (on sort de la lumière additive : le rayon est opaque, en couches)
+        g.restore(); g.save();
+        const P = d.effet === 'gel' ? K.GLACE : d.effet === 'brulure' ? K.FEU : K.palette(couleur);
+        K.rayon(g, long, ep * 0.62, f.t, P, p);
+        K.orbe(g, 0, 0, ep * 0.55, f.t, P, p);
+        // Le rayon de glace : des cristaux poussent le long du rayon, et au bout.
+        if (d.effet === 'gel') {
+          for (let i = 0; i < Math.floor(long / 48); i++) {
+            const xx = 30 + i * 48;
+            const cr = K.lisse((f.t - i * 0.8) / 5) * p;
+            K.cristal(g, xx, -ep * 0.5, 16 * cr, 9, -0.3 + K.hasard(i) * 0.6, P);
+            K.cristal(g, xx + 20, ep * 0.5, 14 * cr, 8, Math.PI + 0.3 - K.hasard(i + 9) * 0.6, P);
+          }
+          for (let i = 0; i < 6; i++) K.cristal(g, long, 0, (26 + K.hasard(i) * 18) * p, 12, (i / 6) * TAU, P);
+        }
+        g.restore(); g.save(); g.globalCompositeOperation = 'lighter';
         // Le rayon tressé du héros : deux fils de lumière enlacés.
         if (d.tresse) {
           for (const s of [-1, 1]) {
@@ -502,7 +555,7 @@ export function dessinerFaisceaux(g, fx, c) {
             g.stroke();
           }
         }
-        if (d.attire || d.drain) for (let i = 0; i < 5; i++) { const xx = long - ((f.t * 12 + i * 60) % long); halo(g, xx, Math.sin(f.t / 3 + i) * ep * 0.4, 10, '#ffffff', 0.7 * p); }
+        if (d.attire || d.drain) for (let i = 0; i < 6; i++) { const xx = long - ((f.t * 12 + i * 60) % long); K.losange(g, xx, Math.sin(f.t / 3 + i) * ep * 0.4, -9, 0, 3, K.palette('#ffffff'), p); }
         if (d.prisme) {
           const arc = ['#ff4a4a', '#ffb02a', '#ffe84a', '#4aff7a', '#4ac8ff', '#a05aff'];
           arc.forEach((c, i) => { g.fillStyle = rgba(c, 0.55 * p); g.fillRect(long * 0.15, -ep + (i * ep * 2) / arc.length, long * 0.85, (ep * 2) / arc.length); });
@@ -518,28 +571,34 @@ export function dessinerFaisceaux(g, fx, c) {
 /* ------------------------------------------------------------------ */
 
 export function dessinerParticules(g, fx) {
+  // Les étincelles : des losanges nets, étirés dans le sens de leur course.
+  for (const p of fx.parts) if (p.type === 'etincelle') K.losange(g, p.x, p.y, p.vx, p.vy, p.r, K.palette(p.c), p.vie / p.max);
   lumiere(g, () => {
     for (const p of fx.parts) {
       const a = p.vie / p.max;
       if (p.type === 'fumee') continue;
-      if (p.type === 'etincelle') {
-        g.strokeStyle = rgba(p.c, a); g.lineWidth = p.r;
-        g.beginPath(); g.moveTo(p.x, p.y); g.lineTo(p.x - p.vx * 2, p.y - p.vy * 2); g.stroke();
-      } else {
+      if (p.type === 'etincelle') continue;
+      {
         g.fillStyle = rgba(p.c, a); g.beginPath(); g.arc(p.x, p.y, p.r, 0, TAU); g.fill();
       }
     }
     for (const a of fx.anneaux) {
+      if (a.etoile) continue;
       if (a.sceau) { sceau(g, a.x, a.y, a.r, a.c, a.vie / 16, a.rot + (26 - a.vie) / 12); continue; }
       g.strokeStyle = rgba(a.c, a.vie / 16); g.lineWidth = a.garde ? 4 : 3 + a.vie / 4;
       g.beginPath(); g.arc(a.x, a.y, a.r, 0, TAU); g.stroke();
       if (!a.garde && a.vie > 10) halo(g, a.x, a.y, a.r * 0.8, '#ffffff', (a.vie - 10) / 6);
     }
   });
+  // La fumée : des boules cernées (comme les combattants), qui s'effacent.
   for (const p of fx.parts) {
     if (p.type !== 'fumee') continue;
-    g.fillStyle = rgba(p.c, (p.vie / p.max) * 0.35);
-    g.beginPath(); g.arc(p.x, p.y, p.r, 0, TAU); g.fill();
+    K.fumee(g, p.x, p.y, p.r, K.palette(p.c), (p.vie / p.max) * 0.6, Math.floor(p.r * 7));
+  }
+  for (const a of fx.anneaux) {
+    if (!a.etoile) continue;
+    const u = 1 - a.vie / 9;
+    K.etoileImpact(g, a.x, a.y, a.max * (u < 0.3 ? u / 0.3 : 1 - (u - 0.3) * 0.5), a.rot, K.palette(a.c), 1 - Math.max(0, u - 0.55) / 0.45);
   }
 }
 
@@ -655,21 +714,22 @@ export function noterTrace(fx, n, x, y, couleur, actif) {
 /** Le sillage : un ruban qui s'affine vers l'arrière, blanc au bout, de la couleur du combattant. */
 export function dessinerTraces(g, fx) {
   if (!fx.traces) return;
-  lumiere(g, () => {
-    for (const tr of fx.traces) {
-      if (tr.length < 3) continue;
-      const bout = tr[tr.length - 1];
+  for (const tr of fx.traces) {
+    if (tr.length < 3) continue;
+    const P = K.palette(tr[tr.length - 1].c);
+    // Trois passes : le liseré, la couleur, le cœur blanc ; le ruban s'affine vers l'arrière.
+    for (const [c, k] of [[P.encre, 1.5], [P.base, 1], [P.coeur, 0.4]]) {
+      g.strokeStyle = c; g.lineCap = 'round'; g.lineJoin = 'round';
       for (let i = 1; i < tr.length; i++) {
         const a = tr[i - 1], b = tr[i];
         const f = i / (tr.length - 1);
-        g.strokeStyle = rgba(f > 0.75 ? '#ffffff' : b.c, Math.max(0, b.v) * 0.8);
-        g.lineWidth = 2 + f * 12;
-        g.lineCap = 'round';
+        g.globalAlpha = Math.max(0, b.v);
+        g.lineWidth = (3 + f * 13) * k;
         g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
       }
-      halo(g, bout.x, bout.y, 16, bout.c, Math.max(0, bout.v) * 0.6);
     }
-  });
+    g.globalAlpha = 1;
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -680,28 +740,22 @@ export function dessinerTraces(g, fx) {
 function chargeUlti(g, t, A, k) {
   if (t >= 54) return;
   const p = Math.min(1, t / 40) * (1 - lisse((t - 44) / 10));
-  lumiere(g, () => {
-    for (let i = 0; i < 18; i++) {
-      const h = ((t * 2.6 + i * 23) % 60) / 60;
-      const a = hasardFixe(i) * TAU;
-      halo(g, A.x + Math.cos(a) * 42 * (1 - h * 0.5), A.y + 86 - h * 170, 26 * (1 - h), k.aura || k.c1, 0.5 * p * (1 - h));
-    }
-    for (let i = 0; i < 24; i++) {
-      const ph = ((t * 1.8 + i * 11) % 36) / 36;
-      const a = hasardFixe(i + 50) * TAU;
-      const r = 200 * (1 - ph * ph);
-      const x = A.x + Math.cos(a) * r, y = A.y + Math.sin(a) * r * 0.8;
-      g.strokeStyle = rgba(i % 3 ? k.c1 : '#ffffff', ph * p); g.lineWidth = 2.5;
-      g.beginPath(); g.moveTo(x, y); g.lineTo(x + (A.x - x) * 0.14, y + (A.y - y) * 0.14); g.stroke();
-    }
-    halo(g, A.x, A.y + 10, 120 * p, k.aura || k.c1, 0.35 * p);
-  });
+  const P = K.palette(k.aura || k.c1);
+  for (let i = 0; i < 22; i++) {
+    const ph = ((t * 1.8 + i * 11) % 36) / 36;
+    const an = hasardFixe(i + 50) * TAU;
+    const r = 200 * (1 - ph * ph);
+    const x = A.x + Math.cos(an) * r, y = A.y + Math.sin(an) * r * 0.8;
+    K.losange(g, x, y, (A.x - x) * 0.08, (A.y - y) * 0.08, 2.4, i % 3 ? P : K.palette('#ffffff'), ph * p);
+  }
 }
 
 /**
  * La caméra d'un ultime : elle serre sur le combattant qui charge, suit le coup jusqu'à
  * l'adversaire, encaisse l'impact, puis relâche. Rend { z, x, y } (le zoom et le point visé), ou null.
  */
+const LARGES = new Set(['dragon', 'eclipse', 'divine', 'armageddon', 'chrono', 'aube-eternelle', 'eclipse-totale', 'singularite', 'supernova', 'omega-collapse', 'ouragan', 'legion', 'meteores', 'foudre', 'ring', 'miroirs',
+  'heros-promesses', 'heros-phenix', 'heros-sceau', 'heros-eveil', 'heros-horizon', 'heros-fracture']);
 export function cameraUlti(fx, c) {
   const C = fx.cine;
   if (!C || reduit()) return null;
@@ -710,7 +764,9 @@ export function cameraUlti(fx, c) {
   const t = C.t;
   const serre = lisse(t / 36) * (1 - lisse((t - 96) / 30));
   const suit = lisse((t - 46) / 20);
-  const z = 1 + 0.42 * serre - 0.1 * suit * serre + (t >= IMPACT && t < IMPACT + FIGE ? 0.08 : 0);
+  // Les ultimes qui remplissent le ciel (un dragon, la lune, un œil géant…) gardent un cadre large.
+  const ample = LARGES.has(C.visuel) ? 0.12 : 0.42;
+  const z = 1 + ample * serre - 0.1 * suit * serre * (ample / 0.42) + (t >= IMPACT && t < IMPACT + FIGE ? 0.08 : 0);
   const vx = j.x + (o.x - j.x) * suit * 0.8;
   const vy = j.y - 110 + (o.y - j.y) * suit * 0.8;
   const x = L / 2 + (vx - L / 2) * serre;
@@ -746,29 +802,41 @@ function lignesConcentration(g, cx, cy, a, t, c = '#ffffff') {
   g.restore();
 }
 
-/** Une onde de choc : un anneau au sol, un anneau debout, qui s'ouvrent et s'effacent. */
-function ondeChoc(g, x, y, p, c) {
-  if (p <= 0 || p >= 1) return;
-  const a = 1 - p;
-  g.lineWidth = 14 * a + 2;
-  g.strokeStyle = rgba('#ffffff', a);
-  g.beginPath(); g.ellipse(x, SOL - 4, 40 + p * 360, 10 + p * 60, 0, 0, TAU); g.stroke();
-  g.strokeStyle = rgba(c, a * 0.9);
-  g.lineWidth = 10 * a + 2;
-  g.beginPath(); g.arc(x, y, 30 + p * 230, 0, TAU); g.stroke();
-}
-
-/** Une gerbe de rayons (l'éclat de l'impact). */
-function gerbe(g, x, y, n, long, c, a, graine = 0) {
-  g.fillStyle = rgba(c, a);
-  for (let i = 0; i < n; i++) {
-    const ang = (i / n) * TAU + hasardFixe(graine + i) * 0.3;
-    const l = long * (0.5 + hasardFixe(graine + i * 5) * 0.7);
-    g.beginPath();
-    g.moveTo(x + Math.cos(ang - 0.05) * 20, y + Math.sin(ang - 0.05) * 20);
-    g.lineTo(x + Math.cos(ang) * l, y + Math.sin(ang) * l);
-    g.lineTo(x + Math.cos(ang + 0.05) * 20, y + Math.sin(ang + 0.05) * 20);
-    g.closePath(); g.fill();
+/** L'aura d'un ultime : des langues de flammes qui montent tout autour de lui, dessinées derrière lui. */
+const AURA = {
+  meteores: K.FEU, zero: K.GLACE, foudre: K.FOUDRE, serpent: K.POISON, singularite: K.VIDE, eclipse: K.LUNE, dragon: K.DRAGON,
+  tectonique: K.SABLE, ouragan: K.VENT, oubli: K.VIDE, maelstrom: K.EAU, divine: K.OR, armageddon: K.ENFER, chrono: K.OR, ring: K.OR,
+  miroirs: K.MIROIR, 'sablier-infini': K.SABLE, 'eclipse-totale': K.OMBRE, 'aube-eternelle': K.OR, 'mille-boucles': K.OR, 'omega-collapse': K.VIDE, vide: K.OMBRE,
+};
+export function dessinerCineDerriere(g, fx, c, pos) {
+  const C = fx.cine;
+  if (!C) return;
+  const j = c.joueurs[C.joueur];
+  const k = teinteK(PERSO[j.id].c, PERSO[j.id].ulti?.teinte);
+  const t = tCine(C.t);
+  const P = AURA[C.visuel] || K.palette(k.aura || k.c1);
+  // Le fond de l'ultime (la nuit, l'orage…), derrière les combattants pour qu'ils restent bien visibles.
+  const fond = FONDS[C.visuel]?.(t);
+  if (fond) {
+    const rgb = (c) => `rgba(${c[0]},${c[1]},${c[2]},${c[3]})`;
+    if (Array.isArray(fond)) g.fillStyle = rgb(fond);
+    else { const gr = g.createLinearGradient(0, 0, 0, SOL); gr.addColorStop(0, rgb(fond.haut)); gr.addColorStop(1, rgb(fond.bas)); g.fillStyle = gr; }
+    g.fillRect(0, 0, L, H);
+  }
+  // Ce qui passe derrière les combattants (le cou du dragon, une faille, la légion, le géant de lumière…).
+  const u = ULTIMES[C.visuel] || ULTIMES_HEROS[C.visuel];
+  if (u?.derriere) {
+    const o = c.joueurs[1 - C.joueur];
+    u.derriere(g, t, { id: j.id, x: j.x, y: j.y - 90, dir: j.dir }, { x: o.x, y: o.y - 90 }, k);
+  }
+  const p = Math.min(1, t / 24) * (1 - K.entre(t, 60, 80));
+  if (p <= 0 || pos?.alpha === 0) return;
+  const x = pos?.x ?? j.x, y = pos?.y ?? j.y;
+  K.lueur(g, x, y - 90, 150, P.base, 0.4 * p);
+  for (let i = 0; i < 11; i++) {
+    const f = i / 10;
+    const h = (110 + 110 * Math.sin(Math.PI * f)) * (0.82 + 0.22 * Math.sin(t / 2.6 + i * 1.7));
+    K.flamme(g, x + (f - 0.5) * 96, y + 6, h * p, 22, t * 1.4, P, i * 2.3, 0.7 * p);
   }
 }
 
@@ -789,19 +857,21 @@ export function dessinerCineUlti(g, fx, c) {
   const v = g.createRadialGradient(L / 2, H / 2, H * 0.3, L / 2, H / 2, L * 0.7);
   v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, `rgba(0,0,0,${0.55 * Math.min(1, C.t / 12)})`);
   g.fillStyle = v; g.fillRect(0, 0, L, H);
-  const f = ULTIS[C.visuel] || ULTIS_HEROS[C.visuel];
+  const u = ULTIMES[C.visuel] || ULTIMES_HEROS[C.visuel];
+  const f = typeof u === 'function' ? u : u?.devant;
   // Le héros : son sceau sous ses pieds, à chaque ultime.
   if (PERSO[j.id]?.heros) lumiere(g, () => sceau(g, j.x, j.y, 120, k.c1, Math.min(1, t / 20), t / 20));
-  if (C.visuel !== 'hadoken') chargeUlti(g, t, A, k);
+  if (!['hadoken', 'meteores', 'zero'].includes(C.visuel)) chargeUlti(g, t, A, k);
   if (f) f(g, t, A, D, k);
   // L'impact, pour tous : l'onde de choc, la gerbe, un éclair blanc bref.
   if (C.t >= IMPACT) {
     const p = (C.t - IMPACT - FIGE) / 26;
-    lumiere(g, () => {
-      ondeChoc(g, D.x, D.y, p, k.faisceau);
-      ondeChoc(g, D.x, D.y, p - 0.25, k.c1);
-      if (C.t < IMPACT + FIGE + 10) gerbe(g, D.x, D.y, 18, 340, '#ffffff', 0.85 * (1 - Math.max(0, p) * 2.5), C.t);
-    });
+    const P = K.palette(k.faisceau);
+    if (p > 0 && p < 1) {
+      K.onde(g, D.x, SOL - 4, 40 + p * 380, 14 * (1 - p) + 2, P, 1 - p, 0.18);
+      K.onde(g, D.x, D.y, 30 + p * 240, 10 * (1 - p) + 2, P, 1 - p);
+    }
+    if (C.t < IMPACT + FIGE + 6) K.etoileImpact(g, D.x, D.y, 150 + (C.t - IMPACT) * 12, C.t * 0.05, P, 1, 12);
     if (C.t >= IMPACT + FIGE && C.t < IMPACT + FIGE + 10) { g.fillStyle = `rgba(255,255,255,${(IMPACT + FIGE + 10 - C.t) / 16})`; g.fillRect(0, 0, L, H); }
   }
   g.restore();
@@ -827,508 +897,12 @@ export function dessinerCineEcran(g, fx, c) {
   g.fillStyle = k.c1; g.fillRect(0, b - 2, L, 2); g.fillRect(0, H - b, L, 2);
 }
 
-const ULTIS = {
-  /* RYU-KEN : le Shin Hadoken. Le ki se rassemble entre ses mains (des étincelles aspirées, des
-     arcs électriques, une aura qui monte), puis la grande boule part, traînant un faisceau. */
-  hadoken(g, t, A, D, k) {
-    const dir = Math.sign(D.x - A.x) || A.dir || 1;
-    const mx = A.x + dir * 62, my = A.y + 2;
-    const blanc = '#ffffff';
-    // 1. La charge.
-    if (t < 58) {
-      const p = Math.min(1, t / 48);
-      lumiere(g, () => {
-        // L'aura : des flammes de ki qui montent autour de lui.
-        for (let i = 0; i < 18; i++) {
-          const h = ((t * 2.6 + i * 23) % 60) / 60;
-          const a = hasardFixe(i) * TAU;
-          halo(g, A.x + Math.cos(a) * 40 * (1 - h * 0.5), A.y + 86 - h * 170, 26 * (1 - h), k.aura, 0.55 * p * (1 - h));
-        }
-        // Les étincelles aspirées vers ses mains.
-        for (let i = 0; i < 30; i++) {
-          const ph = ((t * 1.8 + i * 11) % 36) / 36;
-          const a = hasardFixe(i + 50) * TAU;
-          const r = 190 * (1 - ph * ph);
-          const x = mx + Math.cos(a) * r, y = my + Math.sin(a) * r * 0.75;
-          g.strokeStyle = rgba(blanc, ph * p); g.lineWidth = 2.5;
-          g.beginPath(); g.moveTo(x, y); g.lineTo(x + (mx - x) * 0.12, y + (my - y) * 0.12); g.stroke();
-        }
-        // La boule qui grossit, qui palpite.
-        const r = 8 + 36 * p + Math.sin(t / 1.6) * 3 * p;
-        halo(g, mx, my, r * 3.4, k.faisceau, 0.55 * p);
-        halo(g, mx, my, r * 1.5, k.faisceau, 1);
-        halo(g, mx, my, r * 0.75, blanc, 1);
-        // Les arcs électriques autour.
-        for (let e = 0; e < 3; e++) {
-          const a = t * 0.7 + e * 2.1;
-          eclair(g, mx, my, mx + Math.cos(a) * r * 2.6, my + Math.sin(a * 1.3) * r * 1.8, rgba('#e6f4ff', 0.9 * p), 2.2, 6, Math.floor(t / 2) * 9 + e * 31);
-        }
-      });
-    }
-    // 2. Le tir : la grande boule file, un faisceau la suit, des traits de vitesse.
-    if (t >= 50 && t <= IMPACT) {
-      const p = lisse((t - 50) / 18);
-      const x = mx + (D.x - mx) * p;
-      lumiere(g, () => {
-        const gr = g.createLinearGradient(mx, 0, x, 0);
-        gr.addColorStop(0, rgba(k.faisceau, 0)); gr.addColorStop(0.6, rgba(k.faisceau, 0.7)); gr.addColorStop(1, rgba(blanc, 0.95));
-        g.fillStyle = gr;
-        const bout = x - dir * 30;
-        g.beginPath(); g.moveTo(mx, my - 16); g.lineTo(bout, my - 50); g.quadraticCurveTo(x + dir * 30, my, bout, my + 50); g.lineTo(mx, my + 16); g.closePath(); g.fill();
-        for (let i = 0; i < 10; i++) {
-          const yy = my + (hasardFixe(i + t) - 0.5) * 150;
-          const l = 80 + hasardFixe(i * 3 + t) * 160;
-          g.strokeStyle = rgba(blanc, 0.7); g.lineWidth = 2;
-          g.beginPath(); g.moveTo(x - dir * 40, yy); g.lineTo(x - dir * (40 + l), yy); g.stroke();
-        }
-        halo(g, x, my, 190, k.faisceau, 0.8);
-        halo(g, x, my, 96, k.faisceau, 1);
-        halo(g, x, my, 58, blanc, 1);
-        halo(g, x, my, 30, blanc, 1);
-      });
-    }
-    // 3. L'explosion sur l'adversaire, puis les étincelles qui retombent.
-    if (t >= IMPACT) {
-      const p = (t - IMPACT) / 40;
-      lumiere(g, () => {
-        if (p < 1) {
-          halo(g, D.x, D.y, 260 * (0.6 + p), k.faisceau, 0.9 * (1 - p));
-          halo(g, D.x, D.y, 120 * (1 - p * 0.6), blanc, 1 - p);
-          for (let e = 0; e < 4; e++) eclair(g, D.x, D.y, D.x + Math.cos(e * 1.7 + t) * 200, D.y + Math.sin(e * 2.3 + t) * 150, rgba('#e6f4ff', 1 - p), 3, 7, t * 3 + e * 17);
-        }
-        for (let i = 0; i < 26; i++) {
-          const q = (t - IMPACT - hasardFixe(i) * 10) / 50;
-          if (q <= 0 || q >= 1) continue;
-          const a = hasardFixe(i + 9) * TAU;
-          const x = D.x + Math.cos(a) * (60 + q * 240);
-          const y = D.y + Math.sin(a) * (40 + q * 120) + q * q * 160;
-          halo(g, x, y, 10 * (1 - q) + 3, i % 3 ? k.faisceau : blanc, 1 - q);
-        }
-      });
-    }
-  },
-  /* BLAZERO : des météores de feu. */
-  meteores(g, t, A, D) {
-    lumiere(g, () => {
-      for (let i = 0; i < 10; i++) {
-        const p = (t - i * 7) / 30;
-        if (p < 0) continue;
-        const x = D.x + (hasardFixe(i) - 0.5) * 300 + (1 - Math.min(1, p)) * 300;
-        const y = -60 + Math.min(1, p) * (SOL + 60);
-        if (p < 1) { for (let q = 0; q < 6; q++) halo(g, x + q * 22, y - q * 22, 34 - q * 4, q ? '#ff6a00' : '#ffd23a', 0.7); }
-        else if (p < 1.6) halo(g, x, SOL - 10, 120 * (p - 0.8), '#ff7a00', 1.6 - p);
-      }
-    });
-  },
-  /* FROSTBYTE : le zéro absolu, des colonnes de glace. */
-  zero(g, t, A, D) {
-    const p = Math.min(1, t / 60);
-    g.fillStyle = `rgba(200,240,255,${p * 0.25})`; g.fillRect(0, 0, L, H);
-    for (let i = -5; i <= 5; i++) {
-      const x = D.x + i * 34;
-      const h = Math.max(0, (p - Math.abs(i) * 0.05)) * 300;
-      const gr = g.createLinearGradient(0, SOL - h, 0, SOL);
-      gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, '#4fc8ff');
-      g.fillStyle = gr;
-      g.beginPath(); g.moveTo(x - 18, SOL); g.lineTo(x - 4, SOL - h); g.lineTo(x + 6, SOL - h * 0.9); g.lineTo(x + 18, SOL); g.fill();
-    }
-    if (t > 70) lumiere(g, () => halo(g, D.x, D.y, (t - 70) * 8, '#bdf3ff', Math.max(0, 1 - (t - 70) / 40)));
-  },
-  /* SHADOW KIRA : des portails, des ombres qui frappent de partout. */
-  vide(g, t, A, D, k) {
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * TAU + t / 30;
-      const x = D.x + Math.cos(a) * 150;
-      const y = D.y + Math.sin(a) * 90;
-      const r = Math.min(40, Math.max(0, t - i * 6) * 3);
-      g.fillStyle = '#0a0014'; g.beginPath(); g.ellipse(x, y, r * 0.6, r, a, 0, TAU); g.fill();
-      lumiere(g, () => { g.strokeStyle = rgba(k.c1, 0.9); g.lineWidth = 3; g.beginPath(); g.ellipse(x, y, r * 0.6, r, a, 0, TAU); g.stroke(); });
-      if ((t + i * 5) % 20 < 4 && t > 20) lumiere(g, () => { g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.beginPath(); g.moveTo(x, y); g.lineTo(D.x, D.y); g.stroke(); });
-    }
-  },
-  /* THUNDEROX : la colère de la foudre. */
-  foudre(g, t, A, D) {
-    if (t % 6 < 3) { g.fillStyle = 'rgba(255,240,150,0.15)'; g.fillRect(0, 0, L, H); }
-    lumiere(g, () => {
-      for (let i = 0; i < 7; i++) {
-        if (t < i * 9 || (t - i * 9) > 16) continue;
-        const x = D.x + (hasardFixe(i) - 0.5) * 200;
-        eclair(g, x + 40, 0, x, SOL, rgba('#ffe066', 0.95), 8, 12, i * 7 + t);
-        eclair(g, x + 40, 0, x, SOL, '#ffffff', 2.5, 12, i * 7 + t);
-        halo(g, x, SOL - 10, 80, '#ffe066', 0.8);
-      }
-    });
-  },
-  /* IRONCLAD : une salve de missiles, puis le laser. */
-  omega(g, t, A, D) {
-    for (let i = 0; i < 8; i++) {
-      const p = (t - i * 5) / 26;
-      if (p < 0 || p > 1.3) continue;
-      const x = A.x + (D.x - A.x) * Math.min(1, p);
-      const y = A.y - 60 - Math.sin(Math.min(1, p) * Math.PI) * (80 + i * 10);
-      if (p < 1) { g.fillStyle = '#d0d0e0'; g.fillRect(x - 10, y - 3, 20, 6); lumiere(g, () => halo(g, x - 14 * A.dir, y, 12, '#ff9a2a', 0.8)); }
-      else lumiere(g, () => halo(g, D.x + (hasardFixe(i) - 0.5) * 80, D.y + (hasardFixe(i + 9) - 0.5) * 80, 60, '#ffb04a', 1.3 - p));
-    }
-    if (t > 55 && t < 100) {
-      const ep = 50 * (1 - (t - 55) / 45) + 6;
-      lumiere(g, () => { g.fillStyle = rgba('#ff4040', 0.85); g.fillRect(Math.min(A.x, D.x - 300), A.y - ep / 2, Math.abs(D.x - A.x) + 600, ep); g.fillStyle = '#ffffff'; g.fillRect(Math.min(A.x, D.x - 300), A.y - ep / 6, Math.abs(D.x - A.x) + 600, ep / 3); });
-    }
-  },
-  /* SERPENTA : le serpent géant qui enserre. */
-  serpent(g, t, A, D) {
-    const p = Math.min(1, t / 60);
-    for (let i = 0; i < 46; i++) {
-      const a = i * 0.32 + t / 9;
-      const rr = (60 + i * 5) * (1 - p * 0.55);
-      const x = D.x + Math.cos(a) * rr;
-      const y = D.y + Math.sin(a) * rr * 0.55;
-      g.fillStyle = i % 4 ? '#1e8a3a' : '#3cdc64';
-      g.beginPath(); g.arc(x, y, Math.max(4, 22 - i * 0.4), 0, TAU); g.fill();
-    }
-    const a = t / 9;
-    const hx = D.x + Math.cos(a) * 60 * (1 - p * 0.55);
-    const hy = D.y + Math.sin(a) * 33 * (1 - p * 0.55);
-    g.fillStyle = '#2aa04a'; g.beginPath(); g.ellipse(hx, hy, 30, 20, a, 0, TAU); g.fill();
-    g.fillStyle = '#ffde3a'; g.beginPath(); g.arc(hx + 8, hy - 6, 4, 0, TAU); g.fill();
-    if (t > 60) for (let i = 0; i < 10; i++) { g.fillStyle = rgba('#8aff8a', 0.6); g.beginPath(); g.arc(D.x + (hasardFixe(i + t) - 0.5) * 140, SOL - hasardFixe(i * 3 + t) * 120, 5, 0, TAU); g.fill(); }
-  },
-  /* CELESTIA : les étoiles convergent, la supernova. */
-  supernova(g, t, A, D, k) {
-    const p = Math.min(1, t / 70);
-    lumiere(g, () => {
-      for (let i = 0; i < 16; i++) {
-        const a = (i / 16) * TAU + t / 14;
-        const rr = 380 * (1 - p);
-        etoile(g, D.x + Math.cos(a) * rr, D.y + Math.sin(a) * rr * 0.6, 9, i % 2 ? '#ffffff' : k.c1, t / 6);
-      }
-      if (t > 60) { const q = (t - 60) / 60; halo(g, D.x, D.y, 40 + q * 460, k.c1, Math.max(0, 1 - q)); halo(g, D.x, D.y, 40 + q * 200, '#ffffff', Math.max(0, 1 - q)); }
-    });
-  },
-  /* GRAVOX : le trou noir qui aspire tout. */
-  singularite(g, t, A, D, k) {
-    const p = Math.min(1, t / 80);
-    for (let i = 0; i < 30; i++) {
-      const a = (i / 30) * TAU + t / 10;
-      const rr = 320 * (1 - ((t * 3 + i * 17) % 100) / 100);
-      lumiere(g, () => { g.strokeStyle = rgba(k.c1, 0.6); g.lineWidth = 2; g.beginPath(); g.moveTo(D.x + Math.cos(a) * rr, D.y + Math.sin(a) * rr * 0.6); g.lineTo(D.x + Math.cos(a) * rr * 0.8, D.y + Math.sin(a) * rr * 0.48); g.stroke(); });
-    }
-    lumiere(g, () => { for (let i = 0; i < 3; i++) { g.strokeStyle = rgba(i ? '#ff7aff' : '#b464ff', 0.8); g.lineWidth = 4; g.beginPath(); g.ellipse(D.x, D.y, 90 + i * 20 + p * 30, 20 + i * 6, t / 16, 0, TAU); g.stroke(); } });
-    g.fillStyle = '#000'; g.beginPath(); g.arc(D.x, D.y, 30 + p * 40, 0, TAU); g.fill();
-  },
-  /* LUNARA : la pleine lune, l'éclipse. */
-  eclipse(g, t, A, D, k) {
-    g.fillStyle = `rgba(0,0,20,${Math.min(0.6, t / 60)})`; g.fillRect(0, 0, L, H);
-    const lx = L / 2; const ly = 150;
-    lumiere(g, () => halo(g, lx, ly, 200, '#dcebff', 0.8));
-    g.fillStyle = '#f0f6ff'; g.beginPath(); g.arc(lx, ly, 90, 0, TAU); g.fill();
-    const p = Math.min(1, t / 70);
-    g.fillStyle = '#05051a'; g.beginPath(); g.arc(lx + 180 * (1 - p), ly, 92, 0, TAU); g.fill();
-    if (t > 60) lumiere(g, () => { for (let i = 0; i < 8; i++) { g.strokeStyle = rgba(k.faisceau, 0.8); g.lineWidth = 6; g.beginPath(); g.moveTo(lx, ly); g.lineTo(D.x + (i - 4) * 14, SOL); g.stroke(); } halo(g, D.x, D.y, 120, k.c1, 0.9); });
-  },
-  /* PYROCLAW : le Roi Dragon. */
-  dragon(g, t, A, D) {
-    const p = Math.min(1, t / 50);
-    const x = A.x - A.dir * 120 + A.dir * p * 120;
-    g.save(); g.translate(x, 210); g.scale(A.dir, 1);
-    g.fillStyle = '#5a0a00';
-    // La tête du dragon.
-    g.beginPath(); g.moveTo(-160, -40); g.quadraticCurveTo(-60, -140, 60, -60); g.lineTo(150, -30); g.lineTo(60, 10); g.quadraticCurveTo(-40, 60, -160, 40); g.fill();
-    g.fillStyle = '#ffd23a'; g.beginPath(); g.ellipse(30, -60, 12, 6, -0.3, 0, TAU); g.fill();
-    g.fillStyle = '#e8d6b0'; for (let i = 0; i < 5; i++) { g.beginPath(); g.moveTo(40 + i * 20, -20); g.lineTo(48 + i * 20, -2); g.lineTo(56 + i * 20, -20); g.fill(); }
-    g.restore();
-    if (t > 40) lumiere(g, () => {
-      for (let i = 0; i < 14; i++) { const q = ((t - 40) * 10 + i * 30) % 500; halo(g, x + A.dir * (140 + q), 200 + q * 0.5 + Math.sin(i) * 20, 50 + q / 10, i % 2 ? '#ff9a1a' : '#ff3a00', 0.7); }
-    });
-  },
-  /* WRAITHBLADE : mille lames fantômes. */
-  'mille-lames'(g, t, A, D, k) {
-    g.fillStyle = 'rgba(0,10,10,0.4)'; g.fillRect(0, 0, L, H);
-    lumiere(g, () => {
-      for (let i = 0; i < 26; i++) {
-        if (t < i * 2.5) continue;
-        const a = hasardFixe(i) * Math.PI;
-        const l = 260;
-        const dx = Math.cos(a) * l; const dy = Math.sin(a) * l * 0.7;
-        const vie = Math.max(0, 1 - (t - i * 2.5) / 14);
-        g.strokeStyle = rgba(k.faisceau, vie); g.lineWidth = 3 + vie * 4;
-        g.beginPath(); g.moveTo(D.x - dx / 2, D.y - dy / 2); g.lineTo(D.x + dx / 2, D.y + dy / 2); g.stroke();
-      }
-      if (t > 66) { g.strokeStyle = '#ffffff'; g.lineWidth = 8; g.beginPath(); g.moveTo(0, D.y + 30); g.lineTo(L, D.y - 30); g.stroke(); }
-    });
-  },
-  /* STONEBACK : l'annihilation tectonique. */
-  tectonique(g, t, A, D) {
-    const p = Math.min(1, t / 60);
-    g.fillStyle = '#3a2614';
-    for (let i = -6; i <= 6; i++) {
-      const x = D.x + i * 50;
-      const h = Math.max(0, p * 220 - Math.abs(i) * 20) * (0.7 + hasardFixe(i) * 0.5);
-      g.beginPath(); g.moveTo(x - 26, SOL); g.lineTo(x - 10, SOL - h); g.lineTo(x + 14, SOL - h * 0.85); g.lineTo(x + 26, SOL); g.fill();
-    }
-    g.strokeStyle = '#ff7a1a'; g.lineWidth = 3;
-    for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(D.x, SOL); g.lineTo(D.x + (hasardFixe(i) - 0.5) * 600 * p, SOL + 20 + hasardFixe(i + 3) * 60); g.stroke(); }
-    if (t > 66) for (let i = 0; i < 16; i++) { g.fillStyle = '#6a5038'; const q = t - 66; g.fillRect(D.x + (hasardFixe(i) - 0.5) * 300, SOL - q * (4 + hasardFixe(i + 2) * 6) + q * q * 0.08, 12, 12); }
-  },
-  /* STORMWING : l'ouragan. */
-  ouragan(g, t, A, D, k) {
-    lumiere(g, () => {
-      for (let i = 0; i < 40; i++) {
-        const h = (i / 40) * 420;
-        const r = 30 + (i / 40) * 160;
-        const a = t / 4 + i * 0.5;
-        g.strokeStyle = rgba(i % 3 ? '#e6f8ff' : k.c1, 0.35); g.lineWidth = 3;
-        g.beginPath(); g.ellipse(D.x + Math.sin(t / 10 + i * 0.2) * 20, SOL - h, r, r * 0.22, 0, a, a + 2.2); g.stroke();
-      }
-      if (t % 10 < 3) eclair(g, D.x - 60, 60, D.x + 40, SOL - 140, '#ffffff', 3, 8, t);
-    });
-  },
-  /* VOIDREAPER : la moisson dimensionnelle. */
-  oubli(g, t, A, D, k) {
-    g.fillStyle = `rgba(10,0,20,${Math.min(0.7, t / 50)})`; g.fillRect(0, 0, L, H);
-    const a = Math.min(1, t / 60) * Math.PI * 1.6 - 0.4;
-    g.save(); g.translate(D.x - 80, D.y - 140); g.rotate(a);
-    g.strokeStyle = '#2a1b10'; g.lineWidth = 8; g.beginPath(); g.moveTo(0, 0); g.lineTo(0, 260); g.stroke();
-    lumiere(g, () => { g.fillStyle = rgba(k.c1, 0.9); g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(180, -40, 230, 60); g.quadraticCurveTo(140, 0, 0, 30); g.fill(); });
-    g.restore();
-    for (let i = 0; i < 8; i++) { const q = ((t * 2 + i * 25) % 160); lumiere(g, () => halo(g, D.x + Math.sin(i * 2) * 60, D.y - q, 16, '#e8d4ff', 0.6 * (1 - q / 160))); }
-  },
-  /* AQUATHORN : le maelström. */
-  maelstrom(g, t, A, D) {
-    g.fillStyle = `rgba(0,40,80,${Math.min(0.5, t / 60)})`; g.fillRect(0, 0, L, H);
-    lumiere(g, () => {
-      for (let i = 0; i < 50; i++) {
-        const a = i * 0.4 + t / 8;
-        const rr = 20 + ((i * 9 + t * 2) % 240);
-        g.fillStyle = rgba(i % 2 ? '#4fd8ff' : '#c8f4ff', 0.5);
-        g.beginPath(); g.arc(D.x + Math.cos(a) * rr, D.y + Math.sin(a) * rr * 0.5, 5, 0, TAU); g.fill();
-      }
-    });
-    if (t > 60) { g.fillStyle = rgba('#00a0dc', 0.6); g.beginPath(); g.moveTo(0, SOL); g.quadraticCurveTo(L / 2, SOL - (t - 60) * 6, L, SOL); g.fill(); }
-  },
-  /* SOLARIUS : l'apocalypse divine. */
-  divine(g, t, A, D) {
-    g.fillStyle = `rgba(255,240,180,${Math.min(0.4, t / 80)})`; g.fillRect(0, 0, L, H);
-    lumiere(g, () => {
-      for (let i = 0; i < 9; i++) {
-        if (t < i * 6) continue;
-        const x = D.x + (i - 4) * 50;
-        const gr = g.createLinearGradient(x - 30, 0, x + 30, 0);
-        gr.addColorStop(0, 'rgba(255,248,200,0)'); gr.addColorStop(0.5, 'rgba(255,248,200,0.8)'); gr.addColorStop(1, 'rgba(255,248,200,0)');
-        g.fillStyle = gr; g.fillRect(x - 30, 0, 60, SOL);
-      }
-      for (let i = 0; i < 12; i++) { const a = (i / 12) * TAU + t / 20; etoile(g, D.x + Math.cos(a) * 120, D.y + Math.sin(a) * 80, 6, '#ffffff', t / 8); }
-    });
-  },
-  /* MALVORTEX : l'armageddon abyssal. */
-  armageddon(g, t, A, D) {
-    g.fillStyle = `rgba(40,0,0,${Math.min(0.6, t / 50)})`; g.fillRect(0, 0, L, H);
-    lumiere(g, () => {
-      for (let i = 0; i < 10; i++) {
-        const x = (i / 10) * L + 50;
-        const h = Math.max(0, (t - i * 4) * 8);
-        for (let q = 0; q < 8; q++) halo(g, x + Math.sin(t / 4 + q) * 10, SOL - (q / 8) * Math.min(h, 500), 30, q % 2 ? '#ff2a00' : '#ff8a1a', 0.5);
-      }
-      halo(g, L / 2, 120, 90, '#ff1a1a', 0.9);
-    });
-    g.fillStyle = '#fff'; g.beginPath(); g.ellipse(L / 2, 120, 50, 22, 0, 0, TAU); g.fill();
-    g.fillStyle = '#c80014'; g.beginPath(); g.ellipse(L / 2, 120, 14, 20, 0, 0, TAU); g.fill();
-  },
-  /* KAÏROS : le temps s'arrête, l'horloge géante sonne l'heure. */
-  chrono(g, t, A, D, k) {
-    g.fillStyle = `rgba(20,40,50,${Math.min(0.55, t / 40)})`; g.fillRect(0, 0, L, H);
-    const cx = L / 2; const cy = 250; const R = 200 * Math.min(1, t / 30);
-    lumiere(g, () => halo(g, cx, cy, R * 1.3, k.c1, 0.35));
-    g.strokeStyle = '#ffd23f'; g.lineWidth = 6;
-    g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.stroke();
-    g.fillStyle = 'rgba(10,40,50,0.5)'; g.fill();
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * TAU - Math.PI / 2;
-      texteContour(g, ['XII', 'I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI'][i], cx + Math.cos(a) * R * 0.82, cy + Math.sin(a) * R * 0.82, 20, '#ffd23f', '#0a2a30');
-    }
-    // Les aiguilles s'emballent, puis s'arrêtent net sur minuit.
-    const v = t < 60 ? t * t / 40 : 0;
-    const ah = t < 60 ? v / 12 : -Math.PI / 2;
-    const am = t < 60 ? v : -Math.PI / 2;
-    g.strokeStyle = '#ffffff'; g.lineCap = 'round';
-    g.lineWidth = 10; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(ah) * R * 0.5, cy + Math.sin(ah) * R * 0.5); g.stroke();
-    g.lineWidth = 6; g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + Math.cos(am) * R * 0.78, cy + Math.sin(am) * R * 0.78); g.stroke();
-    if (t > 60) lumiere(g, () => { for (let i = 0; i < 8; i++) { const a = (i / 8) * TAU + t / 20; g.strokeStyle = rgba(k.faisceau, 0.8); g.lineWidth = 4; g.beginPath(); g.moveTo(cx, cy); g.lineTo(D.x + Math.cos(a) * 40, D.y + Math.sin(a) * 40); g.stroke(); } halo(g, D.x, D.y, 90, k.c1, 0.9); });
-  },
-  /* ONYX : les projecteurs, la foule, le coup du K.O. */
-  ring(g, t, A, D, k) {
-    g.fillStyle = `rgba(0,0,0,${Math.min(0.7, t / 30)})`; g.fillRect(0, 0, L, H);
-    lumiere(g, () => {
-      for (const [x, s] of [[150, 1], [850, -1]]) {
-        const gr = g.createLinearGradient(x, 0, D.x, SOL);
-        gr.addColorStop(0, 'rgba(255,248,200,0.5)'); gr.addColorStop(1, 'rgba(255,248,200,0.05)');
-        g.fillStyle = gr; g.beginPath(); g.moveTo(x - 20 * s, 0); g.lineTo(x + 20 * s, 0); g.lineTo(D.x + 90, SOL); g.lineTo(D.x - 90, SOL); g.fill();
-      }
-      // Les flashs des photographes.
-      for (let i = 0; i < 6; i++) if ((t + i * 7) % 23 < 2) halo(g, 60 + i * 170, 120 + (i % 2) * 60, 30, '#ffffff', 0.9);
-    });
-    // La rafale de poings dorés.
-    for (let i = 0; i < 12; i++) {
-      const q = t - 20 - i * 3;
-      if (q < 0 || q > 12) continue;
-      const y = D.y - 60 + (hasardFixe(i) - 0.5) * 120;
-      lumiere(g, () => halo(g, D.x - A.dir * (60 - q * 5), y, 26, '#ffd23f', 0.8));
-      g.fillStyle = '#d8102a'; g.beginPath(); g.arc(D.x - A.dir * (60 - q * 5), y, 12, 0, TAU); g.fill();
-    }
-    if (t > 62) { texteContour(g, 'K.O. !', L / 2, 170, 100 + Math.max(0, 80 - t), '#ffd23f', '#5a0010', 'center', true); }
-  },
-  /* NÉMÉSIS : mille miroirs, mille reflets qui frappent. */
-  miroirs(g, t, A, D, k) {
-    g.fillStyle = `rgba(10,15,40,${Math.min(0.6, t / 40)})`; g.fillRect(0, 0, L, H);
-    for (let i = 0; i < 14; i++) {
-      const a = (i / 14) * TAU + t / 40;
-      const rr = 260 - Math.min(1, t / 60) * 120;
-      const x = D.x + Math.cos(a) * rr;
-      const y = D.y + Math.sin(a) * rr * 0.55;
-      g.save(); g.translate(x, y); g.rotate(a + Math.PI / 2);
-      const m = g.createLinearGradient(-20, -40, 20, 40);
-      m.addColorStop(0, '#ffffff'); m.addColorStop(0.5, '#a8c4e8'); m.addColorStop(1, '#5a6aa8');
-      g.fillStyle = m; g.globalAlpha = 0.85;
-      g.beginPath(); g.moveTo(0, -42); g.lineTo(18, -10); g.lineTo(10, 40); g.lineTo(-12, 34); g.lineTo(-18, -12); g.closePath(); g.fill();
-      g.restore();
-      // Chaque miroir lance son reflet.
-      if (t > 40 && (t + i * 3) % 18 < 3) lumiere(g, () => { g.strokeStyle = rgba('#ffffff', 0.9); g.lineWidth = 3; g.beginPath(); g.moveTo(x, y); g.lineTo(D.x, D.y); g.stroke(); });
-    }
-    if (t > 66) lumiere(g, () => halo(g, D.x, D.y, (t - 66) * 10, k.c1, Math.max(0, 1 - (t - 66) / 40)));
-  },
-  /* LE GÉNÉRAL VORN : la légion charge, puis une pluie de lances. */
-  legion(g, t, A, D, k) {
-    g.fillStyle = `rgba(20,14,6,${Math.min(0.55, t / 40)})`; g.fillRect(0, 0, L, H);
-    // Les rangs de soldats, en ombres chinoises, qui avancent.
-    for (let rang = 0; rang < 3; rang++) {
-      const avance = Math.min(1, Math.max(0, (t - rang * 8) / 50));
-      for (let i = 0; i < 9; i++) {
-        const x = A.x - A.dir * (420 - avance * 300) + A.dir * i * 44 - A.dir * rang * 22;
-        const y = SOL - 4 - rang * 10;
-        g.fillStyle = rgba('#120c04', 0.85 - rang * 0.2);
-        g.fillRect(x - 9, y - 58, 18, 40);
-        g.beginPath(); g.arc(x, y - 66, 10, 0, TAU); g.fill();
-        g.fillRect(x - 8, y - 18, 6, 18); g.fillRect(x + 2, y - 18, 6, 18);
-        // La lance, et l'horloge du heaume qui luit.
-        g.strokeStyle = rgba('#d8c8a0', 0.8); g.lineWidth = 2;
-        g.beginPath(); g.moveTo(x + A.dir * 10, y - 20); g.lineTo(x + A.dir * 30, y - 110); g.stroke();
-        lumiere(g, () => halo(g, x + A.dir * 3, y - 68, 7, k.c1, 0.9));
-      }
-    }
-    // La pluie de lances.
-    if (t > 40) {
-      for (let i = 0; i < 16; i++) {
-        const q = (t - 40 - i * 2) / 16;
-        if (q < 0 || q > 1.2) continue;
-        const x = D.x + (hasardFixe(i) - 0.5) * 260;
-        const y = -40 + Math.min(1, q) * (D.y + 40);
-        g.strokeStyle = '#e8d8b0'; g.lineWidth = 3;
-        g.beginPath(); g.moveTo(x - 20, y - 70); g.lineTo(x, y); g.stroke();
-        g.fillStyle = k.c1; g.beginPath(); g.moveTo(x, y + 8); g.lineTo(x - 5, y - 6); g.lineTo(x + 5, y - 6); g.fill();
-        if (q >= 1) lumiere(g, () => halo(g, x, y, 40, k.c1, 1.2 - q));
-      }
-    }
-    if (t > 62) texteContour(g, 'CHARGEZ !', L / 2, 160, 90, k.c1, '#2a1600', 'center', true);
-  },
-  /* SABLIA : le sable remonte le temps, un sablier géant engloutit l'adversaire. */
-  'sablier-infini'(g, t, A, D, k) {
-    g.fillStyle = `rgba(60,36,10,${Math.min(0.45, t / 40)})`; g.fillRect(0, 0, L, H);
-    // Le sable qui tourbillonne.
-    lumiere(g, () => {
-      for (let i = 0; i < 60; i++) {
-        const a = i * 0.7 + t / 10;
-        const rr = 40 + (i % 12) * 16 * (1 - Math.min(1, t / 90));
-        halo(g, D.x + Math.cos(a) * rr * 2, D.y + Math.sin(a) * rr * 0.6, 8, k.c1, 0.5);
-      }
-    });
-    // Le sablier, qui se referme sur lui.
-    const p = Math.min(1, t / 50);
-    const h = 220;
-    g.save(); g.translate(D.x, D.y); g.globalAlpha = 0.9;
-    g.strokeStyle = '#ffe0a0'; g.lineWidth = 6;
-    g.beginPath(); g.moveTo(-90 * p, -h); g.lineTo(90 * p, -h); g.lineTo(8, 0); g.lineTo(90 * p, h * 0.5); g.lineTo(-90 * p, h * 0.5); g.lineTo(-8, 0); g.closePath(); g.stroke();
-    g.fillStyle = rgba(k.c1, 0.35);
-    const sable = Math.min(1, Math.max(0, (t - 30) / 40));
-    g.beginPath(); g.moveTo(-90 * p * (1 - sable), -h * (1 - sable)); g.lineTo(90 * p * (1 - sable), -h * (1 - sable)); g.lineTo(0, 0); g.fill();
-    g.beginPath(); g.moveTo(-90 * p * sable, h * 0.5); g.lineTo(90 * p * sable, h * 0.5); g.lineTo(0, h * 0.5 * (1 - sable)); g.fill();
-    g.restore();
-    if (t > 66) lumiere(g, () => halo(g, D.x, D.y, (t - 66) * 10, '#ffe0a0', Math.max(0, 1 - (t - 66) / 40)));
-  },
-  /* ÉCLIPSE : la lune avale le soleil, et une lame d'orange traverse la nuit. */
-  'eclipse-totale'(g, t, A, D, k) {
-    const nuit = Math.min(0.85, t / 35);
-    g.fillStyle = `rgba(4,0,12,${nuit})`; g.fillRect(0, 0, L, H);
-    const sx = L / 2;
-    const sy = 150;
-    lumiere(g, () => { halo(g, sx, sy, 150, '#ff9a3c', 0.9); halo(g, sx, sy, 70, '#fff0c0', 1); });
-    // La lune qui glisse devant le soleil.
-    const p = Math.min(1, t / 45);
-    g.fillStyle = '#05000a';
-    g.beginPath(); g.arc(sx - 140 + p * 140, sy, 66, 0, TAU); g.fill();
-    if (p >= 1) lumiere(g, () => { g.strokeStyle = rgba('#ffc070', 0.9); g.lineWidth = 4; g.beginPath(); g.arc(sx, sy, 68, 0, TAU); g.stroke(); });
-    // Les lames, dans le noir total.
-    if (t > 46) {
-      lumiere(g, () => {
-        for (let i = 0; i < 6; i++) {
-          const q = t - 46 - i * 3;
-          if (q < 0 || q > 10) continue;
-          const a = hasardFixe(i) * Math.PI - Math.PI / 2;
-          g.strokeStyle = rgba(i % 2 ? '#ff9a3c' : '#ffffff', 1 - q / 10); g.lineWidth = 5;
-          g.beginPath(); g.moveTo(D.x - Math.cos(a) * 200, D.y - Math.sin(a) * 120); g.lineTo(D.x + Math.cos(a) * 200, D.y + Math.sin(a) * 120); g.stroke();
-        }
-      });
-    }
-    if (t > 66) lumiere(g, () => halo(g, D.x, D.y, (t - 66) * 12, k.c1, Math.max(0, 1 - (t - 66) / 40)));
-  },
-  /* HÉMÉRA : l'aube se lève, mille rayons dorés. */
-  'aube-eternelle'(g, t, A, D, k) {
-    const p = Math.min(1, t / 60);
-    const gr = g.createLinearGradient(0, H, 0, 0);
-    gr.addColorStop(0, `rgba(255,160,90,${0.5 * p})`); gr.addColorStop(1, `rgba(120,60,140,${0.3 * p})`);
-    g.fillStyle = gr; g.fillRect(0, 0, L, H);
-    lumiere(g, () => {
-      halo(g, L / 2, SOL - 40 + (1 - p) * 200, 260 * p + 40, '#ffd090', 0.9);
-      for (let i = 0; i < 16; i++) {
-        const a = -Math.PI + (i / 15) * Math.PI;
-        g.strokeStyle = rgba('#ffe0b0', 0.5 * p); g.lineWidth = 6;
-        g.beginPath(); g.moveTo(L / 2, SOL - 40); g.lineTo(L / 2 + Math.cos(a) * 900, SOL - 40 + Math.sin(a) * 900); g.stroke();
-      }
-      if (t > 50) halo(g, D.x, D.y, (t - 50) * 6, '#ffffff', Math.max(0, 1 - (t - 50) / 40));
-    });
-  },
-  /* LE PREMIER HÉROS : mille boucles — ses images d'avant frappent toutes ensemble. */
-  'mille-boucles'(g, t, A, D, k) {
-    g.fillStyle = `rgba(20,16,8,${Math.min(0.6, t / 40)})`; g.fillRect(0, 0, L, H);
-    for (let i = 0; i < 12; i++) {
-      const a = (i / 12) * TAU + t / 30;
-      const rr = 280 - Math.min(1, t / 60) * 200;
-      const x = D.x + Math.cos(a) * rr;
-      const y = D.y + 30 + Math.sin(a) * rr * 0.35;
-      g.save(); g.globalAlpha = 0.5; g.fillStyle = k.c1;
-      g.beginPath(); g.ellipse(x, y - 40, 14, 40, 0, 0, TAU); g.fill();
-      g.beginPath(); g.arc(x, y - 92, 12, 0, TAU); g.fill();
-      g.restore();
-      if (t > 40 && (t + i * 2) % 14 < 3) lumiere(g, () => { g.strokeStyle = rgba('#fff4c8', 0.9); g.lineWidth = 3; g.beginPath(); g.moveTo(x, y - 60); g.lineTo(D.x, D.y); g.stroke(); });
-    }
-    if (t > 62) texteContour(g, 'ENCORE.', L / 2, 170, 90, k.c1, '#2a2010', 'center', true);
-  },
-  /* LE CHAOS : tout finit ici. */
-  'omega-collapse'(g, t, A, D, k) {
-    g.fillStyle = `rgba(0,0,0,${Math.min(0.85, t / 40)})`; g.fillRect(0, 0, L, H);
-    lumiere(g, () => {
-      for (let i = 0; i < 12; i++) eclair(g, D.x, D.y, D.x + Math.cos(i) * 500, D.y + Math.sin(i * 1.7) * 300, rgba(i % 2 ? '#ff50ff' : '#c814ff', 0.7), 3, 8, i + Math.floor(t / 4));
-      halo(g, D.x, D.y, 60 + Math.sin(t / 3) * 10 + Math.max(0, t - 60) * 8, k.c1, 0.9);
-    });
-    g.fillStyle = '#000'; g.beginPath(); g.arc(D.x, D.y, 40 + Math.min(40, t / 2), 0, TAU); g.fill();
-    if (t > 66) { lumiere(g, () => halo(g, D.x, D.y, (t - 66) * 14, '#ffffff', Math.max(0, 1 - (t - 66) / 50))); }
-  },
-};
-
 /* ------------------------------------------------------------------ */
 /* Le héros : ses techniques à lui (formes et cinématiques `heros-…`)  */
 /* ------------------------------------------------------------------ */
 
 /** Le sceau du héros : un cercle de runes et une étoile à six branches, à plat au sol ou dressé. */
-function sceau(g, x, y, r, c, a, rot, plat = true) {
+export function sceau(g, x, y, r, c, a, rot, plat = true) {
   if (r < 2 || a <= 0) return;
   g.save();
   g.translate(x, y);
@@ -1357,97 +931,73 @@ function sceau(g, x, y, r, c, a, rot, plat = true) {
 }
 
 function dessinerProjHeros(g, forme, r, k, dir, t, p) {
+  const P = K.palette(k.faisceau);
   switch (forme) {
-    case 'heros-eclat': {
+    case 'heros-eclat':
       // Un cristal d'énergie à facettes, et sa traînée de paillettes.
-      lumiere(g, () => {
-        for (let i = 1; i < 7; i++) halo(g, -dir * i * 12, Math.sin(t / 2 + i * 1.7) * 6, 6, k.faisceau, 0.6 - i * 0.08);
-        halo(g, 0, 0, r * 2.2, k.c1, 0.8);
-      });
+      for (let i = 1; i < 5; i++) K.losange(g, -dir * i * 13, Math.sin(t / 2 + i * 1.7) * 5, -dir * 5, 0, 2.4, P, 1 - i * 0.2);
+      K.lueur(g, 0, 0, r * 2.2, k.c1, 0.6);
       g.rotate((t / 6) * dir);
-      g.fillStyle = '#ffffff';
-      g.beginPath(); g.moveTo(0, -r); g.lineTo(r * 0.55, -r * 0.2); g.lineTo(r * 0.35, r * 0.8); g.lineTo(-r * 0.35, r * 0.8); g.lineTo(-r * 0.55, -r * 0.2); g.closePath(); g.fill();
-      g.fillStyle = rgba(k.faisceau, 0.75);
-      g.beginPath(); g.moveTo(0, -r); g.lineTo(r * 0.35, r * 0.8); g.lineTo(0, r * 0.3); g.closePath(); g.fill();
+      K.cristal(g, 0, r * 0.8, r * 1.7, r * 1.1, 0, P);
       break;
-    }
     case 'heros-phenix': {
-      // Un oiseau de feu : deux ailes qui battent, une longue queue.
+      // Un petit phénix : des ailes de flammes qui battent, une queue, un cœur ardent.
+      const PF = k.teinte ? K.palette(k.c1) : K.FEU;
       g.scale(dir, 1);
       const bat = Math.sin(t / 2.5);
-      lumiere(g, () => {
-        for (let i = 1; i < 8; i++) halo(g, -i * 10, Math.sin(t / 3 + i) * 4, r * (0.9 - i * 0.09), i % 2 ? '#ff9a1a' : k.c1, 0.55 - i * 0.06);
-        halo(g, 0, 0, r * 1.8, '#ff7a1a', 0.8);
-        g.fillStyle = rgba('#ffcf4a', 0.9);
-        for (const s of [-1, 1]) {
-          g.beginPath(); g.moveTo(-4, 0);
-          g.quadraticCurveTo(-r * 0.4, s * r * (1.4 + bat * 0.6), -r * 1.4, s * r * (1.1 + bat * 0.5));
-          g.quadraticCurveTo(-r * 0.6, s * r * 0.4, -4, 0); g.fill();
-        }
-      });
-      g.fillStyle = '#fff4c8';
-      g.beginPath(); g.ellipse(2, 0, r * 0.6, r * 0.32, 0, 0, TAU); g.fill();
-      g.beginPath(); g.moveTo(r * 0.5, -3); g.lineTo(r * 0.95, 0); g.lineTo(r * 0.5, 3); g.fill();
+      for (const s of [-1, 1]) for (let i = 0; i < 3; i++) { g.save(); g.rotate(Math.PI + s * (0.9 + i * 0.35 + bat * 0.3)); K.flamme(g, 0, 0, r * (1.8 - i * 0.3), r * 0.6, t + i, PF, i + s); g.restore(); }
+      g.save(); g.rotate(-Math.PI / 2); K.flamme(g, 0, r * 0.4, r * 2.4, r * 0.8, t, PF, 5); g.restore();
+      K.orbe(g, 0, 0, r * 0.55, t, PF);
       break;
     }
-    case 'heros-flocon': {
+    case 'heros-flocon':
+      // Un flocon à six branches, cerné.
       g.rotate(t / 5);
-      lumiere(g, () => halo(g, 0, 0, r * 2, '#bdf3ff', 0.6));
-      g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.lineCap = 'round';
-      for (let i = 0; i < 6; i++) {
-        g.save(); g.rotate((i / 6) * TAU);
-        g.beginPath(); g.moveTo(0, 0); g.lineTo(r, 0);
-        g.moveTo(r * 0.55, 0); g.lineTo(r * 0.78, -r * 0.25); g.moveTo(r * 0.55, 0); g.lineTo(r * 0.78, r * 0.25); g.stroke();
-        g.restore();
+      K.lueur(g, 0, 0, r * 2, P.base, 0.5);
+      for (const [c, w] of [[P.encre, 7], [P.clair, 4], [P.coeur, 1.5]]) {
+        g.strokeStyle = c; g.lineWidth = w; g.lineCap = 'round';
+        for (let i = 0; i < 6; i++) {
+          g.save(); g.rotate((i / 6) * TAU);
+          g.beginPath(); g.moveTo(0, 0); g.lineTo(r, 0);
+          g.moveTo(r * 0.55, 0); g.lineTo(r * 0.8, -r * 0.26); g.moveTo(r * 0.55, 0); g.lineTo(r * 0.8, r * 0.26); g.stroke();
+          g.restore();
+        }
       }
-      g.strokeStyle = k.faisceau; g.lineWidth = 1.5; g.beginPath(); g.arc(0, 0, r * 0.3, 0, TAU); g.stroke();
       break;
-    }
     case 'heros-corbeau': {
       // Trois corbeaux d'ombre, en vol serré, les yeux de la couleur du héros.
       g.scale(dir, 1);
-      lumiere(g, () => halo(g, -10, 0, r * 2, k.c1, 0.45));
+      K.lueur(g, -10, 0, r * 2, k.c1, 0.4);
       for (const [dx, dy, s] of [[0, 0, 1], [-r * 1.2, -r * 0.7, 0.7], [-r * 1.3, r * 0.6, 0.65]]) {
         const bat = Math.sin(t / 2 + dx);
         g.save(); g.translate(dx * 1.4, dy * 1.4); g.scale(s * 1.5, s * 1.5);
-        g.fillStyle = '#0c0614';
-        g.beginPath(); g.ellipse(0, 0, 14, 6, 0, 0, TAU); g.fill();
-        g.beginPath(); g.moveTo(-4, 0); g.lineTo(-14, -18 * bat); g.lineTo(4, -2); g.fill();
-        g.beginPath(); g.moveTo(-4, 0); g.lineTo(-10, 16 * bat); g.lineTo(4, 2); g.fill();
+        g.fillStyle = '#0c0614'; g.strokeStyle = rgba(k.c1, 0.8); g.lineWidth = 1.2;
+        g.beginPath(); g.ellipse(0, 0, 14, 6, 0, 0, TAU); g.fill(); g.stroke();
+        g.beginPath(); g.moveTo(-4, 0); g.lineTo(-14, -18 * bat); g.lineTo(4, -2); g.closePath(); g.fill(); g.stroke();
+        g.beginPath(); g.moveTo(-4, 0); g.lineTo(-10, 16 * bat); g.lineTo(4, 2); g.closePath(); g.fill(); g.stroke();
         g.beginPath(); g.moveTo(12, -2); g.lineTo(20, 0); g.lineTo(12, 3); g.fill();
         g.beginPath(); g.moveTo(-12, 0); g.lineTo(-22, -5); g.lineTo(-22, 5); g.fill();
-        lumiere(g, () => halo(g, 8, -2, 4, k.c1, 1));
+        g.fillStyle = k.c1; g.beginPath(); g.arc(8, -2, 2, 0, TAU); g.fill();
         g.restore();
       }
       break;
     }
     case 'heros-meteore': {
-      // Un roc d'énergie, fendu de lumière.
-      lumiere(g, () => {
-        for (let i = 1; i < 6; i++) halo(g, -Math.sign(p.vx || dir) * i * 12, -p.vy * i * 1.2, r * (1 - i * 0.12), k.c1, 0.5 - i * 0.08);
-        halo(g, 0, 0, r * 1.8, k.faisceau, 0.6);
-      });
-      g.rotate((t / 7) * dir);
-      g.fillStyle = k.c2;
-      g.beginPath();
-      for (let i = 0; i < 9; i++) { const a = (i / 9) * TAU; const rr = r * (0.78 + hasardFixe(i + 2) * 0.3); g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); }
-      g.closePath(); g.fill();
-      lumiere(g, () => {
-        g.strokeStyle = rgba(k.faisceau, 0.95); g.lineWidth = 2.5;
-        g.beginPath(); g.moveTo(-r * 0.6, -r * 0.1); g.lineTo(-r * 0.1, r * 0.1); g.lineTo(r * 0.2, -r * 0.4); g.moveTo(-r * 0.1, r * 0.1); g.lineTo(r * 0.3, r * 0.5); g.stroke();
-      });
+      // Un roc d'énergie en feu, sa traînée de flammes.
+      const vx = p.vx || dir, vy = p.vy || 0;
+      g.save(); g.rotate(Math.atan2(-vx, vy)); K.flamme(g, 0, r * 0.4, r * 3.4, r * 1.6, t, K.palette(k.c1), 4); g.restore();
+      K.orbe(g, 0, 0, r * 0.95, t, K.palette(k.c1));
+      K.eclat(g, -r * 0.1, -r * 0.1, r * 0.72, (t / 7) * dir, { ...K.ROCHE, base: k.c2 || '#5a2a18', clair: k.c1 });
       break;
     }
     case 'heros-anneau': {
       // Un anneau tranchant qui tourne sur lui-même.
-      lumiere(g, () => halo(g, 0, 0, r * 1.9, k.c1, 0.5));
+      const AC = K.palette('#d8e0ec');
       g.save(); g.scale(1, 0.45); g.rotate(t / 2);
-      g.strokeStyle = '#e8eef8'; g.lineWidth = 6; g.beginPath(); g.arc(0, 0, r, 0, TAU); g.stroke();
-      g.strokeStyle = k.faisceau; g.lineWidth = 2; g.beginPath(); g.arc(0, 0, r - 5, 0, TAU); g.stroke();
-      g.fillStyle = '#ffffff';
+      for (const [c, w] of [[AC.encre, 9], [AC.base, 6], [P.base, 2]]) { g.strokeStyle = c; g.lineWidth = w; g.beginPath(); g.arc(0, 0, r, 0, TAU); g.stroke(); }
       for (let i = 0; i < 6; i++) {
         const a = (i / 6) * TAU;
-        g.beginPath(); g.moveTo(Math.cos(a) * r, Math.sin(a) * r); g.lineTo(Math.cos(a + 0.3) * (r + 11), Math.sin(a + 0.3) * (r + 11)); g.lineTo(Math.cos(a + 0.45) * r, Math.sin(a + 0.45) * r); g.fill();
+        K.couches(g, (s) => { g.moveTo(Math.cos(a) * r, Math.sin(a) * r); g.lineTo(Math.cos(a + 0.3) * (r + 13 * s), Math.sin(a + 0.3) * (r + 13 * s)); g.lineTo(Math.cos(a + 0.45) * r, Math.sin(a + 0.45) * r); g.closePath(); }, AC, [1.2, 1, 0.5, 0]);
       }
       g.restore();
       break;
@@ -1456,13 +1006,9 @@ function dessinerProjHeros(g, forme, r, k, dir, t, p) {
       // Un oiseau de lumière, une étoile pour cœur.
       g.rotate(Math.atan2(p.vy || 0, p.vx || dir));
       const bat = Math.sin(t / 2);
-      lumiere(g, () => {
-        for (let i = 1; i < 6; i++) halo(g, -i * 10, 0, 5, '#ffffff', 0.5 - i * 0.08);
-        halo(g, 0, 0, r * 2, k.c1, 0.7);
-        g.fillStyle = rgba(k.faisceau, 0.9);
-        for (const s of [-1, 1]) { g.beginPath(); g.moveTo(2, 0); g.quadraticCurveTo(-r * 0.2, s * r * 1.6 * (0.5 + Math.abs(bat) * 0.5), -r, s * r * (0.4 + bat * 0.5)); g.lineTo(-r * 0.3, 0); g.fill(); }
-      });
-      etoile(g, 0, 0, r * 0.55, '#ffffff', t / 6);
+      for (let i = 1; i < 4; i++) K.losange(g, -i * 11, 0, -5, 0, 2, P, 1 - i * 0.25);
+      for (const s of [-1, 1]) K.couches(g, (q) => { g.moveTo(2, 0); g.quadraticCurveTo(-r * 0.2, s * r * 1.6 * (0.5 + Math.abs(bat) * 0.5) * q, -r * q, s * r * (0.4 + bat * 0.5)); g.lineTo(-r * 0.3, 0); g.closePath(); }, P, [1.15, 1, 0.6, 0.2]);
+      K.etoileImpact(g, 0, 0, r * 0.6, t / 6, P, 1, 5);
       break;
     }
     default: break;
@@ -1470,38 +1016,25 @@ function dessinerProjHeros(g, forme, r, k, dir, t, p) {
 }
 
 function dessinerZoneHeros(g, d, x, actif, k, z) {
+  const P = K.palette(k.c1);
   switch (d.forme) {
     case 'heros-geyser':
       // Trois jets de flammes qui sortent du sol, l'un après l'autre.
-      lumiere(g, () => {
-        for (let i = 0; i < 3; i++) {
-          const dx = (i - 1) * d.rayon * 0.55;
-          const p = Math.min(1, Math.max(0, (actif - i * 3) / 8));
-          const h = d.hauteur * p * (0.8 + 0.2 * Math.sin(z.t / 3 + i));
-          if (h < 2) continue;
-          const gr = g.createLinearGradient(0, SOL - h, 0, SOL);
-          gr.addColorStop(0, rgba('#ffd23a', 0)); gr.addColorStop(0.3, rgba('#ff9a1a', 0.8)); gr.addColorStop(1, rgba(k.c1, 0.9));
-          g.fillStyle = gr;
-          g.beginPath(); g.moveTo(x + dx - 18, SOL); g.quadraticCurveTo(x + dx - 26, SOL - h * 0.5, x + dx, SOL - h); g.quadraticCurveTo(x + dx + 26, SOL - h * 0.5, x + dx + 18, SOL); g.fill();
-          halo(g, x + dx, SOL - h, 22, '#ffe680', 0.7 * p);
-        }
-      });
+      for (let i = 0; i < 3; i++) {
+        const dx = (i - 1) * d.rayon * 0.55;
+        const p = Math.min(1, Math.max(0, (actif - i * 3) / 8));
+        if (p <= 0) continue;
+        K.brasier(g, x + dx, SOL + 4, 50, d.hauteur * p * (0.85 + 0.15 * Math.sin(z.t / 3 + i)), z.t, k.teinte ? P : K.FEU, i * 4, 1, 3);
+      }
       break;
     case 'heros-lances':
       // Des lances de lumière qui se plantent autour de l'adversaire.
-      lumiere(g, () => {
-        for (let i = 0; i < 5; i++) {
-          const q = Math.min(1, Math.max(0, (actif - i * 2) / 6));
-          const lx = x + (hasardFixe(i + 3) - 0.5) * d.rayon * 1.6;
-          const y = -60 + q * (SOL + 60);
-          g.strokeStyle = rgba(k.faisceau, 0.9); g.lineWidth = 5;
-          g.beginPath(); g.moveTo(lx, y - 120); g.lineTo(lx, y); g.stroke();
-          g.strokeStyle = '#ffffff'; g.lineWidth = 2;
-          g.beginPath(); g.moveTo(lx, y - 120); g.lineTo(lx, y); g.stroke();
-          g.fillStyle = '#ffffff'; g.beginPath(); g.moveTo(lx, y + 14); g.lineTo(lx - 7, y - 4); g.lineTo(lx + 7, y - 4); g.fill();
-          if (q >= 1) halo(g, lx, SOL - 6, 40, k.c1, 0.8);
-        }
-      });
+      for (let i = 0; i < 5; i++) {
+        const q = Math.min(1, Math.max(0, (actif - i * 2) / 6));
+        const lx = x + (K.hasard(i + 3) - 0.5) * d.rayon * 1.6;
+        K.lance(g, lx, -60 + q * (SOL + 60), Math.PI / 2, 120, K.palette(k.faisceau), 1, '#ffffff');
+        if (q >= 1) K.etoileImpact(g, lx, SOL - 6, 30, z.t, P, Math.max(0, 1 - (actif - i * 2 - 6) / 8), 8);
+      }
       break;
     case 'heros-cristaux': {
       // Des cristaux qui jaillissent du sol, penchés au hasard.
@@ -1509,256 +1042,30 @@ function dessinerZoneHeros(g, d, x, actif, k, z) {
       const n = Math.max(3, Math.round(d.rayon / 22));
       for (let i = 0; i < n; i++) {
         const dx = (i / (n - 1) - 0.5) * d.rayon * 1.8;
-        const h = d.hauteur * p * (0.45 + hasardFixe(i) * 0.55);
-        if (h < 2) continue;
-        g.save(); g.translate(x + dx, SOL); g.rotate((hasardFixe(i + 7) - 0.5) * 0.5);
-        const gr = g.createLinearGradient(0, -h, 0, 0);
-        gr.addColorStop(0, '#ffffff'); gr.addColorStop(1, rgba(k.faisceau, 0.7));
-        g.fillStyle = gr;
-        g.beginPath(); g.moveTo(-10, 0); g.lineTo(-7, -h * 0.8); g.lineTo(0, -h); g.lineTo(7, -h * 0.8); g.lineTo(10, 0); g.closePath(); g.fill();
-        g.strokeStyle = rgba('#ffffff', 0.6); g.lineWidth = 1; g.beginPath(); g.moveTo(0, -h); g.lineTo(0, 0); g.stroke();
-        g.restore();
+        K.cristal(g, x + dx, SOL + 4, d.hauteur * p * (0.45 + K.hasard(i) * 0.55), 20, (K.hasard(i + 7) - 0.5) * 0.5, K.palette(k.faisceau));
       }
-      lumiere(g, () => halo(g, x, SOL - 30, d.rayon, k.c1, 0.3));
       break;
     }
     case 'heros-onde': {
       // Le poing frappe le sol : des anneaux de choc, le sceau, des éclats qui sautent.
       const p = Math.min(1, actif / d.duree);
-      lumiere(g, () => {
-        for (let i = 0; i < 3; i++) {
-          const q = Math.max(0, p - i * 0.15);
-          g.strokeStyle = rgba(i ? k.faisceau : '#ffffff', 0.9 * (1 - q)); g.lineWidth = 8 * (1 - q) + 2;
-          g.beginPath(); g.ellipse(x, SOL, d.rayon * (0.2 + q), 16 * (0.3 + q), 0, 0, TAU); g.stroke();
-        }
-        sceau(g, x, SOL, d.rayon * 0.7, k.c1, 1 - p, z.t / 20);
-      });
+      for (let i = 0; i < 3; i++) { const q = Math.max(0, p - i * 0.15); K.onde(g, x, SOL, d.rayon * (0.2 + q), 8 * (1 - q) + 2, P, 1 - q, 0.16); }
+      lumiere(g, () => sceau(g, x, SOL, d.rayon * 0.7, k.c1, 1 - p, z.t / 20));
       for (let i = 0; i < 10; i++) {
-        const a = hasardFixe(i) * Math.PI;
-        const q = p * (0.6 + hasardFixe(i + 4) * 0.4);
-        g.fillStyle = rgba(k.c2, 1 - p);
-        g.fillRect(x + Math.cos(a) * d.rayon * q, SOL - Math.sin(a) * 50 * q - 4, 6, 6);
+        const a = K.hasard(i) * Math.PI;
+        const q = p * (0.6 + K.hasard(i + 4) * 0.4);
+        K.eclat(g, x + Math.cos(a) * d.rayon * q, SOL - Math.sin(a) * 50 * q - 4, 4, q * 6 + i, K.ROCHE, 1 - p);
       }
       break;
     }
     case 'heros-sceau':
-      // Le sceau sous l'adversaire, et la lumière qui en monte.
-      lumiere(g, () => {
-        sceau(g, x, SOL, d.rayon, k.c1, 1, z.t / 12);
-        const w = d.rayon * 0.6;
-        const gr = g.createLinearGradient(x - w, 0, x + w, 0);
-        gr.addColorStop(0, rgba(k.faisceau, 0)); gr.addColorStop(0.5, rgba(k.faisceau, 0.6 + 0.3 * Math.sin(z.t / 2))); gr.addColorStop(1, rgba(k.faisceau, 0));
-        g.fillStyle = gr; g.fillRect(x - w, SOL - d.hauteur, w * 2, d.hauteur);
-        for (let i = 0; i < 6; i++) etoile(g, x + (hasardFixe(i) - 0.5) * w * 2, SOL - ((z.t * 6 + i * 50) % d.hauteur), 6, '#ffffff', z.t / 8 + i);
-      });
+      // Le sceau sous l'adversaire, et la colonne de lumière qui en monte.
+      lumiere(g, () => sceau(g, x, SOL, d.rayon, k.c1, 1, z.t / 12));
+      g.save(); g.translate(x, SOL + 6); g.rotate(-Math.PI / 2);
+      K.rayon(g, d.hauteur, d.rayon * 0.4, z.t, K.palette(k.faisceau), 0.9);
+      g.restore();
       break;
     default:
-      lumiere(g, () => halo(g, x, SOL - 60, d.rayon, k.c1, 0.6));
+      K.lueur(g, x, SOL - 60, d.rayon, k.c1, 0.5);
   }
 }
-
-/** Les cinématiques des ultimes du héros. A : le héros (id, x, y, dir) ; D : l'adversaire. */
-const ULTIS_HEROS = {
-  /* Un poing géant, chargé de toute l'énergie de l'arène, qui fend l'écran. */
-  'heros-fracture'(g, t, A, D, k) {
-    const charge = Math.min(1, t / 40);
-    lumiere(g, () => {
-      for (let i = 0; i < 14; i++) {
-        const a = i * 0.45 + t / 9;
-        const rr = 220 * (1 - ((t * 3 + i * 17) % 60) / 60);
-        halo(g, A.x + Math.cos(a) * rr, A.y + Math.sin(a) * rr, 8, k.faisceau, 0.7);
-      }
-      if (t < 50) halo(g, A.x + A.dir * 40, A.y, 40 + charge * 60, k.c1, 0.8);
-    });
-    if (t > 40 && t < 90) {
-      const p = Math.min(1, (t - 40) / 28);
-      g.save(); g.translate(A.x + (D.x - A.x) * p, D.y); g.scale(A.dir, 1);
-      lumiere(g, () => { for (let i = 1; i < 6; i++) halo(g, -i * 40, 0, 90 - i * 12, k.faisceau, 0.5 - i * 0.07); halo(g, 0, 0, 120, k.c1, 0.9); });
-      g.fillStyle = rgba('#ffffff', 0.92);
-      g.beginPath(); g.roundRect(-70, -55, 100, 110, 30); g.fill();
-      g.fillStyle = rgba(k.faisceau, 0.95);
-      for (let i = 0; i < 4; i++) { g.beginPath(); g.roundRect(18, -52 + i * 27, 34, 24, 10); g.fill(); }
-      g.beginPath(); g.roundRect(-30, 30, 56, 26, 12); g.fill();
-      g.restore();
-    }
-    if (t >= 68) {
-      // L'écran se fend.
-      const q = Math.min(1, (t - 68) / 10);
-      g.save(); g.strokeStyle = '#ffffff'; g.lineWidth = 3; g.lineCap = 'round'; g.lineJoin = 'round';
-      for (let i = 0; i < 9; i++) {
-        const a = (i / 9) * TAU + hasardFixe(i) * 0.5;
-        g.beginPath(); g.moveTo(D.x, D.y);
-        for (let s = 1; s <= 5; s++) {
-          const l = 80 * s * q;
-          const b = a + (hasardFixe(i * 7 + s) - 0.5) * 0.5;
-          g.lineTo(D.x + Math.cos(b) * l, D.y + Math.sin(b) * l);
-        }
-        g.stroke();
-      }
-      g.restore();
-      lumiere(g, () => halo(g, D.x, D.y, 80 + (t - 68) * 6, k.c1, Math.max(0, 1 - (t - 68) / 40)));
-    }
-  },
-  /* Un immense phénix naît de l'aura et traverse l'adversaire. */
-  'heros-phenix'(g, t, A, D, k) {
-    const F = k.teinte
-      ? { fond: '4,10,30', queue: k.c1, aile1: '#ffffff', aile2: k.c1, coeur: '#ffffff', corps: '#f4fbff', crete: k.c1 }
-      : { fond: '40,8,0', queue: '#ff7a1a', aile1: '#ffcf4a', aile2: '#ff8a1a', coeur: '#ffe680', corps: '#fff6d8', crete: '#ff9a1a' };
-    g.fillStyle = `rgba(${F.fond},${Math.min(0.45, t / 40)})`; g.fillRect(0, 0, L, H);
-    const p = Math.max(0, (t - 20) / 50);
-    if (p < 1.4) {
-      const m = Math.min(1, p);
-      const x = A.x + (D.x - A.x) * p;
-      const y = A.y + (D.y - A.y) * m - Math.sin(m * Math.PI) * 140;
-      const bat = Math.sin(t / 4);
-      const e = 1 + Math.min(1, t / 20) * 1.2;
-      g.save(); g.translate(x, y); g.scale(A.dir * e, e);
-      lumiere(g, () => {
-        for (let i = 1; i < 14; i++) halo(g, -i * 16, Math.sin(t / 4 + i * 0.6) * (6 + i * 2), 26 - i, i % 3 ? F.queue : k.c1, 0.6 - i * 0.035);
-        for (const s of [-1, 1]) {
-          g.fillStyle = rgba(s < 0 ? F.aile1 : F.aile2, 0.85);
-          g.beginPath(); g.moveTo(-10, 0);
-          g.bezierCurveTo(-20, s * 60 * (0.6 + bat * 0.5), -90, s * 90 * (0.6 + bat * 0.5), -110, s * 70 * (0.5 + bat * 0.5));
-          g.bezierCurveTo(-70, s * 30, -40, s * 14, -10, 0); g.fill();
-        }
-        halo(g, 0, 0, 50, F.coeur, 0.9);
-      });
-      g.fillStyle = F.corps;
-      g.beginPath(); g.ellipse(0, 0, 30, 13, 0, 0, TAU); g.fill();
-      g.beginPath(); g.arc(26, -10, 11, 0, TAU); g.fill();
-      g.beginPath(); g.moveTo(34, -12); g.lineTo(50, -6); g.lineTo(34, -4); g.fill();
-      g.fillStyle = F.crete;
-      for (let i = 0; i < 3; i++) { g.beginPath(); g.moveTo(22, -18); g.lineTo(10 - i * 8, -34 - i * 4); g.lineTo(18 - i * 4, -16); g.fill(); }
-      g.restore();
-    }
-    if (t > 66) lumiere(g, () => halo(g, D.x, D.y, (t - 66) * 9, F.crete, Math.max(0, 1 - (t - 66) / 40)));
-  },
-  /* Un tourbillon d'éclairs qui se resserre sur l'adversaire. */
-  'heros-tempete'(g, t, A, D, k) {
-    g.fillStyle = `rgba(6,8,24,${Math.min(0.6, t / 40)})`; g.fillRect(0, 0, L, H);
-    const serre = 1 - Math.min(1, t / 70) * 0.75;
-    lumiere(g, () => {
-      for (let i = 0; i < 3; i++) {
-        g.strokeStyle = rgba(i ? k.faisceau : '#ffffff', 0.7); g.lineWidth = i ? 4 : 2;
-        g.beginPath();
-        for (let s = 0; s <= 40; s++) {
-          const a = s * 0.3 + t / 6 + (i * TAU) / 3;
-          const rr = (20 + s * 6) * serre;
-          if (s) g.lineTo(D.x + Math.cos(a) * rr, D.y + Math.sin(a) * rr * 0.55); else g.moveTo(D.x + Math.cos(a) * rr, D.y + Math.sin(a) * rr * 0.55);
-        }
-        g.stroke();
-      }
-      for (let i = 0; i < 4; i++) {
-        if ((t + i * 7) % 18 >= 5) continue;
-        const a = hasardFixe(i + Math.floor(t / 18)) * TAU;
-        eclair(g, D.x + Math.cos(a) * 260 * serre, D.y + Math.sin(a) * 140 * serre, D.x, D.y, rgba('#ffffff', 0.9), 3, 8, t + i);
-      }
-      halo(g, D.x, D.y, 60 * serre + 30, k.c1, 0.7);
-    });
-    if (t > 66) lumiere(g, () => { halo(g, D.x, D.y, (t - 66) * 10, k.faisceau, Math.max(0, 1 - (t - 66) / 40)); if (t < 80) eclair(g, D.x + 30, 0, D.x, SOL, '#ffffff', 6, 12, t); });
-  },
-  /* Le sceau du gardien : un cercle magique sous l'adversaire, puis une colonne de lumière. */
-  'heros-sceau'(g, t, A, D, k) {
-    g.fillStyle = `rgba(4,6,20,${Math.min(0.5, t / 40)})`; g.fillRect(0, 0, L, H);
-    const p = Math.min(1, t / 40);
-    lumiere(g, () => {
-      sceau(g, D.x, SOL, 200 * p, k.c1, 1, t / 25);
-      sceau(g, D.x, SOL, 130 * p, k.faisceau, 0.8, -t / 18);
-      sceau(g, A.x - A.dir * 20, A.y, 90 * p, k.faisceau, 0.9, t / 15, false);
-      if (t > 45) {
-        const q = Math.min(1, (t - 45) / 20);
-        const w = 140 * q;
-        const gr = g.createLinearGradient(D.x - w, 0, D.x + w, 0);
-        gr.addColorStop(0, rgba(k.c1, 0)); gr.addColorStop(0.5, rgba('#ffffff', 0.95)); gr.addColorStop(1, rgba(k.c1, 0));
-        g.fillStyle = gr; g.fillRect(D.x - w, 0, w * 2, SOL);
-        for (let i = 0; i < 12; i++) halo(g, D.x + (hasardFixe(i) - 0.5) * w * 2, SOL - ((t * 9 + i * 50) % SOL), 8, '#ffffff', 0.7);
-      }
-    });
-  },
-  /* La comète humaine : des ruées de tous les côtés, plus vite que l'œil. */
-  'heros-comete'(g, t, A, D, k) {
-    g.fillStyle = `rgba(0,0,0,${Math.min(0.55, t / 30)})`; g.fillRect(0, 0, L, H);
-    lumiere(g, () => {
-      for (let i = 0; i < 8; i++) {
-        const q = (t - 8 - i * 7) / 10;
-        if (q < 0 || q > 1.6) continue;
-        const a = hasardFixe(i + 11) * Math.PI - Math.PI / 2 + (i % 2) * Math.PI;
-        const x0 = D.x - Math.cos(a) * 520; const y0 = D.y - Math.sin(a) * 260;
-        const x1 = D.x + Math.cos(a) * 520; const y1 = D.y + Math.sin(a) * 260;
-        const m = Math.min(1, q);
-        const queue = Math.max(0, m - 0.35);
-        const al = Math.max(0, 1 - (q - 1) * 1.6);
-        g.beginPath(); g.moveTo(x0 + (x1 - x0) * queue, y0 + (y1 - y0) * queue); g.lineTo(x0 + (x1 - x0) * m, y0 + (y1 - y0) * m);
-        g.strokeStyle = rgba(k.faisceau, al); g.lineWidth = 14; g.stroke();
-        g.strokeStyle = rgba('#ffffff', al); g.lineWidth = 4; g.stroke();
-        if (q < 1) halo(g, x0 + (x1 - x0) * m, y0 + (y1 - y0) * m, 40, k.c1, 0.9);
-        if (q > 0.45 && q < 0.7) halo(g, D.x, D.y, 70, '#ffffff', 0.8);
-      }
-    });
-    if (t > 66) lumiere(g, () => halo(g, D.x, D.y, (t - 66) * 10, k.c1, Math.max(0, 1 - (t - 66) / 40)));
-  },
-  /* L'éveil : un géant de lumière, à l'image du héros, se dresse et frappe avec lui. */
-  'heros-eveil'(g, t, A, D, k) {
-    g.fillStyle = `rgba(0,0,0,${Math.min(0.5, t / 35)})`; g.fillRect(0, 0, L, H);
-    const p = Math.min(1, t / 45);
-    const p0 = PERSO[A.id];
-    const perso = p0 && k.teinte ? { ...p0, c: { ...p0.c, c1: k.c1, aura: k.c1, faisceau: k.c1, tenue: k.c1 } } : p0;
-    lumiere(g, () => {
-      halo(g, A.x - A.dir * 60, SOL - 220 * p, 260 * p, k.c1, 0.5);
-      for (let i = 0; i < 16; i++) halo(g, A.x - A.dir * 60 + (hasardFixe(i) - 0.5) * 300, SOL - ((t * 5 + i * 37) % 400), 6, k.faisceau, 0.7);
-    });
-    if (perso) {
-      const pose = t < 50 ? 'garde' : t < 85 ? 'poing' : 'victoire';
-      g.save();
-      g.globalCompositeOperation = 'lighter';
-      dessinerCombattant(g, perso, { x: A.x - A.dir * 60, y: SOL + 20 + (1 - p) * 200, dir: A.dir, pose, t, p: Math.min(1, Math.max(0, (t - 50) / 8)), echelle: 1 + p * 1.8, alpha: 0.55 * p, sansOmbre: true, aura: 1 });
-      g.restore();
-    }
-    if (t > 62) lumiere(g, () => halo(g, D.x, D.y, (t - 62) * 9, '#ffffff', Math.max(0, 1 - (t - 62) / 40)));
-  },
-  /* La lame d'horizon : une seule entaille, d'un bord à l'autre, qui coupe l'écran en deux. */
-  'heros-horizon'(g, t, A, D, k) {
-    g.fillStyle = `rgba(0,0,0,${Math.min(0.7, t / 30)})`; g.fillRect(0, 0, L, H);
-    const y = D.y;
-    if (t < 42) lumiere(g, () => { halo(g, A.x + A.dir * 30, A.y, 20 + t, k.c1, 0.8); etoile(g, A.x + A.dir * 30, A.y, 6 + t / 3, '#ffffff', t / 6); });
-    if (t >= 40 && t < 68) {
-      const q = Math.min(1, (t - 40) / 6);
-      lumiere(g, () => {
-        const x0 = A.dir > 0 ? 0 : L * (1 - q);
-        g.fillStyle = rgba(k.faisceau, 0.6); g.fillRect(x0, y - 6, L * q, 12);
-        g.fillStyle = '#ffffff'; g.fillRect(x0, y - 1.5, L * q, 3);
-      });
-    }
-    if (t >= 68) {
-      const q = Math.min(1, (t - 68) / 14);
-      const ecart = q * 26;
-      g.fillStyle = '#000'; g.fillRect(0, y - ecart, L, ecart * 2);
-      lumiere(g, () => {
-        g.fillStyle = rgba('#ffffff', 1 - q * 0.5); g.fillRect(0, y - ecart - 3, L, 3); g.fillRect(0, y + ecart, L, 3);
-        for (let i = 0; i < 20; i++) halo(g, hasardFixe(i) * L, y + (hasardFixe(i + 5) - 0.5) * ecart * 2, 6, k.c1, 0.8);
-      });
-    }
-  },
-  /* Mille promesses : une étoile par allié, qui montent, se rassemblent, et tombent ensemble. */
-  'heros-promesses'(g, t, A, D, k) {
-    g.fillStyle = `rgba(4,4,20,${Math.min(0.65, t / 35)})`; g.fillRect(0, 0, L, H);
-    const couleurs = ['#3296ff', '#ff6a1a', '#8fe6ff', '#ffd23f', '#b45aff', '#3cdc64', '#ff5ab4', k.c1];
-    const pts = couleurs.map((c, i) => { const a = (i / couleurs.length) * TAU - Math.PI / 2; return { c, x: D.x + Math.cos(a) * 170, y: 150 + Math.sin(a) * 80 }; });
-    lumiere(g, () => {
-      if (t > 40 && t < 56) {
-        g.strokeStyle = rgba('#ffffff', 0.5); g.lineWidth = 1.5;
-        g.beginPath(); pts.forEach((s, i) => (i ? g.lineTo(s.x, s.y) : g.moveTo(s.x, s.y))); g.closePath(); g.stroke();
-      }
-      pts.forEach((s, i) => {
-        const q = Math.min(1, Math.max(0, (t - i * 3) / 30));
-        let x = A.x + (s.x - A.x) * q;
-        let y = A.y + (s.y - A.y) * q;
-        const f = Math.min(1, (t - 54 - i * 2) / 14);
-        if (f > 0) { x = s.x + (D.x - s.x) * f; y = s.y + (D.y - s.y) * f; }
-        halo(g, x, y, 26, s.c, 0.9);
-        etoile(g, x, y, 10, '#ffffff', t / 8 + i);
-      });
-    });
-    if (t > 68) lumiere(g, () => halo(g, D.x, D.y, (t - 68) * 10, '#ffffff', Math.max(0, 1 - (t - 68) / 40)));
-  },
-};

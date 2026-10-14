@@ -96,7 +96,9 @@ test('les techniques du héros sont à lui seul : ni leurs noms, ni leurs formes
   const effets = fs.readFileSync(new URL('../public/games/street-combat/js/effets.js', import.meta.url), 'utf8');
   const toutes = [...Object.values(TECHNIQUES.a), ...Object.values(TECHNIQUES.b), ...Object.values(ECOLES).flatMap((e) => e.combos.map((c) => c.coup))];
   for (const x of toutes) if (x.forme) assert.ok(effets.includes(`case '${x.forme}'`), x.forme);
-  for (const x of Object.values(TECHNIQUES.u)) assert.ok(effets.includes(`'${x.visuel}'(g, t, A, D, k)`), x.visuel);
+  // Les cinématiques des ultimes sont dans ultimes.js (une fonction, ou { derriere, devant }).
+  const ultimes = fs.readFileSync(new URL('../public/games/street-combat/js/ultimes.js', import.meta.url), 'utf8');
+  for (const x of Object.values(TECHNIQUES.u)) assert.ok(ultimes.includes(`'${x.visuel}'(g, t, A, D, k)`) || ultimes.includes(`'${x.visuel}': {`), x.visuel);
 });
 
 test('on choisit ses techniques ; sinon, ce sont celles de l’école', () => {
