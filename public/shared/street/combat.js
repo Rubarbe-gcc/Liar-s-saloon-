@@ -457,7 +457,9 @@ function jouerBrique(c, j, a) {
     case 'zone': {
       if (t === 0) {
         const x = d.ou === 'cible' ? o.x : d.ou === 'soi' ? j.x : j.x + j.dir * (d.distance || 120);
-        c.zones.push({ j: j.n, def: d, nom: a.nom, x: Math.max(ARENE.BORD, Math.min(ARENE.L - ARENE.BORD, x)), t: 0, dir: j.dir, coupsFaits: 0 });
+        // Les dés (Jackpot) : tirés dès le lancer, par le hasard du combat (le même chez les deux joueurs en ligne).
+        const des = d.des ? 1 + Math.floor(hasard(c) * 6) : undefined;
+        c.zones.push({ j: j.n, def: d, nom: a.nom, x: Math.max(ARENE.BORD, Math.min(ARENE.L - ARENE.BORD, x)), t: 0, dir: j.dir, coupsFaits: 0, des });
       }
       break;
     }
@@ -698,6 +700,7 @@ function avancerZones(c) {
     z.t += 1;
     if (d.avance) z.x += d.avance * z.dir;
     const actif = z.t - d.delai;
+    if (actif === 0 && z.des) evt(c, { type: 'texte', x: z.x, y: ARENE.SOL - 250, texte: `🎲 ${z.des} !`, couleur: z.des >= 5 ? '#ffd23f' : '#ffffff', gros: z.des === 6 });
     if (actif < 0 || actif >= d.duree) continue;
     const coups = d.coups || 1;
     const espace = Math.max(1, Math.floor(d.duree / coups));
@@ -710,7 +713,9 @@ function avancerZones(c) {
     if (Math.abs(cible.x - z.x) <= d.rayon + 28 && b.y1 >= haut) {
       const dirCoup = d.ou === 'soi' ? Math.sign(cible.x - z.x) || att.dir : att.dir;
       // Une zone qui sort du sol se garde accroupi ; une qui tombe du ciel, debout.
-      const res = recevoirCoup(c, att, cible, { ...d, bas: d.solSeulement || d.forme === 'pic', saute: false }, 'zone', dirCoup, cible.x, cible.y - 70);
+      // Les dés : de deux tiers des dégâts (un 1) à une fois et demie (un 6).
+      const degats = z.des ? Math.round(d.degats * (0.5 + z.des / 6)) : d.degats;
+      const res = recevoirCoup(c, att, cible, { ...d, degats, bas: d.solSeulement || d.forme === 'pic', saute: false }, 'zone', dirCoup, cible.x, cible.y - 70);
       if (res) z.coupsFaits += 1;
     }
   }

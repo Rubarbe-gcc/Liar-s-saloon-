@@ -398,7 +398,7 @@ function expression(nomPose) {
 function texVisage(perso, expr, o) {
   const k = perso.c;
   const X = perso.look.extras;
-  const feminin = ['couettes', 'chignon', 'longs'].includes(perso.look.tete) || X.includes('robe') || X.includes('jupe');
+  const feminin = ['couettes', 'chignon', 'longs', 'oreilles-renard'].includes(perso.look.tete) || X.includes('robe') || X.includes('jupe');
   const encreC = '#1c0e10';
   const iris = k.yeux || '#5a3420';
   return texture(FACE.l, FACE.h, (g) => {
@@ -689,6 +689,13 @@ function ajouterTorse(P, perso, buste, { largeur, taille }) {
   if (X.includes('fissures') || X.includes('mousse')) {
     const mousse = boule(1, mat('#5f8f3a'), 9, 4, 6); mousse.position.set(-largeur + 8, 44, devantZ * 0.6); buste.add(mousse);
   }
+  if (X.includes('noeud-pap')) {
+    // Le plastron blanc de la chemise, en V, et le nœud papillon.
+    const chemise = plaque([[-8, 48], [8, 48], [0, 24]], 1, mat('#f4f0e8')); chemise.position.z = devantZ + 0.5;
+    buste.add(chemise);
+    for (const s of [-1, 1]) { const a = boule(1, mat(k.c2, 'brillant')); a.scale.set(5, 3.4, 2.2); a.position.set(s * 4.6, 46, devantZ + 2); a.rotation.z = s * 0.25; buste.add(a); }
+    const n = boule(1.9, mat(teinte(k.c2, -0.2), 'brillant')); n.position.set(0, 46, devantZ + 3); buste.add(n);
+  }
   if (X.includes('fissures-energie')) {
     for (const [x, y, a] of [[-8, 36, 0.4], [-6, 22, -0.3], [8, 34, -0.3], [9, 20, 0.2]]) {
       const f = maille(GEO.boite(), mat(k.c1, 'lueur'), 1.6, 12, 1); f.position.set(x, y, devantZ + 0.5); f.rotation.z = a; buste.add(f);
@@ -754,6 +761,27 @@ function construireTete(perso) {
       T.panache = panache;
     }
     if (X.includes('plumet')) { const p = plaque([[-2, 18], [-16, 40], [-30, 28], [-16, 30], [-8, 16]], 2, mat(k.c1, 'voile')); groupe.add(p); T.panache = p; }
+    return T;
+  }
+  // Le masque du catcheur : toute la tête couverte, des flammes d'or autour des yeux, la bouche à l'air.
+  if (L.tete === 'masque-catch') {
+    const forme = new THREE.Mesh(GEO.tete(), mat(k.c1, 'brillant'));
+    forme.scale.set(14.8, 16.3, 14.1);
+    visage.add(forme);
+    const or = mat(k.c2, 'metal');
+    for (const z of [-5.4, 5.4]) {
+      const flamme = plaque([[-3, -4], [4, -5], [8, 0], [4, 5], [-2, 9], [0, 3]], 1.4, or);
+      flamme.position.set(12.4, 2, z); flamme.rotation.y = -Math.PI / 2; flamme.scale.set(z > 0 ? -1 : 1, 1, 1);
+      const blanc = boule(1, mat('#ffffff', 'brillant')); blanc.scale.set(1.6, 3, 3.1); blanc.position.set(13.2, 2, z);
+      const pupille = boule(1, mat('#151018', 'brillant')); pupille.scale.set(1, 1.7, 1.6); pupille.position.set(14.5, 2, z * 0.92);
+      visage.add(flamme, blanc, pupille);
+      T.yeux.push(blanc); T.pupilles.push(pupille);
+    }
+    const menton = boule(1, peau); menton.scale.set(6, 5.5, 8.5); menton.position.set(9.5, -9.5, 0); visage.add(menton);
+    const bouche = maille(GEO.boite(), mat('#5a2020'), 1.2, 1.6, 5); bouche.position.set(15.1, -9.5, 0); visage.add(bouche); T.bouche = bouche;
+    // La crête d'or au milieu du crâne, les lacets dans la nuque.
+    visage.add(plaque([[-15, 4], [-8, 17.5], [4, 17], [12, 9], [3, 12], [-6, 12]], 2, or));
+    for (let i = 0; i < 3; i++) { const l = maille(GEO.boite(), mat('#ffffff'), 1, 1, 9); l.position.set(-14.6, -2 + i * 4, 0); visage.add(l); }
     return T;
   }
 
@@ -958,8 +986,90 @@ function coiffure3D(T, perso) {
       calotte(0.45);
       break;
     }
+    case 'casquette': {
+      // Une casquette portée à l'envers : la calotte, la visière dans la nuque, le bouton ; des mèches sur le front.
+      calotte(0.4);
+      const tissu = mat(k.c2);
+      const cal = new THREE.Mesh(new THREE.SphereGeometry(16.6, 26, 14, 0, Math.PI * 2, 0, Math.PI * 0.4), tissu);
+      cal.rotation.z = rad(14); cal.position.set(-1, 2, 0); v.add(cal);
+      const visiere = boule(1, tissu); visiere.scale.set(10, 1.3, 11); visiere.position.set(-17, 5, 0); visiere.rotation.z = rad(-14); v.add(visiere);
+      const bouton = boule(2, mat(k.c1, 'brillant')); bouton.position.set(-2, 17.5, 0); v.add(bouton);
+      for (const z of [-5, 0, 5]) pic(11, 8, z, 9, 2.6, rad(-128));
+      break;
+    }
+    case 'haut-de-forme': {
+      // Le chapeau haut de forme du flambeur, son ruban rouge, un as glissé dedans.
+      calotte(0.48);
+      const feutre = mat(teinte(k.tenue, 0.05), 'brillant');
+      const chapeau = new THREE.Group();
+      const bord = new THREE.Mesh(new THREE.CylinderGeometry(21, 21, 1.6, 30), feutre); bord.position.y = 14; bord.scale.z = 0.9;
+      const fut = new THREE.Mesh(new THREE.CylinderGeometry(12.6, 12, 24, 28), feutre); fut.position.y = 27;
+      const ruban = new THREE.Mesh(new THREE.CylinderGeometry(12.8, 12.7, 4.5, 28), mat(k.c2)); ruban.position.y = 17.5;
+      const as = maille(GEO.boite(), mat('#ffffff'), 0.8, 8, 5.6); as.position.set(4, 22, 11.4); as.rotation.set(0.25, 0, 0.2);
+      chapeau.add(bord, fut, ruban, as); chapeau.rotation.z = rad(-8);
+      v.add(chapeau);
+      break;
+    }
+    case 'chapeau-cowboy': {
+      // Le chapeau de cowboy : un large bord bombé, la calotte cabossée, le ruban.
+      calotte(0.5);
+      const cuir = mat(teinte(k.c1, -0.3));
+      const chapeau = new THREE.Group();
+      const bord = boule(1, cuir); bord.scale.set(26, 2.4, 22); bord.position.y = 13;
+      const calotteC = boule(1, cuir); calotteC.scale.set(13, 11, 11.5); calotteC.position.y = 19;
+      const creux = boule(1, mat(teinte(k.c1, -0.45))); creux.scale.set(9, 2, 4); creux.position.set(0, 29.4, 0);
+      const ruban = new THREE.Mesh(new THREE.CylinderGeometry(12.9, 12.9, 3, 28), mat(k.c2)); ruban.position.y = 16; ruban.scale.z = 0.9;
+      chapeau.add(bord, calotteC, creux, ruban); chapeau.rotation.z = rad(-6);
+      v.add(chapeau);
+      break;
+    }
+    case 'oreilles-renard': {
+      // Des cheveux longs, deux oreilles de renarde pointues (le dedans blanc), des mèches sur le front.
+      calotte(0.55, 16);
+      const dos = boule(1, cheveux); dos.scale.set(8, 23, 13); dos.position.set(-10, -11, 0); dos.rotation.z = rad(-12);
+      v.add(dos); T.dos = dos;
+      for (const z of [-1, 1]) {
+        const o = maille(GEO.cone(), cheveux, 5.6, 16, 3.4); o.position.set(-3, 21, z * 9); o.rotation.set(z * rad(-16), 0, rad(10)); v.add(o);
+        const i = maille(GEO.cone(), mat('#fff4ea'), 3.2, 10, 1.6); i.position.set(-1.4, 20, z * 9.3); i.rotation.copy(o.rotation); v.add(i);
+      }
+      for (const z of [-6, 0, 6]) pic(11, 8, z, 9, 2.6, rad(-128), z ? cheveux : clair);
+      break;
+    }
+    case 'loup': {
+      // La crinière hirsute du loup-garou, ses oreilles pointues.
+      calotte(0.52);
+      for (let i = 0; i < 13; i++) {
+        const a = rad(-110 + i * 19);
+        pic(-3 + Math.cos(a) * 13, 2 + Math.sin(a) * 13, (i % 2 ? 1 : -1) * (4 + (i % 3) * 3), 13 + (i % 3) * 5, 3.6, a - Math.PI / 2, i % 2 ? cheveux : clair);
+      }
+      for (const z of [-1, 1]) {
+        const o = maille(GEO.cone(), cheveux, 5, 14, 3); o.position.set(-2, 20, z * 9); o.rotation.set(z * rad(-20), 0, rad(14)); v.add(o);
+        const i = maille(GEO.cone(), mat('#d88a9a'), 2.6, 8, 1.4); i.position.set(-0.6, 19, z * 9.4); i.rotation.copy(o.rotation); v.add(i);
+      }
+      break;
+    }
     default:
       calotte(0.48);
+  }
+  // Une couronne de feuilles et de fleurs.
+  if (X.includes('couronne-feuilles')) {
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      const f = boule(1, mat(i % 3 ? '#5ad84a' : '#2e9a3a', 'brillant')); f.scale.set(4.6, 1.4, 2.6);
+      f.position.set(Math.cos(a) * 15.6 - 1, 9 + Math.sin(a * 2) * 1.4, Math.sin(a) * 15.6); f.rotation.set(0, -a, rad(24));
+      v.add(f);
+    }
+    for (const [a, c] of [[0.5, '#ff8ad8'], [2.3, '#ffe066'], [4.0, '#ff8ad8']]) { const fl = boule(2.4, mat(c, 'brillant')); fl.position.set(Math.cos(a) * 16 - 1, 11, Math.sin(a) * 16); v.add(fl); }
+  }
+  // Le casque du DJ : l'arceau par-dessus la tête, deux grosses coques, leur anneau qui luit.
+  if (X.includes('casque-audio')) {
+    const arceau = new THREE.Mesh(new THREE.TorusGeometry(17.4, 1.9, 8, 26, Math.PI), mat(k.c2, 'brillant'));
+    arceau.rotation.y = Math.PI / 2; arceau.position.set(-1, 3, 0); v.add(arceau);
+    for (const z of [-1, 1]) {
+      const coque = new THREE.Mesh(new THREE.CylinderGeometry(7.2, 7.2, 5.5, 24), mat('#1a1a2a', 'brillant'));
+      coque.rotation.x = Math.PI / 2; coque.position.set(-1, 2, z * 16.4); v.add(coque);
+      const anneau = new THREE.Mesh(new THREE.TorusGeometry(5.6, 1.1, 6, 24), mat(k.c1, 'lueur')); anneau.position.set(-1, 2, z * 19.3); v.add(anneau);
+    }
   }
 }
 
@@ -974,7 +1084,7 @@ function ajouterAccessoires(P, perso) {
   if (X.includes('cape')) {
     const general = X.includes('general');
     const long = general ? 30 : 0;
-    const c = plaque([[-14 * l, 0], [8, 0], [-6, -48], [-10, -104 - long], [-50 - long, -98 - long], [-40 - long * 0.6, -46]], 2, mat(general ? '#a0102a' : perso.id === 'malvortex' ? '#5a0010' : teinte(k.tenue, 0.1), 'voile'));
+    const c = plaque([[-14 * l, 0], [8, 0], [-6, -48], [-10, -104 - long], [-50 - long, -98 - long], [-40 - long * 0.6, -46]], 2, mat(general ? '#a0102a' : perso.id === 'malvortex' ? '#5a0010' : perso.look.tete === 'masque-catch' ? k.c1 : teinte(k.tenue, 0.1), 'voile'));
     P.cape = new THREE.Group(); P.cape.add(c);
     if (general) { const bord = plaque([[-10, -104 - long], [-50 - long, -98 - long], [-50 - long, -95 - long], [-10, -101 - long]], 2.4, mat('#ffd23f', 'metal')); P.cape.add(bord); }
     g.add(P.cape);
@@ -994,7 +1104,7 @@ function ajouterAccessoires(P, perso) {
   }
   // La queue : un tube courbe derrière les hanches.
   if (X.includes('queue') || X.includes('queue-dragon')) {
-    P.queue = new THREE.Mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(new THREE.Vector3(-6, -2, 0), new THREE.Vector3(-40, -30, -6), new THREE.Vector3(-60, -10, -10)), 16, 4.5, 10, false), mat(X.includes('queue-dragon') ? teinte(k.peau, -0.1) : k.c1, 'brillant'));
+    P.queue = new THREE.Mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(new THREE.Vector3(-6, -2, 0), new THREE.Vector3(-40, -30, -6), new THREE.Vector3(-60, -10, -10)), 16, 4.5, 10, false), mat(X.includes('queue-dragon') ? teinte(k.peau, -0.1) : perso.look.tete === 'loup' ? k.cheveux : k.c1, 'brillant'));
     g.add(P.queue);
   }
   // L'écharpe : un long pan qui flotte derrière le cou.
@@ -1059,6 +1169,55 @@ function ajouterAccessoires(P, perso) {
   if (X.includes('nageoires')) {
     const n = plaque([[0, 0], [-14, 12], [-2, -6]], 1.4, mat(k.c1, 'voile'));
     P.nageoire = n; g.add(n);
+  }
+  // La bombe de peinture du graffeur, dans la main arrière.
+  if (X.includes('bombe')) {
+    const b = new THREE.Group();
+    const corps3 = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.6, 13, 18), mat(k.c2, 'metal')); corps3.rotation.z = -Math.PI / 2; corps3.position.x = 5;
+    const etiquette = new THREE.Mesh(new THREE.CylinderGeometry(3.8, 3.8, 5, 18), mat(k.c1)); etiquette.rotation.z = -Math.PI / 2; etiquette.position.x = 4;
+    const tete = boule(2.1, mat('#f0f0f0', 'brillant')); tete.position.x = 12.5;
+    b.add(corps3, etiquette, tete); P.bombe = b; g.add(b);
+  }
+  // L'éventail de papier.
+  if (X.includes('eventail')) {
+    const e = new THREE.Group();
+    for (let i = 0; i < 7; i++) {
+      const lame = plaque([[0, -1.2], [28, -4.6], [28, 4.6], [0, 1.2]], 0.8, mat(i % 2 ? '#fff6e8' : k.c1, 'voile'));
+      lame.rotation.z = rad(-60 + i * 20); e.add(lame);
+    }
+    e.add(boule(2, mat('#2a1a10', 'brillant')));
+    P.eventail = e; g.add(e);
+  }
+  // Le grand aimant en fer à cheval, qui flotte derrière l'épaule.
+  if (X.includes('aimant')) {
+    const a = new THREE.Group();
+    const fer = new THREE.Mesh(new THREE.TorusGeometry(12, 4.4, 10, 28, Math.PI), mat(k.c1, 'brillant'));
+    fer.rotation.z = Math.PI;
+    a.add(fer);
+    for (const x of [-12, 12]) { const b = maille(GEO.boite(), mat('#d8dce8', 'metal'), 9, 7, 9); b.position.set(x, 3.5, 0); a.add(b); }
+    for (const x of [-12, 12]) { const l = boule(2.6, mat(x < 0 ? k.c1 : k.c2, 'lueur')); l.position.set(x, 8, 0); a.add(l); }
+    P.aimant = a; g.add(a);
+  }
+  // Le revolver du pistolero.
+  if (X.includes('revolver')) {
+    const r = new THREE.Group();
+    const acier = mat('#5a5a6a', 'metal');
+    const canon3 = maille(GEO.boite(), acier, 18, 2.8, 2.8); canon3.position.set(12, 2, 0);
+    const barillet = new THREE.Mesh(new THREE.CylinderGeometry(3.6, 3.6, 6.5, 12), acier); barillet.rotation.z = Math.PI / 2; barillet.position.set(3, 1.5, 0);
+    const crosse = maille(GEO.boite(), mat('#6a3a1a', 'brillant'), 4.2, 10, 3.4); crosse.position.set(-2, -4, 0); crosse.rotation.z = -0.35;
+    r.add(canon3, barillet, crosse); P.revolver = r; g.add(r);
+  }
+  // Les queues de la renarde : cinq grandes queues touffues au bout blanc, en éventail.
+  if (X.includes('queues')) {
+    P.queues = [];
+    for (let i = 0; i < 5; i++) {
+      const q = new THREE.Group();
+      const fourrure = mat(i % 2 ? k.cheveux : teinte(k.cheveux, 0.14), 'brillant');
+      q.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(new THREE.Vector3(0, 0, 0), new THREE.Vector3(-26, 4, 0), new THREE.Vector3(-36, 32, 0)), 14, 5.8, 10, false), fourrure));
+      const bout = boule(1, mat('#fff6ee', 'brillant')); bout.scale.set(6.2, 9.5, 6.2); bout.position.set(-36, 36, 0);
+      q.add(bout);
+      q.userData.i = i; g.add(q); P.queues.push(q);
+    }
   }
   // Sur les épaules.
   const ep = new THREE.Group();
@@ -1211,6 +1370,15 @@ function poser(P, sq, o) {
   if (P.canon) tenir(P.canon, MA, CA, true);
   if (P.griffes) tenir(P.griffes, MA, CA);
   if (P.nageoire) { P.nageoire.position.copy(MR); }
+  if (P.bombe) tenir(P.bombe, MR, CR);
+  if (P.eventail) tenir(P.eventail, MR, CR);
+  if (P.revolver) tenir(P.revolver, MA, CA);
+  if (P.aimant) { P.aimant.position.set(epaule.x - 38, -(epaule.y + 4) + Math.sin(t / 12) * 3, -24 * l); P.aimant.rotation.set(0, 0, 0.9 + Math.sin(t / 20) * 0.12); P.aimant.scale.setScalar(1.25); }
+  if (P.queues) for (const q of P.queues) {
+    const i = q.userData.i;
+    q.position.copy(V(hanche, -6 - i * 1.5));
+    q.rotation.set(rad((i - 2) * 16), 0, rad(-34 + i * 17) + Math.sin(t / 7 + i) * 0.12);
+  }
   if (P.epauliere) { P.epauliere.position.copy(V(epaule, zB * 0.7)); P.epauliere.position.y -= 2; P.epauliere.rotation.set(0, 0, rad(pose.b) * 0.6 - 0.15); }
   if (P.brassard) { P.brassard.position.copy(CA).lerp(EA, 0.5); P.brassard.rotation.set(Math.PI / 2, 0, Math.atan2(CA.y - EA.y, CA.x - EA.x)); }
   if (P.aiguille) P.aiguille.rotation.z = -t / 30;

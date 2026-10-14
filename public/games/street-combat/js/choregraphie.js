@@ -59,6 +59,24 @@ const ATTAQUE = {
   'heros-eveil': (t) => (t < 56 ? { pose: 'garde' } : t < 100 ? { pose: 'poing', p: entre(t, 56, 68) } : { pose: 'garde' }),
   'heros-horizon': (t, e) => (t < 56 ? { pose: 'ulti-charge', p: t / 56 } : t < 62 ? { pose: 'ruee', dx: (e + 100) * entre(t, 56, 62) } : disparait(Math.max(t, 60), e)),
   'heros-promesses': (t) => leve(t, 'invoque', 20),
+  // La nouvelle vague.
+  luchador: (t, e) => {
+    // Il fonce, s'envole au-dessus des cordes, et retombe de tout son poids au moment du coup.
+    const pres = Math.max(0, e - 60);
+    if (t < 18) return { pose: 'ruee', dx: pres * entre(t, 2, 18) };
+    if (t < IMPACT) { const h = 150 * Math.sin(Math.PI * Math.min(1, (t - 18) / 50)); return { pose: t < 40 ? 'saut' : 'pied-air', dx: pres, dy: -h, enLAir: h > 1 }; }
+    if (t < 100) return { pose: 'frappe-sol', p: 1, dx: pres };
+    return { pose: 'marche', dx: pres * (1 - entre(t, 100, 128)) };
+  },
+  fresque: (t) => (t < 60 ? { pose: t < 10 ? 'ulti-charge' : 'v-pointe', p: 1 } : t < 100 ? { pose: 'ulti' } : { pose: 'garde' }),
+  foret: (t) => leve(t, 'invoque', 18),
+  enceintes: (t) => (t < IMPACT ? { pose: 'v-sautille', p: 1 } : t < 100 ? { pose: 'v-deux-poings' } : { pose: 'garde' }),
+  'mille-grues': (t) => leve(t, 'invoque', 26),
+  polarite: (t) => (t < 30 ? { pose: 'invoque', p: 1 } : t < IMPACT ? { pose: 'v-bras-ecartes' } : t < 100 ? { pose: 'ulti' } : { pose: 'garde' }),
+  jackpot: (t) => (t < 54 ? { pose: 'v-bras-croises' } : t < 100 ? { pose: 'v-pointe' } : { pose: 'garde' }),
+  midi: (t) => (t < 58 ? { pose: 'garde' } : t < 100 ? { pose: 'poing', p: 1 } : { pose: 'garde' }),
+  'neuf-queues': (t) => leve(t, 'v-bras-ecartes', 24),
+  'lune-sang': (t, e) => (t < 50 ? { pose: t < 20 ? 'ulti-charge' : 'v-bras-ecartes', p: Math.min(1, t / 20) } : disparait(t, e)),
 };
 
 /** Il s'élève (de h), dans une pose, puis redescend. */
@@ -88,7 +106,7 @@ function defense(t, visuel) {
   const gel = visuel === 'zero' && t >= 40 && t < IMPACT + 6;
   const lent = visuel === 'chrono' && t >= 10 && t < IMPACT;
   // Aspiré par un trou noir, emporté par un ouragan, soulevé par la roche ou le maelström.
-  const souleve = { singularite: 60, ouragan: 70, tectonique: 50, maelstrom: 34 }[visuel] || 0;
+  const souleve = { singularite: 60, ouragan: 70, tectonique: 50, maelstrom: 34, foret: 40, polarite: 50 }[visuel] || 0;
   if (t < IMPACT && souleve) {
     const s = entre(t, 30, IMPACT) * souleve;
     return { pose: 'tenu-leve', p: entre(t, 30, 50), dy: -s, enLAir: s > 1 };

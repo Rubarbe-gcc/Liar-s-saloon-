@@ -17,7 +17,7 @@ import { creerRendu3D } from './trois/rendu3d.js';
 /** La qualité graphique (menu) : haute, moyenne, basse, ou 2D. Par défaut : moyenne sur un téléphone. */
 const QUALITE = (() => { try { const q = JSON.parse(localStorage.getItem('street.graphismes')); if (q) return q; } catch { /* rien */ } return matchMedia('(pointer: coarse)').matches ? 'moyenne' : 'haute'; })();
 if (QUALITE !== '2d') { const r3 = creerRendu3D(); if (r3) { brancher3D(r3); brancherDecor3D(decor3D); } }
-import { ARENES, ARENE, fondArene, fondPret, animerArene, areneApres, dessinerMurs, brancherDecor3D } from './arenes.js';
+import { ARENES, ARENE, fondArene, fondPret, animerArene, areneApres, dessinerMurs, brancherDecor3D, areneDe } from './arenes.js';
 import { decor3D } from './trois/decors3d.js';
 import * as FX from './effets.js';
 import { animerSaisie } from './saisie.js';
@@ -100,6 +100,7 @@ const CLE_ARCADE = 'street.arcade';
 const CLE_ARCADE_FINIS = 'street.arcade.finis';
 const CLE_REPLAYS = 'street.replays';
 const CLE_TACTILE = 'street.tactile';
+const CLE_DEFIS = 'street.defis';
 const NIVEAUX = [['facile', 'Facile'], ['normal', 'Normal'], ['difficile', 'Difficile'], ['impossible', 'Impossible']];
 
 /** Ce qu'on a vraiment débloqué en jouant. */
@@ -126,7 +127,29 @@ function croiser(id) {
 function indice(p) {
   if (p.indice) return p.indice;
   if (p.boss) return 'Battez-le dans le mode Histoire';
-  return { histoire: 'Terminez le mode Histoire', tournoi: 'Gagnez le Tournoi en difficile', tour: 'Atteignez le sommet de la Tour des défis' }[p.secret] || '';
+  return {
+    histoire: 'Terminez le mode Histoire', tournoi: 'Gagnez le Tournoi en difficile', tour: 'Atteignez le sommet de la Tour des défis',
+    arcade: 'Terminez le mode Arcade', 'arcade-difficile': 'Terminez le mode Arcade en difficile',
+    defis: 'Réussissez les cinq défis de combos avec dix combattants (Entraînement)', niveau: 'Faites monter votre héros au niveau 10',
+  }[p.secret] || '';
+}
+/**
+ * Les secrets qu'on gagne par ce qu'on a déjà fait : finir l'Arcade (en difficile pour Desperado),
+ * les défis de combos, le niveau de son héros. Vérifié aussi à l'ouverture du menu : ce qu'on avait
+ * accompli avant leur arrivée compte. Le mode modérateur ne débloque rien pour de vrai.
+ */
+const MERITES = {
+  arcade: () => lire(CLE_ARCADE_FINIS, []).length > 0,
+  'arcade-difficile': () => (records().arcadeDifficile || 0) > 0 || succes.estDebloque('street-arcade-pur'),
+  defis: () => Object.values(lire(CLE_DEFIS, {})).filter((l) => l.length >= 5).length >= 10,
+  niveau: () => sauvegardes().some((h) => h?.createur && niveauHeros(h.xp || 0) >= 10),
+};
+function verifierSecrets() {
+  if (MOD.estModerateur()) return;
+  const nouveaux = Object.entries(MERITES).filter(([cle, merite]) => SECRETS[cle] && merite() && debloquer(SECRETS[cle])).map(([cle]) => PERSO[SECRETS[cle]].nom);
+  if (!nouveaux.length) return;
+  son('victoire');
+  toast(`🔓 Nouveau combattant : <b>${nouveaux.map(esc).join('</b>, <b>')}</b> !`, 3600);
 }
 const records = () => ({ victoires: 0, combats: 0, combo: 0, tour: 0, tournois: 0, ...lire(CLE_RECORDS, {}) });
 
@@ -245,6 +268,7 @@ function ouvrirModerateur() {
 }
 
 function majMenu() {
+  verifierSecrets();
   const h = sauvegardes().filter((x) => x && !x.fini).sort((a, b) => b.maj - a.maj)[0];
   $('histoire-info').textContent = h ? `Reprendre : ${HIST.ACTES[sceneDe(h).acte].num} · ${sceneDe(h).sous}` : '';
   const t = lire(CLE_TOURNOI, null);
@@ -502,6 +526,9 @@ function ouvrirArenes() {
     if (!fondPret(a)) aDessiner.push([g, a]);
     b.append(cv);
     b.insertAdjacentHTML('beforeend', `<span>${esc(a.nom)}</span>`);
+    // Chez qui l'on est.
+    const hote = PERSO[a.perso || a.boss];
+    if (hote) b.title = `Chez ${hote.nom}`;
     grille.append(b);
   }
   aller('s-arenes');
@@ -1252,7 +1279,8 @@ function lancerTour(hero) {
   const forts = melange(PERSOS.filter((p) => aDebloquer(p) && disponible(p) && p.id !== baseDe(hero) && p.id !== SECRETS.tour).map((p) => p.id));
   const file = Array.from({ length: ETAGES }, (_, k) => (k >= ETAGES - 2 && forts.length ? forts[(k - (ETAGES - 2)) % forts.length] : base[k % base.length]));
   const normales = ARENES.filter((a) => !a.boss).map((a) => a.id);
-  const arenes = file.map(() => normales[Math.floor(Math.random() * normales.length)]);
+  // Chacun se bat chez lui, s'il a son arène ; sinon, une arène au hasard.
+  const arenes = file.map((id) => areneDe(id)?.id || normales[Math.floor(Math.random() * normales.length)]);
   ecrire(CLE_TOUR, { hero, file, arenes, etage: 0, vie: null });
   montrerTour();
 }
@@ -1523,7 +1551,6 @@ function suivreTuto(evs) {
 
 /* ---- Les défis de combos (à l'entraînement) ---- */
 
-const CLE_DEFIS = 'street.defis';
 const defisFaits = (id) => lire(CLE_DEFIS, {})[id] || [];
 function majDefis() {
   const p = PERSO[config.p1];
@@ -1541,6 +1568,7 @@ function suivreDefis(evs) {
   ecrire(CLE_DEFIS, tous);
   if (tous[p.id].length >= 5) succes.debloquer('street-defis');
   if (Object.values(tous).filter((l) => l.length >= 5).length >= 10) succes.debloquer('street-defis10');
+  verifierSecrets();
   son('victoire');
   toast(`⭐ Défi réussi : ${esc(TUTO.defisDe(p)[nouveaux[0]].texte)}`, 2200);
   majDefis();
@@ -1876,7 +1904,8 @@ function montrerFinReplay() {
 function lancerArcade(hero, difficulte) {
   const a = ARCADE.planArcade(hero, difficulte);
   const normales = ARENES.filter((x) => !x.boss).map((x) => x.id);
-  a.arenes = a.file.map((id, k) => (k === a.file.length - 1 ? ARENES.find((x) => x.boss === id)?.id || 'trone' : normales[Math.floor(Math.random() * normales.length)]));
+  // Chacun se bat chez lui, s'il a son arène (le boss de la fin aussi).
+  a.arenes = a.file.map((id, k) => areneDe(id)?.id || (k === a.file.length - 1 ? 'trone' : normales[Math.floor(Math.random() * normales.length)]));
   ecrire(CLE_ARCADE, a);
   montrerArcade();
 }
@@ -1943,12 +1972,14 @@ async function finirArcade(a) {
   ecrire(CLE_ARCADE, null);
   const r = records();
   r.arcade = (r.arcade || 0) + 1;
+  if (a.difficulte === 'difficile') r.arcadeDifficile = (r.arcadeDifficile || 0) + 1;
   ecrire(CLE_RECORDS, r);
   const finis = new Set(lire(CLE_ARCADE_FINIS, []));
   finis.add(baseDe(a.hero));
   ecrire(CLE_ARCADE_FINIS, [...finis]);
   succes.debloquer('street-arcade');
   if (a.difficulte === 'difficile' && a.pieces === 0) succes.debloquer('street-arcade-pur');
+  verifierSecrets();
   const f = ARCADE.finArcade(baseDe(a.hero));
   const pieces = a.pieces ? `${a.pieces} pièce${a.pieces > 1 ? 's' : ''} remise${a.pieces > 1 ? 's' : ''}` : 'sans remettre une seule pièce !';
   await cinematique([
@@ -2009,6 +2040,7 @@ function donnerXp(h, gain) {
   const apres = niveauHeros(h.xp);
   sauver(true);
   if (apres >= 10) succes.debloquer('street-niveau10');
+  verifierSecrets();
   if (apres >= NIVEAU_MAX) succes.debloquer('street-niveau20');
   const nouv = nouvellesRecompenses(avant, apres);
   if (nouv.length) setTimeout(() => toast(`🎁 Débloqué pour votre héros : ${nouv.map((r) => esc(r.nom)).join(', ')} (✏️ Héros)`, 4200), 1200);

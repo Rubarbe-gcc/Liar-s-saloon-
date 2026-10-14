@@ -12,7 +12,9 @@
  * (`boss`), et des personnages secrets (`secret`), cachés dans la
  * sélection tant qu'on ne les a pas gagnés : Kaïros à la fin de l'Histoire,
  * le Général Vorn, Sablia et Éclipse en cours d'histoire, Onyx au Tournoi
- * en difficile, Némésis au sommet de la Tour des défis.
+ * en difficile, Némésis au sommet de la Tour des défis ; Jackpot en
+ * finissant l'Arcade, Desperado en la finissant en difficile, Kitsune aux
+ * défis de combos (dix combattants), Fenrir avec un héros au niveau 10.
  *
  * Les figurants (l'armée de l'Horloge) ne se jouent pas : on les affronte
  * seulement dans l'histoire.
@@ -290,6 +292,98 @@ export const PERSOS = [
     ],
   }),
 
+  /* ---- la nouvelle vague : six combattants de plus, ouverts d'office ---- */
+  P({
+    id: 'mamba', nom: 'MAMBA ROJA', style: 'Lucha Libre', desc: 'Le Serpent Rouge du Ring',
+    c: { c1: '#e8203a', c2: '#ffd23f', faisceau: '#ff4a5a', aura: '#ff3040', peau: '#c8845a', cheveux: '#1a1010', tenue: '#2a0a14', ceinture: '#ffd23f' },
+    stats: { hp: 12, dmg: 12, def: 10 }, vitesse: 3.6, saut: 13, dmg: 1.16, hpMult: 1.1, defMult: 1.02,
+    look: { corps: 'massif', tete: 'masque-catch', extras: ['torse-nu', 'cape'] },
+    specA: { nom: '¡PLANCHA !', ...ruee({ vx: 10, vy: -12, duree: 32, degats: 17, stun: 30, recul: 8, plonge: true, ecrase: true }) },
+    specB: { nom: '¡LARIAT !', ...ruee({ vx: 11, duree: 20, degats: 15, stun: 28, recul: 16, armure: true }) },
+    ulti: { nom: 'DIABLO ROJO SUPLEX !!', portee: 240, visuel: 'luchador' },
+    saisie: { nom: 'LLAVE MORTAL', seq: [['¡AGARRE !', 10, 6], ['SUPLEX !', 14, 9], ['PILEDRIVER !', 18, 12], ['¡OLÉ !', 22, 14]] },
+    combos: [
+      { nom: 'TOPE', entree: 'PPK', coup: ruee({ vx: 6, duree: 16, degats: 12, stun: 26, recul: 12 }) },
+      { nom: 'ÉTREINTE DE L’OURS', entree: 'DFP', coup: ruee({ vx: 5, duree: 22, coups: 2, degats: 8, stun: 30, recul: 2, portee: 110, attire: true }) },
+      { nom: 'COUP DE CHAISE', entree: 'BFK', coup: ruee({ vx: 4, duree: 20, degats: 16, stun: 34, recul: 18, portee: 125 }) },
+    ],
+  }),
+  P({
+    id: 'graff', nom: 'GRAFF', style: 'Artiste de Rue', desc: 'La Ville est sa Toile',
+    c: { c1: '#2ae8a0', c2: '#ff3ad0', faisceau: '#ff3ad0', aura: '#2ae8a0', peau: '#8a5a3a', cheveux: '#1a1a2a', tenue: '#2a2a48', ceinture: '#ffd23f' },
+    stats: { hp: 9, dmg: 12, def: 8 }, vitesse: 5.8, saut: 17, dmg: 1.18, hpMult: 0.96, defMult: 0.94,
+    look: { corps: 'fin', tete: 'casquette', extras: ['echarpe', 'bombe'] },
+    specA: { nom: 'TAG BOMB !', ...proj({ vitesse: 10, rayon: 22, degats: 14, stun: 26, forme: 'peinture', effet: 'lenteur', duree: 80 }) },
+    specB: { nom: 'KICKFLIP !', ...ruee({ vx: 13, vy: -6, duree: 26, coups: 2, degats: 7, stun: 22, recul: 8, invincible: 8 }) },
+    ulti: { nom: 'MURAL MASTERPIECE !!', portee: 300, visuel: 'fresque' },
+    saisie: { nom: 'TAG EXPRESS', seq: [['SPRAY !', 8, 4], ['CONTOUR !', 8, 5], ['REMPLISSAGE !', 12, 6], ['SIGNATURE !', 18, 10]] },
+    combos: [
+      { nom: 'SKATE RUSH', entree: 'PPK', coup: ruee({ vx: 12, duree: 18, coups: 2, degats: 6, stun: 20, recul: 8 }) },
+      { nom: 'RAFALE DE BOMBES', entree: 'DFP', coup: proj({ vitesse: 13, rayon: 12, degats: 5, nb: 3, intervalle: 7, forme: 'peinture', duree: 55 }) },
+      { nom: 'NUAGE DE PEINTURE', entree: 'DBK', coup: zone({ ou: 'devant', distance: 110, delai: 8, rayon: 70, hauteur: 160, degats: 7, coups: 2, duree: 40, stun: 22, effet: 'lenteur', forme: 'peinture' }) },
+    ],
+  }),
+  P({
+    id: 'sylva', nom: 'SYLVA', style: 'Druidesse des Ronces', desc: 'La Forêt Vit en Elle',
+    c: { c1: '#5ad84a', c2: '#2a7a2a', faisceau: '#8aff5a', aura: '#5ad84a', peau: '#e8c8a0', cheveux: '#8a4a26', tenue: '#2a5a2a', ceinture: '#c89a4a' },
+    stats: { hp: 10, dmg: 10, def: 10 }, vitesse: 4.2, saut: 14, dmg: 1.02, hpMult: 0.98, defMult: 1.02,
+    look: { corps: 'fin', tete: 'longs', extras: ['couronne-feuilles', 'robe'] },
+    specA: { nom: 'RONCES !', ...zone({ ou: 'cible', delai: 30, rayon: 70, hauteur: 170, degats: 6, coups: 3, duree: 54, stun: 22, effet: 'lenteur', forme: 'ronces', solSeulement: true }) },
+    specB: { nom: 'SÈVE VIVE !', type: 'soin', soin: 12, duree: 30 },
+    ulti: { nom: 'COLÈRE DE LA FORÊT !!', portee: 280, visuel: 'foret' },
+    saisie: { nom: 'ÉTREINTE DES LIANES', seq: [['LIANE !', 9, 5], ['RACINE !', 11, 6], ['ÉPINES !', 14, 8], ['FLORAISON !', 20, 11]] },
+    combos: [
+      { nom: 'FOUET DE LIANE', entree: 'PPK', coup: ruee({ vx: 4, duree: 18, degats: 11, stun: 26, recul: 10, portee: 150 }) },
+      { nom: 'GRAINES', entree: 'DFP', coup: proj({ vitesse: 9, rayon: 12, degats: 5, nb: 3, intervalle: 8, forme: 'feuille', duree: 70 }) },
+      { nom: 'ENRACINÉE', entree: 'DBP', coup: { type: 'garde', duree: 40, contre: true, degats: 14 } },
+    ],
+  }),
+  P({
+    id: 'echo', nom: 'ÉCHO', style: 'DJ des Ondes', desc: 'Le Son qui Frappe',
+    c: { c1: '#00e5ff', c2: '#7a2aff', faisceau: '#00e5ff', aura: '#a050ff', peau: '#d8a880', cheveux: '#a050ff', tenue: '#14142a', ceinture: '#00e5ff' },
+    stats: { hp: 10, dmg: 12, def: 9 }, vitesse: 4.6, saut: 15, dmg: 1.18, hpMult: 1.02, defMult: 1.0,
+    look: { corps: 'normal', tete: 'crete', extras: ['casque-audio'] },
+    specA: { nom: 'DROP THE BASS !', ...faisceau({ portee: 520, epaisseur: 60, degats: 6, coups: 4, stun: 20, recul: 6, duree: 40, couleur: '#00e5ff', son: true }) },
+    specB: { nom: 'SCRATCH !', ...proj({ vitesse: 12, rayon: 18, degats: 9, nb: 2, intervalle: 10, forme: 'note', ondule: true, duree: 80 }) },
+    ulti: { nom: 'FINAL DROP !!', portee: 300, visuel: 'enceintes' },
+    saisie: { nom: 'REMIX', seq: [['BEAT !', 8, 4], ['BEAT !', 8, 4], ['SCRATCH !', 10, 6], ['DROP !', 18, 10]] },
+    combos: [
+      { nom: 'BREAKDANCE', entree: 'PPK', coup: ruee({ vx: 6, duree: 28, coups: 3, degats: 5, stun: 18, recul: 8, tourne: true }) },
+      { nom: 'LARSEN', entree: 'DFP', coup: proj({ vitesse: 15, rayon: 22, degats: 10, forme: 'onde-son', traverse: true, duree: 45 }) },
+      { nom: 'ONDE DE CHOC', entree: 'BFK', coup: zone({ ou: 'soi', delai: 6, rayon: 120, hauteur: 140, degats: 12, stun: 26, recul: 22, forme: 'onde' }) },
+    ],
+  }),
+  P({
+    id: 'origami', nom: 'ORIGAMI', style: 'Maîtresse du Papier', desc: 'Mille Plis, Une Lame',
+    c: { c1: '#f04060', c2: '#f8f0e0', faisceau: '#fff6e8', aura: '#ff8aa0', peau: '#f0d8c0', cheveux: '#141018', tenue: '#f8f0e0', ceinture: '#f04060' },
+    stats: { hp: 9, dmg: 12, def: 9 }, vitesse: 5.2, saut: 18, dmg: 1.2, hpMult: 1.0, defMult: 1.0,
+    look: { corps: 'fin', tete: 'chignon', extras: ['eventail', 'jupe'] },
+    specA: { nom: 'VOL DE GRUES !', ...proj({ vitesse: 9, rayon: 16, degats: 7, nb: 3, intervalle: 8, forme: 'grue', tete: 0.3, duree: 100 }) },
+    specB: { nom: 'PLIAGE !', ...ruee({ vx: 14, duree: 18, degats: 15, stun: 28, recul: 10, traverse: true, invincible: 12 }) },
+    ulti: { nom: 'MILLE GRUES DE PAPIER !!', portee: 300, visuel: 'mille-grues' },
+    saisie: { nom: 'PAPIER FROISSÉ', seq: [['PLI !', 8, 4], ['CONTRE-PLI !', 8, 5], ['FROISSÉ !', 12, 7], ['BOULE DE PAPIER !', 18, 10]] },
+    combos: [
+      { nom: 'COUP D’ÉVENTAIL', entree: 'PPK', coup: ruee({ vx: 7, duree: 16, degats: 11, stun: 24, recul: 18 }) },
+      { nom: 'SHURIKEN DE PAPIER', entree: 'DFP', coup: proj({ vitesse: 15, rayon: 12, degats: 10, forme: 'etoile-papier', duree: 50 }) },
+      { nom: 'PARAVENT', entree: 'BBP', coup: { type: 'garde', duree: 40, renvoi: true } },
+    ],
+  }),
+  P({
+    id: 'aimanta', nom: 'AIMANTA', style: 'Reine du Magnétisme', desc: 'Tout Finit par Revenir',
+    c: { c1: '#ff3a4a', c2: '#3a6aff', faisceau: '#c8a0ff', aura: '#ff5a8a', peau: '#e8c0a0', cheveux: '#e8e8f8', tenue: '#2a2a38', ceinture: '#3a6aff' },
+    stats: { hp: 10, dmg: 12, def: 10 }, vitesse: 4.4, saut: 14, dmg: 1.16, hpMult: 1.02, defMult: 1.04,
+    look: { corps: 'normal', tete: 'couettes', extras: ['aimant', 'brassards'] },
+    specA: { nom: 'ATTRACTION !', ...faisceau({ portee: 520, epaisseur: 50, degats: 8, coups: 2, stun: 30, recul: 2, attire: 3, duree: 40, couleur: '#c8a0ff', aimant: true }) },
+    specB: { nom: 'RÉPULSION !', ...zone({ ou: 'soi', delai: 4, rayon: 110, hauteur: 200, degats: 10, stun: 22, recul: 30, duree: 18, forme: 'champ-aimant' }) },
+    ulti: { nom: 'POLARITÉ ABSOLUE !!', portee: 280, visuel: 'polarite' },
+    saisie: { nom: 'CHAMP MAGNÉTIQUE', seq: [['NORD !', 9, 5], ['SUD !', 9, 5], ['INVERSION !', 13, 8], ['ÉCRASEMENT !', 20, 12]] },
+    combos: [
+      { nom: 'POINGS AIMANTÉS', entree: 'PPK', coup: ruee({ vx: 8, duree: 18, coups: 2, degats: 7, stun: 22, recul: 6, attire: true }) },
+      { nom: 'LIMAILLE', entree: 'DFP', coup: proj({ vitesse: 12, rayon: 10, degats: 4, nb: 4, intervalle: 4, forme: 'limaille', duree: 60 }) },
+      { nom: 'AIMANT', entree: 'DBK', coup: proj({ vitesse: 6, rayon: 18, degats: 6, stun: 30, attire: 3, forme: 'aimant', duree: 90 }) },
+    ],
+  }),
+
   /* ---- les boss, débloqués en les battant dans le mode Histoire ---- */
   P({
     id: 'solarius', nom: 'SOLARIUS', style: 'Gardien de la Lumière', desc: 'La lumière qui consume les ténèbres', boss: 'normal',
@@ -382,6 +476,68 @@ export const PERSOS = [
       { nom: 'REFLET FUGACE', entree: 'PPK', coup: ruee({ vx: 15, duree: 16, degats: 13, stun: 28, recul: 8, traverse: true, invincible: 12 }) },
       { nom: 'MIROIR', entree: 'BBP', coup: { type: 'garde', duree: 40, renvoi: true } },
       { nom: 'DOUBLE', entree: 'DBP', coup: { type: 'teleport', derriere: true, degats: 12, stun: 26, recul: 12, duree: 16 } },
+    ],
+  }),
+
+  /* ---- les secrets de la nouvelle vague : à gagner en Arcade, aux défis, avec son héros ---- */
+  P({
+    id: 'jackpot', nom: 'JACKPOT', style: 'Le Flambeur', desc: 'Il Mise Toujours Tout', secret: 'arcade',
+    c: { c1: '#ffd23f', c2: '#b0102a', faisceau: '#ffe680', aura: '#ffd23f', peau: '#e0b088', cheveux: '#2a1a10', tenue: '#1a1428', ceinture: '#b0102a' },
+    stats: { hp: 10, dmg: 12, def: 9 }, vitesse: 4.8, saut: 15, dmg: 1.12, hpMult: 1.0, defMult: 0.98,
+    look: { corps: 'normal', tete: 'haut-de-forme', extras: ['noeud-pap'] },
+    specA: { nom: 'CARTE MAÎTRESSE !', ...proj({ vitesse: 16, rayon: 14, degats: 5, nb: 3, intervalle: 6, forme: 'carte', duree: 55 }) },
+    specB: { nom: 'COUP DE DÉS !', ...zone({ ou: 'cible', delai: 32, rayon: 60, hauteur: 600, degats: 13, stun: 28, forme: 'des', des: true }) },
+    ulti: { nom: 'JACKPOT ROYAL !!', portee: 280, visuel: 'jackpot' },
+    saisie: { nom: 'PARTIE TRUQUÉE', seq: [['MISE !', 8, 4], ['RELANCE !', 10, 6], ['TAPIS !', 14, 8], ['QUINTE FLUSH !', 20, 12]] },
+    combos: [
+      { nom: 'CANNE', entree: 'PPK', coup: ruee({ vx: 6, duree: 16, degats: 12, stun: 24, recul: 12, portee: 130 }) },
+      { nom: 'ROULETTE', entree: 'DFP', coup: proj({ vitesse: 7, rayon: 22, degats: 10, forme: 'jeton', rase: true, duree: 90 }) },
+      { nom: 'BLUFF', entree: 'BBP', coup: { type: 'garde', duree: 36, contre: true, degats: 16 } },
+    ],
+  }),
+  P({
+    id: 'desperado', nom: 'DESPERADO', style: 'Pistolero du Saloon', desc: 'Le Plus Rapide de l’Ouest', secret: 'arcade-difficile',
+    c: { c1: '#e8a040', c2: '#7a3a1a', faisceau: '#fff0a0', aura: '#e8a040', peau: '#c89070', cheveux: '#3a2414', tenue: '#3a4a6a', ceinture: '#7a3a1a' },
+    stats: { hp: 10, dmg: 12, def: 9 }, vitesse: 4.4, saut: 13, dmg: 1.24, hpMult: 1.04, defMult: 1.0,
+    look: { corps: 'normal', tete: 'chapeau-cowboy', extras: ['echarpe', 'revolver'] },
+    specA: { nom: 'SIX COUPS !', ...proj({ vitesse: 20, rayon: 9, degats: 5, stun: 16, recul: 4, nb: 6, intervalle: 5, forme: 'balle', duree: 45 }) },
+    specB: { nom: 'LASSO !', ...faisceau({ portee: 380, epaisseur: 30, degats: 11, stun: 34, recul: 2, attire: 5, duree: 26, couleur: '#c89a5a', lasso: true }) },
+    ulti: { nom: 'HIGH NOON !!', portee: 320, visuel: 'midi' },
+    saisie: { nom: 'DUEL AU SOLEIL', seq: [['CROSSE !', 9, 5], ['COUP DE BOTTE !', 10, 6], ['À BOUT PORTANT !', 16, 10], ['BANG !', 20, 12]] },
+    combos: [
+      { nom: 'COUP DE CROSSE', entree: 'PPK', coup: ruee({ vx: 6, duree: 16, degats: 12, stun: 26, recul: 14 }) },
+      { nom: 'DYNAMITE', entree: 'DFP', coup: proj({ vitesse: 9, rayon: 14, degats: 12, stun: 26, recul: 14, forme: 'dynamite', rase: true, duree: 70 }) },
+      { nom: 'RUÉE DU MUSTANG', entree: 'BFK', coup: ruee({ vx: 13, duree: 22, degats: 13, stun: 26, recul: 16 }) },
+    ],
+  }),
+  P({
+    id: 'kitsune', nom: 'KITSUNE', style: 'Renarde aux Neuf Queues', desc: 'Les Feux Follets Dansent pour Elle', secret: 'defis',
+    c: { c1: '#ff8a2a', c2: '#ffffff', faisceau: '#7ad8ff', aura: '#ff8a2a', peau: '#f4dcc4', cheveux: '#ff9a3a', tenue: '#c8102e', ceinture: '#ffffff' },
+    stats: { hp: 9, dmg: 12, def: 9 }, vitesse: 5.6, saut: 18, dmg: 1.16, hpMult: 0.96, defMult: 0.98,
+    look: { corps: 'fin', tete: 'oreilles-renard', extras: ['queues', 'haori'] },
+    specA: { nom: 'KITSUNEBI !', ...proj({ vitesse: 7, rayon: 16, degats: 6, nb: 3, intervalle: 10, forme: 'feu-follet', tete: 0.35, duree: 110, effet: 'brulure' }) },
+    specB: { nom: 'ILLUSION !', type: 'teleport', derriere: true, degats: 14, stun: 28, recul: 10, duree: 20 },
+    ulti: { nom: 'NEUF QUEUES CÉLESTES !!', portee: 300, visuel: 'neuf-queues' },
+    saisie: { nom: 'DANSE DU RENARD', seq: [['GRIFFE !', 8, 4], ['QUEUE !', 9, 5], ['FEU FOLLET !', 12, 7], ['ILLUSION !', 14, 8], ['RENARD CÉLESTE !', 20, 11]] },
+    combos: [
+      { nom: 'COUP DE QUEUE', entree: 'PPK', coup: ruee({ vx: 7, duree: 22, coups: 3, degats: 5, stun: 18, recul: 8, tourne: true }) },
+      { nom: 'FOX FIRE', entree: 'DFP', coup: zone({ ou: 'cible', delai: 28, rayon: 55, hauteur: 220, degats: 10, stun: 24, forme: 'pilier' }) },
+      { nom: 'DOUBLE', entree: 'BBK', coup: { type: 'teleport', derriere: false, recule: true, degats: 0, duree: 14 } },
+    ],
+  }),
+  P({
+    id: 'fenrir', nom: 'FENRIR', style: 'Loup-Garou', desc: 'La Pleine Lune le Réveille', secret: 'niveau',
+    c: { c1: '#9ad0ff', c2: '#3a3a4a', faisceau: '#c8e8ff', aura: '#6aa8ff', peau: '#76768a', cheveux: '#4a4a5c', tenue: '#2a2420', ceinture: '#8a6a4a' },
+    stats: { hp: 11, dmg: 13, def: 8 }, vitesse: 5.4, saut: 16, dmg: 1.26, hpMult: 1.06, defMult: 0.94,
+    look: { corps: 'massif', tete: 'loup', extras: ['griffes', 'queue', 'torse-nu', 'yeux-luisants'] },
+    specA: { nom: 'HURLEMENT !', ...zone({ ou: 'soi', delai: 8, rayon: 140, hauteur: 220, degats: 8, stun: 30, recul: 18, duree: 20, forme: 'hurlement' }) },
+    specB: { nom: 'CROCS !', ...ruee({ vx: 15, vy: -5, duree: 24, degats: 16, stun: 28, recul: 10 }) },
+    ulti: { nom: 'LUNE DE SANG !!', portee: 260, visuel: 'lune-sang' },
+    saisie: { nom: 'CURÉE', seq: [['MORSURE !', 8, 5], ['GRIFFE !', 8, 5], ['GRIFFE !', 8, 5], ['DÉCHIQUETAGE !', 14, 9], ['HURLEMENT !', 20, 11]] },
+    combos: [
+      { nom: 'GRIFFES SAUVAGES', entree: 'PPK', coup: ruee({ vx: 9, duree: 22, coups: 3, degats: 6, stun: 20, recul: 6 }) },
+      { nom: 'BOND DU LOUP', entree: 'DFK', coup: ruee({ vx: 12, vy: -12, duree: 30, degats: 13, stun: 28, plonge: true }) },
+      { nom: 'INSTINCT', entree: 'DBP', coup: { type: 'garde', duree: 30, contre: true, degats: 15 } },
     ],
   }),
 
@@ -626,6 +782,16 @@ const VICTOIRES = {
   vornjeune: ['v-salut-mili', 'v-poing', 'Pour mes hommes !'],
   pillard: ['v-rire', 'v-pointe', 'Ta bourse ou ta vie !'],
   habitant: ['v-pointe', 'v-poing', 'Va-t’en de notre ville !'],
+  mamba: ['v-flex', 'v-deux-poings', '¡Viva la lucha !'],
+  graff: ['v-pointe', 'v-sautille', 'Signé, Graff.'],
+  sylva: ['v-meditation', 'v-bras-ecartes', 'La forêt repousse toujours.'],
+  echo: ['v-sautille', 'v-deux-poings', 'Le public en redemande !'],
+  origami: ['v-salut', 'v-garde-honneur', 'Plié. Rangé.'],
+  aimanta: ['v-pointe', 'v-levitation', 'Tu es attiré par la défaite.'],
+  jackpot: ['v-salut', 'v-rire', 'La maison gagne toujours.'],
+  desperado: ['v-pointe', 'v-bras-croises', 'Cette ville est trop petite pour nous deux.'],
+  kitsune: ['v-rire', 'v-levitation', 'Tu as perdu ? Ou c’était une illusion ?'],
+  fenrir: ['v-poing-sol', 'v-bras-ecartes', 'AOUUUUH !'],
 };
 for (const p of [...PERSOS, ...FIGURANTS]) {
   const [round, combat, cri] = VICTOIRES[p.id] || ['v-poing', 'v-poing', 'Victoire !'];
@@ -638,7 +804,7 @@ export const PERSO = Object.fromEntries([...PERSOS, ...FIGURANTS].map((p) => [p.
 export const ROSTER = PERSOS.filter((p) => !p.boss && !p.secret);
 export const BOSS = { normal: 'solarius', difficile: 'malvortex', impossible: 'lechaos' };
 /** Les personnages secrets, et où les gagner (les autres secrets de l’histoire disent où dans `indice`). */
-export const SECRETS = { histoire: 'kairos', tournoi: 'onyx', tour: 'nemesis' };
+export const SECRETS = { histoire: 'kairos', tournoi: 'onyx', tour: 'nemesis', arcade: 'jackpot', 'arcade-difficile': 'desperado', defis: 'kitsune', niveau: 'fenrir' };
 /** Un combattant à débloquer (boss ou secret). */
 export const aDebloquer = (p) => !!(p.boss || p.secret);
 

@@ -68,6 +68,16 @@ export const VOIX = {
   vornjeune: { genre: 'h', hauteur: 0.85, vitesse: 1.05 },
   pillard: { genre: 'h', hauteur: 0.9, vitesse: 1.15 },
   habitant: { genre: 'h', hauteur: 1.0, vitesse: 1.1 },
+  mamba: { genre: 'h', hauteur: 0.7, vitesse: 1.15 },
+  graff: { genre: 'h', hauteur: 1.1, vitesse: 1.2 },
+  sylva: { genre: 'f', hauteur: 1.0, vitesse: 0.9 },
+  echo: { genre: 'h', hauteur: 1.05, vitesse: 1.15 },
+  origami: { genre: 'f', hauteur: 1.15, vitesse: 0.95 },
+  aimanta: { genre: 'f', hauteur: 1.05, vitesse: 1.05 },
+  jackpot: { genre: 'h', hauteur: 0.85, vitesse: 0.95 },
+  desperado: { genre: 'h', hauteur: 0.65, vitesse: 0.85 },
+  kitsune: { genre: 'f', hauteur: 1.25, vitesse: 1.05 },
+  fenrir: { genre: 'h', hauteur: 0.45, vitesse: 1.0 },
 };
 /** La voix d'un combattant (le héros créé porte la sienne). */
 export const voixDe = (p) => (p?.voix || VOIX[p?.id] || { genre: 'h', hauteur: 1, vitesse: 1 });

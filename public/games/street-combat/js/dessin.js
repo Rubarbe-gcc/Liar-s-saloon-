@@ -590,8 +590,8 @@ function genouillere(g, k, m, derriere = false) {
   g.fillStyle = derriere ? '#5a4410' : '#8a5a10';
   g.beginPath(); g.moveTo(k.x + 8 * m, k.y - 3); g.lineTo(k.x + 15 * m, k.y); g.lineTo(k.x + 8 * m, k.y + 3); g.fill();
 }
-export const manche = (p) => (p.figurant || p.look.extras.includes('general') || ['ironclad', 'stoneback', 'lechaos', 'malvortex', 'shadowkira', 'voidreaper'].includes(p.id) ? p.c.tenue : p.c.peau);
-export const gant = (p) => (p.look.extras.includes('gants-boxe') ? '#d8102a' : p.look.extras.includes('griffes') ? teinte(p.c.peau, -0.2) : p.id === 'stoneback' ? teinte(p.c.peau, -0.15) : p.c.c1);
+export const manche = (p) => (p.figurant || p.look.extras.includes('general') || ['ironclad', 'stoneback', 'lechaos', 'malvortex', 'shadowkira', 'voidreaper', 'graff', 'jackpot', 'desperado', 'aimanta', 'kitsune', 'origami'].includes(p.id) ? p.c.tenue : p.c.peau);
+export const gant = (p) => (p.look.extras.includes('gants-boxe') ? '#d8102a' : p.look.extras.includes('griffes') ? teinte(p.c.peau, -0.2) : p.id === 'stoneback' ? teinte(p.c.peau, -0.15) : p.id === 'jackpot' ? '#f4f0e8' : ['kitsune', 'sylva', 'origami'].includes(p.id) ? p.c.peau : p.c.c1);
 
 /* ------------------------------------------------------------------ */
 /* La tête                                                             */
@@ -607,7 +607,7 @@ export function dessinerTete(g, perso, x, y, o = {}) {
   g.rotate(rad((o.rot || 0) * 0.35));
 
   // Derrière la tête : cheveux longs, couettes, capuche.
-  if (L.tete === 'longs') {
+  if (L.tete === 'longs' || L.tete === 'oreilles-renard') {
     g.fillStyle = k.cheveux;
     g.beginPath();
     g.moveTo(-14, -10);
@@ -976,7 +976,75 @@ function coiffure(g, p, t) {
       }
       break;
     }
+    case 'masque-catch': {
+      // Le masque du catcheur couvre tout : des flammes d'or autour des yeux, la bouche à l'air, une crête.
+      g.fillStyle = k.c1;
+      g.beginPath(); g.ellipse(0, -1, 15.6, 17, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = k.peau; g.beginPath(); g.ellipse(7, 10, 7, 5, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = k.c2;
+      for (const ex of [3, 11]) { g.beginPath(); g.moveTo(ex - 6, -2); g.quadraticCurveTo(ex - 2, -12, ex + 2, -9); g.quadraticCurveTo(ex + 7, -6, ex + 5, 2); g.quadraticCurveTo(ex, 4, ex - 6, -2); g.fill(); }
+      g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(3, -2, 3.4, 2.8, 0, 0, Math.PI * 2); g.ellipse(11, -2, 3.2, 2.8, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#111'; g.beginPath(); g.arc(4.4, -1.6, 1.7, 0, Math.PI * 2); g.arc(12, -1.6, 1.6, 0, Math.PI * 2); g.fill();
+      g.strokeStyle = 'rgba(60,20,20,0.8)'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(5, 10); g.lineTo(11, 9.5); g.stroke();
+      g.fillStyle = k.c2; g.beginPath(); g.moveTo(-14, -6); g.quadraticCurveTo(-8, -21, 4, -18); g.quadraticCurveTo(-4, -14, -14, -6); g.fill();
+      break;
+    }
+    case 'casquette': {
+      // Une casquette à l'envers : la visière dans la nuque.
+      g.beginPath(); g.ellipse(-2, -10, 15, 7, 0, Math.PI, Math.PI * 2); g.fill();
+      g.fillStyle = k.c2;
+      g.beginPath(); g.ellipse(-1, -11, 16, 9, 0, Math.PI, Math.PI * 2); g.fill();
+      g.beginPath(); g.ellipse(-17, -9, 9, 2.6, -0.15, 0, Math.PI * 2); g.fill();
+      g.fillStyle = k.c1; g.beginPath(); g.arc(-1, -19.5, 2, 0, Math.PI * 2); g.fill();
+      break;
+    }
+    case 'haut-de-forme': {
+      g.beginPath(); g.ellipse(-2, -10, 15, 7, 0, Math.PI, Math.PI * 2); g.fill();
+      g.save(); g.rotate(-0.12);
+      g.fillStyle = teinte(k.tenue, 0.05);
+      g.fillRect(-20, -15, 40, 3.5); g.fillRect(-12, -40, 24, 26);
+      g.fillStyle = k.c2; g.fillRect(-12, -19, 24, 4.5);
+      g.fillStyle = '#ffffff'; g.fillRect(6, -27, 5, 7);
+      g.restore();
+      break;
+    }
+    case 'chapeau-cowboy': {
+      g.beginPath(); g.ellipse(-2, -10, 15, 7, 0, Math.PI, Math.PI * 2); g.fill();
+      g.fillStyle = teinte(k.c1, -0.3);
+      g.beginPath(); g.moveTo(-26, -12); g.quadraticCurveTo(0, -6, 26, -14); g.quadraticCurveTo(28, -17, 22, -16); g.quadraticCurveTo(0, -13, -22, -15); g.closePath(); g.fill();
+      g.beginPath(); g.moveTo(-12, -14); g.quadraticCurveTo(-12, -32, -2, -30); g.lineTo(2, -27); g.lineTo(6, -30); g.quadraticCurveTo(14, -32, 13, -14); g.closePath(); g.fill();
+      g.fillStyle = k.c2; g.fillRect(-12, -18, 25, 3.4);
+      break;
+    }
+    case 'oreilles-renard': {
+      g.beginPath(); g.ellipse(-2, -9, 17, 10, 0, Math.PI * 0.95, Math.PI * 2.05); g.fill();
+      for (const [x, s] of [[-10, 1], [4, 0.9]]) {
+        g.fillStyle = k.cheveux; g.beginPath(); g.moveTo(x - 6, -15); g.lineTo(x - 2, -34 * s); g.lineTo(x + 6, -16); g.closePath(); g.fill();
+        g.fillStyle = '#fff4ea'; g.beginPath(); g.moveTo(x - 3, -16); g.lineTo(x - 1.5, -28 * s); g.lineTo(x + 3, -17); g.closePath(); g.fill();
+      }
+      break;
+    }
+    case 'loup': {
+      // La crinière, dans le dos et sur le crâne ; les oreilles pointues.
+      for (let i = 0; i < 7; i++) {
+        const a = rad(-200 + i * 26);
+        g.fillStyle = i % 2 ? k.cheveux : teinte(k.cheveux, 0.25);
+        g.beginPath(); g.moveTo(Math.cos(a - 0.25) * 14, Math.sin(a - 0.25) * 15); g.lineTo(Math.cos(a) * 27, Math.sin(a) * 26); g.lineTo(Math.cos(a + 0.25) * 14, Math.sin(a + 0.25) * 15); g.fill();
+      }
+      g.fillStyle = k.cheveux; g.beginPath(); g.ellipse(-2, -9, 16, 9, 0, Math.PI, Math.PI * 2); g.fill();
+      for (const x of [-10, 4]) { g.beginPath(); g.moveTo(x - 5, -14); g.lineTo(x - 1, -32); g.lineTo(x + 5, -15); g.fill(); }
+      break;
+    }
     default: break;
+  }
+  if (L.extras.includes('couronne-feuilles')) {
+    for (let i = 0; i < 7; i++) { g.fillStyle = i % 2 ? '#5ad84a' : '#2e9a3a'; g.beginPath(); g.ellipse(-14 + i * 4.6, -13 - Math.sin((i / 6) * Math.PI) * 3, 4.2, 2, rad(-30 + i * 10), 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = '#ff8ad8'; g.beginPath(); g.arc(-4, -17, 2.2, 0, Math.PI * 2); g.arc(8, -16, 2, 0, Math.PI * 2); g.fill();
+  }
+  if (L.extras.includes('casque-audio')) {
+    g.strokeStyle = k.c2; g.lineWidth = 3; g.beginPath(); g.arc(-2, -2, 17, Math.PI * 1.05, Math.PI * 1.95); g.stroke();
+    g.fillStyle = '#1a1a2a'; g.beginPath(); g.ellipse(-4, 0, 6, 7.5, 0, 0, Math.PI * 2); g.fill();
+    g.strokeStyle = k.c1; g.lineWidth = 1.6; g.beginPath(); g.ellipse(-4, 0, 4, 5.5, 0, 0, Math.PI * 2); g.stroke();
   }
 }
 
@@ -1062,6 +1130,13 @@ function torse(g, p, { largeur, taille, t, l }) {
     g.fillStyle = k.ceinture; g.beginPath(); g.arc(2, -32, 6, 0, Math.PI * 2); g.fill();
     g.strokeStyle = '#1a1206'; g.lineWidth = 1.4;
     g.beginPath(); g.moveTo(2, -32); g.lineTo(2, -37); g.moveTo(2, -32); g.lineTo(5.5, -30); g.stroke();
+  }
+  // Le plastron blanc et le nœud papillon du flambeur.
+  if (X.includes('noeud-pap')) {
+    g.fillStyle = '#f4f0e8'; g.beginPath(); g.moveTo(-7, -48); g.lineTo(9, -48); g.lineTo(1, -24); g.closePath(); g.fill();
+    g.fillStyle = k.c2;
+    g.beginPath(); g.moveTo(1, -46); g.lineTo(-7, -50); g.lineTo(-7, -42); g.closePath(); g.moveTo(1, -46); g.lineTo(9, -50); g.lineTo(9, -42); g.closePath(); g.fill();
+    g.beginPath(); g.arc(1, -46, 2, 0, Math.PI * 2); g.fill();
   }
   if (X.includes('ecailles')) {
     g.strokeStyle = rgba(k.c1, 0.5); g.lineWidth = 1;
@@ -1175,8 +1250,27 @@ function arriere(g, p, { hanche, epaule, cou, t, l, pose }) {
     }
     g.restore();
   }
+  if (X.includes('queues')) {
+    // Cinq queues de renarde, touffues, au bout blanc, en éventail.
+    for (let i = 0; i < 5; i++) {
+      const a = rad(-150 + i * 22) + Math.sin(t / 7 + i) * 0.1;
+      const bx = hanche.x - 4 + Math.cos(a) * 46, by = hanche.y - 6 + Math.sin(a) * 46;
+      g.strokeStyle = i % 2 ? k.cheveux : teinte(k.cheveux, 0.14); g.lineWidth = 11; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(hanche.x - 4, hanche.y); g.quadraticCurveTo(hanche.x - 4 + Math.cos(a) * 30, hanche.y + 10, bx, by); g.stroke();
+      g.fillStyle = '#fff6ee'; g.beginPath(); g.ellipse(bx, by, 6, 8, a + Math.PI / 2, 0, Math.PI * 2); g.fill();
+    }
+  }
+  if (X.includes('aimant')) {
+    // Le grand aimant, qui flotte derrière l'épaule.
+    g.save(); g.translate(epaule.x - 36, epaule.y + 4 + Math.sin(t / 12) * 3); g.rotate(0.9);
+    g.strokeStyle = k.c1; g.lineWidth = 9; g.lineCap = 'butt';
+    g.beginPath(); g.arc(0, 0, 14, 0, Math.PI); g.stroke();
+    g.fillStyle = '#d8dce8'; g.fillRect(-18.5, -9, 9, 9); g.fillRect(9.5, -9, 9, 9);
+    lueur(g, -14, -12, 3, k.c1); lueur(g, 14, -12, 3, k.c2);
+    g.restore();
+  }
   if (X.includes('queue') || X.includes('queue-dragon')) {
-    g.strokeStyle = X.includes('queue-dragon') ? teinte(k.peau, -0.1) : k.c1;
+    g.strokeStyle = X.includes('queue-dragon') ? teinte(k.peau, -0.1) : p.look.tete === 'loup' ? k.cheveux : k.c1;
     g.lineWidth = 9; g.lineCap = 'round';
     g.beginPath();
     g.moveTo(hanche.x - 6, hanche.y + 2);
@@ -1298,6 +1392,24 @@ function armeArriere(g, p, main, coude, o, t) {
     g.beginPath(); g.moveTo(-10, -60); g.lineTo(-10, -80); g.moveTo(0, -70); g.lineTo(0, -88); g.moveTo(10, -60); g.lineTo(10, -80); g.moveTo(-10, -60); g.lineTo(10, -60); g.stroke();
     g.restore();
   }
+  if (X.includes('eventail')) {
+    // L'éventail de papier, ouvert.
+    g.save(); g.translate(main.x, main.y); g.rotate(a);
+    for (let i = 0; i < 7; i++) {
+      const b = rad(-60 + i * 20);
+      g.fillStyle = i % 2 ? '#fff6e8' : k.c1;
+      g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 28, b - 0.17, b + 0.17); g.closePath(); g.fill();
+    }
+    g.restore();
+  }
+  if (X.includes('bombe')) {
+    // La bombe de peinture.
+    g.save(); g.translate(main.x, main.y); g.rotate(a);
+    g.fillStyle = k.c2; g.beginPath(); g.roundRect(-2, -4, 14, 8, 2); g.fill();
+    g.fillStyle = k.c1; g.fillRect(2, -4, 5, 8);
+    g.fillStyle = '#f0f0f0'; g.beginPath(); g.arc(13.5, 0, 2.2, 0, Math.PI * 2); g.fill();
+    g.restore();
+  }
   void o; void t;
 }
 
@@ -1323,6 +1435,13 @@ function armeAvant(g, p, main, coude, o, t) {
     g.save(); g.translate(main.x, main.y); g.rotate(a);
     g.fillStyle = '#fff2d8';
     for (let i = -1; i <= 1; i++) { g.beginPath(); g.moveTo(6, i * 4 - 1.5); g.lineTo(20, i * 6); g.lineTo(6, i * 4 + 1.5); g.fill(); }
+    g.restore();
+  }
+  if (X.includes('revolver')) {
+    // Le revolver : le canon, le barillet, la crosse de bois.
+    g.save(); g.translate(main.x, main.y); g.rotate(a);
+    g.fillStyle = '#5a5a6a'; g.fillRect(4, -4, 18, 3.4); g.beginPath(); g.ellipse(4, -2, 4, 3.4, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#6a3a1a'; g.save(); g.rotate(-0.35); g.fillRect(-4, -1, 4.4, 10); g.restore();
     g.restore();
   }
   void t;

@@ -263,11 +263,197 @@ export function dessinerProjectiles(g, c, t) {
         break;
       }
       default:
-        dessinerBoule(g, d.forme, r, k, dir, t, p);
+        if (!dessinerProjNouveau(g, d.forme, r, k, dir, t, p)) dessinerBoule(g, d.forme, r, k, dir, t, p);
         break;
     }
     g.restore();
   }
+}
+
+/* Les projectiles de la nouvelle vague : peinture, notes, grues de papier, cartes… Rend vrai si dessiné. */
+const PEINTURES = ['#ff3ad0', '#2ae8a0', '#ffd23f', '#3ab8ff'];
+function dessinerProjNouveau(g, forme, r, k, dir, t, p) {
+  switch (forme) {
+    case 'peinture': {
+      // Une bombe de peinture : une goutte qui tremble, ses éclaboussures derrière.
+      const P = K.palette(PEINTURES[Math.floor(p.t / 6 + p.x / 97) % PEINTURES.length]);
+      for (let i = 1; i < 4; i++) K.couches(g, (s) => g.arc(-dir * i * r * 0.8, Math.sin(t / 2 + i) * 4, r * (0.4 - i * 0.07) * s, 0, TAU), P, [1.2, 1, 0.6, 0.25], 1 - i * 0.22);
+      K.couches(g, (s) => {
+        for (let a = 0; a <= TAU + 0.01; a += TAU / 10) {
+          const rr = r * s * (0.85 + 0.15 * Math.sin(a * 3 + t / 2));
+          if (a === 0) g.moveTo(Math.cos(a) * rr, Math.sin(a) * rr); else g.lineTo(Math.cos(a) * rr, Math.sin(a) * rr);
+        }
+      }, P, [1.12, 1, 0.55, 0.22]);
+      return true;
+    }
+    case 'feuille': {
+      g.rotate(t / 5 * dir);
+      const P = K.palette('#5ad84a');
+      K.couches(g, (s) => { g.moveTo(-r * 1.3 * s, 0); g.quadraticCurveTo(0, -r * 0.9 * s, r * 1.3 * s, 0); g.quadraticCurveTo(0, r * 0.9 * s, -r * 1.3 * s, 0); }, P, [1.15, 1, 0.5, 0]);
+      g.strokeStyle = P.encre; g.lineWidth = 1.4; g.beginPath(); g.moveTo(-r * 1.2, 0); g.lineTo(r * 1.2, 0); g.stroke();
+      return true;
+    }
+    case 'note': {
+      // Une note de musique qui luit.
+      const P = K.palette(k.c1);
+      K.lueur(g, 0, 0, r * 2.4, k.c1, 0.55);
+      g.save(); g.rotate(Math.sin(t / 4) * 0.25);
+      K.couches(g, (s) => { g.ellipse(-r * 0.3, r * 0.5, r * 0.62 * s, r * 0.46 * s, -0.4, 0, TAU); }, P, [1.2, 1, 0.55, 0.2]);
+      g.fillStyle = P.encre; g.fillRect(r * 0.2, -r * 1.2, r * 0.3, r * 1.75);
+      g.fillStyle = P.base; g.fillRect(r * 0.26, -r * 1.15, r * 0.18, r * 1.65);
+      K.couches(g, (s) => { g.moveTo(r * 0.3, -r * 1.2); g.quadraticCurveTo(r * 1.1 * s, -r * 0.9, r * 0.9 * s, -r * 0.2); g.quadraticCurveTo(r * 0.8, -r * 0.7, r * 0.3, -r * 0.7); }, P, [1.1, 1, 0.5, 0]);
+      g.restore();
+      return true;
+    }
+    case 'onde-son': {
+      // Le Larsen : des arcs sonores qui grossissent en avançant.
+      g.scale(dir, 1);
+      const P = K.palette(k.c1);
+      for (let i = 0; i < 4; i++) {
+        const rr = r * (0.6 + i * 0.35) + ((t * 2) % 8);
+        g.strokeStyle = P.encre; g.lineWidth = 7 - i; g.beginPath(); g.arc(-i * 10, 0, rr, -0.9, 0.9); g.stroke();
+        g.strokeStyle = i % 2 ? P.clair : P.base; g.lineWidth = 4 - i * 0.6; g.beginPath(); g.arc(-i * 10, 0, rr, -0.9, 0.9); g.stroke();
+      }
+      K.lueur(g, 0, 0, r * 2, k.c1, 0.4);
+      return true;
+    }
+    case 'grue': {
+      // Une grue de papier : deux ailes qui battent, le cou et la queue pointus.
+      g.rotate(Math.atan2(p.vy, p.vx));
+      if (p.vx < 0) g.scale(1, -1);
+      const bat = Math.sin(t / 2.2 + p.x / 40);
+      const papier = { encre: '#5a1a28', base: '#fff6e8', clair: '#ffffff', coeur: '#ffffff' };
+      K.couches(g, (s) => { g.moveTo(-r * 0.9 * s, 0); g.lineTo(-r * 0.2, -r * 1.3 * bat * s); g.lineTo(r * 0.4 * s, 0); g.closePath(); }, papier, [1.1, 1, 0, 0]);
+      K.couches(g, (s) => { g.moveTo(-r * 1.4 * s, -r * 0.5); g.lineTo(-r * 0.2, r * 0.3 * s); g.lineTo(r * 1.5 * s, -r * 0.7); g.lineTo(r * 0.4, r * 0.25 * s); g.closePath(); }, { ...papier, base: k.c1 }, [1.1, 1, 0.5, 0]);
+      return true;
+    }
+    case 'etoile-papier': {
+      g.rotate(t / 2.5);
+      for (let i = 0; i < 4; i++) {
+        g.rotate(TAU / 4);
+        K.couches(g, (s) => { g.moveTo(0, 0); g.lineTo(r * 1.4 * s, -r * 0.35 * s); g.lineTo(r * 0.4 * s, r * 0.3 * s); g.closePath(); }, i % 2 ? K.palette(k.c1) : { encre: '#5a1a28', base: '#fff6e8', clair: '#ffffff', coeur: '#ffffff' }, [1.15, 1, 0.4, 0]);
+      }
+      return true;
+    }
+    case 'limaille':
+      for (let i = 0; i < 3; i++) K.eclat(g, (i - 1) * 6, Math.sin(t / 2 + i * 2) * 5, r * 0.55, t / 3 + i, { encre: '#1a1a24', fonce: '#5a5a6a', base: '#9a9aaa', clair: '#e0e0ea', coeur: '#ffffff' });
+      K.lueur(g, 0, 0, r * 2, '#c8a0ff', 0.4);
+      return true;
+    case 'aimant': {
+      // Un petit aimant qui attire : son fer rouge, ses pôles d'argent, des lignes de champ.
+      g.rotate(Math.sin(t / 5) * 0.3 + (dir > 0 ? -Math.PI / 2 : Math.PI / 2));
+      for (let i = 1; i <= 3; i++) K.onde(g, 0, -r * 0.4, r * 0.8 + i * 9 + ((t * 1.5) % 9), 2, K.palette(i % 2 ? k.c1 : k.c2), 0.6 - i * 0.15);
+      g.strokeStyle = '#2a0008'; g.lineWidth = r * 0.75; g.beginPath(); g.arc(0, 0, r * 0.7, 0, Math.PI); g.stroke();
+      g.strokeStyle = k.c1; g.lineWidth = r * 0.55; g.beginPath(); g.arc(0, 0, r * 0.7, 0, Math.PI); g.stroke();
+      g.fillStyle = '#e0e4ee'; g.fillRect(-r * 1.0, -r * 0.5, r * 0.6, r * 0.55); g.fillRect(r * 0.4, -r * 0.5, r * 0.6, r * 0.55);
+      return true;
+    }
+    case 'carte': {
+      // Une carte qui tourne sur elle-même : le dos rouge, la face blanche et son cœur.
+      g.rotate(t / 3 * dir);
+      const face = Math.cos(t / 2) > 0;
+      g.scale(Math.max(0.15, Math.abs(Math.cos(t / 2))), 1);
+      g.fillStyle = '#1a0a10'; g.beginPath(); g.roundRect(-r * 0.75 - 1.5, -r - 1.5, r * 1.5 + 3, r * 2 + 3, 3); g.fill();
+      g.fillStyle = face ? '#fffaf0' : '#b0102a'; g.beginPath(); g.roundRect(-r * 0.75, -r, r * 1.5, r * 2, 3); g.fill();
+      if (face) { g.fillStyle = '#d8102a'; g.beginPath(); g.arc(-r * 0.2, -r * 0.1, r * 0.25, Math.PI, 0); g.arc(r * 0.2, -r * 0.1, r * 0.25, Math.PI, 0); g.lineTo(0, r * 0.5); g.closePath(); g.fill(); }
+      else { g.strokeStyle = '#ffd23f'; g.lineWidth = 1.2; g.strokeRect(-r * 0.55, -r * 0.8, r * 1.1, r * 1.6); }
+      return true;
+    }
+    case 'jeton': {
+      // Un jeton de casino qui roule au sol.
+      g.rotate((p.t * 0.25) * dir);
+      g.fillStyle = '#1a0a10'; g.beginPath(); g.arc(0, 0, r + 2, 0, TAU); g.fill();
+      g.fillStyle = k.c2; g.beginPath(); g.arc(0, 0, r, 0, TAU); g.fill();
+      g.fillStyle = '#ffffff';
+      for (let i = 0; i < 6; i++) { g.save(); g.rotate((i / 6) * TAU); g.fillRect(r * 0.7, -r * 0.14, r * 0.3, r * 0.28); g.restore(); }
+      g.fillStyle = k.c1; g.beginPath(); g.arc(0, 0, r * 0.5, 0, TAU); g.fill();
+      return true;
+    }
+    case 'feu-follet': {
+      // Un feu follet bleu : une flamme qui suit sa route, un petit cœur blanc.
+      const P = K.palette(k.faisceau);
+      g.save(); g.rotate(Math.atan2(p.vy, p.vx) - Math.PI / 2 + Math.PI);
+      K.flamme(g, 0, r * 0.4, r * 2.8, r * 1.5, t, P, p.x / 50);
+      g.restore();
+      K.orbe(g, 0, 0, r * 0.6, t, P);
+      return true;
+    }
+    case 'dynamite': {
+      g.rotate(p.t * 0.2 * dir);
+      g.fillStyle = '#3a0608'; g.beginPath(); g.roundRect(-r * 1.1 - 1.5, -r * 0.4 - 1.5, r * 2.2 + 3, r * 0.8 + 3, 4); g.fill();
+      g.fillStyle = '#d8203a'; g.beginPath(); g.roundRect(-r * 1.1, -r * 0.4, r * 2.2, r * 0.8, 3); g.fill();
+      g.fillStyle = '#ffffff'; g.fillRect(-r * 0.2, -r * 0.4, r * 0.4, r * 0.8);
+      g.strokeStyle = '#3a2a1a'; g.lineWidth = 1.6; g.beginPath(); g.moveTo(r * 1.1, 0); g.quadraticCurveTo(r * 1.5, -r * 0.6, r * 1.8, -r * 0.3); g.stroke();
+      K.etoileImpact(g, r * 1.8, -r * 0.3, 6 + Math.sin(t) * 2, t, K.FEU, 1, 6);
+      return true;
+    }
+    default: return false;
+  }
+}
+
+/**
+ * Les rayons de la nouvelle vague, dessinés le long de +x (déjà tourné vers l'adversaire) :
+ * les basses d'Écho (des arcs sonores et un égaliseur), le lasso de Desperado, le champ d'Aimanta.
+ */
+function faisceauNouveau(g, d, f, long, ep, p, k) {
+  if (d.son) {
+    const P = K.palette(k.c1), P2 = K.palette(k.c2);
+    for (let i = 0; i < 7; i++) {
+      const x = ((f.t * 9 + i * (long / 7)) % Math.max(1, long));
+      const h = ep * (0.4 + 0.6 * x / long);
+      for (const [c, w] of [[P.encre, 8], [i % 2 ? P2.base : P.base, 5], [P.coeur, 1.5]]) {
+        g.strokeStyle = c; g.lineWidth = w * p; g.beginPath(); g.ellipse(x, 0, h * 0.35, h, 0, -1.2, 1.2); g.stroke();
+      }
+    }
+    // L'égaliseur, au pied du son.
+    for (let i = 0; i < 9; i++) {
+      const bh = (10 + 26 * Math.abs(Math.sin(f.t / 2 + i * 1.3))) * p;
+      g.fillStyle = rgba(i % 2 ? k.c1 : k.c2, 0.8); g.fillRect(20 + i * 12, ep * 0.6 - bh, 8, bh);
+    }
+    return;
+  }
+  if (d.lasso) {
+    // Le lasso : une corde qui file, la boucle au bout qui tourne.
+    const bout = long * Math.min(1, f.t / 8);
+    const corde = (c, w) => {
+      g.strokeStyle = c; g.lineWidth = w; g.lineCap = 'round';
+      g.beginPath(); g.moveTo(0, 0);
+      for (let x = 0; x <= bout; x += 10) g.lineTo(x, Math.sin(x / 40 - f.t / 2) * 8 * (1 - x / Math.max(1, bout)));
+      g.stroke();
+      g.beginPath(); g.ellipse(bout + 14, 0, 16, 22 + Math.sin(f.t / 2) * 4, Math.sin(f.t / 3) * 0.5, 0, TAU); g.stroke();
+    };
+    g.globalAlpha *= p;
+    corde('#2a1406', 6); corde('#c89a5a', 3.4); corde('#ecd2a0', 1);
+    return;
+  }
+  // L'aimant : des lignes de champ en fuseau, rouges et bleues, qui ramènent l'adversaire.
+  for (let i = 0; i < 6; i++) {
+    const s = i < 3 ? -1 : 1, rang = (i % 3) + 1;
+    g.strokeStyle = rgba(i % 2 ? k.c1 : k.c2, 0.85 * p); g.lineWidth = 3;
+    g.setLineDash([14, 10]); g.lineDashOffset = f.t * 3;
+    g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(long / 2, s * ep * 0.45 * rang, long, 0); g.stroke();
+  }
+  g.setLineDash([]);
+  K.orbe(g, 0, 0, ep * 0.35, f.t, K.palette(k.c1), p);
+  K.orbe(g, long, 0, ep * 0.3, f.t, K.palette(k.c2), p);
+}
+
+/** Les dés de Jackpot : ils tombent du ciel, rebondissent ; le premier montre le tirage. */
+function dessinerDes(g, x, z, d, actif) {
+  // Deux gros dés tombent du ciel, rebondissent : le premier montre le tirage.
+  const chute = Math.min(1, (z.t - d.delai + 14) / 14);
+  const rebond = actif > 0 ? Math.abs(Math.sin(actif / 4)) * 30 * Math.max(0, 1 - actif / 20) : 0;
+  for (const [dx, face, rot] of [[-26, z.des || 6, 0.3], [30, ((z.des || 6) % 6) + 1, -0.4]]) {
+    const y = -60 + (SOL - 36 + 60) * chute - rebond;
+    g.save(); g.translate(x + dx, y); g.rotate(rot + (1 - chute) * 4);
+    g.fillStyle = '#1a0a10'; g.beginPath(); g.roundRect(-26, -26, 52, 52, 10); g.fill();
+    g.fillStyle = '#fffaf0'; g.beginPath(); g.roundRect(-23, -23, 46, 46, 8); g.fill();
+    g.fillStyle = face === 1 ? '#d8102a' : '#1a0a10';
+    const PIPS = { 1: [[0, 0]], 2: [[-1, -1], [1, 1]], 3: [[-1, -1], [0, 0], [1, 1]], 4: [[-1, -1], [1, -1], [-1, 1], [1, 1]], 5: [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], 6: [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]] };
+    for (const [px, py] of PIPS[face]) { g.beginPath(); g.arc(px * 12, py * 12, face === 1 ? 7 : 4.6, 0, TAU); g.fill(); }
+    g.restore();
+  }
+  if (actif >= 0 && actif < 10) K.etoileImpact(g, x, SOL - 10, 70, actif, K.OR, 1 - actif / 10, 8);
 }
 
 function dessinerBoule(g, forme, r, k, dir, t, p) {
@@ -359,6 +545,7 @@ export function dessinerZones(g, c, t) {
       if (d.hauteur >= 500) { g.fillStyle = rgba(k.c1, 0.06 + p * 0.1); g.fillRect(x - d.rayon * 0.5, 0, d.rayon, SOL); }
       if (d.forme?.startsWith('heros-')) lumiere(g, () => sceau(g, x, SOL, d.rayon * (0.4 + p * 0.6), d.teinte || k.c1, 0.4 + p * 0.6, z.t / 10));
       if (d.forme === 'lune') K.lune(g, x, -80 + p * (SOL - 120), 40);
+      if (d.forme === 'des' && z.t > d.delai - 14) dessinerDes(g, x, z, d, z.t - d.delai);
       continue;
     }
     g.save();
@@ -494,6 +681,61 @@ export function dessinerZones(g, c, t) {
         K.faille(g, x, SOL - 100, 200, 40 * Math.min(1, actif / 6), z.t, K.VIDE, 5);
         K.foudre(g, x - d.rayon, SOL - 20, x + d.rayon, SOL - 160, 4, K.VIDE, z.t, 1);
         break;
+      case 'ronces': {
+        // Des ronces jaillissent du sol, s'enroulent, hérissées d'épines.
+        const m = K.lisse(actif / 8);
+        const P = K.palette('#2e9a3a');
+        for (let i = 0; i < 6; i++) {
+          const x0 = x + (i - 2.5) * d.rayon * 0.34;
+          const h = d.hauteur * (0.55 + 0.45 * K.hasard(i + 3)) * m;
+          const s = i % 2 ? 1 : -1;
+          for (const [c, w] of [[P.encre, 9], [P.base, 5.5], [P.clair, 1.8]]) {
+            g.strokeStyle = c; g.lineWidth = w; g.lineCap = 'round';
+            g.beginPath(); g.moveTo(x0, SOL + 4); g.bezierCurveTo(x0 + s * 28, SOL - h * 0.35, x0 - s * 26, SOL - h * 0.7, x0 + s * 8 + Math.sin(z.t / 6 + i) * 6, SOL - h); g.stroke();
+          }
+          for (let e = 1; e < 5; e++) {
+            const v = e / 5;
+            const ex = x0 + s * Math.sin(v * Math.PI * 1.6) * 22, ey = SOL - h * v;
+            g.fillStyle = '#d8f0a0'; g.beginPath(); g.moveTo(ex - 3, ey); g.lineTo(ex + s * 9, ey - 4); g.lineTo(ex - 3, ey - 5); g.fill();
+          }
+          if (m >= 1 && i % 2) { g.fillStyle = '#ff8ad8'; g.beginPath(); g.arc(x0 + s * 8, SOL - h, 5, 0, TAU); g.fill(); g.fillStyle = '#ffe066'; g.beginPath(); g.arc(x0 + s * 8, SOL - h, 2, 0, TAU); g.fill(); }
+        }
+        break;
+      }
+      case 'peinture': {
+        // Un nuage de peinture : des taches de toutes les couleurs qui éclatent, et coulent.
+        const m = K.lisse(actif / 6);
+        for (let i = 0; i < 9; i++) {
+          const P = K.palette(PEINTURES[i % PEINTURES.length]);
+          const a = K.hasard(i) * TAU;
+          const rr = d.rayon * 0.8 * m * (0.4 + 0.6 * K.hasard(i + 7));
+          const bx = x + Math.cos(a) * rr, by = SOL - 70 + Math.sin(a) * rr * 0.8;
+          K.couches(g, (s) => g.arc(bx, by + actif * 0.4 * K.hasard(i + 2), (14 + K.hasard(i + 4) * 16) * s * m, 0, TAU), P, [1.12, 1, 0.55, 0.2], 0.95);
+        }
+        break;
+      }
+      case 'champ-aimant': {
+        // La répulsion : des lignes de champ rouges et bleues, un anneau qui repousse.
+        const p = Math.min(1, actif / d.duree);
+        for (let i = 0; i < 5; i++) {
+          g.save(); g.translate(x, SOL - 90); g.scale(1, 0.55);
+          g.strokeStyle = rgba(i % 2 ? k.c1 : k.c2, 0.85 * (1 - p)); g.lineWidth = 4;
+          g.beginPath(); g.ellipse(0, 0, d.rayon * (0.4 + p * 0.9) + i * 12, 40 + i * 14, 0, 0, TAU); g.stroke();
+          g.restore();
+        }
+        K.onde(g, x, SOL - 90, d.rayon * (0.3 + p * 1.1), 10 * (1 - p) + 2, K.palette(k.c1), 1 - p);
+        break;
+      }
+      case 'des':
+        dessinerDes(g, x, z, d, actif);
+        break;
+      case 'hurlement': {
+        // Le hurlement du loup : des ondes pâles qui partent de lui, une lune derrière.
+        const p = Math.min(1, actif / d.duree);
+        K.lune(g, x, SOL - 230, 26, K.LUNE, 0.5 * (1 - p));
+        for (let i = 0; i < 3; i++) K.onde(g, x, SOL - 120, d.rayon * (0.3 + p + i * 0.25), 8 * (1 - p) + 2, K.palette(k.c1), (1 - p) * (1 - i * 0.25), 0.1);
+        break;
+      }
       default:
         K.lueur(g, x, SOL - 60, d.rayon, k.c1, 0.5);
         K.onde(g, x, SOL - 4, d.rayon, 4, P, 0.8, 0.18);
@@ -528,6 +770,10 @@ export function dessinerFaisceaux(g, fx, c) {
           g.closePath();
         }, P, [1.15, 1, 0.66, 0.32], p);
         for (let i = 0; i < 5; i++) { const xx = (f.t * 14 + i * 60) % Math.max(1, long); K.orbe(g, xx, Math.sin(f.t + i) * ep * 0.3, 8 + (xx / Math.max(1, long)) * ep * 0.4, f.t + i, P, p); }
+        g.restore(); g.save(); g.globalCompositeOperation = 'lighter';
+      } else if (d.son || d.lasso || d.aimant) {
+        g.restore(); g.save();
+        faisceauNouveau(g, d, f, long, ep, p, k);
         g.restore(); g.save(); g.globalCompositeOperation = 'lighter';
       } else {
         // (on sort de la lumière additive : le rayon est opaque, en couches)
@@ -755,6 +1001,7 @@ function chargeUlti(g, t, A, k) {
  * l'adversaire, encaisse l'impact, puis relâche. Rend { z, x, y } (le zoom et le point visé), ou null.
  */
 const LARGES = new Set(['dragon', 'eclipse', 'divine', 'armageddon', 'chrono', 'aube-eternelle', 'eclipse-totale', 'singularite', 'supernova', 'omega-collapse', 'ouragan', 'legion', 'meteores', 'foudre', 'ring', 'miroirs',
+  'luchador', 'fresque', 'foret', 'enceintes', 'mille-grues', 'polarite', 'jackpot', 'midi', 'neuf-queues', 'lune-sang',
   'heros-promesses', 'heros-phenix', 'heros-sceau', 'heros-eveil', 'heros-horizon', 'heros-fracture']);
 export function cameraUlti(fx, c) {
   const C = fx.cine;
@@ -807,6 +1054,8 @@ const AURA = {
   meteores: K.FEU, zero: K.GLACE, foudre: K.FOUDRE, serpent: K.POISON, singularite: K.VIDE, eclipse: K.LUNE, dragon: K.DRAGON,
   tectonique: K.SABLE, ouragan: K.VENT, oubli: K.VIDE, maelstrom: K.EAU, divine: K.OR, armageddon: K.ENFER, chrono: K.OR, ring: K.OR,
   miroirs: K.MIROIR, 'sablier-infini': K.SABLE, 'eclipse-totale': K.OMBRE, 'aube-eternelle': K.OR, 'mille-boucles': K.OR, 'omega-collapse': K.VIDE, vide: K.OMBRE,
+  luchador: K.FEU, fresque: K.palette('#ff3ad0'), foret: K.POISON, enceintes: K.palette('#00e5ff'), 'mille-grues': K.palette('#fff0e8'), polarite: K.palette('#c8a0ff'),
+  jackpot: K.OR, midi: K.SABLE, 'neuf-queues': K.palette('#7ad8ff'), 'lune-sang': K.ENFER,
 };
 export function dessinerCineDerriere(g, fx, c, pos) {
   const C = fx.cine;

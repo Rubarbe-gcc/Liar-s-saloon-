@@ -17,7 +17,7 @@
 import * as K from './anime.js';
 import { ARENE } from '../../../shared/street/combat.js';
 import { PERSO } from '../../../shared/street/persos.js';
-import { dessinerCombattant } from './dessin.js';
+import { dessinerCombattant, rgba } from './dessin.js';
 import { texteContour, sceau } from './effets.js';
 
 const L = ARENE.L;
@@ -1020,6 +1020,455 @@ export const ULTIMES = {
       for (let i = 0; i < 8; i++) { g.save(); g.translate(D.x, SOL); g.rotate((i - 3.5) * 0.3); K.flamme(g, 0, 0, 220 * (1 - p), 30, t, P, i, 1 - p); g.restore(); }
     }
   },
+  /* MAMBA ROJA : Diablo Rojo Suplex. Les cordes du ring et la foule surgissent ; il fonce, empoigne,
+     s'envole au-dessus des cordes sous les flashs… et retombe de tout son poids : le ring tremble. */
+  luchador(g, t, A, D, k) {
+    const nuit = K.entre(t, 0, 12) * (1 - K.entre(t, 108, 128));
+    // Les cordes rouges et or, les poteaux des coins.
+    g.save(); g.globalAlpha = nuit;
+    for (let i = 0; i < 3; i++) {
+      const y = SOL - 52 - i * 44 + (t >= IMPACT && t < IMPACT + 14 ? Math.sin((t - IMPACT) * 1.6) * 6 * (1 - (t - IMPACT) / 14) : 0);
+      g.fillStyle = '#000'; g.fillRect(0, y - 4, L, 8);
+      g.fillStyle = i % 2 ? k.c2 : k.c1; g.fillRect(0, y - 2.5, L, 5);
+    }
+    for (const x of [26, L - 26]) { g.fillStyle = '#1a1018'; g.fillRect(x - 9, SOL - 176, 18, 176); g.fillStyle = k.c2; g.fillRect(x - 12, SOL - 182, 24, 12); }
+    g.restore();
+    // La foule en ombres chinoises qui saute, les flashs des photographes.
+    for (let i = 0; i < 26; i++) K.silhouette(g, (i / 25) * L, H + 30 - Math.abs(Math.sin(t / 2.6 + i)) * 12, 110 + K.hasard(i + 40) * 30, '#06040a', nuit);
+    for (let i = 0; i < 7; i++) if ((t + i * 5) % 19 < 2) K.etoileImpact(g, 50 + i * 150, 430 + (i % 2) * 30, 20, t, K.palette('#ffffff'), nuit, 4);
+    // Dans les airs : un projecteur sur lui, une traînée de flammes rouges.
+    if (t > 20 && t < IMPACT) {
+      const dir = Math.sign(D.x - A.x) || A.dir || 1;
+      const x = D.x - dir * 40;
+      const h = 150 * Math.sin(Math.PI * Math.min(1, (t - 18) / 50));
+      g.save(); g.globalAlpha = 0.3 * nuit; g.fillStyle = '#fff6c8';
+      g.beginPath(); g.moveTo(x - 14, 0); g.lineTo(x + 14, 0); g.lineTo(x + 70, D.y - h + 120); g.lineTo(x - 70, D.y - h + 120); g.closePath(); g.fill();
+      g.restore();
+      if (t > 50) for (let i = 0; i < 5; i++) K.flamme(g, x + (i - 2) * 14, D.y - h + 60, 70 + i * 6, 22, t, K.palette(k.c1), i);
+    }
+    if (t >= IMPACT) {
+      const p = (t - IMPACT) / 46;
+      K.explosion(g, D.x, SOL - 30, 180, p, K.palette(k.c1), 301);
+      for (let i = 0; i < 8; i++) K.fumee(g, D.x + (K.hasard(i) - 0.5) * 320, SOL - 20 - p * 50, 30 + p * 40, K.FUMEE, 0.75 * (1 - p), i);
+      // Les confettis or et rouges, et le cri.
+      for (let i = 0; i < 26; i++) { const x = K.hasard(i + 9) * L; const y = -20 + Math.min(1, p * 1.2) * (SOL + 40) * (0.6 + K.hasard(i * 3) * 0.5); g.save(); g.translate(x, y); g.rotate(t / 4 + i); g.fillStyle = [k.c1, k.c2, '#ffffff'][i % 3]; g.fillRect(-5, -3, 10, 6); g.restore(); }
+      g.save(); g.translate(L / 2, 160); const s = 1 + Math.max(0, 1 - (t - IMPACT) / 8) * 0.8; g.scale(s, s); g.rotate(-0.07);
+      texteContour(g, '¡OLÉ !', 0, 0, 110, k.c2, '#5a0010', 'center', true);
+      g.restore();
+    }
+  },
+  /* GRAFF : Mural Masterpiece. Il dégaine ses bombes : des traînées de toutes les couleurs couvrent le mur
+     derrière l'adversaire, son nom s'y écrit en lettres bulles… puis tout lui explose dessus. */
+  fresque: {
+    derriere(g, t, A, D, k) {
+      const peint = K.entre(t, 8, 56);
+      const fin = 1 - K.entre(t, 104, 128);
+      const couleurs = ['#ff3ad0', '#2ae8a0', '#ffd23f', '#3ab8ff', '#ff6a3a'];
+      // Les grandes traînées de peinture, qui se déroulent l'une après l'autre.
+      for (let i = 0; i < 5; i++) {
+        const q = K.entre(peint, i * 0.14, i * 0.14 + 0.36);
+        if (q <= 0) continue;
+        const y = 120 + i * 58;
+        g.save(); g.globalAlpha = 0.9 * fin;
+        g.strokeStyle = '#10081a'; g.lineWidth = 46; g.lineCap = 'round';
+        g.beginPath(); g.moveTo(-20, y); for (let x = 0; x <= L * q; x += 40) g.lineTo(x, y + Math.sin(x / 90 + i) * 26); g.stroke();
+        g.strokeStyle = couleurs[i]; g.lineWidth = 38;
+        g.beginPath(); g.moveTo(-20, y); for (let x = 0; x <= L * q; x += 40) g.lineTo(x, y + Math.sin(x / 90 + i) * 26); g.stroke();
+        // Les coulures.
+        g.lineWidth = 6;
+        for (let c = 0; c < 6; c++) { const x = (K.hasard(i * 7 + c) * L) * q; g.beginPath(); g.moveTo(x, y + 14); g.lineTo(x, y + 14 + 50 * q * K.hasard(c + i)); g.stroke(); }
+        g.restore();
+      }
+      // Le nom, en lettres bulles.
+      const nom = K.entre(t, 36, 60);
+      if (nom > 0) {
+        g.save(); g.globalAlpha = fin; g.translate(L / 2, 230); g.rotate(-0.08); g.scale(0.6 + 0.4 * nom, 0.6 + 0.4 * nom);
+        texteContour(g, 'GRAFF !', 0, 0, 150, '#ffd23f', '#ff3ad0', 'center', true);
+        g.restore();
+      }
+    },
+    devant(g, t, A, D, k) {
+      const dir = Math.sign(D.x - A.x) || A.dir || 1;
+      // Le jet des bombes, de sa main vers le mur.
+      if (t > 6 && t < 60) {
+        for (let i = 0; i < 16; i++) {
+          const q = ((t * 2 + i * 7) % 30) / 30;
+          const P = K.palette(['#ff3ad0', '#2ae8a0', '#ffd23f', '#3ab8ff'][i % 4]);
+          K.couches(g, (s) => g.arc(A.x + dir * (40 + q * 260), A.y - 10 - q * (80 + K.hasard(i) * 120), (5 + q * 9) * s, 0, TAU), P, [1.2, 1, 0.5, 0], 1 - q);
+        }
+      }
+      if (t >= IMPACT) {
+        const p = (t - IMPACT) / 46;
+        for (let i = 0; i < 14; i++) {
+          const a = K.hasard(i + 3) * TAU, v = 0.4 + K.hasard(i * 5) * 0.8;
+          const P = K.palette(['#ff3ad0', '#2ae8a0', '#ffd23f', '#3ab8ff'][i % 4]);
+          K.couches(g, (s) => g.arc(D.x + Math.cos(a) * v * p * 260, D.y + Math.sin(a) * v * p * 200 + p * p * 120, (26 - p * 14) * s, 0, TAU), P, [1.12, 1, 0.55, 0.2], 1 - p * 0.6);
+        }
+      }
+    },
+  },
+  /* SYLVA : Colère de la Forêt. La terre se fend, des racines géantes surgissent et l'enserrent ; un
+     arbre immense pousse derrière elle ; au coup, les lianes serrent et tout fleurit d'un coup. */
+  foret: {
+    derriere(g, t, A, D) {
+      const pousse = K.entre(t, 4, 50);
+      const fin = 1 - K.entre(t, 106, 128);
+      if (pousse <= 0) return;
+      // L'arbre : un tronc noueux, une couronne de feuilles en couches.
+      const x = A.x - (A.dir || 1) * 120;
+      const h = 380 * pousse;
+      const BOIS = { encre: '#1e1006', fonce: '#4a2a12', base: '#6a4020', clair: '#9a6a3a', coeur: '#c89a6a' };
+      K.couches(g, (s) => { g.moveTo(x - 40 * s, SOL); g.quadraticCurveTo(x - 20 * s, SOL - h * 0.5, x - 14 * s, SOL - h); g.lineTo(x + 14 * s, SOL - h); g.quadraticCurveTo(x + 22 * s, SOL - h * 0.5, x + 40 * s, SOL); g.closePath(); }, BOIS, [1, 0.8, 0.3, 0], fin);
+      for (let i = 0; i < 9; i++) {
+        const a = -Math.PI / 2 + (i - 4) * 0.36;
+        const P = K.palette(i % 2 ? '#3aa84a' : '#5ad84a');
+        K.couches(g, (s) => g.arc(x + Math.cos(a) * 110 * pousse, SOL - h + Math.sin(a) * 70 * pousse + 30, 70 * pousse * s, 0, TAU), P, [1.06, 1, 0.55, 0.15], fin);
+      }
+    },
+    devant(g, t, A, D) {
+      const P = K.palette('#2e9a3a');
+      const serre = K.entre(t, 24, IMPACT);
+      const fin = 1 - K.entre(t, 106, 128);
+      // Les racines qui sortent du sol et s'enroulent autour de lui.
+      for (let i = 0; i < 6; i++) {
+        const s = i % 2 ? 1 : -1;
+        const sort = K.entre(t, 8 + i * 3, 30 + i * 3);
+        if (sort <= 0) continue;
+        const x0 = D.x + s * (90 - serre * 40) + (i - 2.5) * 10;
+        const top = SOL - (SOL - D.y + 70) * sort;
+        for (const [c, w] of [[P.encre, 16], [P.base, 11], [P.clair, 3]]) {
+          g.strokeStyle = c; g.lineWidth = w * fin; g.lineCap = 'round';
+          g.beginPath(); g.moveTo(x0, SOL + 6); g.bezierCurveTo(x0 - s * 60, SOL - 80 * sort, D.x + s * 70 * (1 - serre), top + 60, D.x - s * 40 * (1 - serre * 0.5), top); g.stroke();
+        }
+      }
+      // Les feuilles qui tourbillonnent.
+      for (let i = 0; i < 18; i++) {
+        const a = t / 9 + i * 0.7;
+        const rr = 90 + K.hasard(i) * 120;
+        g.save(); g.translate(D.x + Math.cos(a) * rr, D.y + Math.sin(a * 1.3) * rr * 0.5); g.rotate(a * 2);
+        K.couches(g, (s) => { g.moveTo(-9 * s, 0); g.quadraticCurveTo(0, -6 * s, 9 * s, 0); g.quadraticCurveTo(0, 6 * s, -9 * s, 0); }, K.palette(i % 3 ? '#5ad84a' : '#ffe066'), [1.15, 1, 0.4, 0], fin * K.entre(t, 10, 30));
+        g.restore();
+      }
+      if (t >= IMPACT) {
+        // Tout fleurit : une gerbe de pétales roses.
+        const p = (t - IMPACT) / 46;
+        for (let i = 0; i < 30; i++) {
+          const a = K.hasard(i + 11) * TAU, v = 0.3 + K.hasard(i * 3) * 0.9;
+          const x = D.x + Math.cos(a) * v * p * 340, y = D.y + Math.sin(a) * v * p * 240 + p * p * 160;
+          g.fillStyle = i % 4 ? '#ff8ad8' : '#ffe066';
+          g.save(); g.translate(x, y); g.rotate(t / 5 + i); g.globalAlpha = 1 - p;
+          g.beginPath(); g.ellipse(0, 0, 7, 4, 0, 0, TAU); g.fill(); g.restore();
+        }
+        K.explosion(g, D.x, D.y, 150, p, K.palette('#8aff5a'), 311);
+      }
+    },
+  },
+  /* ÉCHO : Final Drop. Deux enceintes géantes montent du sol, les projecteurs balaient la scène, le
+     public saute ; le son monte, monte… et au drop, les basses soufflent tout. */
+  enceintes(g, t, A, D, k) {
+    const monte = K.entre(t, 0, 22) * (1 - K.entre(t, 108, 128));
+    const P1 = K.palette(k.c1), P2 = K.palette(k.c2);
+    // Les projecteurs colorés qui balaient.
+    for (let i = 0; i < 4; i++) {
+      const a = Math.sin(t / 12 + i * 1.7) * 0.5;
+      g.save(); g.translate(150 + i * 230, 0); g.rotate(a); g.globalAlpha = 0.22 * monte;
+      g.fillStyle = i % 2 ? k.c1 : k.c2; g.beginPath(); g.moveTo(-12, 0); g.lineTo(12, 0); g.lineTo(90, SOL); g.lineTo(-90, SOL); g.closePath(); g.fill();
+      g.restore();
+    }
+    // Les deux enceintes, leurs membranes qui battent la mesure.
+    const bat = t >= IMPACT ? 1 + Math.max(0, 1 - (t - IMPACT) / 10) * 0.4 : 1 + Math.abs(Math.sin(t / 3)) * 0.08 * (t / IMPACT);
+    for (const x of [90, L - 90]) {
+      const y = SOL - 230 * monte;
+      g.fillStyle = '#06040c'; g.beginPath(); g.roundRect(x - 74, y - 4, 148, 238, 12); g.fill();
+      g.fillStyle = '#1a1626'; g.beginPath(); g.roundRect(x - 70, y, 140, 230, 10); g.fill();
+      for (const [cy, r] of [[y + 60, 40], [y + 160, 54]]) {
+        g.fillStyle = '#0a0812'; g.beginPath(); g.arc(x, cy, r * bat + 4, 0, TAU); g.fill();
+        g.fillStyle = '#2a2638'; g.beginPath(); g.arc(x, cy, r * bat, 0, TAU); g.fill();
+        g.strokeStyle = k.c1; g.lineWidth = 3; g.beginPath(); g.arc(x, cy, r * bat * 0.75, 0, TAU); g.stroke();
+        g.fillStyle = '#0a0812'; g.beginPath(); g.arc(x, cy, r * 0.28, 0, TAU); g.fill();
+      }
+      K.lueur(g, x, y + 110, 120, k.c1, 0.3 * monte);
+    }
+    // L'égaliseur au sol, qui grimpe jusqu'au drop.
+    for (let i = 0; i < 24; i++) {
+      const h = (20 + 120 * Math.abs(Math.sin(t / 2.5 + i * 0.7)) * Math.min(1, t / IMPACT)) * monte;
+      g.fillStyle = rgba(i % 2 ? k.c1 : k.c2, 0.75); g.fillRect(170 + i * 28, SOL - h, 20, h);
+    }
+    // Les notes qui tourbillonnent autour de l'adversaire.
+    for (let i = 0; i < 10; i++) {
+      const a = t / 8 + i * 0.63, rr = 140 - 70 * K.entre(t, 20, IMPACT);
+      const x = D.x + Math.cos(a) * rr, y = D.y + Math.sin(a) * rr * 0.6;
+      K.couches(g, (s) => g.ellipse(x, y, 9 * s, 7 * s, -0.4, 0, TAU), i % 2 ? P1 : P2, [1.2, 1, 0.5, 0], monte);
+      g.fillStyle = (i % 2 ? P1 : P2).encre; g.fillRect(x + 6, y - 26, 3, 26);
+    }
+    if (t > 44 && t < IMPACT) {
+      g.save(); g.translate(L / 2, 140); const s = 1 + Math.sin(t) * 0.04; g.scale(s, s);
+      texteContour(g, t < 56 ? '3… 2… 1…' : 'DROP !', 0, 0, 80, k.c1, '#14002a', 'center', true);
+      g.restore();
+    }
+    if (t >= IMPACT) {
+      const p = (t - IMPACT) / 46;
+      for (let i = 0; i < 6; i++) K.onde(g, D.x, D.y, 30 + p * (220 + i * 90), 12 * (1 - p) + 2, i % 2 ? P1 : P2, 1 - p);
+      K.explosion(g, D.x, D.y, 170, p, P1, 321);
+    }
+  },
+  /* ORIGAMI : Mille Grues de Papier. Une nuée de grues de papier se plie dans l'air et tourne autour
+     d'elle, puis fond sur l'adversaire en rivière ; au coup, une grue géante s'envole des confettis. */
+  'mille-grues'(g, t, A, D, k) {
+    const dir = Math.sign(D.x - A.x) || A.dir || 1;
+    const papier = { encre: '#5a1a28', base: '#fff6e8', clair: '#ffffff', coeur: '#ffffff' };
+    const rouge = { ...papier, base: k.c1 };
+    const grue = (x, y, r, an, bat, P, a = 1) => {
+      g.save(); g.translate(x, y); g.rotate(an); if (Math.cos(an) < 0) g.scale(1, -1);
+      K.couches(g, (s) => { g.moveTo(-r * 0.9 * s, 0); g.lineTo(-r * 0.2, -r * 1.3 * bat * s); g.lineTo(r * 0.4 * s, 0); g.closePath(); }, papier, [1.1, 1, 0, 0], a);
+      K.couches(g, (s) => { g.moveTo(-r * 1.4 * s, -r * 0.5); g.lineTo(-r * 0.2, r * 0.3 * s); g.lineTo(r * 1.5 * s, -r * 0.7); g.lineTo(r * 0.4, r * 0.25 * s); g.closePath(); }, P, [1.1, 1, 0.5, 0], a);
+      g.restore();
+    };
+    const fin = 1 - K.entre(t, 104, 128);
+    for (let i = 0; i < 40; i++) {
+      const ph = K.hasard(i) * TAU;
+      const plonge = K.entre(t, 40 + (i % 10) * 2, 64 + (i % 10) * 2);
+      // D'abord une spirale autour d'elle, puis une rivière vers l'adversaire.
+      const a = t / 12 + ph, rr = 90 + (i % 5) * 26;
+      const sx = A.x + Math.cos(a) * rr, sy = A.y - 40 + Math.sin(a) * rr * 0.55 - (i % 7) * 10;
+      const x = sx + (D.x - sx) * plonge, y = sy + (D.y - sy) * plonge + Math.sin(plonge * Math.PI) * -60;
+      const an = plonge > 0 ? Math.atan2(D.y - sy, D.x - sx) : a + Math.PI / 2;
+      if (t >= IMPACT + 4 && plonge >= 1) continue;
+      grue(x, y, 10 + (i % 3) * 3, an, Math.sin(t / 2 + i), i % 4 ? papier : rouge, K.entre(t, i * 0.6, i * 0.6 + 8) * fin);
+    }
+    if (t >= IMPACT) {
+      const p = (t - IMPACT) / 46;
+      for (let i = 0; i < 40; i++) {
+        const a = K.hasard(i + 5) * TAU, v = 0.3 + K.hasard(i * 3) * 0.9;
+        g.save(); g.translate(D.x + Math.cos(a) * v * p * 320, D.y + Math.sin(a) * v * p * 220 + p * p * 140); g.rotate(t / 3 + i);
+        g.fillStyle = i % 3 ? '#fff6e8' : k.c1; g.globalAlpha = 1 - p; g.fillRect(-5, -4, 10, 8); g.restore();
+      }
+      // La grue géante s'envole.
+      grue(D.x + dir * 40, D.y - 60 - p * 220, 70, -Math.PI / 2 + 0.3 * dir, Math.sin(t / 3), rouge, Math.min(1, (t - IMPACT) / 8) * (1 - K.entre(t, 112, 128)));
+    }
+  },
+  /* AIMANTA : Polarité Absolue. Deux pôles géants s'allument de part et d'autre, rouge et bleu ; le champ
+     arrache tout le métal de l'arène vers l'adversaire, soulevé ; au coup, les deux aimants claquent. */
+  polarite(g, t, A, D, k) {
+    const monte = K.entre(t, 0, 20) * (1 - K.entre(t, 106, 128));
+    const serre = K.entre(t, 36, IMPACT);
+    const ecart = 330 - 250 * serre;
+    // Les lignes de champ entre les deux pôles.
+    g.save(); g.globalAlpha = monte * 0.8;
+    for (let i = 0; i < 7; i++) {
+      g.strokeStyle = i % 2 ? k.c1 : k.c2; g.lineWidth = 3; g.setLineDash([16, 10]); g.lineDashOffset = t * 4;
+      g.beginPath(); g.moveTo(D.x - ecart + 40, D.y); g.bezierCurveTo(D.x - ecart / 2, D.y - 40 - i * 30, D.x + ecart / 2, D.y - 40 - i * 30, D.x + ecart - 40, D.y); g.stroke();
+      g.beginPath(); g.moveTo(D.x - ecart + 40, D.y); g.bezierCurveTo(D.x - ecart / 2, D.y + 30 + i * 22, D.x + ecart / 2, D.y + 30 + i * 22, D.x + ecart - 40, D.y); g.stroke();
+    }
+    g.setLineDash([]); g.restore();
+    // Le métal arraché du sol, qui file vers lui.
+    for (let i = 0; i < 18; i++) {
+      const q = ((t * 1.4 + i * 9) % 40) / 40;
+      const x0 = K.hasard(i) * L, x = x0 + (D.x - x0) * q * serre * 1.4, y = SOL - q * (SOL - D.y) * Math.min(1, t / 30);
+      K.eclat(g, x, y, 6 + K.hasard(i + 3) * 6, t / 4 + i, { encre: '#1a1a24', fonce: '#5a5a6a', base: '#9a9aaa', clair: '#e0e0ea', coeur: '#ffffff' }, monte * (1 - q * 0.3));
+    }
+    // Les deux aimants géants, N et S, qui se rapprochent… et claquent.
+    for (const [s, c, lettre] of [[-1, k.c1, 'N'], [1, k.c2, 'S']]) {
+      const x = D.x + s * ecart;
+      g.save(); g.translate(x, D.y); g.rotate(s * Math.PI / 2); g.globalAlpha = monte;
+      g.strokeStyle = '#10081a'; g.lineWidth = 50; g.beginPath(); g.arc(0, -10, 54, 0, Math.PI); g.stroke();
+      g.strokeStyle = c; g.lineWidth = 40; g.beginPath(); g.arc(0, -10, 54, 0, Math.PI); g.stroke();
+      g.fillStyle = '#e0e4ee'; g.fillRect(-76, -40, 44, 32); g.fillRect(32, -40, 44, 32);
+      g.restore();
+      K.lueur(g, x, D.y, 110, c, 0.4 * monte);
+      g.save(); g.globalAlpha = monte; texteContour(g, lettre, x - s * 70, D.y - 90, 54, c, '#10081a'); g.restore();
+    }
+    if (t >= IMPACT) {
+      const p = (t - IMPACT) / 46;
+      K.explosion(g, D.x, D.y, 170, p, K.palette('#c8a0ff'), 331);
+      for (let i = 0; i < 12; i++) K.foudre(g, D.x, D.y, D.x + Math.cos(i) * 200 * p, D.y + Math.sin(i * 1.7) * 140 * p, 3, K.palette(i % 2 ? k.c1 : k.c2), t + i, 1, 1 - p);
+    }
+  },
+  /* JACKPOT : Jackpot Royal. Une machine à sous géante s'allume derrière l'adversaire ; les rouleaux
+     tournent, s'arrêtent un à un : 7… 7… 7 ! La machine crache une pluie de pièces et de cartes sur lui. */
+  jackpot: {
+    derriere(g, t, A, D, k) {
+      const monte = K.entre(t, 0, 18) * (1 - K.entre(t, 106, 128));
+      if (monte <= 0) return;
+      const x = D.x, y = 80 + (1 - monte) * -300;
+      g.save(); g.globalAlpha = monte;
+      // La caisse dorée, ses ampoules qui clignotent.
+      g.fillStyle = '#2a0a10'; g.beginPath(); g.roundRect(x - 190, y - 6, 380, 250, 26); g.fill();
+      const caisse = g.createLinearGradient(0, y, 0, y + 240); caisse.addColorStop(0, '#ffe680'); caisse.addColorStop(1, '#b8820a');
+      g.fillStyle = caisse; g.beginPath(); g.roundRect(x - 184, y, 368, 238, 22); g.fill();
+      for (let i = 0; i < 22; i++) {
+        const a = (i / 22) * TAU;
+        const bx = x + Math.cos(a) * 196, by = y + 118 + Math.sin(a) * 128;
+        g.fillStyle = (Math.floor(t / 3) + i) % 2 ? '#ffffff' : '#d8102a'; g.beginPath(); g.arc(bx, by, 5, 0, TAU); g.fill();
+      }
+      // Les trois rouleaux.
+      const arrets = [34, 44, 54];
+      for (let r = 0; r < 3; r++) {
+        const rx = x - 116 + r * 116;
+        g.fillStyle = '#1a0a10'; g.fillRect(rx - 50, y + 40, 100, 140);
+        g.fillStyle = '#fffaf0'; g.fillRect(rx - 46, y + 44, 92, 132);
+        g.save(); g.beginPath(); g.rect(rx - 46, y + 44, 92, 132); g.clip();
+        if (t < arrets[r]) {
+          const sym = ['🍒', '🔔', '7', '🍋', '💎'];
+          for (let s = -1; s <= 2; s++) { const off = ((t * 22) % 60); g.font = '900 52px "Arial Black", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = '#b0102a'; g.fillText(sym[(Math.floor(t * 0.4) + s + r * 2 + 50) % sym.length], rx, y + 110 + s * 60 - off + 30); }
+        } else {
+          const rebond = Math.max(0, 1 - (t - arrets[r]) / 6) * 10;
+          texteContour(g, '7', rx, y + 110 + rebond, 92, '#d8102a', '#3a0008');
+        }
+        g.restore();
+      }
+      g.restore();
+    },
+    devant(g, t, A, D, k) {
+      if (t >= 54 && t < IMPACT + 30) {
+        g.save(); g.translate(L / 2, 380); const s = 1 + Math.max(0, 1 - (t - 54) / 6) * 0.7; g.scale(s, s); g.rotate(-0.05);
+        texteContour(g, 'JACKPOT !', 0, 0, 96, '#ffd23f', '#5a0010', 'center', true);
+        g.restore();
+      }
+      if (t >= 56) {
+        // La pluie de pièces d'or et de cartes, qui s'abat sur lui.
+        const p = (t - 56) / 60;
+        for (let i = 0; i < 40; i++) {
+          const q = Math.min(1.4, p * 2 - (i % 8) * 0.05);
+          if (q <= 0) continue;
+          const x = D.x + (K.hasard(i) - 0.5) * 360 * (1 - Math.min(1, q) * 0.5);
+          const y = 300 + q * (SOL - 300);
+          g.save(); g.translate(x, Math.min(SOL - 6, y)); g.rotate(t / 3 + i);
+          if (i % 4) { g.scale(Math.abs(Math.cos(t / 3 + i)), 1); g.fillStyle = '#7a4a00'; g.beginPath(); g.arc(0, 0, 11, 0, TAU); g.fill(); g.fillStyle = '#ffd23f'; g.beginPath(); g.arc(0, 0, 9, 0, TAU); g.fill(); g.fillStyle = '#fff0a0'; g.beginPath(); g.arc(-2, -2, 4, 0, TAU); g.fill(); }
+          else { g.fillStyle = '#1a0a10'; g.fillRect(-10, -14, 20, 28); g.fillStyle = '#fffaf0'; g.fillRect(-8.5, -12.5, 17, 25); g.fillStyle = '#d8102a'; g.font = '900 14px sans-serif'; g.textAlign = 'center'; g.fillText('♥', 0, 5); }
+          g.restore();
+        }
+      }
+      if (t >= IMPACT) K.explosion(g, D.x, D.y, 170, (t - IMPACT) / 46, K.OR, 341);
+    },
+  },
+  /* DESPERADO : High Noon. Midi sonne : l'arène vire au sépia, le soleil cogne au zénith, un virevoltant
+     roule entre eux. Silence… Il dégaine plus vite que l'éclair : six coups, six éclairs. */
+  midi(g, t, A, D, k) {
+    const dir = Math.sign(D.x - A.x) || A.dir || 1;
+    const sepia = K.entre(t, 0, 16) * (1 - K.entre(t, 106, 128));
+    K.soleil(g, L / 2, 70, 56, t, K.OR, sepia, 18);
+    // La cloche de midi.
+    if (t > 8 && t < 40) {
+      g.save(); g.translate(L / 2, 190); g.globalAlpha = Math.min(1, (40 - t) / 8);
+      texteContour(g, (t < 22 ? 'DONG…' : 'DONG…  DONG…'), 0, 0, 52, '#fff0c8', '#3a2408', 'center', true);
+      g.restore();
+    }
+    // Le virevoltant qui roule entre eux.
+    if (t < 60) {
+      const x = -60 + (L + 120) * (t / 60);
+      g.save(); g.translate(x, SOL - 26 - Math.abs(Math.sin(t / 4)) * 20); g.rotate(t / 3);
+      g.strokeStyle = '#7a5a2a'; g.lineWidth = 2;
+      for (let i = 0; i < 9; i++) { g.beginPath(); g.ellipse(0, 0, 24, 14 + i, i * 0.7, 0, TAU); g.stroke(); }
+      g.restore();
+    }
+    // Les yeux plissés, en gros plan (deux bandes), puis le tir.
+    if (t > 40 && t < 58) {
+      g.save(); g.globalAlpha = Math.min(1, (t - 40) / 4) * Math.min(1, (58 - t) / 4);
+      g.fillStyle = '#1a1006'; g.fillRect(0, 150, L, 90);
+      g.fillStyle = '#c89070'; g.fillRect(0, 158, L, 74);
+      for (const x of [L * 0.32, L * 0.68]) { g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(x, 195, 60, 12, 0, 0, TAU); g.fill(); g.fillStyle = '#3a2414'; g.beginPath(); g.arc(x + dir * 10, 195, 10, 0, TAU); g.fill(); }
+      g.fillStyle = '#3a2414'; g.fillRect(L * 0.32 - 70, 168, 140, 8); g.fillRect(L * 0.68 - 70, 168, 140, 8);
+      g.restore();
+    }
+    // Six éclairs de canon, six traits.
+    for (let i = 0; i < 6; i++) {
+      const t0 = 58 + i * 1.6;
+      if (t < t0 || t > t0 + 5) continue;
+      const q = (t - t0) / 5;
+      K.etoileImpact(g, A.x + dir * 50, A.y - 6, 40, t, K.FEU, 1 - q, 6);
+      g.save(); g.strokeStyle = `rgba(255,240,180,${1 - q})`; g.lineWidth = 3;
+      g.beginPath(); g.moveTo(A.x + dir * 50, A.y - 6); g.lineTo(D.x, D.y - 30 + (i - 2.5) * 12); g.stroke(); g.restore();
+    }
+    if (t >= IMPACT) {
+      const p = (t - IMPACT) / 46;
+      for (let i = 0; i < 6; i++) K.etoileImpact(g, D.x + (K.hasard(i) - 0.5) * 60, D.y - 30 + (i - 2.5) * 14, 46 * (1 - p), t + i, K.FEU, 1 - p, 8);
+      // Le chapeau de l'adversaire s'envole… ou ce qu'il en reste : un petit nuage de poussière.
+      for (let i = 0; i < 6; i++) K.fumee(g, D.x + (K.hasard(i) - 0.5) * 240, SOL - 20 - p * 40, 26 + p * 30, { ...K.SABLE, base: '#c8a070' }, 0.7 * (1 - p), i);
+      g.save(); g.translate(L / 2, 160); const s = 1 + Math.max(0, 1 - (t - IMPACT) / 8) * 0.8; g.scale(s, s);
+      texteContour(g, 'BANG !', 0, 0, 110, '#fff0a0', '#5a1a00', 'center', true);
+      g.restore();
+    }
+  },
+  /* KITSUNE : Neuf Queues Célestes. Ses neuf queues se déploient en feu bleu derrière elle, immenses ;
+     des feux follets encerclent l'adversaire ; au coup, une tête de renard de flammes le dévore. */
+  'neuf-queues': {
+    derriere(g, t, A, D, k) {
+      const deploie = K.entre(t, 4, 40) * (1 - K.entre(t, 104, 128));
+      if (deploie <= 0) return;
+      const P = K.palette(k.faisceau);
+      for (let i = 0; i < 9; i++) {
+        const a = -Math.PI / 2 + (i - 4) * 0.3 * deploie + Math.sin(t / 10 + i) * 0.05;
+        g.save(); g.translate(A.x - (A.dir || 1) * 20, A.y + 20); g.rotate(a + Math.PI / 2);
+        K.flamme(g, 0, 0, 300 * deploie, 58, t, P, i * 1.3, 0.85);
+        g.restore();
+      }
+    },
+    devant(g, t, A, D, k) {
+      const dir = Math.sign(D.x - A.x) || A.dir || 1;
+      const P = K.palette(k.faisceau);
+      const fin = 1 - K.entre(t, 104, 128);
+      // Le torii, en ombre, derrière l'adversaire.
+      g.save(); g.globalAlpha = 0.5 * K.entre(t, 10, 30) * fin; g.fillStyle = '#c8102e';
+      g.fillRect(D.x - 140, SOL - 260, 22, 260); g.fillRect(D.x + 118, SOL - 260, 22, 260);
+      g.fillRect(D.x - 170, SOL - 270, 340, 20); g.fillRect(D.x - 150, SOL - 226, 300, 14);
+      g.restore();
+      // Les feux follets qui tournent, se resserrent.
+      const serre = K.entre(t, 30, IMPACT);
+      for (let i = 0; i < 9; i++) {
+        const a = t / 7 + (i / 9) * TAU, rr = 170 - 120 * serre;
+        K.orbe(g, D.x + Math.cos(a) * rr, D.y + Math.sin(a) * rr * 0.6, 14, t + i, P, K.entre(t, 10 + i * 2, 20 + i * 2) * fin);
+      }
+      // La tête de renard de flammes, qui fond sur lui.
+      if (t > 50 && t < IMPACT + 16) {
+        const q = K.entre(t, 50, IMPACT);
+        const x = A.x + (D.x - A.x) * q, y = A.y - 60 + (D.y - A.y + 60) * q;
+        g.save(); g.translate(x, y); g.scale(dir, 1); g.globalAlpha = 1 - K.entre(t, IMPACT + 4, IMPACT + 16);
+        K.couches(g, (s) => { g.moveTo(-90 * s, -50 * s); g.lineTo(-60 * s, -110 * s); g.lineTo(-30 * s, -50 * s); g.lineTo(30 * s, -50 * s); g.lineTo(60 * s, -110 * s); g.lineTo(90 * s, -50 * s); g.quadraticCurveTo(110 * s, 20 * s, 150 * s, 40 * s); g.quadraticCurveTo(40 * s, 90 * s, -60 * s, 50 * s); g.quadraticCurveTo(-100 * s, 10 * s, -90 * s, -50 * s); }, P, [1, 0.88, 0.6, 0.3]);
+        g.fillStyle = '#ffffff'; g.beginPath(); g.ellipse(30, -20, 14, 6, -0.3, 0, TAU); g.fill();
+        g.restore();
+      }
+      if (t >= IMPACT) K.explosion(g, D.x, D.y, 180, (t - IMPACT) / 46, P, 351);
+    },
+  },
+  /* FENRIR : Lune de Sang. Le ciel rougit, une lune de sang énorme se lève ; il hurle, sa silhouette de
+     loup se découpe sur la lune ; il disparaît… trois griffures géantes déchirent l'écran. */
+  'lune-sang': {
+    derriere(g, t, A, D, k) {
+      const leve = K.entre(t, 0, 36) * (1 - K.entre(t, 108, 128));
+      if (leve <= 0) return;
+      const SANG = { encre: '#2a0004', fonce: '#7a0a10', base: '#c81e24', clair: '#ff6a4a', coeur: '#ffd0b0' };
+      const y = SOL + 60 - 380 * leve;
+      K.lueur(g, L / 2, y, 330, '#ff2a2a', 0.45 * leve);
+      K.lune(g, L / 2, y, 150, SANG, leve);
+      // La silhouette du loup qui hurle, sur la lune.
+      if (t > 20 && t < 60) {
+        g.save(); g.globalAlpha = Math.min(1, (t - 20) / 8) * Math.min(1, (60 - t) / 8); g.fillStyle = '#12020a'; g.translate(L / 2 - 40, y + 70);
+        g.beginPath(); g.moveTo(-40, 60); g.lineTo(-30, 10); g.lineTo(-10, -20); g.lineTo(0, -60); g.lineTo(10, -40); g.lineTo(20, -70); g.lineTo(28, -38); g.lineTo(60, -90); g.lineTo(50, -40); g.lineTo(30, 0); g.lineTo(40, 60); g.closePath(); g.fill();
+        g.restore();
+      }
+    },
+    devant(g, t, A, D, k) {
+      if (t > 22 && t < 44) {
+        g.save(); g.translate(L / 2, 120); g.globalAlpha = Math.min(1, (44 - t) / 6); const s = 1 + Math.sin(t * 1.3) * 0.05; g.scale(s, s);
+        texteContour(g, 'AOUUUUUH !', 0, 0, 80, '#ffd0d0', '#3a0004', 'center', true);
+        g.restore();
+      }
+      // Trois griffures géantes, en travers de l'écran.
+      for (let i = 0; i < 3; i++) {
+        const t0 = 58 + i * 3;
+        if (t < t0) continue;
+        const q = Math.min(1, (t - t0) / 4), fin = 1 - K.entre(t, 96, 124);
+        g.save(); g.translate(D.x - 200 + i * 60, D.y - 200); g.rotate(0.9);
+        for (const [c, w] of [['#12020a', 26], ['#c81e24', 16], ['#ffd0b0', 4]]) {
+          g.strokeStyle = c; g.lineWidth = w * fin; g.lineCap = 'round';
+          g.beginPath(); g.moveTo(0, 0); g.quadraticCurveTo(220 * q, 30 * q, 440 * q, 0); g.stroke();
+        }
+        g.restore();
+      }
+      if (t >= IMPACT) K.explosion(g, D.x, D.y, 170, (t - IMPACT) / 46, { encre: '#2a0004', fonce: '#7a0a10', base: '#c81e24', clair: '#ff6a4a', coeur: '#ffffff' }, 361);
+    },
+  },
 };
 
 /**
@@ -1043,6 +1492,16 @@ export const FONDS = {
   'mille-boucles': (t) => [40, 28, 10, 0.45 * tenue(t, 0, 18)],
   'omega-collapse': (t) => [0, 0, 0, 0.75 * tenue(t, 0, 24)],
   vide: (t) => [4, 0, 10, 0.6 * tenue(t, 0, 18)],
+  luchador: (t) => [0, 0, 0, 0.55 * tenue(t, 0, 12)],
+  fresque: (t) => [10, 4, 20, 0.5 * tenue(t, 0, 14)],
+  foret: (t) => [0, 20, 6, 0.45 * tenue(t, 0, 18)],
+  enceintes: (t) => [6, 0, 20, 0.7 * tenue(t, 0, 16)],
+  'mille-grues': (t) => [30, 8, 14, 0.35 * tenue(t, 0, 18)],
+  polarite: (t) => [10, 4, 24, 0.5 * tenue(t, 0, 18)],
+  jackpot: (t) => [20, 0, 6, 0.55 * tenue(t, 0, 16)],
+  midi: (t) => [120, 80, 30, 0.45 * tenue(t, 0, 16)],
+  'neuf-queues': (t) => [0, 4, 24, 0.55 * tenue(t, 0, 18)],
+  'lune-sang': (t) => ({ haut: [60, 0, 4, 0.75 * tenue(t, 0, 24)], bas: [20, 0, 0, 0.4 * tenue(t, 0, 24)] }),
 };
 
 /* ------------------------------------------------------------------ */

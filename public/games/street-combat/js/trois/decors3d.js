@@ -809,6 +809,317 @@ const ARENES3D = {
     for (let x = -800; x < 1800; x += 90) ajouter(c, new THREE.BoxGeometry(50, 40, 30), pierre, x, 60, -400);
     c.exposition = 1.05;
   },
+  /* ---- Chez eux : les arènes de la nouvelle vague ---- */
+  lucha(c) {
+    // L'arène de lucha libre : la foule sur les gradins, les fanions de papel picado, l'écran au masque, les cordes.
+    const { R } = c;
+    ciel(c, ['#0a0414', '#1a0828', '#2a0a30', '#3a0a2a'], { brouillard: [800, 4200] });
+    lumiere(c, { ciel: '#ff6aa0', sol: '#0a1a4a', ambiance: 0.45, soleil: '#fff4e0', force: 2.6, dir: [0, 1, 0.15] });
+    sol(c, TEX.tapis('#1a5ac8', '#ffd23f', R), { rugosite: 0.9 });
+    for (let rang = 0; rang < 6; rang++) {
+      const z = -700 - rang * 160; const y = rang * 70;
+      for (let i = 0; i < 46; i++) { const x = -600 + i * 50 + (rang % 2) * 25; ajouter(c, new THREE.CapsuleGeometry(14, 24, 4, 8), std(`hsl(${300 + R() * 60}, ${30 + R() * 30}%, ${14 + rang * 2}%)`), x, y + 30, z, { ombre: false }); }
+    }
+    // Les fanions, en guirlandes au-dessus du ring.
+    const cols = ['#ff3a8a', '#ffd23f', '#2ae8a0', '#3ab8ff', '#ff7a2a', '#c86aff'];
+    for (const [ye, z] of [[34, -500], [70, -900]]) {
+      const p0 = auPoint(0, ye, z); const p1 = auPoint(L, ye, z);
+      ajouter(c, new THREE.CylinderGeometry(1, 1, p1.x - p0.x + 400, 4), std('#1a1018'), L / 2, p0.y, z, { rz: Math.PI / 2, ombre: false });
+      for (let x = p0.x - 200; x < p1.x + 200; x += aEchelle(34, z)) {
+        const f = ajouter(c, new THREE.PlaneGeometry(aEchelle(28, z), aEchelle(32, z)), new THREE.MeshStandardMaterial({ color: new THREE.Color(cols[(R() * cols.length) | 0]), side: THREE.DoubleSide, roughness: 0.8, emissive: new THREE.Color('#200818'), emissiveIntensity: 0.3 }), x, p0.y - aEchelle(18, z), z, { rz: (R() - 0.5) * 0.3, ombre: false });
+        void f;
+      }
+    }
+    // L'écran géant, et son masque de catcheur.
+    panneau(c, 500, 175, -1000, 300, 150, (g, w, h) => {
+      g.fillStyle = '#0a0a14'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#e8203a'; g.beginPath(); g.ellipse(w / 2, h / 2 + 10, h * 0.32, h * 0.38, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#ffd23f'; for (const s of [-1, 1]) { g.beginPath(); g.ellipse(w / 2 + s * h * 0.13, h / 2, h * 0.11, h * 0.07, s * -0.4, 0, Math.PI * 2); g.fill(); }
+      g.fillStyle = '#ffffff'; for (const s of [-1, 1]) { g.beginPath(); g.ellipse(w / 2 + s * h * 0.13, h / 2, h * 0.055, h * 0.035, 0, 0, Math.PI * 2); g.fill(); }
+      g.font = `900 ${h * 0.2}px Impact, sans-serif`; g.textAlign = 'center'; g.fillStyle = '#ffd23f'; g.shadowColor = '#ffd23f'; g.shadowBlur = 16;
+      g.fillText('¡LUCHA LIBRE!', w / 2, h * 0.16);
+    }, 1.5);
+    // Les cordes (rouge, or, vert) et les poteaux.
+    for (let i = 0; i < 3; i++) ajouter(c, new THREE.CylinderGeometry(3, 3, 2400, 8), std(['#e8203a', '#ffd23f', '#2a9a4a'][i], { roughness: 0.4 }), L / 2, 40 + i * 32, -60, { rz: Math.PI / 2 });
+    for (const xe of [28, 972]) ajouter(c, new THREE.CylinderGeometry(9, 9, 140, 12), std('#ffd23f', { metalness: 0.8, roughness: 0.3 }), xe, 70, -60);
+    c.exposition = 1.1;
+  },
+  ruelle(c) {
+    // La ruelle au coucher du soleil : les murs de brique, le grand graffiti, les escaliers de secours, la rampe de skate.
+    const { R } = c;
+    lumiere(c, { ciel: '#ffb09a', sol: '#4a3a48', ambiance: 1.3, soleil: '#ffb070', force: 2.2, dir: [0.2, 0.6, 0.7] });
+    sol(c, TEX.dalles('#4a4a56', '#34343e', R), { rugosite: 0.6 });
+    // La ville au loin, au bout de la ruelle.
+    for (let i = 0; i < 9; i++) immeuble(c, -200 + i * 190 + R() * 60, -3200, 150 + R() * 80, 500 + R() * 700, 140, '#2a1a2a', R, ['#ffd27a', '#ff8a6a']);
+    // Le mur du fond, tagué.
+    panneau(c, 500, 270, -900, 760, 380, (g, w, h) => {
+      g.fillStyle = '#5a3a34'; g.fillRect(0, 0, w, h);
+      g.strokeStyle = 'rgba(0,0,0,0.35)'; g.lineWidth = 2;
+      for (let y = 0; y < h; y += 18) { g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke(); for (let x = ((y / 18) % 2) * 20; x < w; x += 40) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 18); g.stroke(); } }
+      const cols = ['#ff3ad0', '#2ae8a0', '#ffd23f', '#3ab8ff', '#ff7a2a'];
+      for (let i = 0; i < 14; i++) { g.fillStyle = cols[i % cols.length]; g.globalAlpha = 0.9; g.beginPath(); g.ellipse(R() * w, R() * h, 40 + R() * 70, 20 + R() * 40, R() * 3, 0, Math.PI * 2); g.fill(); }
+      g.globalAlpha = 1;
+      g.font = `900 ${h * 0.34}px "Arial Black", sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.lineWidth = 16; g.strokeStyle = '#10081a'; g.strokeText('GRAFF', w / 2, h * 0.52);
+      const gr = g.createLinearGradient(0, h * 0.35, 0, h * 0.7); gr.addColorStop(0, '#ffd23f'); gr.addColorStop(1, '#ff3ad0');
+      g.fillStyle = gr; g.fillText('GRAFF', w / 2, h * 0.52);
+      g.lineWidth = 3; g.strokeStyle = '#ffffff'; g.strokeText('GRAFF', w / 2 - 4, h * 0.5);
+    }, 0.35);
+    lampe(c, '#ffc8a0', L / 2, 300, -500, 2.5, 1400);
+    // Les murs des côtés, et leurs escaliers de secours.
+    const brique = std('#4a2a26', { roughness: 0.95 });
+    for (const s of [-1, 1]) {
+      const x = L / 2 + s * 820;
+      ajouter(c, new THREE.BoxGeometry(320, 1000, 1600), brique, x, 500, -900);
+      for (let k = 0; k < 4; k++) {
+        ajouter(c, new THREE.BoxGeometry(120, 6, 260), std('#2a2a34', { metalness: 0.6, roughness: 0.5 }), x - s * 220, 220 + k * 190, -700);
+        ajouter(c, new THREE.BoxGeometry(4, 60, 260), std('#2a2a34', { metalness: 0.6 }), x - s * 278, 250 + k * 190, -700);
+      }
+    }
+    // La rampe de skate, la benne, le réverbère.
+    const pr = auPoint(800, SOL, -300);
+    const rampe = new THREE.Shape(); rampe.moveTo(0, 0); rampe.lineTo(120, 0); rampe.lineTo(120, 110); rampe.quadraticCurveTo(110, 10, 0, 0);
+    const geoR = new THREE.ExtrudeGeometry(rampe, { depth: 160, bevelEnabled: false }); geoR.translate(0, 0, -80);
+    ajouter(c, geoR, std('#6a6a7a', { roughness: 0.6 }), pr.x, 0, -300);
+    ajouter(c, new THREE.BoxGeometry(150, 80, 80), std('#1a5a3a', { roughness: 0.7 }), auPoint(170, SOL, -380).x, 40, -380);
+    const pl = auPoint(60, SOL, -200);
+    ajouter(c, new THREE.CylinderGeometry(4, 5, 360, 8), std('#1a1a22'), pl.x, 180, -200);
+    ajouter(c, new THREE.SphereGeometry(14, 12, 8), lueur('#ffd27a', 2), pl.x + 20, 360, -200, { ombre: false });
+    lampe(c, '#ffb060', pl.x + 20, 340, -160, 2, 900);
+    c.exposition = 1.25;
+  },
+  bosquet(c) {
+    // Le bosquet sacré : un arbre immense, des champignons qui luisent, un cercle de pierres, de l'herbe haute.
+    const { R } = c;
+    ciel(c, ['#0a2014', '#1a4a28', '#4a8a3a', '#c8e88a'], { brouillard: [700, 3600] });
+    lumiere(c, { ciel: '#c8ff9a', sol: '#24480e', ambiance: 0.9, soleil: '#fff0b0', force: 2.4, dir: [-0.3, 0.9, -0.3] });
+    c.scene.fog = new THREE.Fog(new THREE.Color('#4a8a4a'), 900, 3800);
+    sol(c, TEX.herbe('#3a6a1c', '#4a8a24', R));
+    // L'arbre immense au centre, ses racines.
+    const za = -1600; const pa = auPoint(500, SOL, za);
+    const bois = std('#4a3018', { roughness: 1 });
+    ajouter(c, new THREE.CylinderGeometry(70, 130, 900, 14), bois, pa.x, 450, za);
+    for (let i = 0; i < 6; i++) { const a = (i / 6) * Math.PI * 2; ajouter(c, new THREE.CylinderGeometry(14, 40, 260, 8), bois, pa.x + Math.cos(a) * 130, 40, za + Math.sin(a) * 130, { rz: Math.cos(a) * 1.1, rx: -Math.sin(a) * 1.1 }); }
+    for (let k = 0; k < 16; k++) {
+      const a = R() * Math.PI * 2; const r = 120 + R() * 380;
+      ajouter(c, new THREE.IcosahedronGeometry(170 + R() * 120, 1), std(['#3a8a30', '#4aa83a', '#2e7a2a'][k % 3], { flatShading: true }), pa.x + Math.cos(a) * r, 900 + R() * 280, za + Math.sin(a) * r * 0.5, { ombre: false });
+    }
+    // D'autres arbres autour.
+    for (let i = 0; i < 18; i++) { const x = R() * 2400 - 700; if (x > 200 && x < 800) continue; arbre(c, x, -600 - R() * 1800, 380 + R() * 220, '#3a2a10', ['#2e7a2a', '#3a8a30', '#4aa83a'][i % 3]); }
+    // Le cercle de pierres levées.
+    for (let i = 0; i < 7; i++) { const a = Math.PI * (0.15 + 0.7 * (i / 6)); ajouter(c, new THREE.BoxGeometry(40, 120 + R() * 50, 24), std('#7a7a72', { flatShading: true, roughness: 1 }), pa.x + Math.cos(a) * 520, 60, za + 500 - Math.sin(a) * 260, { ry: a }); }
+    // Les champignons qui luisent.
+    for (let i = 0; i < 14; i++) {
+      const x = R() * 1400 - 200; const z = -180 - R() * 600;
+      ajouter(c, new THREE.CylinderGeometry(4, 6, 26, 8), std('#e8e0c8'), x, 13, z, { ombre: false });
+      ajouter(c, new THREE.SphereGeometry(18, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), lueur(i % 3 ? '#8aff5a' : '#ff8ad8', 0.8), x, 24, z, { s: [1, 0.6, 1], ombre: false });
+      if (i % 4 === 0) lampe(c, '#8aff5a', x, 40, z, 0.8, 300);
+    }
+    c.exposition = 1.05;
+  },
+  club(c) {
+    // Le club sur le toit : la ville de nuit, la cabine du DJ, les enceintes, la boule à facettes, la piste qui brille.
+    const { R } = c;
+    ciel(c, ['#02000a', '#0a0420', '#14062e', '#220838'], { brouillard: [1200, 5200] });
+    lumiere(c, { ciel: '#a050ff', sol: '#0a0812', ambiance: 0.4, soleil: '#8ae8ff', force: 1.2, dir: [0, 1, 0.3] });
+    etoiles(c, 90, 240);
+    // La piste de danse : des dalles de couleur qui luisent.
+    const piste = texture(256, (g, n) => { const cols = ['#00e5ff', '#a050ff', '#ff3ad0', '#1a1428']; for (let y = 0; y < n; y += 32) for (let x = 0; x < n; x += 32) { g.fillStyle = cols[(R() * cols.length) | 0]; g.fillRect(x + 1, y + 1, 30, 30); } }, [14, 12]);
+    sol(c, piste, { rugosite: 0.3, metal: 0.3, lueur: 0.35, teinte: '#8a8aa0' });
+    for (const [z, hmin, hmax] of [[-3200, 600, 1300], [-2400, 400, 900]]) { let x = -900; while (x < 1900) { const w = 120 + R() * 180; immeuble(c, x + w / 2, z, w, hmin + R() * (hmax - hmin), 140, '#0a0818', R, ['#a050ff', '#00e5ff', '#ffd27a']); x += w + 30 + R() * 40; } }
+    // La cabine du DJ, sa façade qui luit.
+    const pd = auPoint(500, SOL, -900);
+    ajouter(c, new THREE.BoxGeometry(aEchelle(260, -900), 150, 120), std('#14101e', { roughness: 0.4, metalness: 0.4 }), pd.x, 75, -900);
+    ajouter(c, new THREE.BoxGeometry(aEchelle(250, -900), 12, 4), lueur('#00e5ff', 2.5), pd.x, 110, -838, { ombre: false });
+    ajouter(c, new THREE.BoxGeometry(aEchelle(250, -900), 8, 4), lueur('#a050ff', 2.5), pd.x, 60, -838, { ombre: false });
+    // Les enceintes géantes.
+    for (const xe of [150, 850]) {
+      const p = auPoint(xe, SOL, -700);
+      ajouter(c, new THREE.BoxGeometry(150, 300, 120), std('#0a0812', { roughness: 0.5 }), p.x, 150, -700);
+      for (const [y, r] of [[230, 40], [110, 56]]) {
+        ajouter(c, new THREE.CylinderGeometry(r, r, 8, 28), std('#2a2638', { roughness: 0.4 }), p.x, y, -638, { rx: Math.PI / 2 });
+        ajouter(c, new THREE.TorusGeometry(r * 0.78, 3, 8, 28), lueur('#00e5ff', 1.6), p.x, y, -632, { ombre: false });
+      }
+    }
+    // La boule à facettes.
+    const pb = auPoint(500, 70, -500);
+    ajouter(c, new THREE.IcosahedronGeometry(aEchelle(34, -500), 2), std('#e0e4f0', { metalness: 1, roughness: 0.15, flatShading: true }), pb.x, pb.y, -500);
+    ajouter(c, new THREE.CylinderGeometry(1, 1, 400, 4), std('#1a1a22'), pb.x, pb.y + 220, -500, { ombre: false });
+    for (const [x, col] of [[200, '#a050ff'], [500, '#00e5ff'], [800, '#ff3ad0']]) lampe(c, col, auPoint(x, 200, -300).x, 200, -300, 2.2, 1100);
+    enseigne(c, 500, 150, -1100, 'ÉCHO', '#00e5ff');
+    c.exposition = 1.2;
+  },
+  papier(c) {
+    // Le jardin de papier : des cloisons de papier qui luisent au couchant, les cerisiers, les lanternes, des grues suspendues.
+    const { R } = c;
+    lumiere(c, { ciel: '#ffc8b0', sol: '#6a4a3a', ambiance: 0.95, soleil: '#ffb090', force: 2.2, dir: [0.5, 0.35, -0.6] });
+    astre(c, 760, 210, 70, '#ffe0a0', 3);
+    montagnes(c, -3400, 700, '#6a3a4a');
+    // Le gravier ratissé.
+    const gravier = texture(256, (g, n) => { g.fillStyle = '#d8c8a8'; g.fillRect(0, 0, n, n); g.strokeStyle = 'rgba(120,100,70,0.35)'; g.lineWidth = 2; for (let y = 4; y < n; y += 10) { g.beginPath(); g.moveTo(0, y); for (let x = 0; x <= n; x += 16) g.lineTo(x, y + Math.sin(x / 20) * 2); g.stroke(); } grain(g, 600, '#a08a60', R, n, 2, 0.2); }, [10, 10]);
+    sol(c, gravier, { rugosite: 0.95 });
+    // Les cloisons de papier (shoji), lumineuses.
+    const zs = -1100;
+    for (let i = 0; i < 7; i++) {
+      const p = auPoint(30 + i * 156, SOL, zs);
+      const w = aEchelle(140, zs), h = aEchelle(250, zs);
+      ajouter(c, new THREE.BoxGeometry(w, h, 10), std('#3a2418'), p.x, h / 2, zs - 6);
+      const shoji = texture(128, (g, n) => { g.fillStyle = '#fff2dc'; g.fillRect(0, 0, n, n); g.strokeStyle = '#3a2418'; g.lineWidth = 4; for (let k = 1; k < 4; k++) { g.beginPath(); g.moveTo((k * n) / 4, 0); g.lineTo((k * n) / 4, n); g.stroke(); g.beginPath(); g.moveTo(0, (k * n) / 4); g.lineTo(n, (k * n) / 4); g.stroke(); } });
+      ajouter(c, new THREE.PlaneGeometry(w * 0.92, h * 0.94), new THREE.MeshStandardMaterial({ map: shoji, emissiveMap: shoji, emissive: new THREE.Color('#ffd8a0'), emissiveIntensity: 0.55 }), p.x, h / 2, zs, { ombre: false });
+    }
+    ajouter(c, new THREE.BoxGeometry(aEchelle(1200, zs), aEchelle(30, zs), 90), std('#2a1810'), L / 2, aEchelle(268, zs), zs);
+    // Les cerisiers, le petit pont rouge, la lanterne de pierre.
+    for (const [x, z] of [[-150, -800], [1150, -900], [280, -1700], [760, -1800]]) arbre(c, x, z, 300 + R() * 80, '#3a2010', '#ffb6d0');
+    const pp = auPoint(250, SOL, -500);
+    ajouter(c, new THREE.TorusGeometry(100, 8, 8, 24, Math.PI), std('#c8102e', { roughness: 0.5 }), pp.x, 0, -500);
+    const pl = auPoint(850, SOL, -350);
+    ajouter(c, new THREE.BoxGeometry(30, 70, 30), std('#8a8a82', { flatShading: true }), pl.x, 35, -350);
+    ajouter(c, new THREE.BoxGeometry(46, 26, 46), lueur('#ffc870', 0.7), pl.x, 82, -350, { ombre: false });
+    ajouter(c, new THREE.ConeGeometry(42, 26, 4), std('#6a6a62', { flatShading: true }), pl.x, 108, -350, { ry: Math.PI / 4 });
+    // Les grues de papier suspendues, et les lanternes.
+    for (let i = 0; i < 9; i++) {
+      const p = auPoint(60 + i * 110, 120 + (i % 3) * 20, -260);
+      ajouter(c, new THREE.CylinderGeometry(0.6, 0.6, 300, 3), std('#2a1a10'), p.x, p.y + 150, -260, { ombre: false });
+      grue3D(c, p.x, p.y, -260, 18, i % 3 ? '#fff6e8' : '#f04060', R() * 6);
+    }
+    for (const x of [100, 400, 700]) lanterne(c, x, 300, -80, '#ffb060');
+    c.exposition = 1.05;
+  },
+  labo(c) {
+    // Le labo magnétique : l'électroaimant géant, les bobines de cuivre, les tours de Tesla, la ferraille.
+    const { R } = c;
+    ciel(c, ['#04060c', '#0a1220', '#14223a', '#1e3050'], { brouillard: [600, 3400] });
+    lumiere(c, { ciel: '#d8c0ff', sol: '#3a3e4a', ambiance: 1.1, soleil: '#c8d8ff', force: 2, dir: [0.2, 0.7, 0.6] });
+    sol(c, TEX.metal('#3a3e4a', '#c8a0ff', R), { rugosite: 0.35, metal: 0.5 });
+    // Le mur du fond, ses panneaux et ses tuyaux.
+    const zm = -1300;
+    ajouter(c, new THREE.BoxGeometry(3600, 1400, 40), std('#2a3448', { metalness: 0.3, roughness: 0.7 }), L / 2, 700, zm - 30);
+    for (let i = 0; i < 6; i++) ajouter(c, new THREE.CylinderGeometry(10, 10, 3000, 10), std('#3a4050', { metalness: 0.7, roughness: 0.4 }), L / 2, 120 + i * 140, zm, { rz: Math.PI / 2 });
+    // L'électroaimant en fer à cheval, rouge, ses pôles d'argent.
+    const pm = auPoint(500, 220, zm + 50);
+    ajouter(c, new THREE.TorusGeometry(aEchelle(110, zm), aEchelle(36, zm), 16, 40, Math.PI), std('#d8203a', { roughness: 0.35, metalness: 0.3 }), pm.x, pm.y, zm + 50, { rz: Math.PI });
+    for (const s of [-1, 1]) ajouter(c, new THREE.BoxGeometry(aEchelle(76, zm), aEchelle(70, zm), aEchelle(76, zm)), std('#d8dce8', { metalness: 0.9, roughness: 0.2 }), pm.x + s * aEchelle(110, zm), pm.y + aEchelle(30, zm), zm + 50);
+    lampe(c, '#c8a0ff', pm.x, pm.y + 80, zm + 200, 3, 1400);
+    // Les tours de Tesla (bobines de cuivre, boule qui luit).
+    for (const xe of [130, 870]) {
+      const p = auPoint(xe, SOL, -700);
+      ajouter(c, new THREE.CylinderGeometry(14, 22, 380, 12), std('#2a2a36', { metalness: 0.6 }), p.x, 190, -700);
+      for (let k = 0; k < 10; k++) ajouter(c, new THREE.TorusGeometry(26, 6, 8, 20), std('#c8783a', { metalness: 0.8, roughness: 0.3 }), p.x, 60 + k * 26, -700, { rx: Math.PI / 2 });
+      ajouter(c, new THREE.SphereGeometry(36, 20, 14), lueur('#c8a0ff', 2.2), p.x, 410, -700, { ombre: false });
+      lampe(c, '#c8a0ff', p.x, 420, -600, 2.5, 900);
+    }
+    // La ferraille au sol.
+    for (let i = 0; i < 10; i++) rocher(c, R() * 1600 - 300, 0, -350 - R() * 700, 30 + R() * 50, '#4a4e5a').material.metalness = 0.7;
+    c.exposition = 1.15;
+  },
+  casino(c) {
+    // Le Velours Noir : les rideaux de velours, les lustres, les machines à sous, l'enseigne d'or.
+    const { R } = c;
+    ciel(c, ['#0a0004', '#1a0208', '#2a040e', '#3a0812'], { brouillard: [900, 4200] });
+    lumiere(c, { ciel: '#ffb070', sol: '#2a0408', ambiance: 0.55, soleil: '#ffe0a0', force: 1.8, dir: [0, 0.9, 0.4] });
+    sol(c, TEX.tapis('#5a0a14', '#ffd23f', R), { rugosite: 0.95 });
+    // Les rideaux : de grands plis de velours rouge, au fond.
+    const zr = -1200;
+    for (let x = -800; x < 1800; x += 60) ajouter(c, new THREE.CylinderGeometry(34, 34, 1400, 12, 1, false, 0, Math.PI), std('#7a0a1a', { roughness: 0.95 }), x, 700, zr, { ry: -Math.PI / 2 });
+    // Les lustres d'or.
+    for (const xe of [200, 500, 800]) {
+      const p = auPoint(xe, 60, -800);
+      ajouter(c, new THREE.CylinderGeometry(1.5, 1.5, 300, 4), std('#3a2a10'), p.x, p.y + 160, -800, { ombre: false });
+      ajouter(c, new THREE.TorusGeometry(46, 5, 8, 24), std('#ffd23f', { metalness: 0.9, roughness: 0.25 }), p.x, p.y, -800, { rx: Math.PI / 2 });
+      for (let k = 0; k < 8; k++) { const a = (k / 8) * Math.PI * 2; ajouter(c, new THREE.SphereGeometry(6, 10, 8), lueur('#fff0a0', 2.4), p.x + Math.cos(a) * 46, p.y + 8, -800 + Math.sin(a) * 46, { ombre: false }); }
+      lampe(c, '#ffe0a0', p.x, p.y - 20, -760, 2.4, 1200);
+    }
+    // Les rangées de machines à sous, de chaque côté.
+    for (let i = 0; i < 12; i++) {
+      const xe = i < 6 ? -40 + i * 60 : 700 + (i - 6) * 60;
+      const p = auPoint(xe, SOL, -600);
+      ajouter(c, new THREE.BoxGeometry(48, 150, 46), std('#ffd23f', { metalness: 0.7, roughness: 0.35 }), p.x, 75, -600);
+      ajouter(c, new THREE.BoxGeometry(36, 40, 4), lueur(R() < 0.5 ? '#ff4a5a' : '#7ad8ff', 1.4), p.x, 105, -576, { ombre: false });
+      ajouter(c, new THREE.CylinderGeometry(2, 2, 40, 6), std('#c8c8d8', { metalness: 0.8 }), p.x + 28, 120, -590, { ombre: false });
+      ajouter(c, new THREE.SphereGeometry(5, 10, 8), std('#d8102a'), p.x + 28, 142, -590, { ombre: false });
+    }
+    enseigne(c, 500, 140, -1000, 'LE VELOURS NOIR', '#ffd23f');
+    c.exposition = 1.15;
+  },
+  saloon(c) {
+    // La grand-rue de l'Ouest : le saloon, les maisons de bois, le château d'eau, les mesas au soleil couchant.
+    const { R } = c;
+    lumiere(c, { ciel: '#ffc890', sol: '#6a4020', ambiance: 0.9, soleil: '#ffb060', force: 2.8, dir: [0.5, 0.3, -0.8] });
+    astre(c, 780, 250, 80, '#ffd890', 2.6);
+    montagnes(c, -3600, 650, '#a0502a', { rugosite: 0.4 });
+    sol(c, TEX.sable('#b08048', '#8a5a2a', R));
+    // Les mesas : de grands blocs plats, au loin.
+    for (const [xe, w, h] of [[120, 300, 260], [880, 380, 200]]) { const z = -2600; const p = auPoint(xe, SOL, z); ajouter(c, new THREE.CylinderGeometry(w * 0.8, w, h, 8), std('#b05a2a', { flatShading: true, roughness: 1 }), p.x, h / 2, z); }
+    // Le saloon, sa véranda, son enseigne, ses portes battantes.
+    const zs = -1000; const ps = auPoint(500, SOL, zs);
+    const bois = std('#7a4a22', { roughness: 0.9 }); const fonce = std('#4a2a12', { roughness: 0.9 });
+    ajouter(c, new THREE.BoxGeometry(aEchelle(380, zs), aEchelle(260, zs), 200), bois, ps.x, aEchelle(130, zs), zs - 60);
+    ajouter(c, new THREE.BoxGeometry(aEchelle(440, zs), aEchelle(14, zs), 140), fonce, ps.x, aEchelle(150, zs), zs + 60);
+    for (const s of [-1, -0.33, 0.33, 1]) ajouter(c, new THREE.CylinderGeometry(6, 6, aEchelle(150, zs), 8), fonce, ps.x + s * aEchelle(200, zs), aEchelle(75, zs), zs + 120);
+    for (const s of [-1, 1]) ajouter(c, new THREE.BoxGeometry(aEchelle(28, zs), aEchelle(46, zs), 6), fonce, ps.x + s * aEchelle(16, zs), aEchelle(50, zs), zs + 42);
+    panneau(c, 500, 230, zs + 50, 260, 60, (g, w, h) => { g.fillStyle = '#3a1a08'; g.fillRect(0, 0, w, h); g.fillStyle = '#fff0a0'; g.font = `900 ${h * 0.7}px "Arial Black", serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('SALOON', w / 2, h / 2 + 2); });
+    // Les maisons voisines, le château d'eau.
+    for (const [xe, z, w, h, col] of [[-80, -900, 260, 200, '#8a5a2a'], [1080, -900, 260, 230, '#6a4020'], [150, -1500, 200, 170, '#7a5030']]) { const p = auPoint(xe, SOL, z); ajouter(c, new THREE.BoxGeometry(w, h, 160), std(col, { roughness: 0.9 }), p.x, h / 2, z); }
+    const pw = auPoint(860, SOL, -1500);
+    for (const [dx, dz] of [[-40, -40], [40, -40], [-40, 40], [40, 40]]) ajouter(c, new THREE.CylinderGeometry(4, 5, 260, 6), fonce, pw.x + dx, 130, -1500 + dz);
+    ajouter(c, new THREE.CylinderGeometry(70, 70, 100, 16), bois, pw.x, 310, -1500);
+    ajouter(c, new THREE.ConeGeometry(80, 50, 16), fonce, pw.x, 385, -1500);
+    // Les cactus.
+    for (const [xe, z] of [[60, -400], [940, -500]]) {
+      const p = auPoint(xe, SOL, z); const vert = std('#3a5a20');
+      ajouter(c, new THREE.CylinderGeometry(14, 16, 160, 10), vert, p.x, 80, z);
+      ajouter(c, new THREE.CylinderGeometry(10, 10, 60, 8), vert, p.x - 30, 110, z);
+      ajouter(c, new THREE.CylinderGeometry(9, 9, 34, 8), vert, p.x - 18, 84, z, { rz: Math.PI / 2 });
+    }
+    c.exposition = 1.05;
+  },
+  renards(c) {
+    // Le temple des renards, la nuit : une allée de torii qui s'enfonce, des renards de pierre, des lanternes de pierre, des feux follets.
+    const { R } = c;
+    ciel(c, ['#02040e', '#0a1028', '#1a1a40', '#2a2050'], { brouillard: [600, 3600] });
+    lumiere(c, { ciel: '#7a9aff', sol: '#2a2a32', ambiance: 0.55, soleil: '#c8d8ff', force: 1.1, dir: [-0.3, 0.9, 0.3] });
+    etoiles(c, 180, 300);
+    astre(c, 820, 110, 34, '#eef4ff', 3);
+    sol(c, TEX.dalles('#4a4a52', '#2a2a32', R), { rugosite: 0.6 });
+    // L'allée de torii.
+    const rouge = std('#c8102e', { roughness: 0.5 }); const noir = std('#1a0806');
+    for (let i = 0; i < 12; i++) {
+      const z = -500 - i * 260; const p = auPoint(500, SOL, z);
+      const ht = 420; const ecart = 170;
+      for (const s of [-1, 1]) ajouter(c, new THREE.CylinderGeometry(14, 16, ht, 12), rouge, p.x + s * ecart, ht / 2, z);
+      ajouter(c, new THREE.BoxGeometry(ecart * 2 + 90, 20, 26), noir, p.x, ht + 10, z);
+      ajouter(c, new THREE.BoxGeometry(ecart * 2 + 40, 16, 18), rouge, p.x, ht - 50, z);
+    }
+    // Les renards de pierre, sur leurs socles.
+    for (const xe of [170, 830]) {
+      const z = -350; const p = auPoint(xe, SOL, z); const pierre = std('#9a9aa2', { flatShading: true, roughness: 1 });
+      ajouter(c, new THREE.BoxGeometry(80, 70, 80), std('#6a6a72'), p.x, 35, z);
+      ajouter(c, new THREE.CapsuleGeometry(20, 40, 4, 8), pierre, p.x, 110, z);
+      ajouter(c, new THREE.SphereGeometry(18, 10, 8), pierre, p.x, 165, z + 8);
+      for (const s of [-1, 1]) ajouter(c, new THREE.ConeGeometry(7, 22, 6), pierre, p.x + s * 10, 188, z + 6);
+      ajouter(c, new THREE.BoxGeometry(30, 10, 8), std('#c8102e'), p.x, 140, z + 24);
+    }
+    // Les lanternes de pierre, et les feux follets bleus.
+    for (const xe of [60, 940]) { const p = auPoint(xe, SOL, -200); ajouter(c, new THREE.BoxGeometry(26, 80, 26), std('#7a7a82'), p.x, 40, -200); ajouter(c, new THREE.BoxGeometry(40, 26, 40), lueur('#ffb060', 0.9), p.x, 92, -200, { ombre: false }); lampe(c, '#ffb060', p.x, 100, -160, 1.4, 600); }
+    for (let i = 0; i < 6; i++) { const p = auPoint(150 + R() * 700, 180 + R() * 160, -700 - R() * 900); ajouter(c, new THREE.SphereGeometry(10, 10, 8), lueur('#7ad8ff', 3), p.x, p.y, p.z, { ombre: false }); lampe(c, '#7ad8ff', p.x, p.y, p.z, 1.2, 500); }
+    c.exposition = 1.15;
+  },
+  clairiere(c) {
+    // La clairière de pleine lune : une lune immense, les sapins noirs, le rocher où l'on hurle, la brume.
+    const { R } = c;
+    ciel(c, ['#02030a', '#060a1a', '#0e1630', '#1a2444'], { brouillard: [600, 3800] });
+    lumiere(c, { ciel: '#9ad0ff', sol: '#0e1a0e', ambiance: 0.6, soleil: '#dce8ff', force: 1.5, dir: [0, 0.6, -0.8] });
+    etoiles(c, 220, 320);
+    astre(c, 500, 190, 150, '#f4f8ff', 1.8);
+    sol(c, TEX.herbe('#1a2a1a', '#24361e', R));
+    for (let i = 0; i < 36; i++) { const x = R() * 2600 - 800; const z = -500 - R() * 2200; if (x > 280 && x < 720 && z < -1600) continue; sapin(c, x, z, 320 + R() * 260, '#06120c'); }
+    // Le rocher qui avance, à droite, d'où l'on hurle à la lune.
+    const pr = auPoint(760, SOL, -900);
+    for (let i = 0; i < 4; i++) rocher(c, pr.x + i * 40, 40 + i * 50, -900 - i * 30, 110 - i * 18, '#1a2420');
+    // La brume, au ras du sol.
+    for (let i = 0; i < 10; i++) nuage(c, R() * 2400 - 700, 20 + R() * 40, -500 - R() * 1600, 220, '#9ab0d0', 0.25);
+    c.exposition = 1.2;
+  },
 };
 
 /** Une enseigne au néon : des lettres qui brillent, et la lumière qu'elles jettent. */
@@ -816,6 +1127,8 @@ function enseigne(c, xe, ye, z, texte, couleur) {
   const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128;
   const g = cv.getContext('2d');
   g.font = '900 86px "Arial Black", sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  const largeur = g.measureText(texte).width;
+  if (largeur > 470) g.font = `900 ${Math.floor((86 * 470) / largeur)}px "Arial Black", sans-serif`;
   g.shadowColor = couleur; g.shadowBlur = 24; g.fillStyle = couleur; g.fillText(texte, 256, 64);
   g.shadowBlur = 0; g.fillStyle = '#ffffff'; g.globalAlpha = 0.6; g.fillText(texte, 256, 64);
   const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace;
@@ -823,4 +1136,25 @@ function enseigne(c, xe, ye, z, texte, couleur) {
   const w = aEchelle(220, z);
   ajouter(c, new THREE.PlaneGeometry(w, w / 4), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, fog: false }), p.x, p.y, z, { ombre: false });
   lampe(c, couleur, p.x, p.y, z + 80, 2.2, 900);
+}
+
+/** Un panneau peint (un mur tagué, un écran, une enseigne de bois) : une image dessinée, posée à la profondeur z. */
+function panneau(c, xe, ye, z, w, h, dessin, lueurForce = 0) {
+  const cv = document.createElement('canvas');
+  cv.width = 512; cv.height = Math.max(16, Math.round((512 * h) / w));
+  dessin(cv.getContext('2d'), cv.width, cv.height);
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+  const m = new THREE.MeshStandardMaterial({ map: t, roughness: 0.85 });
+  if (lueurForce) { m.emissiveMap = t; m.emissive = new THREE.Color('#ffffff'); m.emissiveIntensity = lueurForce; }
+  const p = auPoint(xe, ye, z);
+  return ajouter(c, new THREE.PlaneGeometry(aEchelle(w, z), aEchelle(h, z)), m, p.x, p.y, z, { ombre: false });
+}
+
+/** Une grue de papier : le corps vu de profil, les deux ailes en travers. */
+function grue3D(c, x, y, z, r, couleur, rot = 0) {
+  const papier = std(couleur, { roughness: 0.7, side: THREE.DoubleSide });
+  const corps = extrusion([[-r * 1.4, 0], [-r * 0.3, r * 0.25], [0, r * 1.1], [r * 0.3, r * 0.25], [r * 1.5, r * 0.7], [r * 0.4, -r * 0.1], [0, -r * 0.35]], 1.5);
+  ajouter(c, corps, papier, x, y, z, { ry: rot, ombre: false });
+  const ailes = extrusion([[-r * 0.5, 0], [0, r * 1.3], [r * 0.5, 0], [0, -r * 1.3]], 1.2);
+  ajouter(c, ailes, papier, x, y + r * 0.2, z, { rx: Math.PI / 2, ry: rot, ombre: false });
 }

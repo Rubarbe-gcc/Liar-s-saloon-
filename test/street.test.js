@@ -29,17 +29,17 @@ function jouer(c, n, e1 = {}, e2 = {}) {
 /** Les entrées d'une séquence : une étape par image, puis rien. */
 const suite = (etapes) => (k) => etapes[k] || {};
 
-test('le roster : 16 combattants, 3 boss, 8 secrets et 7 figurants, chacun avec ses compétences, son ultime et ses combos', () => {
-  assert.equal(ROSTER.length, 16);
-  assert.equal(PERSOS.length, 27);
-  assert.equal(PERSOS.filter((p) => p.secret).length, 8);
+test('le roster : 22 combattants, 3 boss, 12 secrets et 7 figurants, chacun avec ses compétences, son ultime et ses combos', () => {
+  assert.equal(ROSTER.length, 22);
+  assert.equal(PERSOS.length, 37);
+  assert.equal(PERSOS.filter((p) => p.secret).length, 12);
   // Les secrets de l’histoire disent où les gagner.
   for (const p of PERSOS.filter((x) => x.secret === 'histoire' && x.id !== SECRETS.histoire)) assert.ok(p.indice, p.id);
   // Les figurants : jamais dans la sélection, jamais à débloquer, mais prêts à se battre.
   assert.equal(FIGURANTS.length, 7);
   for (const p of FIGURANTS) { assert.ok(p.figurant && PERSO[p.id] === p && !PERSOS.includes(p) && !aDebloquer(p), p.id); }
   assert.deepEqual(Object.values(BOSS).sort(), ['lechaos', 'malvortex', 'solarius']);
-  assert.deepEqual(Object.values(SECRETS).sort(), ['kairos', 'nemesis', 'onyx']);
+  assert.deepEqual(Object.values(SECRETS).sort(), ['desperado', 'fenrir', 'jackpot', 'kairos', 'kitsune', 'nemesis', 'onyx']);
   for (const id of Object.values(SECRETS)) assert.ok(PERSO[id].secret && !ROSTER.includes(PERSO[id]), id);
   const visuels = new Set();
   for (const p of [...PERSOS, ...FIGURANTS]) {
@@ -56,7 +56,7 @@ test('le roster : 16 combattants, 3 boss, 8 secrets et 7 figurants, chacun avec 
     // Deux techniques d'un même combattant n'ont jamais la même manipulation.
     assert.equal(new Set(p.combos.map((x) => x.entree)).size, 3, p.id);
   }
-  assert.equal(visuels.size, 27, 'un ultime unique par combattant');
+  assert.equal(visuels.size, 37, 'un ultime unique par combattant');
 });
 
 test('les coups de base : un poing touche, la garde le bloque', () => {

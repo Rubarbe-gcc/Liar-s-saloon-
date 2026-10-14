@@ -34,7 +34,20 @@ export const ARENES = [
   { id: 'dojopluie', nom: 'LE DOJO SOUS LA PLUIE', ciel: ['#05080e', '#0e1620', '#1a2430', '#2a3440'], sol: '#2a2420', sol2: '#1a1612', deco: '#8aa0c0', deco2: '#c8d8f0' },
   { id: 'engrenages', nom: 'AU CŒUR DE L’HORLOGE', ciel: ['#0a0804', '#1a1408', '#2a2010', '#3a2c14'], sol: '#2a2418', sol2: '#14100a', deco: '#ffd23f', deco2: '#4fe0d0' },
   { id: 'citadelle', nom: 'CITADELLE DE L’HORLOGE', ciel: ['#1a0804', '#4a1a0a', '#a04a14', '#e89040'], sol: '#4a3420', sol2: '#2a1c10', deco: '#e8a030', deco2: '#ffd23f', boss: 'vorn' },
+  // Chez eux : là où l'on trouve les combattants de la nouvelle vague (les secrets ouvrent la leur en arrivant).
+  { id: 'lucha', nom: 'ARENA LUCHA LIBRE', ciel: ['#0a0414', '#1a0828', '#2a0a30', '#3a0a2a'], sol: '#1a5ac8', sol2: '#0a3a8a', deco: '#ffd23f', deco2: '#e8203a', perso: 'mamba' },
+  { id: 'ruelle', nom: 'RUELLE DES GRAFFS', ciel: ['#0a0612', '#1a1030', '#4a1a48', '#ff7a5a'], sol: '#3a3a44', sol2: '#24242c', deco: '#2ae8a0', deco2: '#ff3ad0', perso: 'graff' },
+  { id: 'bosquet', nom: 'BOSQUET SACRÉ', ciel: ['#0a2014', '#1a4a28', '#4a8a3a', '#c8e88a'], sol: '#3a6a1c', sol2: '#24480e', deco: '#8aff5a', deco2: '#ff8ad8', perso: 'sylva' },
+  { id: 'club', nom: 'LE CLUB ÉCHO', ciel: ['#02000a', '#0a0420', '#14062e', '#220838'], sol: '#14121e', sol2: '#0a0812', deco: '#00e5ff', deco2: '#a050ff', perso: 'echo' },
+  { id: 'papier', nom: 'JARDIN DE PAPIER', ciel: ['#2a1a2a', '#6a3a4a', '#d88a8a', '#ffe0c8'], sol: '#d8c8a8', sol2: '#b0a080', deco: '#f04060', deco2: '#fff6e8', perso: 'origami' },
+  { id: 'labo', nom: 'LABO MAGNÉTIQUE', ciel: ['#04060c', '#0a1220', '#14223a', '#1e3050'], sol: '#2a2e3a', sol2: '#1a1c26', deco: '#c8a0ff', deco2: '#ff3a4a', perso: 'aimanta' },
+  { id: 'casino', nom: 'LE VELOURS NOIR', ciel: ['#0a0004', '#1a0208', '#2a040e', '#3a0812'], sol: '#5a0a14', sol2: '#2a0408', deco: '#ffd23f', deco2: '#ff4a5a', boss: 'jackpot' },
+  { id: 'saloon', nom: 'LE SALOON', ciel: ['#3a1a0a', '#a04a1a', '#e8902a', '#ffd890'], sol: '#b08048', sol2: '#8a5a2a', deco: '#e8a040', deco2: '#fff0a0', boss: 'desperado' },
+  { id: 'renards', nom: 'TEMPLE DES RENARDS', ciel: ['#02040e', '#0a1028', '#1a1a40', '#2a2050'], sol: '#4a4a52', sol2: '#2a2a32', deco: '#ff8a2a', deco2: '#7ad8ff', boss: 'kitsune' },
+  { id: 'clairiere', nom: 'CLAIRIÈRE DE PLEINE LUNE', ciel: ['#02030a', '#060a1a', '#0e1630', '#1a2444'], sol: '#1a2a1a', sol2: '#0e1a0e', deco: '#9ad0ff', deco2: '#e8f4ff', boss: 'fenrir' },
 ];
+/** L'arène d'un combattant (chez lui), s'il en a une. */
+export const areneDe = (id) => ARENES.find((a) => a.perso === id || a.boss === id) || null;
 export const ARENE = Object.fromEntries(ARENES.map((a) => [a.id, a]));
 
 /** Un hasard qui donne toujours le même décor. */
@@ -437,6 +450,92 @@ const DECORS = {
     for (const x of [100, 260, 740, 900]) { for (let y = 0; y < 300; y += 16) { g.beginPath(); g.ellipse(x + Math.sin(y / 40) * 6, y, 5, 8, 0, 0, Math.PI * 2); g.stroke(); } }
     montagnes(g, SOL, 90, '#1a0000', R, 40);
   },
+  lucha(g, a, R) {
+    // Les gradins dans le noir, la foule, les fanions de papel picado, l'écran géant.
+    for (let r = 0; r < 5; r++) for (let i = 0; i < 40; i++) { g.fillStyle = `hsl(${280 + R() * 40}, 25%, ${8 + r * 3}%)`; g.beginPath(); g.arc(i * 26 + (r % 2) * 13, 300 + r * 34, 10, 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = '#0a0a14'; g.fillRect(380, 90, 240, 120);
+    g.fillStyle = '#e8203a'; g.beginPath(); g.ellipse(500, 150, 46, 52, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#ffd23f'; for (const x of [482, 518]) { g.beginPath(); g.ellipse(x, 142, 14, 9, x < 500 ? 0.3 : -0.3, 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = '#ffffff'; for (const x of [482, 518]) { g.beginPath(); g.ellipse(x, 142, 7, 5, 0, 0, Math.PI * 2); g.fill(); }
+    for (const y of [40, 70]) for (let i = 0; i < 26; i++) { g.fillStyle = ['#ff3a8a', '#ffd23f', '#2ae8a0', '#3ab8ff', '#ff7a2a'][i % 5]; g.beginPath(); g.moveTo(i * 40, y); g.lineTo(i * 40 + 34, y); g.lineTo(i * 40 + 30, y + 26); g.lineTo(i * 40 + 4, y + 26); g.fill(); }
+  },
+  ruelle(g, a, R) {
+    // Le mur du fond couvert de graffitis, les escaliers de secours, une rampe de skate.
+    g.fillStyle = '#3a2a30'; g.fillRect(120, 120, 760, SOL - 120);
+    g.strokeStyle = 'rgba(0,0,0,0.3)'; g.lineWidth = 1;
+    for (let y = 120; y < SOL; y += 14) { g.beginPath(); g.moveTo(120, y); g.lineTo(880, y); g.stroke(); for (let x = 120 + ((y / 14) % 2) * 15; x < 880; x += 30) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 14); g.stroke(); } }
+    for (let i = 0; i < 7; i++) { g.fillStyle = rgba(['#ff3ad0', '#2ae8a0', '#ffd23f', '#3ab8ff'][i % 4], 0.85); g.beginPath(); g.ellipse(200 + i * 100, 260 + Math.sin(i * 2) * 50, 50 + R() * 30, 30 + R() * 20, R(), 0, Math.PI * 2); g.fill(); }
+    g.font = '900 86px "Arial Black", sans-serif'; g.textAlign = 'center'; g.lineWidth = 8; g.strokeStyle = '#10081a'; g.strokeText('GRAFF', 500, 300); g.fillStyle = '#ffd23f'; g.fillText('GRAFF', 500, 300);
+    for (const x of [0, 880]) { g.fillStyle = '#24161c'; g.fillRect(x, 60, 120, SOL - 60); }
+    g.strokeStyle = '#1a1a22'; g.lineWidth = 4; for (let y = 120; y < 380; y += 70) { g.beginPath(); g.moveTo(20, y); g.lineTo(110, y); g.moveTo(890, y); g.lineTo(980, y); g.stroke(); }
+    g.fillStyle = '#5a5a6a'; g.beginPath(); g.moveTo(700, SOL); g.quadraticCurveTo(820, SOL, 840, SOL - 90); g.lineTo(860, SOL - 90); g.lineTo(860, SOL); g.fill();
+  },
+  bosquet(g, a, R) {
+    // Le grand arbre au fond, ses racines, des champignons qui luisent, des rayons de lumière.
+    g.fillStyle = '#3a2a14'; g.beginPath(); g.moveTo(430, SOL); g.quadraticCurveTo(470, 260, 460, 120); g.lineTo(540, 120); g.quadraticCurveTo(530, 260, 570, SOL); g.fill();
+    for (let i = 0; i < 12; i++) { g.fillStyle = ['#2e7a2a', '#4aa83a', '#3a8a30'][i % 3]; g.beginPath(); g.arc(500 + Math.cos(i) * 180 * R(), 110 + Math.sin(i * 1.7) * 70, 70 + R() * 40, 0, Math.PI * 2); g.fill(); }
+    for (let i = 0; i < 10; i++) { const x = 60 + R() * 880; g.fillStyle = '#e8e0c8'; g.fillRect(x - 3, SOL - 18, 6, 18); g.fillStyle = rgba('#8aff5a', 0.9); g.beginPath(); g.ellipse(x, SOL - 18, 14, 8, 0, Math.PI, 0); g.fill(); }
+    g.save(); g.globalCompositeOperation = 'lighter'; for (const x of [300, 520, 760]) { const gr = g.createLinearGradient(x, 0, x + 80, SOL); gr.addColorStop(0, 'rgba(255,250,200,0.25)'); gr.addColorStop(1, 'rgba(255,250,200,0)'); g.fillStyle = gr; g.beginPath(); g.moveTo(x - 20, 0); g.lineTo(x + 30, 0); g.lineTo(x + 140, SOL); g.lineTo(x + 40, SOL); g.fill(); } g.restore();
+  },
+  club(g, a, R) {
+    // La ville la nuit derrière, la cabine du DJ, les enceintes, la boule à facettes.
+    ciel_etoile(g, R, 60, 200);
+    for (let x = 0; x < L; x += 50 + R() * 40) { const h = 120 + R() * 200; g.fillStyle = '#0a0818'; g.fillRect(x, SOL - 60 - h, 46, h); }
+    g.fillStyle = '#100c1c'; g.fillRect(380, 300, 240, 110); g.fillStyle = rgba('#00e5ff', 0.85); g.fillRect(390, 310, 220, 8);
+    for (const x of [200, 800]) { g.fillStyle = '#06040c'; g.fillRect(x - 60, 230, 120, 240); g.fillStyle = '#2a2638'; g.beginPath(); g.arc(x, 300, 40, 0, Math.PI * 2); g.arc(x, 400, 50, 0, Math.PI * 2); g.fill(); }
+    g.fillStyle = '#d8dcea'; g.beginPath(); g.arc(500, 70, 30, 0, Math.PI * 2); g.fill();
+  },
+  papier(g, a, R) {
+    // Le soleil couchant, les cloisons de papier qui luisent, les cerisiers, les lanternes, des grues suspendues.
+    soleil(g, 760, 200, 50, '#ffe0a0', 3);
+    for (let i = 0; i < 6; i++) { const x = 40 + i * 160; g.fillStyle = '#3a2418'; g.fillRect(x, 230, 140, 240); g.fillStyle = '#fff0d8'; g.fillRect(x + 6, 236, 128, 228); g.strokeStyle = '#3a2418'; g.lineWidth = 3; for (let k = 1; k < 4; k++) { g.beginPath(); g.moveTo(x + k * 35, 236); g.lineTo(x + k * 35, 464); g.stroke(); g.beginPath(); g.moveTo(x, 236 + k * 57); g.lineTo(x + 140, 236 + k * 57); g.stroke(); } }
+    for (let i = 0; i < 18; i++) { g.fillStyle = rgba('#ffb6d0', 0.9); g.beginPath(); g.arc(R() * L, 60 + R() * 120, 30 + R() * 20, 0, Math.PI * 2); g.fill(); }
+    for (let i = 0; i < 8; i++) { const x = 70 + i * 125; g.strokeStyle = '#2a1a10'; g.lineWidth = 1; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, 150); g.stroke(); g.fillStyle = '#fff6e8'; g.beginPath(); g.moveTo(x - 14, 150); g.lineTo(x, 140); g.lineTo(x + 14, 150); g.lineTo(x, 158); g.fill(); }
+  },
+  labo(g, a, R) {
+    // Les bobines de cuivre, les tours de Tesla, le grand électroaimant du fond.
+    g.fillStyle = '#141a28'; g.fillRect(0, 100, L, SOL - 100);
+    g.strokeStyle = '#ff3a4a'; g.lineWidth = 40; g.beginPath(); g.arc(500, 220, 100, Math.PI, 0, true); g.stroke();
+    g.fillStyle = '#d8dce8'; g.fillRect(380, 160, 40, 60); g.fillRect(580, 160, 40, 60);
+    for (const x of [140, 860]) { g.fillStyle = '#2a2a36'; g.fillRect(x - 12, 180, 24, SOL - 180); for (let k = 0; k < 8; k++) { g.fillStyle = '#c8783a'; g.fillRect(x - 26, 200 + k * 30, 52, 16); } g.fillStyle = '#c8a0ff'; g.beginPath(); g.arc(x, 170, 22, 0, Math.PI * 2); g.fill(); }
+    for (let i = 0; i < 6; i++) { g.fillStyle = '#3a3e4a'; g.beginPath(); g.ellipse(250 + i * 100, SOL, 50, 22, 0, Math.PI, 0); g.fill(); }
+  },
+  casino(g, a, R) {
+    // Les rideaux de velours, les lustres d'or, les machines à sous, l'enseigne.
+    for (let x = 0; x < L; x += 30) { const gr = g.createLinearGradient(x, 0, x + 30, 0); gr.addColorStop(0, '#3a0610'); gr.addColorStop(0.5, '#7a0a1a'); gr.addColorStop(1, '#3a0610'); g.fillStyle = gr; g.fillRect(x, 0, 30, SOL); }
+    for (const x of [200, 500, 800]) { soleil(g, x, 80, 16, '#ffe680', 4); }
+    for (let i = 0; i < 10; i++) { const x = 40 + i * 100; if (x > 300 && x < 700) continue; g.fillStyle = '#ffd23f'; g.fillRect(x - 30, 330, 60, 140); g.fillStyle = '#1a0a10'; g.fillRect(x - 22, 350, 44, 40); g.fillStyle = '#d8102a'; g.font = '900 26px sans-serif'; g.textAlign = 'center'; g.fillText('777', x, 380); }
+    g.font = '900 54px "Arial Black", sans-serif'; g.textAlign = 'center'; g.fillStyle = '#ffd23f'; g.fillText('LE VELOURS NOIR', 500, 200);
+  },
+  saloon(g, a, R) {
+    // Les mesas au loin, le soleil, la façade du saloon, le château d'eau.
+    soleil(g, 780, 230, 60, '#ffd890', 2.5);
+    montagnes(g, 380, 160, '#a0502a', R, 80);
+    g.fillStyle = '#6a3a1a'; g.fillRect(300, 180, 400, 290); g.fillStyle = '#4a2a10'; g.fillRect(280, 300, 440, 16);
+    g.fillStyle = '#2a1408'; g.fillRect(460, 360, 80, 110); g.fillStyle = '#fff0a0'; g.font = '900 54px "Arial Black", serif'; g.textAlign = 'center'; g.fillText('SALOON', 500, 250);
+    g.fillStyle = '#5a3a1a'; g.fillRect(820, 250, 12, 220); g.fillRect(880, 250, 12, 220); g.fillStyle = '#7a4a20'; g.beginPath(); g.ellipse(856, 230, 50, 36, 0, 0, Math.PI * 2); g.fill();
+    g.fillStyle = '#3a5a20'; g.fillRect(110, 330, 20, 140); g.fillRect(80, 370, 30, 12); g.fillRect(80, 345, 12, 30);
+  },
+  renards(g, a, R) {
+    // Une allée de torii rouges qui s'enfonce dans la nuit, des renards de pierre, des lanternes.
+    ciel_etoile(g, R, 120, 300);
+    for (let i = 7; i >= 0; i--) {
+      const k = 1 - i * 0.1; const w = 300 * k; const h = 360 * k; const y = SOL - 20 * (1 - k);
+      g.fillStyle = teinte('#c8102e', -i * 0.08);
+      g.fillRect(500 - w / 2, y - h, 16 * k, h); g.fillRect(500 + w / 2 - 16 * k, y - h, 16 * k, h);
+      g.fillStyle = '#1a0806'; g.fillRect(500 - w / 2 - 20 * k, y - h - 14 * k, w + 40 * k, 14 * k);
+      g.fillStyle = teinte('#c8102e', -i * 0.08); g.fillRect(500 - w / 2, y - h + 30 * k, w, 10 * k);
+    }
+    for (const x of [140, 860]) { g.fillStyle = '#8a8a92'; g.fillRect(x - 30, SOL - 40, 60, 40); g.beginPath(); g.moveTo(x - 18, SOL - 40); g.lineTo(x - 12, SOL - 110); g.lineTo(x + 18, SOL - 40); g.fill(); g.beginPath(); g.moveTo(x - 14, SOL - 105); g.lineTo(x - 8, SOL - 130); g.lineTo(x - 2, SOL - 105); g.moveTo(x + 2, SOL - 105); g.lineTo(x + 8, SOL - 130); g.lineTo(x + 14, SOL - 105); g.fill(); }
+  },
+  clairiere(g, a, R) {
+    // La pleine lune énorme, les sapins noirs tout autour, la brume.
+    soleil(g, 500, 170, 110, '#f4f8ff', 2);
+    ciel_etoile(g, R, 100, 300);
+    for (let i = 0; i < 22; i++) { const x = (i / 21) * L; if (x > 280 && x < 720) continue; const h = 200 + R() * 160; g.fillStyle = '#04080a'; g.beginPath(); g.moveTo(x - 50, SOL); g.lineTo(x, SOL - h); g.lineTo(x + 50, SOL); g.fill(); }
+    g.fillStyle = '#0a1210'; g.beginPath(); g.moveTo(600, SOL); g.lineTo(660, 360); g.lineTo(760, 330); g.lineTo(800, SOL); g.fill();
+    const br = g.createLinearGradient(0, 380, 0, SOL); br.addColorStop(0, 'rgba(200,220,255,0)'); br.addColorStop(1, 'rgba(200,220,255,0.25)'); g.fillStyle = br; g.fillRect(0, 380, L, SOL - 380);
+  },
   zero(g, a, R) {
     ciel_etoile(g, R, 90, SOL);
     // Des rochers qui flottent.
@@ -460,7 +559,7 @@ const DECORS = {
 export function animerArene(g, a, t) {
   const R = alea(1234);
   switch (a.id) {
-    case 'dojo':
+    case 'dojo': case 'papier':
       for (let i = 0; i < 26; i++) {
         const x = (R() * L + t * (0.6 + R())) % L; const y = (R() * H + t * (0.8 + R() * 0.6)) % SOL;
         g.fillStyle = rgba('#ffb6d0', 0.8); g.beginPath(); g.ellipse(x, y, 4, 2.4, t / 20 + i, 0, Math.PI * 2); g.fill();
@@ -532,13 +631,79 @@ export function animerArene(g, a, t) {
       }
       for (let i = 0; i < 40; i++) { const x = (R() * L + t * (1.5 + R() * 2)) % L; const y = 300 + R() * 200; g.fillStyle = rgba('#ffc080', 0.3); g.fillRect(x, y, 2, 1.5); }
       break;
-    case 'ruines': case 'desert':
+    case 'ruines': case 'desert': case 'saloon':
       for (let i = 0; i < 40; i++) { const x = (R() * L + t * (1.5 + R() * 2)) % L; const y = 300 + R() * 200; g.fillStyle = rgba('#ffe0a0', 0.35); g.fillRect(x, y, 2, 1.5); }
+      // Au saloon : un virevoltant qui traverse de temps en temps.
+      if (a.id === 'saloon') {
+        const p = (t % 600) / 600;
+        if (p < 0.5) {
+          const x = -60 + (L + 120) * (p / 0.5);
+          g.save(); g.translate(x, SOL + 30 - Math.abs(Math.sin(t / 6)) * 24); g.rotate(t / 5);
+          g.strokeStyle = 'rgba(122,90,42,0.9)'; g.lineWidth = 1.6;
+          for (let k = 0; k < 8; k++) { g.beginPath(); g.ellipse(0, 0, 20, 12 + k, k * 0.7, 0, Math.PI * 2); g.stroke(); }
+          g.restore();
+        }
+      }
+      break;
+    case 'ruelle':
+      // La poussière dans la lumière du soir, une enseigne qui grésille.
+      for (let i = 0; i < 30; i++) { const x = (R() * L + t * (0.8 + R())) % L; const y = 150 + R() * 300; g.fillStyle = rgba('#ffc8a0', 0.3); g.fillRect(x, y, 2, 2); }
+      if (Math.floor(t / 7) % 9 !== 0) { g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = rgba('#2ae8a0', 0.5); g.font = '900 30px "Arial Black", sans-serif'; g.textAlign = 'center'; g.fillText('OPEN', 940, 160); g.restore(); }
+      break;
+    case 'club': {
+      // Les lasers qui balaient, la boule à facettes, le sol qui pulse en rythme.
+      g.save(); g.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 6; i++) {
+        const a0 = Math.sin(t / 30 + i * 1.3) * 0.9;
+        g.strokeStyle = rgba(i % 2 ? '#00e5ff' : '#a050ff', 0.45); g.lineWidth = 3;
+        g.beginPath(); g.moveTo(500, 70); g.lineTo(500 + Math.sin(a0) * 900, 70 + Math.cos(a0) * 700); g.stroke();
+      }
+      for (let i = 0; i < 18; i++) { const an = t / 40 + i * 0.35; g.fillStyle = rgba('#ffffff', 0.5 * Math.max(0, Math.sin(t / 5 + i))); g.beginPath(); g.arc(500 + Math.cos(an) * 400, 140 + Math.sin(an * 1.7) * 160, 3, 0, Math.PI * 2); g.fill(); }
+      const battement = Math.max(0, Math.sin(t / 4.6));
+      g.fillStyle = rgba(Math.floor(t / 28) % 2 ? '#00e5ff' : '#a050ff', 0.12 * battement); g.fillRect(0, SOL, L, H - SOL);
+      g.restore();
+      break;
+    }
+    case 'labo': {
+      // Des arcs électriques entre les tours de Tesla, et sur l'électroaimant.
+      g.save(); g.globalCompositeOperation = 'lighter';
+      if (Math.floor(t / 4) % 5 < 3) {
+        for (const [x0, y0, x1, y1] of [[140, 170, 380, 190], [860, 170, 620, 190]]) {
+          const Rk = alea(Math.floor(t / 2) * 13 + x0);
+          g.strokeStyle = rgba('#c8a0ff', 0.8); g.lineWidth = 2.5; g.shadowColor = '#c8a0ff'; g.shadowBlur = 12;
+          g.beginPath(); g.moveTo(x0, y0); for (let k = 1; k < 8; k++) g.lineTo(x0 + (x1 - x0) * k / 8 + (Rk() - 0.5) * 30, y0 + (y1 - y0) * k / 8 + (Rk() - 0.5) * 40); g.lineTo(x1, y1); g.stroke();
+        }
+      }
+      g.restore();
+      // De la limaille qui tourne lentement.
+      for (let i = 0; i < 24; i++) { const an = t / 50 + i * 0.26; g.fillStyle = rgba('#b8bcc8', 0.6); g.fillRect(500 + Math.cos(an) * (120 + (i % 4) * 20), 230 + Math.sin(an) * 60, 3, 2); }
+      break;
+    }
+    case 'casino':
+      // Les ampoules qui clignotent, des éclats d'or.
+      for (let i = 0; i < 30; i++) { const on = (Math.floor(t / 6) + i) % 2; g.fillStyle = on ? 'rgba(255,240,160,0.9)' : 'rgba(255,80,90,0.6)'; g.beginPath(); g.arc(20 + i * 33, 18, 4, 0, Math.PI * 2); g.fill(); }
+      for (let i = 0; i < 8; i++) { const v = (t * 0.7 + i * 47) % 140; if (v < 20) etoile(g, (R() * L) % L, 60 + R() * 300, 3 + (20 - v) / 5, '#fff0a0', t / 10); }
+      break;
+    case 'renards':
+      // Les feux follets bleus qui flottent dans l'allée de torii.
+      g.save(); g.globalCompositeOperation = 'lighter';
+      for (let i = 0; i < 10; i++) {
+        const x = 120 + (i * 97) % 760 + Math.sin(t / 30 + i) * 30; const y = 200 + (i % 4) * 50 + Math.sin(t / 20 + i * 2) * 20;
+        const gr = g.createRadialGradient(x, y, 1, x, y, 18); gr.addColorStop(0, 'rgba(180,240,255,0.9)'); gr.addColorStop(1, 'rgba(122,216,255,0)');
+        g.fillStyle = gr; g.beginPath(); g.arc(x, y, 18, 0, Math.PI * 2); g.fill();
+      }
+      g.restore();
+      break;
+    case 'clairiere':
+      // La brume qui glisse au ras du sol, des lucioles, un nuage qui passe devant la lune.
+      for (let i = 0; i < 5; i++) { const x = ((t * (0.3 + i * 0.1) + i * 260) % (L + 400)) - 200; g.fillStyle = 'rgba(200,215,240,0.08)'; g.beginPath(); g.ellipse(x, SOL - 20 + i * 6, 220, 30, 0, 0, Math.PI * 2); g.fill(); }
+      for (let i = 0; i < 16; i++) { const x = (R() * L + Math.sin(t / 50 + i) * 40) % L; const y = 280 + R() * 180; g.fillStyle = rgba('#d8ffa0', 0.5 + Math.sin(t / 10 + i * 2) * 0.4); g.beginPath(); g.arc(x, y, 2, 0, Math.PI * 2); g.fill(); }
+      { const x = ((t * 0.25) % (L + 600)) - 300; g.fillStyle = 'rgba(10,16,30,0.55)'; for (let k = 0; k < 4; k++) { g.beginPath(); g.arc(x + k * 50, 150 + Math.sin(k) * 10, 40, 0, Math.PI * 2); g.fill(); } }
       break;
     case 'station':
       for (let i = 0; i < 5; i++) { const on = Math.floor(t / 20 + i) % 3 === 0; g.fillStyle = on ? '#ff3a3a' : '#5a1a1a'; g.beginPath(); g.arc(80 + i * 200, 30, 4, 0, Math.PI * 2); g.fill(); }
       break;
-    case 'jungle': case 'foret':
+    case 'jungle': case 'foret': case 'bosquet':
       for (let i = 0; i < 24; i++) {
         const x = (R() * L + Math.sin(t / 50 + i) * 40) % L; const y = 200 + R() * 260 + Math.cos(t / 40 + i) * 20;
         const v = 0.5 + Math.sin(t / 10 + i * 2) * 0.5;
@@ -584,7 +749,7 @@ export function animerArene(g, a, t) {
         g.fillStyle = rgba(i % 3 ? '#4fe0d0' : '#ffd23f', 0.6 * (1 - v / H)); g.fillRect(x, H - v, 2, 2);
       }
       break;
-    case 'ring':
+    case 'ring': case 'lucha':
       // Les projecteurs qui balaient la foule, les flashs.
       g.save(); g.globalCompositeOperation = 'lighter';
       for (const [x0, vit] of [[200, 1], [800, -1.3]]) {
@@ -637,6 +802,8 @@ export const SUITE = {
   ruines: 'foret', foret: 'ruines', volcan: 'trone', trone: 'volcan', station: 'celeste', celeste: 'cathedrale',
   cathedrale: 'celeste', jungle: 'ruines', toundra: 'abysses', abysses: 'jungle', ring: 'neon', horloge: 'engrenages',
   engrenages: 'horloge', sommet: 'celeste', zero: 'horloge',
+  lucha: 'neon', ruelle: 'neon', bosquet: 'jungle', club: 'neon', papier: 'dojo', labo: 'station',
+  casino: 'neon', saloon: 'desert', renards: 'foret', clairiere: 'foret',
 };
 /** L'arène où l'on se bat, après avoir brisé `etage` murs depuis celle du départ. */
 export function areneApres(depart, etage = 0) {

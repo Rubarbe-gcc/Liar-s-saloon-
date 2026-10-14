@@ -69,6 +69,16 @@ export const BIOS = {
   chasseur: 'Les éclaireurs de l’Armée de l’Horloge. Ils arrivent toujours une seconde avant toi.',
   pillard: 'Mercenaire d’une guerre oubliée, il y a cent ans.',
   habitant: 'Les habitants de Néon City. Ils ont tout perdu dans l’attaque de l’armée.',
+  mamba: 'Le catcheur masqué le plus aimé de Néon City. Personne n’a jamais vu son visage ; il dit que son masque, c’est son visage.',
+  graff: 'Artiste de rue en skate. Chaque mur de Néon City porte sa signature, et la police n’a jamais réussi à le rattraper.',
+  sylva: 'Druidesse de la jungle primordiale. Elle parle aux arbres, et les arbres, parfois, se battent pour elle.',
+  echo: 'Le DJ des toits de Néon City. Il a appris à frapper en rythme ; il dit que chaque combat est un morceau.',
+  origami: 'Maîtresse du pliage, elle a plié mille grues pour faire un vœu. Le vœu tient toujours, mais elle ne dit pas lequel.',
+  aimanta: 'Ingénieure de la station Zéro-G. Un accident l’a rendue magnétique : depuis, elle n’a plus jamais perdu ses clés.',
+  jackpot: 'Le roi du Velours Noir. Il n’a jamais perdu une partie… parce qu’il a toujours une carte dans sa manche.',
+  desperado: 'Venu d’un vieux saloon de l’Ouest, il cherche le seul adversaire plus rapide que lui. Il ne l’a pas encore trouvé.',
+  kitsune: 'Esprit renard aux neuf queues, gardienne d’un temple oublié. Elle adore les farces, et déteste qu’on les découvre.',
+  fenrir: 'Un brave garçon le jour. Mais quand la lune se lève, quelque chose de très grand et de très poilu prend sa place.',
 };
 
 /** L'histoire de la Fracture, page par page (chacune s'ouvre à une scène). */
