@@ -109,7 +109,7 @@ export function elJeton(v, { petit = false } = {}) {
   const el = document.createElement('span');
   el.className = `jeton j${v}${petit ? ' petit' : ''}`;
   el.dataset.v = v;
-  el.innerHTML = `<b>${v >= 1000 ? `${v / 1000}k` : v}</b>`;
+  el.innerHTML = `<b>${v >= 1000 ? `${v / 1000}K` : v}</b>`;
   return el;
 }
 

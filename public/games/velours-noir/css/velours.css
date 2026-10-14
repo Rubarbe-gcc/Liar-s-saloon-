@@ -216,15 +216,23 @@ button { font: inherit; color: inherit; }
 .carte.terne { filter: brightness(.45) saturate(.6); transition: filter .3s; }
 
 /* ---------- jetons ---------- */
-.jeton { --c: #e8e2d6; --t: #1a1012; position: relative; display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; flex: none;
-  background: radial-gradient(circle, var(--c) 0 52%, transparent 53%), repeating-conic-gradient(var(--c) 0 22.5deg, #f8f4ea 22.5deg 45deg);
-  box-shadow: inset 0 0 0 3px var(--c), inset 0 0 0 4px rgba(0,0,0,.25), 0 3px 0 rgba(0,0,0,.35), 0 5px 10px rgba(0,0,0,.4); color: var(--t); }
-.jeton b { font: 800 .72rem var(--ui); pointer-events: none; }
-.jeton::after { content: ""; position: absolute; inset: 24%; border-radius: 50%; border: 1px dashed rgba(255,255,255,.55); }
-.jeton.j1 { --c: #e8e2d6; --t: #1a1012; } .jeton.j5 { --c: #c42d3c; --t: #fff; } .jeton.j25 { --c: #1f8a5a; --t: #fff; }
-.jeton.j100 { --c: #1c1a20; --t: #f3dc9a; } .jeton.j500 { --c: #7b3fc4; --t: #fff; } .jeton.j1000 { --c: #d9b45a; --t: #2a1606; } .jeton.j5000 { --c: #e46b1c; --t: #fff; }
+/* une couleur par valeur, des rayures au bord, la valeur en gros sur une pastille ivoire */
+.jeton { --c: #f1ece0; --s: #2a5bb8; --t: #1a1012; position: relative; display: inline-grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; flex: none;
+  background: radial-gradient(circle, var(--c) 0 63%, transparent 64%), repeating-conic-gradient(from -7.5deg, var(--s) 0 15deg, var(--c) 15deg 45deg);
+  box-shadow: inset 0 0 0 1.5px rgba(0,0,0,.28), inset 0 2px 0 rgba(255,255,255,.25), 0 3px 0 rgba(0,0,0,.45), 0 5px 10px rgba(0,0,0,.45); color: var(--t); }
+.jeton::after { content: ""; position: absolute; inset: 17%; border-radius: 50%; background: radial-gradient(circle at 40% 32%, #fff, #f1e9d6);
+  box-shadow: 0 0 0 1.5px var(--s), 0 0 0 3px var(--c), inset 0 1px 2px rgba(0,0,0,.22); }
+.jeton b { position: relative; z-index: 1; font: 900 .8rem/1 var(--ui); letter-spacing: -.04em; pointer-events: none; }
+.jeton.j1 { --c: #f1ece0; --s: #2a5bb8; --t: #1a1012; }
+.jeton.j5 { --c: #c42d3c; --s: #fff; --t: #a01826; }
+.jeton.j25 { --c: #1f8a5a; --s: #fff; --t: #136b43; }
+.jeton.j100 { --c: #1c1a20; --s: #f3dc9a; --t: #1c1a20; }
+.jeton.j500 { --c: #7b3fc4; --s: #fff; --t: #5d2a9e; }
+.jeton.j1000 { --c: #e0b43a; --s: #2a1606; --t: #6b4a08; }
+.jeton.j5000 { --c: #e46b1c; --s: #fff; --t: #a8460a; }
 .jeton.petit { width: 28px; height: 28px; }
-.jeton.petit b { font-size: .55rem; }
+.jeton.petit::after { inset: 15%; box-shadow: 0 0 0 1px var(--s), inset 0 1px 1px rgba(0,0,0,.2); }
+.jeton.petit b { font-size: .58rem; }
 .pile { position: relative; width: 28px; height: 28px; }
 .pile .jeton { position: absolute; left: 0; bottom: calc(var(--k) * 4px); }
 .pile em { position: absolute; left: 50%; top: 100%; transform: translateX(-50%); margin-top: 3px; font: 700 .72rem var(--ui); font-style: normal; color: var(--or-clair);
@@ -399,7 +407,8 @@ button { font: inherit; color: inherit; }
   .mini-roue { width: 70px; height: 70px; }
   .barre h2 { font-size: 1rem; }
   .btn.action { min-width: 74px; padding: 9px 10px; }
-  .jeton { width: 38px; height: 38px; }
+  .jeton { width: 40px; height: 40px; }
+  .jeton b { font-size: .74rem; }
   .siege { width: 104px; }
   .siege .plaque { min-width: 0; padding-right: 8px; gap: 5px; }
   .siege .avatar { width: 28px; height: 28px; font-size: 1rem; }
@@ -800,3 +809,26 @@ body.moderateur .portes { grid-template-columns: repeat(auto-fit, minmax(200px, 
 .carte .figure .milieu b { font: 900 calc(var(--cw) * .52)/1 Georgia, 'Times New Roman', serif; }
 .carte .figure .milieu small { font-size: calc(var(--cw) * .24); line-height: 1; }
 .carte .figure .milieu .couronne { font-size: calc(var(--cw) * .2); color: #b8913c; min-height: .6em; }
+
+/* ---------- la roue d'emojis ---------- */
+.b-reaction { font-size: 1.05rem; }
+.b-reaction:disabled { opacity: .4; cursor: default; }
+.roue-emoji { position: fixed; inset: 0; z-index: 70; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  background: radial-gradient(circle at 50% 50%, rgba(42,10,18,.6), rgba(8,3,5,.82)); touch-action: none; user-select: none; }
+.roue-emoji[hidden] { display: none; }
+.re-scene { position: relative; width: min(92vw, 380px); height: 230px; perspective: 760px; cursor: grab; }
+.re-scene:active { cursor: grabbing; }
+.re-anneau { --a: 0deg; position: absolute; inset: 0; transform-style: preserve-3d; transform: translateZ(-130px) rotateX(-14deg) rotateY(var(--a)); transition: transform .55s cubic-bezier(.3,1.45,.5,1); }
+/* chaque emoji reste tourné vers soi pendant que la roue tourne (comme une grande roue) */
+.re-anneau.net, .re-anneau.net .re-e { transition: none; }
+.re-e { position: absolute; left: 50%; top: 50%; width: 72px; height: 72px; margin: -36px; border-radius: 50%; display: grid; place-items: center; cursor: pointer;
+  font: 2.3rem/1 sans-serif; color: inherit; border: 2px solid var(--or, #d9b45a);
+  background: radial-gradient(circle at 35% 28%, #8a2a40, #2a0a12 72%); box-shadow: 0 8px 18px rgba(0,0,0,.55), inset 0 0 14px rgba(0,0,0,.5);
+  transform: rotateY(calc(var(--k) * 45deg)) translateZ(140px) rotateY(calc(var(--k) * -45deg - var(--a))); filter: brightness(.62) saturate(.8); transition: transform .55s cubic-bezier(.3,1.45,.5,1), filter .3s, box-shadow .3s; }
+.re-e.devant, .re-e:hover, .re-e:focus-visible { filter: none; outline: none; }
+.re-e.devant { box-shadow: 0 0 0 3px var(--or-clair, #f3dc9a), 0 0 30px rgba(243,220,154,.55), 0 10px 22px rgba(0,0,0,.6); }
+.re-socle { position: absolute; left: 50%; bottom: 0; width: 76%; height: 30px; transform: translateX(-50%); border-radius: 50%; background: radial-gradient(closest-side, rgba(217,180,90,.35), transparent); pointer-events: none; }
+.re-aide { margin: 0; color: var(--doux); font-size: .8rem; text-align: center; padding: 0 16px; }
+.calque-reactions { position: fixed; inset: 0; pointer-events: none; z-index: 46; perspective: 600px; }
+.reaction-vol { position: absolute; font: 2.7rem/1 sans-serif; filter: drop-shadow(0 4px 6px rgba(0,0,0,.6)); will-change: transform, opacity; }
+@media (prefers-reduced-motion: reduce) { .re-anneau { transition: none; } }

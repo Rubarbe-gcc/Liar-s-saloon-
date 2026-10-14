@@ -21,6 +21,7 @@ import { makeRng } from '../../../shared/hasard.js';
 import { ROUE_DESSIN } from './roulette.js';
 import * as fx from './effets.js';
 import * as sfx from './sfx.js';
+import * as RX from './reactions.js';
 
 const $ = (id) => document.getElementById(id);
 const TOURS = 10;
@@ -42,6 +43,7 @@ export function monterService(app, aller) {
   let paiement = 0;
 
   const ecran = $('s-service');
+  RX.brancher('s-service', { ancre: () => ecran.querySelector('.bras-d') });
   const plateau = $('sv-plateau');
 
   /* ---------- le tableau de bord ---------- */
@@ -325,6 +327,9 @@ export function monterService(app, aller) {
     if (ok) bon();
     else erreur(k, el, attendu.geste === 'payer' ? `On me doit ${fx.nombre(attendu.gain)} !` : attendu.geste === 'egalite' ? 'C’est une égalité, rendez-moi ma mise.' : 'Euh… j’ai perdu, en fait.');
     sv.regle[k] = attendu;
+    // le client réagit : ravi d'un blackjack, fâché d'une erreur, parfois dépité
+    const r = !ok ? '😡' : attendu.res === 'blackjack' ? '🔥' : attendu.geste === 'payer' && Math.random() < 0.4 ? '🤑' : attendu.geste === 'ramasser' && Math.random() < 0.5 ? '😭' : null;
+    if (r) RX.montrer(r, $(`sv-client-${k}`)?.querySelector('.buste'), { delai: 400 });
     el.classList.remove('choisie');
     el.classList.add('reglee');
     const pile = el.querySelector('.mise-fp');

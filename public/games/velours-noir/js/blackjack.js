@@ -14,6 +14,8 @@ import { creerCroupier } from './croupier.js';
 import * as fx from './effets.js';
 import * as sfx from './sfx.js';
 import * as EL from './enligne.js';
+import * as RX from './reactions.js';
+import * as REACT from '../../../shared/casino/reactions.js';
 
 const $ = (id) => document.getElementById(id);
 const MIN = 5;          // pas de mise maximum : seule la caisse limite
@@ -41,6 +43,8 @@ export function monterBlackjack(app) {
   const totalCroupier = $('bj-total-croupier');
   const soldeBarre = document.querySelector('#s-blackjack .barre-solde');
   croupier = creerCroupier($('bj-croupier'), 'celeste');
+  RX.brancher('s-blackjack', { ancre: () => places[moi]?.el, envoyer: (e) => { if (enLigne) EL.envoyer({ t: 'reaction', e }); } });
+  let naturel = false;  // un blackjack dans la donne : Céleste applaudit
 
   /* ---------- les jetons à miser ---------- */
   const plateau = $('bj-jetons');
@@ -357,6 +361,7 @@ export function monterBlackjack(app) {
           if (!m) break;
           m.el.classList.remove('active');
           if (e.res === 'brule') break;
+          if (e.res === 'blackjack') naturel = true;
           badge(m, e.res);
           const versJoueur = e.s === moi ? soldeBarre : places[e.s].el;
           if (e.retour > m.mise) {
@@ -382,6 +387,12 @@ export function monterBlackjack(app) {
         case 'fin':
           monTour = false; monAssurance = false; fini = true;
           for (const p of Object.values(places)) p.el.classList.remove('a-son-tour');
+          {
+            const nets = Object.values(e.nets || {});
+            const r = naturel ? '👏' : nets.length && nets.every((n) => n < 0) && REACT.hasard('bj', JSON.stringify(e.nets)) < 0.5 ? '😎' : null;
+            if (r) RX.montrer(r, croupier.el, { delai: 700 });
+            naturel = false;
+          }
           await fin(e);
           break;
       }
@@ -583,6 +594,7 @@ export function monterBlackjack(app) {
           croupier.dire('Faites vos jeux.', { voix: false });
         });
         break;
+      case 'reaction': if (m.s !== moi) RX.montrer(m.e, places[m.s]?.el); break;
       case 'parti': sortirEnLigne(); break;
       case 'erreur': croupier?.dire(m.msg, { voix: false }); break;
     }

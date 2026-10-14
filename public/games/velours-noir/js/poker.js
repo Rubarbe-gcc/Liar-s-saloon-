@@ -18,6 +18,8 @@ import { creerCroupier } from './croupier.js';
 import * as fx from './effets.js';
 import * as sfx from './sfx.js';
 import * as EL from './enligne.js';
+import * as RX from './reactions.js';
+import * as REACT from '../../../shared/casino/reactions.js';
 
 const $ = (id) => document.getElementById(id);
 const CLE_TABLE = 'velours.poker.assis';
@@ -57,6 +59,11 @@ export function monterPoker(app, aller) {
   let tournoi = null;            // la table est celle d'un tournoi (ses infos)
 
   const feutre = $('pk-feutre');
+  const plaque = (i) => siegesEl[i]?.querySelector('.plaque');
+  RX.brancher('s-poker', { ancre: () => plaque(moi), envoyer: (e) => { if (enLigne) EL.envoyer({ t: 'reaction', e }); } });
+  let rx = null;  // ce qui s'est passé pendant la main, pour les réactions des habitués
+  const habitues = () => Object.fromEntries(t.joueurs.flatMap((j, i) => (j.style && i !== moi ? [[i, j.style]] : [])));
+  const reagir = (r) => { rx?.deja.add(r.i); RX.montrer(r.e, () => plaque(r.i), { delai: r.delai }); };
 
   /* ---------- les jetons restés à une table ---------- */
   let aRendre = null;
@@ -210,6 +217,7 @@ export function monterPoker(app, aller) {
       if (!assis) return;
       switch (e.type) {
         case 'nouvelle-main': {
+          rx = { pots: [], mains: [], engages: [], couches: [], deja: new Set() };
           $('pk-board').innerHTML = '';
           $('pk-annonce').textContent = '';
           ui.pot = 0; majPot();
@@ -242,6 +250,7 @@ export function monterPoker(app, aller) {
         case 'donne': {
           const el = fx.elCarte(null);
           siegesEl[e.i].querySelector('.cartes-siege').appendChild(el);
+          if (rx && !rx.engages.includes(e.i)) rx.engages.push(e.i);
           if (e.i === moi && e.carte) el.dataset.carte = `${e.carte.r}${e.carte.c}`;
           croupier.donne(siegesEl[e.i].offsetLeft < feutre.clientWidth / 2 ? -1 : 1);
           sfx.carte();
@@ -260,6 +269,7 @@ export function monterPoker(app, aller) {
           penser(e.i, false);
           if (e.quoi === 'coucher') {
             el.classList.add('couche');
+            rx?.couches.push(e.i);
             for (const c of el.querySelectorAll('.cartes-siege .carte')) fx.partir(c, croupier.el, { duree: 380, tour: 90 });
             sfx.carte();
           } else if (e.quoi === 'parole') {
@@ -271,7 +281,10 @@ export function monterPoker(app, aller) {
             sfx.jetons(Math.min(8, 2 + Math.round(e.ajout / (t.grosse * 4))));
             await fx.attendre(380);
             majMise(e.i);
-            if (e.quoi === 'tapis') { sfx.coup(); fx.secouer(feutre, 4); croupier.dire(e.i === moi ? 'Tapis !' : `${t.joueurs[e.i].nom} fait tapis !`); }
+            if (e.quoi === 'tapis') { sfx.coup(); fx.secouer(feutre, 4); croupier.dire(e.i === moi ? 'Tapis !' : `${t.joueurs[e.i].nom} fait tapis !`);
+              const r = rx && REACT.reactionTapis({ i: e.i, mise: e.mise, bots: habitues(), couches: rx.couches, deja: rx.deja });
+              if (r) reagir(r);
+            }
           }
           await fx.attendre(e.i === moi ? 150 : 260);
           break;
@@ -311,6 +324,7 @@ export function monterPoker(app, aller) {
         }
         case 'abattage':
           aSonTour(-1);
+          if (rx) rx.mains = e.mains;
           croupier.dire('Abattage.', { duree: 1200 });
           for (const m of e.mains) {
             const cartesEl = siegesEl[m.i].querySelectorAll('.cartes-siege .carte');
@@ -323,10 +337,13 @@ export function monterPoker(app, aller) {
           await fx.attendre(500);
           break;
         case 'gain':
+          rx?.pots.push(e);
           await gain(e);
           break;
         case 'fin-main':
           aSonTour(-1);
+          if (rx) REACT.reactionsMain({ bots: habitues(), pots: rx.pots, mains: rx.mains, jetons: ui.jetons, engages: rx.engages, grosse: t.grosse, deja: rx.deja }).forEach(reagir);
+          rx = null;
           break;
       }
     }
@@ -553,6 +570,9 @@ export function monterPoker(app, aller) {
         if (m.arrive && m.arrive !== EL.identite().nom) croupier.dire(`${m.arrive} arrive. Il prendra place à la prochaine main.`, { voix: false });
         if (m.part) croupier.dire(`${m.part} quitte la table.`, { voix: false });
         if (m.absent) croupier.dire(`${m.absent} a perdu la connexion.`, { voix: false });
+        break;
+      case 'reaction':
+        if (m.s !== moi) RX.montrer(m.e, plaque(m.s));
         break;
       case 'tournoi-info':
         tournoi = m.tournoi;

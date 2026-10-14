@@ -29,6 +29,7 @@
 import crypto from 'node:crypto';
 import * as BJ from '../public/shared/casino/blackjack.js';
 import * as P from '../public/shared/casino/poker.js';
+import * as REACT from '../public/shared/casino/reactions.js';
 import * as R from '../public/shared/casino/roulette.js';
 import { makeRng, melanger } from '../public/shared/hasard.js';
 
@@ -901,6 +902,14 @@ export function handleMessage(conn, msg) {
     default:
   }
   if (!salle || !m) return;
+  // une réaction de la roue : seulement les emojis prévus, une toutes les 3 s au plus
+  if (msg.t === 'reaction') {
+    if (!REACT.valide(msg.e)) return;
+    const maintenant = Date.now();
+    if (maintenant - (m.reaction || 0) < REACT.ESPACEMENT_MS) return;
+    m.reaction = maintenant;
+    return diffuser(salle, { t: 'reaction', jeu: salle.jeu, s: m.s, e: msg.e });
+  }
   if (salle.jeu === 'blackjack') {
     if (msg.t === 'miser') return miserBlackjack(salle, m, msg.mise);
     if (msg.t === 'pret') {

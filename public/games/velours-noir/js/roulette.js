@@ -14,6 +14,7 @@ import { creerCroupier } from './croupier.js';
 import * as fx from './effets.js';
 import * as sfx from './sfx.js';
 import * as EL from './enligne.js';
+import * as RX from './reactions.js';
 
 const $ = (id) => document.getElementById(id);
 const JETONS = [1, 5, 25, 100, 500];
@@ -134,6 +135,8 @@ export const ROUE_DESSIN = { dessiner, T, C, PAS, RAYON_PISTE, RAYON_CASE, easeO
 export function monterRoulette(app) {
   const rng = makeRng(Date.now() ^ 0x0de1);
   const croupier = creerCroupier($('rl-croupier'), 'henri');
+  const placeDe = (s) => $('rl-joueurs').querySelector(`[data-s="${s}"]`);
+  RX.brancher('s-roulette', { ancre: () => (enLigne && placeDe(moi)) || $('rl-jetons'), envoyer: (e) => { if (enLigne) EL.envoyer({ t: 'reaction', e }); } });
   const toile = $('rl-roue');
   toile.width = toile.height = T;
   const g = toile.getContext('2d');
@@ -441,6 +444,9 @@ export function monterRoulette(app) {
     }
 
     const { retour, gagnants, perdants } = R.regler(paris, numero);
+    // Henri applaudit un plein ; il savoure quand la banque ramasse tout
+    if (gagnants.some((id) => R.PAR_ID[id].type === 'plein')) RX.montrer('👏', croupier.el, { delai: 1200 });
+    else if (total > 0 && !gagnants.length && Math.random() < 0.4) RX.montrer('😎', croupier.el, { delai: 900 });
     await fx.attendre(500);
     if (perdants.length) {
       croupier.ramasse();
@@ -539,7 +545,7 @@ export function monterRoulette(app) {
     el.hidden = !enLigne;
     el.innerHTML = membres.map((m) => {
       const t = Object.values(autres[m.s] || {}).reduce((a, v) => a + v, 0);
-      return `<span class="joueur${m.s === moi ? ' moi' : ''}${m.absent ? ' absent' : ''}" style="--c:${COULEURS[m.s % COULEURS.length]}">${m.avatar} ${m.s === moi ? 'Vous' : m.nom}${t && m.s !== moi ? ` <b>${fx.nombre(t)}</b>` : ''}</span>`;
+      return `<span data-s="${m.s}" class="joueur${m.s === moi ? ' moi' : ''}${m.absent ? ' absent' : ''}" style="--c:${COULEURS[m.s % COULEURS.length]}">${m.avatar} ${m.s === moi ? 'Vous' : m.nom}${t && m.s !== moi ? ` <b>${fx.nombre(t)}</b>` : ''}</span>`;
     }).join('');
   }
 
@@ -591,6 +597,9 @@ export function monterRoulette(app) {
         for (const s of Object.keys(autres)) if (!membres.some((x) => x.s === Number(s))) delete autres[s];
         dessinerAutres(); dessinerJoueurs();
         if (m.arrive && m.arrive !== EL.identite().nom) croupier.dire(`Bienvenue, ${m.arrive}.`, { voix: false });
+        break;
+      case 'reaction':
+        if (m.s !== moi) RX.montrer(m.e, placeDe(m.s));
         break;
       case 'paris':
         if (m.s === moi) break;
