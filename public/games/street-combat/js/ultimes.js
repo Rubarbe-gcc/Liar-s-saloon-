@@ -1044,7 +1044,8 @@ export const ULTIMES = {
       g.save(); g.globalAlpha = 0.3 * nuit; g.fillStyle = '#fff6c8';
       g.beginPath(); g.moveTo(x - 14, 0); g.lineTo(x + 14, 0); g.lineTo(x + 70, D.y - h + 120); g.lineTo(x - 70, D.y - h + 120); g.closePath(); g.fill();
       g.restore();
-      if (t > 50) for (let i = 0; i < 5; i++) K.flamme(g, x + (i - 2) * 14, D.y - h + 60, 70 + i * 6, 22, t, K.palette(k.c1), i);
+      // En retombant : une traînée de flammes au-dessus de lui (sans le cacher).
+      if (t > 50) for (let i = 0; i < 5; i++) K.flamme(g, x - dir * 20 + (i - 2) * 14, D.y - h - 80, 50 + i * 5, 18, t, K.palette(k.c1), i, 0.75);
     }
     if (t >= IMPACT) {
       const p = (t - IMPACT) / 46;
@@ -1252,13 +1253,15 @@ export const ULTIMES = {
   polarite(g, t, A, D, k) {
     const monte = K.entre(t, 0, 20) * (1 - K.entre(t, 106, 128));
     const serre = K.entre(t, 36, IMPACT);
-    const ecart = 330 - 250 * serre;
+    // Les deux pôles : N tombe du ciel, S sort du sol, de part et d'autre de l'adversaire (soulevé).
+    const cy = D.y - 25;
+    const ecart = 300 - 205 * serre;
+    const haut = cy - ecart, bas = cy + ecart * 0.62;
     // Les lignes de champ entre les deux pôles.
     g.save(); g.globalAlpha = monte * 0.8;
     for (let i = 0; i < 7; i++) {
       g.strokeStyle = i % 2 ? k.c1 : k.c2; g.lineWidth = 3; g.setLineDash([16, 10]); g.lineDashOffset = t * 4;
-      g.beginPath(); g.moveTo(D.x - ecart + 40, D.y); g.bezierCurveTo(D.x - ecart / 2, D.y - 40 - i * 30, D.x + ecart / 2, D.y - 40 - i * 30, D.x + ecart - 40, D.y); g.stroke();
-      g.beginPath(); g.moveTo(D.x - ecart + 40, D.y); g.bezierCurveTo(D.x - ecart / 2, D.y + 30 + i * 22, D.x + ecart / 2, D.y + 30 + i * 22, D.x + ecart - 40, D.y); g.stroke();
+      for (const s2 of [-1, 1]) { g.beginPath(); g.moveTo(D.x + s2 * 50, haut + 30); g.bezierCurveTo(D.x + s2 * (70 + i * 28), haut + 60, D.x + s2 * (70 + i * 28), bas - 60, D.x + s2 * 50, bas - 30); g.stroke(); }
     }
     g.setLineDash([]); g.restore();
     // Le métal arraché du sol, qui file vers lui.
@@ -1267,16 +1270,15 @@ export const ULTIMES = {
       const x0 = K.hasard(i) * L, x = x0 + (D.x - x0) * q * serre * 1.4, y = SOL - q * (SOL - D.y) * Math.min(1, t / 30);
       K.eclat(g, x, y, 6 + K.hasard(i + 3) * 6, t / 4 + i, { encre: '#1a1a24', fonce: '#5a5a6a', base: '#9a9aaa', clair: '#e0e0ea', coeur: '#ffffff' }, monte * (1 - q * 0.3));
     }
-    // Les deux aimants géants, N et S, qui se rapprochent… et claquent.
-    for (const [s, c, lettre] of [[-1, k.c1, 'N'], [1, k.c2, 'S']]) {
-      const x = D.x + s * ecart;
-      g.save(); g.translate(x, D.y); g.rotate(s * Math.PI / 2); g.globalAlpha = monte;
+    // Les deux aimants géants qui se rapprochent… et claquent.
+    for (const [s, c, lettre, y] of [[-1, k.c1, 'N', haut], [1, k.c2, 'S', bas]]) {
+      g.save(); g.translate(D.x, y); g.rotate(s < 0 ? Math.PI : 0); g.globalAlpha = monte;
       g.strokeStyle = '#10081a'; g.lineWidth = 50; g.beginPath(); g.arc(0, -10, 54, 0, Math.PI); g.stroke();
       g.strokeStyle = c; g.lineWidth = 40; g.beginPath(); g.arc(0, -10, 54, 0, Math.PI); g.stroke();
       g.fillStyle = '#e0e4ee'; g.fillRect(-76, -40, 44, 32); g.fillRect(32, -40, 44, 32);
       g.restore();
-      K.lueur(g, x, D.y, 110, c, 0.4 * monte);
-      g.save(); g.globalAlpha = monte; texteContour(g, lettre, x - s * 70, D.y - 90, 54, c, '#10081a'); g.restore();
+      K.lueur(g, D.x, y, 110, c, 0.4 * monte);
+      g.save(); g.globalAlpha = monte; texteContour(g, lettre, D.x + 110, y - s * 30, 54, c, '#10081a'); g.restore();
     }
     if (t >= IMPACT) {
       const p = (t - IMPACT) / 46;
@@ -1438,20 +1440,24 @@ export const ULTIMES = {
       const leve = K.entre(t, 0, 36) * (1 - K.entre(t, 108, 128));
       if (leve <= 0) return;
       const SANG = { encre: '#2a0004', fonce: '#7a0a10', base: '#c81e24', clair: '#ff6a4a', coeur: '#ffd0b0' };
-      const y = SOL + 60 - 380 * leve;
-      K.lueur(g, L / 2, y, 330, '#ff2a2a', 0.45 * leve);
-      K.lune(g, L / 2, y, 150, SANG, leve);
+      const y = SOL + 40 - 300 * leve;
+      K.lueur(g, L / 2, y, 300, '#ff2a2a', 0.45 * leve);
+      K.lune(g, L / 2, y, 120, SANG, leve);
       // La silhouette du loup qui hurle, sur la lune.
       if (t > 20 && t < 60) {
-        g.save(); g.globalAlpha = Math.min(1, (t - 20) / 8) * Math.min(1, (60 - t) / 8); g.fillStyle = '#12020a'; g.translate(L / 2 - 40, y + 70);
-        g.beginPath(); g.moveTo(-40, 60); g.lineTo(-30, 10); g.lineTo(-10, -20); g.lineTo(0, -60); g.lineTo(10, -40); g.lineTo(20, -70); g.lineTo(28, -38); g.lineTo(60, -90); g.lineTo(50, -40); g.lineTo(30, 0); g.lineTo(40, 60); g.closePath(); g.fill();
+        // Un loup assis, le museau levé vers le ciel.
+        g.save(); g.globalAlpha = Math.min(1, (t - 20) / 8) * Math.min(1, (60 - t) / 8); g.fillStyle = '#12020a'; g.translate(L / 2 - 20, y + 40); g.scale(1.3, 1.3);
+        g.beginPath(); g.moveTo(-46, 64); g.quadraticCurveTo(-52, 20, -26, 0); g.lineTo(-14, -30); g.lineTo(-10, -52); g.lineTo(-4, -72); g.lineTo(2, -60);
+        g.lineTo(10, -74); g.lineTo(12, -58); g.lineTo(34, -92); g.lineTo(38, -86); g.lineTo(22, -52); g.quadraticCurveTo(14, -30, 18, -6);
+        g.quadraticCurveTo(30, 20, 26, 64); g.closePath(); g.fill();
+        g.beginPath(); g.moveTo(-46, 60); g.quadraticCurveTo(-80, 66, -86, 40); g.quadraticCurveTo(-70, 56, -44, 50); g.fill();
         g.restore();
       }
     },
     devant(g, t, A, D, k) {
       if (t > 22 && t < 44) {
-        g.save(); g.translate(L / 2, 120); g.globalAlpha = Math.min(1, (44 - t) / 6); const s = 1 + Math.sin(t * 1.3) * 0.05; g.scale(s, s);
-        texteContour(g, 'AOUUUUUH !', 0, 0, 80, '#ffd0d0', '#3a0004', 'center', true);
+        g.save(); g.translate(L / 2, 300); g.globalAlpha = Math.min(1, (44 - t) / 6); const s = 1 + Math.sin(t * 1.3) * 0.05; g.scale(s, s);
+        texteContour(g, 'AOUUUUUH !', 0, 0, 72, '#ffd0d0', '#3a0004', 'center', true);
         g.restore();
       }
       // Trois griffures géantes, en travers de l'écran.
