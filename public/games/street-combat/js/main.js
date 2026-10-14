@@ -10,14 +10,17 @@
 
 import { PERSOS, PERSO, ROSTER, BOSS, SECRETS, JAUGE, STATUTS, lireEntree, aDebloquer } from '../../../shared/street/persos.js';
 import { creerCombat, pas, evenements, pose, assister, ARENE as A, MUR_PV, MUR_TRANSITION } from '../../../shared/street/combat.js';
-import { dessinerCombattant, dessinerPortrait, rgba, teinte, brancher3D } from './dessin.js';
+import { dessinerCombattant, dessinerPortrait, rgba, teinte, brancher3D, ambianceArene, squelette } from './dessin.js';
 import { creerRendu3D } from './trois/rendu3d.js';
 
 // La 3D : les combattants sont des modèles 3D (Three.js) ; sans WebGL, ou si on la coupe, le dessin 2D.
-if (localStorage.getItem('street.graphismes') !== '"2d"') { const r3 = creerRendu3D(); if (r3) { brancher3D(r3); brancherDecor3D(decor3D); } }
+/** La qualité graphique (menu) : haute, moyenne, basse, ou 2D. Par défaut : moyenne sur un téléphone. */
+const QUALITE = (() => { try { const q = JSON.parse(localStorage.getItem('street.graphismes')); if (q) return q; } catch { /* rien */ } return matchMedia('(pointer: coarse)').matches ? 'moyenne' : 'haute'; })();
+if (QUALITE !== '2d') { const r3 = creerRendu3D(); if (r3) { brancher3D(r3); brancherDecor3D(decor3D); } }
 import { ARENES, ARENE, fondArene, fondPret, animerArene, areneApres, dessinerMurs, brancherDecor3D } from './arenes.js';
 import { decor3D } from './trois/decors3d.js';
 import * as FX from './effets.js';
+import { animerSaisie } from './saisie.js';
 import { creerHud, dessinerHud } from './hud.js';
 import { jouer as son, estMuet, basculerSon } from './son.js';
 import { installerMusique } from '../../../shared/musique.js';
@@ -1511,14 +1514,22 @@ function dessiner() {
   g.save();
   // La secousse.
   if (fx.secousse) g.translate((Math.random() - 0.5) * fx.secousse * 2, (Math.random() - 0.5) * fx.secousse * 2);
+  // L'ultime : la caméra serre sur celui qui charge, suit le coup, encaisse l'impact.
+  const cam = FX.cameraUlti(fx, c);
+  if (cam) { g.translate(A.L / 2, A.H / 2); g.scale(cam.z, cam.z); g.translate(-cam.x, -cam.y); }
   const arene = areneApres(config.areneId, c.etage || 0);
-  g.drawImage(fondArene(arene), 0, 0, A.L, A.H);
+  const fond = fondArene(arene);
+  ambianceArene(fond.ambiance);
+  g.drawImage(fond, 0, 0, A.L, A.H);
   animerArene(g, arene, t);
   if (c.murs) dessinerMurs(g, arene, c.murs, MUR_PV, t);
   FX.dessinerZones(g, c, t);
 
   // Les combattants : celui qui frappe passe devant.
   const ordre = [...c.joueurs].sort((a, b) => (a.action ? 1 : 0) - (b.action ? 1 : 0));
+  // Une saisie : celui qui tient passe devant, et chacun joue sa part de l'animation.
+  const saisie = animerSaisie(c, PERSO);
+  if (saisie) ordre.sort((a) => (a.n === saisie.joueurs[0] ? 1 : -1));
   for (const j of ordre) {
     const p = PERSO[j.id];
     const a = j.action;
@@ -1529,11 +1540,24 @@ function dessiner() {
     // La victoire : celle du round, ou, s'il vient de gagner le combat, la grande.
     const finale = j.victoires >= (c.victoiresRequises || 2);
     const nomPose = pose(j) === 'victoire' && !finale ? 'victoire-round' : pose(j);
+    const s = saisie && (j.n === saisie.joueurs[0] ? saisie.att : j.n === saisie.joueurs[1] ? saisie.def : null);
     dessinerCombattant(g, p, {
-      x: j.x, y: j.y, dir: j.dir, pose: nomPose, t: j.anim, p: progres, enLAir: !j.sol, alpha,
+      x: j.x, y: j.y, dir: j.dir, pose: nomPose, t: j.anim, p: progres, enLAir: !j.sol, alpha, ...s, cle: `combat-${j.n}`,
       aura: j.etat === 'ulti' ? 1 : j.etat === 'victoire' && finale ? 0.75 + Math.sin(t / 6) * 0.2 : j.sp >= 100 ? 0.45 + Math.sin(t / 6) * 0.2 : 0,
       statuts: Object.keys(j.statuts).length ? j.statuts : null, eclat: eclats[j.n] * 0.8, corrompu: !!config.corrompu?.[j.n], echelle: config.echelle?.[j.n] || 1,
     });
+    // Le sillage du poing ou du pied qui frappe.
+    const frappe = QUALITE !== 'basse' && a && !s && ['poing', 'poing-bas', 'poing-air', 'uppercut', 'ruee', 'lance', 'pied', 'pied-air', 'balayage'].includes(nomPose);
+    if (frappe || fx.traces?.[j.n]?.length) {
+      let x = 0, y = 0;
+      if (frappe) {
+        const sq = squelette(p, { pose: nomPose, t: j.anim, p: progres, enLAir: !j.sol });
+        const e = (config.echelle?.[j.n] || 1) * sq.car.h;
+        const bout = ['pied', 'pied-air', 'balayage'].includes(nomPose) ? sq.jambes.fa : sq.mainA;
+        x = j.x + j.dir * e * bout.x; y = j.y + e * bout.y;
+      }
+      FX.noterTrace(fx, j.n, x, y, p.c.c1, frappe);
+    }
     // Le bouclier, la parade : un halo.
     if (j.garde || j.armure > 0) {
       g.save(); g.globalCompositeOperation = 'lighter';
@@ -1542,12 +1566,22 @@ function dessiner() {
       g.restore();
     }
   }
+  FX.dessinerTraces(g, fx);
   FX.dessinerFaisceaux(g, fx, c);
   FX.dessinerProjectiles(g, c, t);
   FX.dessinerParticules(g, fx);
   FX.dessinerTextes(g, fx);
   FX.dessinerCineUlti(g, fx, c);
   g.restore();
+  // L'image d'impact, comme dans un manga : tout en négatif, en noir et blanc, le temps de deux images.
+  if (FX.imageImpact(fx)) {
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalCompositeOperation = 'saturation'; g.fillStyle = '#808080'; g.fillRect(0, 0, cv.width, cv.height);
+    g.globalCompositeOperation = 'difference'; g.fillStyle = '#ffffff'; g.fillRect(0, 0, cv.width, cv.height);
+    g.restore();
+  }
+  FX.dessinerCineEcran(g, fx, c);
 
   dessinerHud(g, c, fx, hud, t);
   FX.dessinerAnnonces(g, fx);
@@ -2045,6 +2079,12 @@ function brancher() {
   });
   $('enligne-annuler').addEventListener('click', () => { EL.quitter(); $('enligne-attente').hidden = true; $('enligne-actions').hidden = false; });
   $('enligne-retour').addEventListener('click', () => { if (EL.salle.code) EL.quitter(); majMenu(); });
+  // La qualité graphique : elle s'applique en relançant l'affichage.
+  $('b-graphismes').value = QUALITE;
+  $('b-graphismes').addEventListener('change', (e) => {
+    try { localStorage.setItem('street.graphismes', JSON.stringify(e.target.value)); } catch { /* rien */ }
+    location.reload();
+  });
   const majVoix = () => { for (const id of ['b-voix-menu', 'b-voix']) $(id).textContent = voixActives() ? '🗣️ Voix' : '🤐 Voix coupées'; };
   for (const id of ['b-voix-menu', 'b-voix']) $(id).addEventListener('click', () => { basculerVoix(); majVoix(); if (voixActives()) dire('Voix activées !', voixDe({ id: 'annonceur' })); });
   majVoix();

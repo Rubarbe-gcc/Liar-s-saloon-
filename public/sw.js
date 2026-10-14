@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v110';
+const VERSION = 'v111';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -184,6 +184,7 @@ const SHELL = [
   '/games/street-combat/js/codex.js',
   '/games/street-combat/js/enligne.js',
   '/games/street-combat/js/tutoriel.js',
+  '/games/street-combat/js/saisie.js',
   '/games/street-combat/icons/icon-192.png',
   '/shared/street/persos.js',
   '/shared/street/combat.js',

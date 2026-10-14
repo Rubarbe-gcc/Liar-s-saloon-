@@ -13,6 +13,11 @@
  * ainsi en 3D sans rien changer ailleurs. Les effets (auras, éclats,
  * projectiles…) restent dessinés par-dessus.
  *
+ * Le style : un anime en cel-shading. Des ombres franches en trois tons, un
+ * contour encré (une coque inversée, gonflée le long des normales), un
+ * contre-jour de la couleur du combattant, et des visages dessinés (une
+ * texture par expression : neutre, colère, douleur, K.O., joie).
+ *
  * Coordonnées : celles du combattant (x vers l'avant, y vers le bas), avec
  * Y retourné pour la 3D, et Z vers nous.
  */
@@ -21,46 +26,23 @@ import * as THREE from '../../../../vendor/three/three.module.min.js';
 import { SEGMENTS, teinte, manche, gant } from '../dessin.js';
 
 const rad = (d) => (d * Math.PI) / 180;
+/** La qualité choisie dans le menu (haute, moyenne, basse ; « 2d » : sans 3D). Par défaut : moyenne sur un téléphone. */
+const QUALITE = (() => { try { const q = JSON.parse(localStorage.getItem('street.graphismes')); if (q) return q; } catch { /* rien */ } return typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches ? 'moyenne' : 'haute'; })();
+/** La finesse maximale (pixels par unité) et le contour, selon la qualité. */
+const FINESSE = { haute: 99, moyenne: 1.7, basse: 1.15 }[QUALITE] || 99;
+const TRAIT = QUALITE !== 'basse';
 
 /** Le cadre de l'image, en unités du combattant : assez large pour les ailes, les capes et les armes. */
 const CADRE = { x0: -160, x1: 160, y0: -290, y1: 40 };
 const CW = CADRE.x1 - CADRE.x0;
 const CH = CADRE.y1 - CADRE.y0;
 /** La toile de rendu (on ne dessine que dans un coin, à la taille voulue). */
-const TOILE = { l: 760, h: 784 };
+const TOILE = { l: 1024, h: 1056 };
 
 /* ------------------------------------------------------------------ */
 /* Le démarrage                                                        */
 /* ------------------------------------------------------------------ */
 
-/** Ce que les métaux reflètent : un studio (un ciel bleuté, un sol sombre, deux grandes lumières). */
-function environnement(renderer) {
-  const env = new THREE.Scene();
-  const geo = new THREE.SphereGeometry(100, 32, 16);
-  const couleurs = [];
-  const pos = geo.attributes.position;
-  const haut = new THREE.Color('#cfdcff');
-  const milieu = new THREE.Color('#7a6a8a');
-  const bas = new THREE.Color('#1a1420');
-  for (let i = 0; i < pos.count; i++) {
-    const y = pos.getY(i) / 100;
-    const c = y > 0 ? milieu.clone().lerp(haut, y) : milieu.clone().lerp(bas, -y);
-    couleurs.push(c.r, c.g, c.b);
-  }
-  geo.setAttribute('color', new THREE.Float32BufferAttribute(couleurs, 3));
-  env.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
-  for (const [x, y, z, c, i] of [[-60, 50, 60, '#fff4e0', 6], [70, 30, -50, '#a8c4ff', 4]]) {
-    const p = new THREE.Mesh(new THREE.PlaneGeometry(40, 30), new THREE.MeshBasicMaterial({ color: new THREE.Color(c).multiplyScalar(i), side: THREE.DoubleSide }));
-    p.position.set(x, y, z); p.lookAt(0, 0, 0);
-    env.add(p);
-  }
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  const tex = pmrem.fromScene(env, 0.03).texture;
-  pmrem.dispose();
-  return tex;
-}
-
-/** Démarre le rendu 3D ; null si le navigateur ne sait pas faire de WebGL. */
 export function creerRendu3D() {
   let renderer;
   try {
@@ -73,22 +55,16 @@ export function creerRendu3D() {
   renderer.setSize(TOILE.l, TOILE.h, false);
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.15;
+  renderer.toneMapping = THREE.NoToneMapping;
 
   const scene = new THREE.Scene();
-  scene.environment = environnement(renderer);
-  // La lumière : le ciel et le sol, une lumière principale en haut à gauche, un contre-jour derrière.
-  scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x3a3048, 0.7));
-  const cle = new THREE.DirectionalLight(0xfff2e0, 2.1);
-  cle.position.set(-260, 420, 520);
+  // La lumière d'un anime : un ciel presque blanc, des ombres teintées de violet, une seule lumière
+  // principale en haut à gauche (le cel-shading la découpe en trois tons) ; le contre-jour est dans les matières.
+  const hemi = new THREE.HemisphereLight(0xfff6ee, 0x7a68b0, 1.35);
+  scene.add(hemi);
+  const cle = new THREE.DirectionalLight(0xfff2e2, 2.6);
+  cle.position.set(-480, 420, 260);
   scene.add(cle);
-  const contre = new THREE.DirectionalLight(0x9ab8ff, 1.6);
-  contre.position.set(320, 180, -460);
-  scene.add(contre);
-  const bas = new THREE.DirectionalLight(0xffc8a0, 0.35);
-  bas.position.set(0, -300, 300);
-  scene.add(bas);
 
   // La caméra : face au plan du combat, assez loin pour que la perspective reste douce.
   const fov = 22;
@@ -99,15 +75,26 @@ export function creerRendu3D() {
 
   const modeles = new Map();
   let courant = null;
+  let ambiance = null;
 
   return {
     renderer,
+    /** Les combattants prennent un peu la lumière de l'arène (sans perdre leurs couleurs). */
+    ambiance(a) {
+      if (a === ambiance) return;
+      ambiance = a;
+      const m = (base, c, k) => new THREE.Color(base).lerp(new THREE.Color(c || base), a ? k : 0);
+      hemi.color.copy(m('#fff6ee', a?.ciel, 0.3));
+      hemi.groundColor.copy(m('#7a68b0', a?.sol, 0.35));
+      cle.color.copy(m('#fff2e2', a?.soleil, 0.4));
+    },
     /** Dessine le combattant dans `g`, dont le repère est déjà celui du combattant (et son échelle). */
     dessiner(g, perso, sq, o) {
       const cle3d = cleDe(perso);
       let m = modeles.get(cle3d);
       if (!m) {
         m = construire(perso);
+        if (TRAIT) encrer(m.groupe);
         modeles.set(cle3d, m);
         if (modeles.size > 60) { const [a] = modeles.keys(); disposer(modeles.get(a)); modeles.delete(a); }
       }
@@ -120,9 +107,12 @@ export function creerRendu3D() {
       // La finesse : autant de pixels que la toile 2D en affiche.
       const tr = g.getTransform();
       const s = Math.sqrt(Math.abs(tr.a * tr.d - tr.b * tr.c)) || 1;
-      const k = Math.min(TOILE.l / CW, TOILE.h / CH, Math.max(0.6, s * 1.05));
+      const k = Math.min(TOILE.l / CW, TOILE.h / CH, FINESSE, Math.max(0.6, s * 1.05));
       const vw = Math.max(16, Math.round(CW * k));
       const vh = Math.max(16, Math.round(CH * k));
+      // Le trait : un peu plus épais quand le combattant est petit, pour rester lisible.
+      UNI.ep.value = Math.min(2.2, 0.95 + 1.25 / s) * (o.trait ?? 1);
+      UNI.rim.value.set(perso.c.aura || perso.c.c1);
       renderer.setScissorTest(true);
       renderer.setViewport(0, TOILE.h - vh, vw, vh);
       renderer.setScissor(0, TOILE.h - vh, vw, vh);
@@ -155,23 +145,98 @@ const GEO = {
   dode: () => geos.dode || (geos.dode = partage(new THREE.DodecahedronGeometry(1, 0))),
 };
 
+/* Le cel-shading : une rampe de trois tons (ombre, demi-teinte, lumière), un contre-jour
+   de la couleur du combattant sur les bords, un reflet net sur ce qui brille. */
+const UNI = { rim: { value: new THREE.Color('#9ab8ff') }, ep: { value: 1.4 } };
+function rampe(valeurs) {
+  const d = new Uint8Array(valeurs.flatMap((v) => { const x = Math.round(Math.min(1, v) * 255); return [x, x, x, 255]; }));
+  const t = new THREE.DataTexture(d, valeurs.length, 1, THREE.RGBAFormat);
+  t.minFilter = t.magFilter = THREE.NearestFilter;
+  t.generateMipmaps = false;
+  t.needsUpdate = true;
+  return t;
+}
+const RAMPES = { doux: rampe([0.3, 0.3, 0.66, 1, 1]), metal: rampe([0.1, 0.1, 0.46, 0.82, 1]) };
+
+/** Une matière toon : `reflet` (0 à 0,1) la taille du reflet, `rim` la force du contre-jour. */
+function toon(params, { reflet = 0, rim = 1, metal = false } = {}) {
+  const m = new THREE.MeshToonMaterial({ gradientMap: metal ? RAMPES.metal : RAMPES.doux, ...params });
+  const specul = reflet ? `#if NUM_DIR_LIGHTS > 0
+        float sp = dot(normal, normalize(directionalLights[0].direction + geometryViewDir));
+        outgoingLight += vec3(1.0, 0.98, 0.94) * smoothstep(${(1 - reflet).toFixed(3)}, ${(1 - reflet + 0.012).toFixed(3)}, sp) * 0.85;
+        #endif` : '';
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uRim = UNI.rim;
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform vec3 uRim;')
+      .replace('#include <opaque_fragment>', `{
+        float fr = 1.0 - max(dot(normal, geometryViewDir), 0.0);
+        float bord = smoothstep(0.56, 0.64, fr) * smoothstep(-0.1, 0.35, dot(normal, normalize(vec3(1.0, 0.45, -0.1))));
+        outgoingLight = mix(outgoingLight, uRim * 1.15 + outgoingLight * 0.35, bord * ${(0.75 * rim).toFixed(2)});
+        ${specul}
+      }
+      #include <opaque_fragment>`);
+  };
+  m.customProgramCacheKey = () => `toon|${reflet}|${rim}|${metal}`;
+  m.userData.toon = true;
+  return m;
+}
+
 const mats = new Map();
 /** Une matière : du tissu, de la peau, du métal, ou une lueur. */
 function mat(couleur, sorte = 'tissu') {
   const cle = `${couleur}|${sorte}`;
   if (mats.has(cle)) return mats.get(cle);
   const c = new THREE.Color(couleur);
+  // Un tissu presque noir garde un peu de relief : on l'éclaircit vers une ardoise (comme le noir dans un anime).
+  const lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+  if (lum < 0.035 && sorte !== 'lueur' && sorte !== 'voile-lueur') c.lerp(new THREE.Color('#4a4058'), 0.4 * (1 - lum / 0.035));
   let m;
-  if (sorte === 'metal') m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.3, metalness: 0.85 });
-  else if (sorte === 'brillant') m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.25, metalness: 0.2 });
-  else if (sorte === 'peau') m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.55, metalness: 0 });
-  else if (sorte === 'lueur') m = new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 1.6, roughness: 0.4 });
-  else if (sorte === 'verre') m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.75 });
-  else if (sorte === 'voile') m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.8, side: THREE.DoubleSide });
-  else if (sorte === 'voile-lueur') m = new THREE.MeshStandardMaterial({ color: c, emissive: c, emissiveIntensity: 0.9, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false });
-  else m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.78, metalness: 0 });
+  if (sorte === 'metal') m = toon({ color: c }, { reflet: 0.07, metal: true, rim: 1.2 });
+  else if (sorte === 'brillant') m = toon({ color: c }, { reflet: 0.035 });
+  else if (sorte === 'peau') m = toon({ color: c }, { rim: 0.8 });
+  else if (sorte === 'lueur') m = new THREE.MeshBasicMaterial({ color: c.clone().lerp(new THREE.Color('#ffffff'), 0.25) });
+  else if (sorte === 'verre') m = toon({ color: c, transparent: true, opacity: 0.8 }, { reflet: 0.06 });
+  else if (sorte === 'voile') m = toon({ color: c, side: THREE.DoubleSide });
+  else if (sorte === 'voile-lueur') m = new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false });
+  else m = toon({ color: c });
   mats.set(cle, m);
   return m;
+}
+
+/* Le contour encré : la même forme, gonflée le long de ses normales, vue de dos, d'une couleur
+   très sombre tirée de la matière (un trait brun sur la peau, bleu nuit sur le bleu…). */
+const ENCRE_V = `uniform float uEp;
+void main() {
+  vec4 mv = modelViewMatrix * vec4(position, 1.0);
+  vec3 n = normalize(normalMatrix * normal);
+  mv.xyz += n * uEp;
+  gl_Position = projectionMatrix * mv;
+}`;
+const ENCRE_F = `uniform vec3 uC;
+void main() {
+  gl_FragColor = vec4(uC, 1.0);
+  #include <colorspace_fragment>
+}`;
+const encres = new Map();
+const NUIT = new THREE.Color('#140812');
+function encre(couleur) {
+  const cle = couleur.getHexString();
+  if (!encres.has(cle)) {
+    const c = couleur.clone().multiplyScalar(0.16).lerp(NUIT, 0.55);
+    encres.set(cle, new THREE.ShaderMaterial({ uniforms: { uEp: UNI.ep, uC: { value: c } }, vertexShader: ENCRE_V, fragmentShader: ENCRE_F, side: THREE.BackSide }));
+  }
+  return encres.get(cle);
+}
+/** Ajoute le contour à tout ce qui est opaque (pas aux lueurs ni au verre). */
+function encrer(groupe) {
+  const a = [];
+  groupe.traverse((x) => { if (x.isMesh && x.material?.userData?.toon && !x.material.transparent && !x.userData.sansTrait) a.push(x); });
+  for (const x of a) {
+    const c = new THREE.Mesh(x.geometry, encre(x.material.userData.encre || x.material.color));
+    c.userData.trait = true;
+    x.add(c);
+  }
 }
 
 function maille(geo, matiere, sx = 1, sy = sx, sz = sx) {
@@ -213,6 +278,237 @@ function plaque(points, epaisseur, matiere) {
   return new THREE.Mesh(geo, matiere);
 }
 
+
+/* ------------------------------------------------------------------ */
+/* Les formes sculptées : le tronc, la tête, le poing                   */
+/* ------------------------------------------------------------------ */
+
+/** Une texture dessinée au canevas (le visage, le kimono). */
+function texture(l, h, dessin) {
+  const cv = document.createElement('canvas');
+  cv.width = l; cv.height = h;
+  dessin(cv.getContext('2d'), l, h);
+  const t = new THREE.CanvasTexture(cv);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  return t;
+}
+
+/** Le tronc : un profil tourné (taille, côtes, poitrine, épaules), l'avant (+Z) au milieu de la texture. */
+function geoTronc(largeur, taille) {
+  const pts = [[taille * 1.03, -5], [taille * 0.97, 3], [taille * 1.0, 11], [largeur * 0.78, 24], [largeur * 0.95, 35], [largeur * 0.98, 42], [largeur * 0.86, 48], [largeur * 0.56, 52.5], [largeur * 0.22, 55], [0.01, 55.6]];
+  const courbe = new THREE.SplineCurve(pts.map(([x, y]) => new THREE.Vector2(x, y)));
+  const geo = new THREE.LatheGeometry(courbe.getPoints(36), 40, Math.PI, Math.PI * 2);
+  // La texture suit la hauteur (pas la longueur du profil) : plus simple à dessiner.
+  const pos = geo.attributes.position;
+  const uv = geo.attributes.uv;
+  for (let i = 0; i < pos.count; i++) uv.setY(i, (pos.getY(i) + 5) / 60.6);
+  return geo;
+}
+/** Hauteur du tronc → ligne de la texture (h = sa hauteur en pixels). */
+const ligneTronc = (y, h) => (1 - (y + 5) / 60.6) * h;
+
+/** Le dessus du corps : le kimono et son col en V, un torse nu dessiné, ou la tenue unie. */
+function matTorse(perso, nu, kimono) {
+  const k = perso.c;
+  const fond = nu ? k.peau : k.tenue;
+  const tex = texture(512, 256, (g, l, h) => {
+    g.fillStyle = fond; g.fillRect(0, 0, l, h);
+    const mx = l / 2;
+    if (kimono && !nu) {
+      // Le col en V, la peau dedans, les revers du kimono autour.
+      const haut = ligneTronc(50, h), pointe = ligneTronc(21, h);
+      g.fillStyle = k.peau;
+      g.beginPath(); g.moveTo(mx - 70, 0); g.lineTo(mx + 70, 0); g.lineTo(mx + 44, haut); g.lineTo(mx, pointe); g.lineTo(mx - 44, haut); g.closePath(); g.fill();
+      // Les pectoraux qu'on devine dans l'ouverture.
+      g.strokeStyle = teinte(k.peau, -0.22); g.lineWidth = 3;
+      g.beginPath(); g.moveTo(mx - 30, ligneTronc(38, h)); g.quadraticCurveTo(mx - 12, ligneTronc(35, h), mx - 2, ligneTronc(37, h)); g.stroke();
+      g.beginPath(); g.moveTo(mx + 30, ligneTronc(38, h)); g.quadraticCurveTo(mx + 12, ligneTronc(35, h), mx + 2, ligneTronc(37, h)); g.stroke();
+      for (const c of [-1, 1]) {
+        g.strokeStyle = teinte(k.tenue, -0.1); g.lineWidth = 16;
+        g.beginPath(); g.moveTo(mx + c * 78, -4); g.lineTo(mx + c * 52, haut); g.lineTo(mx + c * 4, pointe + 6); g.stroke();
+        g.strokeStyle = teinte(k.tenue, -0.32); g.lineWidth = 3;
+        g.beginPath(); g.moveTo(mx + c * 70, -4); g.lineTo(mx + c * 44, haut); g.lineTo(mx, pointe); g.stroke();
+      }
+      // Quelques plis à la taille.
+      g.strokeStyle = teinte(k.tenue, -0.14); g.lineWidth = 2.5;
+      for (const [x, y, dx, dy] of [[-60, 40, 18, -26], [70, 38, -14, -22], [-20, 30, 6, -18], [30, 34, -4, -16]]) {
+        g.beginPath(); g.moveTo(mx + x, ligneTronc(y - 30, h)); g.quadraticCurveTo(mx + x + dx * 0.3, ligneTronc(y - 30 - dy * 0.5, h), mx + x + dx, ligneTronc(y - 30 - dy, h)); g.stroke();
+      }
+    } else if (nu) {
+      // Un torse nu : pectoraux, abdominaux, nombril.
+      g.strokeStyle = teinte(k.peau, -0.26); g.lineWidth = 3.4; g.lineCap = 'round';
+      for (const c of [-1, 1]) {
+        g.beginPath(); g.moveTo(mx + c * 74, ligneTronc(40, h)); g.quadraticCurveTo(mx + c * 34, ligneTronc(31, h), mx + c * 3, ligneTronc(35, h)); g.stroke();
+      }
+      g.beginPath(); g.moveTo(mx, ligneTronc(44, h)); g.lineTo(mx, ligneTronc(6, h)); g.stroke();
+      for (const y of [28, 20, 12]) for (const c of [-1, 1]) { g.beginPath(); g.moveTo(mx + c * 4, ligneTronc(y, h)); g.quadraticCurveTo(mx + c * 16, ligneTronc(y + 1.2, h), mx + c * 24, ligneTronc(y - 0.5, h)); g.stroke(); }
+      g.fillStyle = teinte(k.peau, -0.32); g.beginPath(); g.ellipse(mx, ligneTronc(3, h), 3, 4.5, 0, 0, Math.PI * 2); g.fill();
+    } else {
+      // Une tenue : deux coutures sur les côtés, un col.
+      g.strokeStyle = teinte(fond, -0.2); g.lineWidth = 3;
+      for (const x of [l * 0.25, l * 0.75]) { g.beginPath(); g.moveTo(x, 0); g.lineTo(x, h); g.stroke(); }
+      g.lineWidth = 8; g.strokeStyle = teinte(fond, -0.12);
+      g.beginPath(); g.moveTo(mx - 50, 2); g.quadraticCurveTo(mx, ligneTronc(48, h), mx + 50, 2); g.stroke();
+    }
+  });
+  const m = toon({ map: tex, color: 0xffffff }, { rim: nu ? 0.8 : 1 });
+  m.userData.encre = new THREE.Color(fond);
+  return m;
+}
+
+/** La tête d'un anime : un crâne rond, une mâchoire qui s'affine vers un menton net. Le visage regarde +X. */
+GEO.tete = () => {
+  if (geos.tete) return geos.tete;
+  const geo = new THREE.SphereGeometry(1, 48, 32);
+  const p = geo.attributes.position;
+  for (let i = 0; i < p.count; i++) {
+    let x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    if (y < 0) {
+      const b = -y;
+      z *= 1 - 0.36 * b * b;
+      x *= x < 0 ? 1 - 0.3 * b * b : 1 - 0.06 * b;
+      if (x > 0) x += 0.1 * b * b * x;
+      y *= 1 + 0.12 * b;
+    } else if (x < 0) x *= 1 + 0.06 * y;   // un crâne un peu plus long derrière
+    p.setXYZ(i, x, y, z);
+  }
+  geo.computeVertexNormals();
+  return (geos.tete = partage(geo));
+};
+
+/* Le visage, dessiné sur la texture de la tête (1024 × 512 : un degré vaut 2,84 pixels).
+   a : l'angle autour de la tête (+ vers le côté le plus proche de nous), b : la hauteur (+ vers le haut). */
+const FACE = { l: 1024, h: 512 };
+const PF = (a, b) => [(0.5 - a / 360) * FACE.l, (0.5 - b / 180) * FACE.h];
+
+/** L'expression d'une pose. */
+function expression(nomPose) {
+  if (nomPose === 'ko' || nomPose === 'sol') return 'ko';
+  if (nomPose === 'touche' || nomPose === 'vol') return 'douleur';
+  if (nomPose.startsWith('v-')) return 'joie';
+  if (['poing', 'pied', 'poing-bas', 'balayage', 'poing-air', 'pied-air', 'saisie', 'lance', 'ruee', 'uppercut', 'tourne', 'ulti'].includes(nomPose)) return 'colere';
+  return 'neutre';
+}
+
+/**
+ * La texture du visage pour une expression.
+ * @param {object} o  { yeux: dessiner les yeux (false : des yeux qui brillent, en 3D), seulLoin : seulement l'œil du fond }
+ */
+function texVisage(perso, expr, o) {
+  const k = perso.c;
+  const X = perso.look.extras;
+  const feminin = ['couettes', 'chignon', 'longs'].includes(perso.look.tete) || X.includes('robe') || X.includes('jupe');
+  const encreC = '#1c0e10';
+  const iris = k.yeux || '#5a3420';
+  return texture(FACE.l, FACE.h, (g) => {
+    g.fillStyle = k.peau; g.fillRect(0, 0, FACE.l, FACE.h);
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    // Une ombre douce sous les sourcils et sous le nez (le cel-shading fait le reste).
+    const ombre = teinte(k.peau, -0.12);
+    // Les deux yeux : s = +1 l'œil proche (le coin extérieur vers la gauche de la texture), -1 l'autre.
+    for (const s of [1, -1]) {
+      if (o.yeux === false || (o.seulLoin && s > 0)) continue;
+      const [cx, cy] = PF(s * 19, -1);
+      const w = feminin ? 27 : 25, h = feminin ? 33 : 28;
+      const ext = cx - s * w, int = cx + s * w;
+      if (expr === 'ko') {
+        g.strokeStyle = encreC; g.lineWidth = 6;
+        g.beginPath(); g.moveTo(ext, cy - 4); g.quadraticCurveTo(cx, cy + 10, int, cy - 2); g.stroke();
+        continue;
+      }
+      if (expr === 'douleur') {
+        // > < : les yeux plissés.
+        g.strokeStyle = encreC; g.lineWidth = 7;
+        g.beginPath(); g.moveTo(ext, cy - 14); g.lineTo(int - s * 6, cy); g.lineTo(ext, cy + 12); g.stroke();
+        continue;
+      }
+      const ferme = expr === 'colere' ? 0.62 : expr === 'joie' ? 0.8 : 1;
+      const haut = cy - h * ferme;
+      const forme = () => {
+        g.beginPath();
+        g.moveTo(int, cy + 2);
+        g.bezierCurveTo(int - s * w * 0.2, haut - 2, ext + s * w * 0.4, haut - 4, ext - s * 3, cy - h * 0.28 * ferme);
+        g.bezierCurveTo(ext + s * w * 0.1, cy + h * 0.55, int - s * w * 0.3, cy + h * 0.62, int, cy + 2);
+        g.closePath();
+      };
+      g.save();
+      forme(); g.fillStyle = '#fbf8f4'; g.fill(); g.clip();
+      // L'iris (dégradé sombre en haut), la pupille, deux reflets.
+      const ix = cx + s * 3, iy = cy + 1, ir = h * 0.78;
+      const gr = g.createLinearGradient(0, iy - ir, 0, iy + ir);
+      gr.addColorStop(0, teinte(iris, -0.55)); gr.addColorStop(0.55, iris); gr.addColorStop(1, teinte(iris, 0.35));
+      g.fillStyle = gr; g.beginPath(); g.ellipse(ix, iy, ir * 0.78, ir, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#0c0608'; g.beginPath(); g.ellipse(ix, iy, ir * (expr === 'colere' ? 0.26 : 0.36), ir * (expr === 'colere' ? 0.42 : 0.5), 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#ffffff';
+      g.beginPath(); g.ellipse(ix - s * ir * 0.3, iy - ir * 0.42, ir * 0.24, ir * 0.2, 0, 0, Math.PI * 2); g.fill();
+      g.beginPath(); g.arc(ix + s * ir * 0.3, iy + ir * 0.4, ir * 0.1, 0, Math.PI * 2); g.fill();
+      // L'ombre de la paupière en haut du blanc.
+      g.fillStyle = 'rgba(80,40,60,0.22)'; g.fillRect(cx - w - 4, haut - 6, w * 2 + 8, h * 0.4);
+      g.restore();
+      // La paupière : un trait épais, effilé vers le coin extérieur (avec des cils pour les filles).
+      g.strokeStyle = encreC; g.lineWidth = feminin ? 8 : 7;
+      g.beginPath(); g.moveTo(int + s * 1, cy + 1); g.bezierCurveTo(int - s * w * 0.2, haut - 3, ext + s * w * 0.4, haut - 5, ext - s * 6, cy - h * 0.3 * ferme - 4); g.stroke();
+      if (feminin) { g.lineWidth = 4; g.beginPath(); g.moveTo(ext - s * 4, cy - h * 0.3); g.lineTo(ext - s * 14, cy - h * 0.5); g.stroke(); }
+      g.lineWidth = 2.6; g.strokeStyle = teinte(k.peau, -0.45);
+      g.beginPath(); g.moveTo(ext + s * 4, cy + h * 0.32); g.quadraticCurveTo(cx, cy + h * 0.66, int - s * 6, cy + h * 0.45); g.stroke();
+    }
+    // Les sourcils : épais, effilés ; froncés en colère, relevés dans la douleur.
+    g.strokeStyle = teinte(k.cheveux, -0.25); g.fillStyle = g.strokeStyle;
+    for (const s of [1, -1]) {
+      const [cx, cy] = PF(s * 19, 12);
+      const int = cx + s * 26, ext = cx - s * 26;
+      const dyInt = expr === 'colere' ? 12 : expr === 'douleur' ? -10 : expr === 'joie' ? -3 : 2;
+      const dyExt = expr === 'colere' ? -10 : expr === 'douleur' ? 8 : -2;
+      g.beginPath();
+      g.moveTo(int, cy + dyInt - 5);
+      g.quadraticCurveTo(cx, cy - 12 + (dyInt + dyExt) / 2, ext - s * 4, cy + dyExt);
+      g.quadraticCurveTo(cx, cy - 2 + (dyInt + dyExt) / 2, int, cy + dyInt + 5);
+      g.closePath(); g.fill();
+    }
+    // Le nez : une petite ombre, la bouche selon l'expression.
+    const [nx, ny] = PF(1, -14);
+    g.fillStyle = ombre; g.beginPath(); g.moveTo(nx + 2, ny - 22); g.quadraticCurveTo(nx - 10, ny - 2, nx - 12, ny + 6); g.lineTo(nx + 4, ny + 6); g.closePath(); g.fill();
+    g.strokeStyle = teinte(k.peau, -0.38); g.lineWidth = 3; g.beginPath(); g.moveTo(nx - 10, ny + 6); g.lineTo(nx + 3, ny + 7); g.stroke();
+    const [bx, by] = PF(1, -29);
+    g.strokeStyle = encreC;
+    if (expr === 'colere') {
+      // Les dents serrées, la bouche ouverte qui crie.
+      g.fillStyle = '#4a0e18'; g.beginPath(); g.moveTo(bx - 26, by - 6); g.quadraticCurveTo(bx, by - 12, bx + 22, by - 7); g.quadraticCurveTo(bx + 4, by + 18, bx - 26, by - 6); g.fill();
+      g.fillStyle = '#ffffff'; g.fillRect(bx - 22, by - 9, 42, 6);
+      g.lineWidth = 3.4; g.beginPath(); g.moveTo(bx - 26, by - 6); g.quadraticCurveTo(bx, by - 12, bx + 22, by - 7); g.stroke();
+    } else if (expr === 'douleur') {
+      g.fillStyle = '#4a0e18'; g.beginPath(); g.ellipse(bx, by + 2, 16, 12, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#ffffff'; g.fillRect(bx - 12, by - 9, 24, 5);
+      g.lineWidth = 3; g.beginPath(); g.ellipse(bx, by + 2, 16, 12, 0, 0, Math.PI * 2); g.stroke();
+    } else if (expr === 'ko') {
+      g.lineWidth = 3.4; g.beginPath(); g.moveTo(bx - 12, by); g.quadraticCurveTo(bx - 4, by - 6, bx + 2, by); g.quadraticCurveTo(bx + 8, by + 6, bx + 14, by); g.stroke();
+    } else if (expr === 'joie') {
+      g.fillStyle = '#5a1420'; g.beginPath(); g.moveTo(bx - 22, by - 6); g.quadraticCurveTo(bx, by + 22, bx + 20, by - 6); g.closePath(); g.fill();
+      g.fillStyle = '#ffffff'; g.fillRect(bx - 18, by - 6, 36, 5);
+      g.lineWidth = 3.4; g.beginPath(); g.moveTo(bx - 24, by - 8); g.quadraticCurveTo(bx, by - 2, bx + 22, by - 8); g.stroke();
+    } else {
+      g.lineWidth = 3.6; g.beginPath(); g.moveTo(bx - 16, by - 2); g.quadraticCurveTo(bx, by + 2, bx + 14, by - 3); g.stroke();
+    }
+    if (feminin && expr !== 'ko') {
+      g.fillStyle = 'rgba(255,110,130,0.28)';
+      for (const s of [1, -1]) { const [cx, cy] = PF(s * 30, -10); g.beginPath(); g.ellipse(cx, cy, 20, 9, 0, 0, Math.PI * 2); g.fill(); }
+    }
+  });
+}
+
+/** Le poing fermé : la paume, les doigts repliés, les jointures, le pouce. Il pointe vers +X (le long de l'avant-bras). */
+function poing(r, matiere) {
+  const g = new THREE.Group();
+  const paume = boule(1, matiere); paume.scale.set(r * 0.92, r * 0.86, r * 0.78);
+  const doigts = boule(1, matiere); doigts.scale.set(r * 0.6, r * 0.9, r * 0.8); doigts.position.set(r * 0.5, 0, 0);
+  g.add(paume, doigts);
+  for (let i = 0; i < 4; i++) { const j = boule(r * 0.27, matiere); j.position.set(r * 0.95, (-0.48 + i * 0.32) * r, r * 0.18); g.add(j); }
+  const pouce = boule(1, matiere); pouce.scale.set(r * 0.52, r * 0.26, r * 0.28); pouce.position.set(r * 0.38, -r * 0.62, r * 0.42); pouce.rotation.z = 0.5;
+  g.add(pouce);
+  return g;
+}
+
 /* ------------------------------------------------------------------ */
 /* Le modèle                                                           */
 /* ------------------------------------------------------------------ */
@@ -234,7 +530,9 @@ function construire(perso) {
   const peau = mat(k.peau, 'peau');
   const robeOuJupe = X.includes('robe') || X.includes('jupe');
   const pantalon = mat(robeOuJupe ? k.peau : k.tenue, robeOuJupe ? 'peau' : 'tissu');
-  const chaussure = mat(L.tete === 'rocher' ? teinte(k.peau, -0.3) : teinte(k.tenue, -0.55), 'brillant');
+  // Les karatékas se battent pieds nus.
+  const piedsNus = KIMONO.includes(perso.id);
+  const chaussure = piedsNus ? peau : mat(L.tete === 'rocher' ? teinte(k.peau, -0.3) : teinte(k.tenue, -0.55), 'brillant');
   const mancheC = manche(perso);
   const bras = mat(mancheC, mancheC === k.peau ? 'peau' : 'tissu');
   const gantC = gant(perso);
@@ -245,19 +543,26 @@ function construire(perso) {
   /* ---- Le bassin, et les jambes ---- */
   P.bassin = boule(1, pantalon); P.bassin.scale.set(13 * l, 9, 11 * l);
   groupe.add(P.bassin);
-  P.cuisseA = segment(8.6 * m, pantalon, 7.4 * m); P.cuisseR = segment(8.2 * m, pantalon, 7 * m);
-  P.tibiaA = segment(7.4 * m, pantalon, 6.2 * m); P.tibiaR = segment(7 * m, pantalon, 6 * m);
+  const ample = KIMONO.includes(perso.id) && !robeOuJupe ? 1.18 : 1;
+  P.cuisseA = segment(8.6 * m * ample, pantalon, 7.4 * m * ample); P.cuisseR = segment(8.2 * m * ample, pantalon, 7 * m * ample);
+  P.tibiaA = segment(7.4 * m * ample, pantalon, 6.4 * m * ample); P.tibiaR = segment(7 * m * ample, pantalon, 6.2 * m * ample);
   const pied = () => {
     const g = new THREE.Group();
     const b = maille(GEO.sphere(), chaussure, 11 * m, 5.6, 6.8 * m);
     b.position.set(5 * m, -1.5, 0);
     const semelle = maille(GEO.boite(), mat('#1a1418'), 22 * m, 2.2, 12 * m);
     semelle.position.set(5 * m, -5.5, 0);
-    g.add(b, semelle);
+    g.add(b);
+    if (!piedsNus) g.add(semelle);
     return g;
   };
   P.piedA = pied(); P.piedR = pied();
   groupe.add(P.cuisseR, P.tibiaR, P.piedR, P.cuisseA, P.tibiaA, P.piedA);
+  if (KIMONO.includes(perso.id) && !robeOuJupe) {
+    const bas = () => new THREE.Mesh(new THREE.CylinderGeometry(7.2 * m, 9.4 * m, 10, 22, 1), pantalon);
+    P.basA = bas(); P.basR = bas();
+    groupe.add(P.basA, P.basR);
+  }
 
   /* ---- Le buste : un tronc qui s'élargit vers les épaules, tourné vers nous ---- */
   const buste = new THREE.Group();
@@ -266,26 +571,29 @@ function construire(perso) {
   const taille = 15 * l;
   const nu = X.includes('torse-nu');
   const haut = nu ? peau : tenue;
-  const tronc = new THREE.Mesh(new THREE.CylinderGeometry(largeur * 0.92, taille, 46, 26, 1), haut);
-  tronc.position.y = 25;
+  const kimono = KIMONO.includes(perso.id);
+  // Le tronc sculpté ; le col en V du kimono, ou les muscles d'un torse nu, sont dessinés dessus.
+  const tronc = new THREE.Mesh(geoTronc(largeur, taille), matTorse(perso, nu, kimono));
   tronc.scale.z = 0.62;
-  const poitrine = boule(1, haut, 1, 1); poitrine.scale.set(largeur * 0.98, 9, largeur * 0.5); poitrine.position.y = 43;
-  const ventre = boule(1, haut); ventre.scale.set(taille * 1.02, 8, taille * 0.66); ventre.position.y = 3;
-  buste.add(tronc, poitrine, ventre);
-  if (KIMONO.includes(perso.id)) {
-    const v = plaque([[-7, 48], [9, 48], [1, 20]], 1, peau);
-    v.position.set(0, 0, largeur * 0.6 + 0.4);
-    buste.add(v);
-  }
-  if (nu) {
-    for (const y of [36, 26, 17]) { const ligne = maille(GEO.boite(), mat(teinte(k.peau, -0.3), 'peau'), 12, 1.2, 1); ligne.position.set(0, y, taille * 0.66 + 1.5); buste.add(ligne); }
-  }
+  buste.add(tronc);
+
   // La ceinture, et son nœud.
   const ceinture = new THREE.Mesh(new THREE.CylinderGeometry(taille + 1.6, taille + 1.4, 8, 26, 1), mat(k.ceinture));
   ceinture.scale.z = 0.7; ceinture.position.y = 1;
-  const noeud = maille(GEO.boite(), mat(teinte(k.ceinture, -0.2)), 5, 12, 2);
-  noeud.position.set(taille - 3, -6, taille * 0.5); noeud.rotation.z = 0.35;
+  const noeud = boule(1, mat(teinte(k.ceinture, -0.08))); noeud.scale.set(4.2, 3.4, 2.6);
+  noeud.position.set(taille - 4, 0.5, taille * 0.62);
   buste.add(ceinture, noeud);
+  if (kimono || X.includes('ceinture-longue')) {
+    const bouts = new THREE.Group();
+    for (const [dx, l2, a] of [[-1.5, 18, 0.32], [1.5, 15, -0.12]]) {
+      const b = plaque([[-1.8, 0], [1.8, 0], [2.2, -l2], [-1.4, -l2 + 1.2]], 1.4, mat(k.ceinture));
+      b.position.set(dx, 0, 0); b.rotation.z = a;
+      bouts.add(b);
+    }
+    bouts.position.set(taille - 4, -1.5, taille * 0.62 + 1.5);
+    buste.add(bouts);
+    P.bouts = bouts;
+  }
   if (X.includes('ceinture-champion')) {
     const boucle = boule(1, mat('#ffd23f', 'metal')); boucle.scale.set(11, 8, 2.5); boucle.position.set(0, 0, taille * 0.7 + 1);
     const rubis = boule(3.4, mat('#d8102a', 'brillant')); rubis.position.set(0, 0, taille * 0.7 + 3.2);
@@ -309,11 +617,18 @@ function construire(perso) {
   /* ---- Les bras ---- */
   P.brasA = segment(6.6 * m, bras, 6 * m); P.avantBrasA = segment(6 * m, bras, 5.4 * m);
   P.brasR = segment(6.2 * m, bras, 5.6 * m); P.avantBrasR = segment(5.6 * m, bras, 5 * m);
-  const poing = X.includes('gants-boxe') ? 11.5 : 7.5;
-  P.mainA = boule(poing * m, gants); P.mainR = boule(poing * m * 0.95, gants);
+  const taillePoing = X.includes('gants-boxe') ? 11.5 : 7.8;
+  const boxe = X.includes('gants-boxe');
+  P.mainA = boxe ? boule(taillePoing * m, gants) : poing(taillePoing * m, gants);
+  P.mainR = boxe ? boule(taillePoing * m * 0.95, gants) : poing(taillePoing * m * 0.95, gants);
   groupe.add(P.brasR, P.avantBrasR, P.mainR, P.brasA, P.avantBrasA, P.mainA);
   // Les épaules, arrondies.
   P.epauleA = boule(8.4 * m * l, haut); P.epauleR = boule(8 * m * l, haut);
+  if (KIMONO.includes(perso.id)) {
+    const manche = (r) => new THREE.Mesh(new THREE.CylinderGeometry(r * 1.02, r * 1.2, 1, 22, 1), haut);
+    P.mancheA = manche(8.2 * m * l); P.mancheR = manche(7.8 * m * l);
+    groupe.add(P.mancheA, P.mancheR);
+  }
   groupe.add(P.epauleA, P.epauleR);
 
   /* ---- La tête ---- */
@@ -390,7 +705,7 @@ function construireTete(perso) {
   const groupe = new THREE.Group();
   // Le visage regarde vers l'avant, un peu tourné vers nous.
   const visage = new THREE.Group();
-  visage.rotation.y = rad(-38);
+  visage.rotation.y = rad(-60);
   groupe.add(visage);
   const T = { groupe, visage, yeux: [], pupilles: [], bouche: null };
   const peau = mat(k.peau, 'peau');
@@ -442,17 +757,28 @@ function construireTete(perso) {
     return T;
   }
 
-  // Le visage.
-  const forme = L.tete === 'rocher' ? maille(GEO.dode(), peau, 15.5, 16, 14.5) : boule(1, peau);
-  if (L.tete !== 'rocher') forme.scale.set(14.5, 16, 13.8);
-  const machoire = boule(1, mat(teinte(k.peau, -0.05), 'peau')); machoire.scale.set(9.5, 7.5, 10); machoire.position.set(5, -8, 0);
-  const nez = boule(1, peau); nez.scale.set(3.2, 2.6, 2.2); nez.position.set(14.2, -2, 0);
-  visage.add(forme, machoire, nez);
-  for (const z of [-1, 1]) { const o = boule(1, peau); o.scale.set(2.6, 4.2, 2); o.position.set(0, -1, z * 13.6); visage.add(o); }
-
-  // Les yeux, les sourcils, la bouche.
+  // Le visage : une tête d'anime, son visage dessiné (une texture par expression).
   const luisants = X.includes('yeux-luisants') || L.tete === 'capuche' || L.tete === 'visiere';
-  for (const z of [-5.2, 5.2]) {
+  if (L.tete !== 'rocher') {
+    const exprs = {};
+    const o = { yeux: !luisants, seulLoin: X.includes('oeil-rouge') };
+    T.matExpr = (e) => {
+      if (!exprs[e]) { const m = toon({ map: texVisage(perso, e, o), color: 0xffffff }, { rim: 0.8 }); m.userData.encre = new THREE.Color(k.peau); exprs[e] = m; }
+      return exprs[e];
+    };
+    T.forme = new THREE.Mesh(GEO.tete(), T.matExpr('neutre'));
+    T.forme.scale.set(14.5, 16, 13.8);
+    T.expr = 'neutre';
+    visage.add(T.forme);
+    for (const z of [-1, 1]) { const o2 = boule(1, peau); o2.scale.set(2.4, 3.8, 1.8); o2.position.set(-0.5, -1, z * 13.4); visage.add(o2); }
+    if (X.includes('oeil-rouge')) { const e = boule(1, mat('#ff2020', 'lueur')); e.scale.set(1.2, 2.4, 3.6); e.position.set(11.6, 2, 5.4); visage.add(e); T.yeux.push(e); }
+    if (luisants) for (const z of [-5.2, 5.2]) { const e = boule(1, mat(k.c1, 'lueur')); e.scale.set(1.2, 1.6, 3.2); e.position.set(12.4, 2, z); visage.add(e); T.yeux.push(e); }
+  } else {
+    const forme = maille(GEO.dode(), peau, 15.5, 16, 14.5);
+    const machoire = boule(1, mat(teinte(k.peau, -0.05), 'peau')); machoire.scale.set(9.5, 7.5, 10); machoire.position.set(5, -8, 0);
+    visage.add(forme, machoire);
+  }
+  for (const z of L.tete === 'rocher' ? [-5.2, 5.2] : []) {
     if (X.includes('oeil-rouge') && z > 0) {
       const e = boule(1, mat('#ff2020', 'lueur')); e.scale.set(1.2, 2.4, 3.6); e.position.set(12.6, 2, z); visage.add(e); T.yeux.push(e); continue;
     }
@@ -465,10 +791,9 @@ function construireTete(perso) {
     visage.add(blanc, pupille, sourcil);
     T.yeux.push(blanc); T.pupilles.push(pupille);
   }
-  const bouche = maille(GEO.boite(), mat('#5a2020'), 1.2, 1.6, 7); bouche.position.set(13.2, -9, 0.5);
-  visage.add(bouche); T.bouche = bouche;
+  if (L.tete === 'rocher') { const bouche = maille(GEO.boite(), mat('#5a2020'), 1.2, 1.6, 7); bouche.position.set(13.2, -9, 0.5); visage.add(bouche); T.bouche = bouche; }
   if (X.includes('barbe')) {
-    const b = boule(1, cheveux); b.scale.set(8, 18, 9); b.position.set(8, -20, 0); visage.add(b);
+    const b = boule(1, cheveux); b.scale.set(8, 16, 9); b.position.set(9, -20, 0); visage.add(b);
   }
   if (L.tete === 'ninja') {
     const masque = new THREE.Mesh(new THREE.SphereGeometry(15.4, 24, 14, -Math.PI / 2, Math.PI, Math.PI * 0.52, Math.PI * 0.38), mat(teinte(k.c2, -0.55)));
@@ -510,7 +835,11 @@ function coiffure3D(T, perso) {
   switch (L.tete) {
     case 'bandeau': {
       calotte(0.5);
-      for (let i = 0; i < 5; i++) pic(-10 + i * 4, 15, -6 + (i % 2) * 6, 12, 3.4, rad(30 - i * 4));
+      // Des mèches en pics, rejetées en arrière, et quelques-unes qui retombent sur le front.
+      for (const [x, y, z, h, r, az, ax] of [[-13, 9, 0, 21, 5, 78, 0], [-10, 13, -7, 19, 4.6, 60, -24], [-10, 13, 7, 19, 4.6, 60, 24], [-5, 16, -3, 18, 4.8, 38, -12], [-5, 16, 5, 17, 4.6, 34, 16], [0, 17, 0, 16, 4.6, 16, 0], [4, 16, -7, 13, 4, -2, -28], [4, 16, 7, 13, 4, -4, 28], [-15, 3, -6, 16, 4.2, 100, -14], [-15, 3, 6, 15, 4.2, 104, 14]]) {
+        const p = pic(x, y, z, h, r, rad(az)); p.rotation.x = rad(ax);
+      }
+      for (const [z, a] of [[-4, -128], [3, -136]]) pic(11, 8, z, 9, 2.6, rad(a));
       const b = new THREE.Mesh(new THREE.TorusGeometry(15, 2.4, 8, 32), mat(k.ceinture));
       b.rotation.x = Math.PI / 2; b.rotation.y = rad(12); b.position.y = 6; b.scale.set(1, 0.95, 1);
       v.add(b);
@@ -790,7 +1119,9 @@ function poser(P, sq, o) {
   const zB = 15 * l;
   P.bassin.position.copy(V(hanche)); P.bassin.position.y -= 3;
   // Les jambes : celle de devant vers nous, l'autre derrière.
+  // Le haut des cuisses un peu sous la ceinture (sinon leur rondeur dépasse).
   const H_A = V(hanche, zJ * 0.8); const H_R = V(hanche, -zJ * 0.8);
+  H_A.y -= 4; H_R.y -= 4;
   const KA = V(jambes.ka, zJ); const FA = V(jambes.fa, zJ);
   const KR = V(jambes.kr, -zJ); const FR = V(jambes.fr, -zJ);
   placer(P.cuisseA, H_A, KA); placer(P.tibiaA, KA, FA);
@@ -805,7 +1136,7 @@ function poser(P, sq, o) {
 
   // Le buste : planté sur les hanches, penché comme la pose, tourné vers nous.
   P.buste.position.copy(V(hanche));
-  P.buste.rotation.set(0, rad(-28), -rad(pose.b));
+  P.buste.rotation.set(0, rad(-14), rad(pose.b));
   if (P.jupe) { P.jupe.position.copy(V(hanche)); P.jupe.rotation.set(0, 0, Math.sin(t / 7) * 0.04); }
 
   // Les bras : l'épaule de devant vers nous.
@@ -816,18 +1147,31 @@ function poser(P, sq, o) {
   placer(P.brasA, EA, CA); placer(P.avantBrasA, CA, MA);
   placer(P.brasR, ER, CR); placer(P.avantBrasR, CR, MR);
   P.mainA.position.copy(MA); P.mainR.position.copy(MR);
+  if (P.mancheA) {
+    const manche = (mc, e, c) => { tmp.subVectors(e, c); const l2 = tmp.length() * 0.42; tmp.normalize(); mc.position.copy(e).addScaledVector(tmp, -l2 / 2 - 1); mc.quaternion.setFromUnitVectors(Y, tmp); mc.scale.set(1, l2, 1); };
+    manche(P.mancheA, EA, CA); manche(P.mancheR, ER, CR);
+  }
+  // Le poing prolonge l'avant-bras.
+  P.mainA.rotation.set(0, 0, Math.atan2(MA.y - CA.y, MA.x - CA.x));
+  P.mainR.rotation.set(0, 0, Math.atan2(MR.y - CR.y, MR.x - CR.x));
+  if (P.basA) {
+    const evase = (bas, f, kk) => { tmp.subVectors(kk, f).normalize(); bas.position.copy(f).addScaledVector(tmp, 5.5); bas.quaternion.setFromUnitVectors(Y, tmp); };
+    evase(P.basA, FA, KA); evase(P.basR, FR, KR);
+  }
+  if (P.bouts) P.bouts.rotation.set(0, 0, Math.sin(t / 6) * 0.1 - rad(pose.b) * 0.8);
 
   // Le cou, la tête.
   const T = P.tete;
   placer(P.cou, V(cou), V(tete).add(new THREE.Vector3(0, -8, 0)));
   T.groupe.position.copy(V(tete));
-  T.groupe.rotation.set(0, 0, -rad((pose.b + (pose.tt || 0)) * 0.35));
+  T.groupe.rotation.set(0, 0, rad((pose.b + (pose.tt || 0)) * 0.35));
   const touche = ['touche', 'vol', 'ko', 'sol'].includes(o.pose);
   const ko = o.pose === 'ko';
   // K.O. : les yeux se ferment.
   for (const e of T.yeux) { e.userData.sy ??= e.scale.y; e.scale.y = ko ? e.userData.sy * 0.18 : e.userData.sy; }
   for (const p of T.pupilles) p.visible = !ko;
   if (T.bouche) { T.bouche.scale.y = touche ? 4.4 : 1.6; T.bouche.scale.z = touche ? 4 : 7; }
+  if (T.forme) { const e = expression(sq.nomPose); if (e !== T.expr) { T.expr = e; T.forme.material = T.matExpr(e); } }
   if (T.pans) T.pans.rotation.set(0, 0, Math.sin(t / 5) * 0.12 - 0.05);
   if (T.panache) T.panache.rotation.z = Math.sin(t / 6) * 0.06;
   if (T.halo) T.halo.position.y = 30 + Math.sin(t / 10) * 2;
@@ -836,7 +1180,7 @@ function poser(P, sq, o) {
 
   // Les accessoires suivent le corps.
   const dos = V(epaule, -10 * l);
-  if (P.cape) { P.cape.position.copy(dos); P.cape.rotation.set(0, 0, -rad(pose.b) * 0.5 + Math.sin(t / 7) * 0.05); }
+  if (P.cape) { P.cape.position.copy(dos); P.cape.rotation.set(0, 0, rad(pose.b) * 0.5 + Math.sin(t / 7) * 0.05); }
   if (P.ailes) for (const a of P.ailes) {
     a.position.set(epaule.x - 6, -(epaule.y + 6), -14 * l + a.userData.z * 4);
     a.rotation.set(0, a.userData.z * 0.35, Math.sin(t / 6) * 0.14 + (pose.rot ? 0.3 : 0));
@@ -867,7 +1211,7 @@ function poser(P, sq, o) {
   if (P.canon) tenir(P.canon, MA, CA, true);
   if (P.griffes) tenir(P.griffes, MA, CA);
   if (P.nageoire) { P.nageoire.position.copy(MR); }
-  if (P.epauliere) { P.epauliere.position.copy(V(epaule, zB * 0.7)); P.epauliere.position.y -= 2; P.epauliere.rotation.set(0, 0, -rad(pose.b) * 0.6 - 0.15); }
+  if (P.epauliere) { P.epauliere.position.copy(V(epaule, zB * 0.7)); P.epauliere.position.y -= 2; P.epauliere.rotation.set(0, 0, rad(pose.b) * 0.6 - 0.15); }
   if (P.brassard) { P.brassard.position.copy(CA).lerp(EA, 0.5); P.brassard.rotation.set(Math.PI / 2, 0, Math.atan2(CA.y - EA.y, CA.x - EA.x)); }
   if (P.aiguille) P.aiguille.rotation.z = -t / 30;
 }

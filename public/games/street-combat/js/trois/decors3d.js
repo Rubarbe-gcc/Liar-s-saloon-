@@ -16,6 +16,8 @@
 
 import * as THREE from '../../../../vendor/three/three.module.min.js';
 
+/** La qualité choisie dans le menu (haute, moyenne, basse ; « 2d » : sans 3D). Par défaut : moyenne sur un téléphone. */
+const QUALITE = (() => { try { const q = JSON.parse(localStorage.getItem('street.graphismes')); if (q) return q; } catch { /* rien */ } return typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches ? 'moyenne' : 'haute'; })();
 const L = 1000;
 const H = 600;
 const SOL = 470;
@@ -73,9 +75,67 @@ export function decor3D(a) {
   const sortie = document.createElement('canvas');
   sortie.width = L; sortie.height = H;
   sortie.getContext('2d').drawImage(renderer.domElement, 0, 0);
+  finition(sortie, QUALITE);
+  // La lumière de l'arène : les combattants (rendu3d.js) s'éclairent dans les mêmes tons.
+  sortie.ambiance = c.ambiance || null;
   // On libère ce qui a servi.
   scene.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) [].concat(o.material).forEach((m) => { m.map?.dispose(); m.emissiveMap?.dispose(); m.dispose(); }); });
   return sortie;
+}
+
+
+/* ------------------------------------------------------------------ */
+/* La finition de l'image : halo des lumières, fond flou, vignette       */
+/* ------------------------------------------------------------------ */
+
+/** Le navigateur sait-il flouter une toile ? (sinon, on garde l'image telle quelle) */
+let filtresOk = null;
+function filtres() {
+  if (filtresOk === null) {
+    const g = document.createElement('canvas').getContext('2d');
+    g.filter = 'blur(2px)';
+    filtresOk = g.filter === 'blur(2px)';
+  }
+  return filtresOk;
+}
+
+/**
+ * Une fois l'arène rendue : ses lumières bavent un peu (un halo, comme dans
+ * un anime), le lointain se floute légèrement pour détacher les combattants,
+ * et les bords s'assombrissent.
+ */
+function finition(cv, qualite) {
+  const g = cv.getContext('2d');
+  if (qualite === 'haute' && filtres()) {
+    // Le halo : seulement ce qui est très clair, flouté, ajouté en douceur.
+    const p = document.createElement('canvas');
+    p.width = L / 4; p.height = H / 4;
+    const gp = p.getContext('2d');
+    gp.filter = 'brightness(0.75) contrast(3.2) saturate(1.3) blur(3px)';
+    gp.drawImage(cv, 0, 0, p.width, p.height);
+    g.save();
+    g.globalCompositeOperation = 'screen';
+    g.globalAlpha = 0.55;
+    g.imageSmoothingQuality = 'high';
+    g.drawImage(p, 0, 0, L, H);
+    g.restore();
+    // Le lointain (au-dessus de l'horizon) un peu flou, de plus en plus net vers le sol.
+    const f = document.createElement('canvas');
+    f.width = L; f.height = H;
+    const gf = f.getContext('2d');
+    gf.filter = 'blur(1.6px)';
+    gf.drawImage(cv, 0, 0);
+    gf.filter = 'none';
+    gf.globalCompositeOperation = 'destination-in';
+    const m = gf.createLinearGradient(0, 0, 0, SOL);
+    m.addColorStop(0, 'rgba(0,0,0,1)'); m.addColorStop(0.62, 'rgba(0,0,0,0.9)'); m.addColorStop(0.9, 'rgba(0,0,0,0)');
+    gf.fillStyle = m; gf.fillRect(0, 0, L, H);
+    g.drawImage(f, 0, 0);
+  }
+  // La vignette.
+  const v = g.createRadialGradient(L / 2, H * 0.55, H * 0.45, L / 2, H * 0.55, L * 0.72);
+  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,0.38)');
+  g.fillStyle = v; g.fillRect(0, 0, L, H);
 }
 
 /* ------------------------------------------------------------------ */
@@ -221,6 +281,7 @@ function sol(c, tex, o = {}) {
 
 /** La lumière : le ciel et le sol, et un soleil qui projette des ombres. */
 function lumiere(c, { ciel: cc = '#ffffff', sol: cs = '#404040', ambiance = 1, soleil = '#ffffff', force = 2.2, dir = [-0.5, 0.8, 0.45] } = {}) {
+  c.ambiance = { ciel: cc, sol: cs, soleil };
   c.scene.add(new THREE.HemisphereLight(new THREE.Color(cc), new THREE.Color(cs), ambiance));
   const s = new THREE.DirectionalLight(new THREE.Color(soleil), force);
   s.position.set(L / 2 + dir[0] * 2000, dir[1] * 2000, dir[2] * 2000);

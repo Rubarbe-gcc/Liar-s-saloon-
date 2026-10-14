@@ -21,7 +21,7 @@ function portrait(id) {
 }
 
 /** L'état propre au bandeau (la traîne des vies). */
-export const creerHud = () => ({ trainee: [null, null] });
+export const creerHud = () => ({ trainee: [null, null], avant: [null, null], eclair: [0, 0] });
 
 export function dessinerHud(g, c, fx, hud, t) {
   c.joueurs.forEach((j, k) => barre(g, c, j, k, hud, t));
@@ -75,6 +75,10 @@ function barre(g, c, j, k, hud, t) {
   // La traîne : elle rattrape la vie, lentement.
   if (hud.trainee[k] === null || hud.trainee[k] < frac) hud.trainee[k] = frac;
   else hud.trainee[k] = Math.max(frac, hud.trainee[k] - 0.006);
+  // Un coup reçu : la barre s'allume un instant.
+  if (hud.avant[k] !== null && frac < hud.avant[k] - 0.0005) hud.eclair[k] = 9;
+  hud.avant[k] = frac;
+  if (hud.eclair[k] > 0) hud.eclair[k] -= 1;
 
   g.save();
   // Le portrait.
@@ -86,21 +90,32 @@ function barre(g, c, j, k, hud, t) {
   // La vie (en biais, comme dans les salles d'arcade).
   const y = 14;
   const h = 22;
-  const cadre = (w, couleur) => {
+  const forme = (w) => {
     g.beginPath();
     if (droite) { g.moveTo(x0 + largeur, y); g.lineTo(x0 + largeur - w, y); g.lineTo(x0 + largeur - w - 8, y + h); g.lineTo(x0 + largeur, y + h); }
     else { g.moveTo(x0, y); g.lineTo(x0 + w, y); g.lineTo(x0 + w + 8, y + h); g.lineTo(x0, y + h); }
     g.closePath();
-    g.fillStyle = couleur; g.fill();
   };
+  const cadre = (w, couleur) => { forme(w); g.fillStyle = couleur; g.fill(); };
   cadre(largeur, 'rgba(0,0,0,0.6)');
   cadre(largeur * hud.trainee[k], '#d0102a');
   const vie = g.createLinearGradient(0, y, 0, y + h);
   const couleur = frac > 0.5 ? ['#c8ff7a', '#2ab84a'] : frac > 0.25 ? ['#ffe680', '#e09b16'] : ['#ff9a9a', '#d0102a'];
   vie.addColorStop(0, couleur[0]); vie.addColorStop(1, couleur[1]);
-  cadre(largeur * frac, vie);
-  g.strokeStyle = 'rgba(255,255,255,0.7)'; g.lineWidth = 1.5;
-  g.strokeRect(x0, y, largeur, h);
+  // Presque K.O. : la barre bat comme un cœur.
+  if (frac > 0 && frac < 0.25) { g.save(); g.shadowColor = '#ff2040'; g.shadowBlur = 10 + Math.sin(t / 4) * 8; cadre(largeur * frac, vie); g.restore(); }
+  else cadre(largeur * frac, vie);
+  // Le reflet en haut, les graduations, l'éclair d'un coup reçu.
+  g.save();
+  forme(largeur * frac); g.clip();
+  g.fillStyle = 'rgba(255,255,255,0.32)'; g.fillRect(x0 - 10, y + 2, largeur + 20, h * 0.32);
+  g.fillStyle = 'rgba(0,0,0,0.18)';
+  for (let i = 1; i < 10; i++) g.fillRect(droite ? x0 + largeur - (largeur * i) / 10 - 1 : x0 + (largeur * i) / 10, y + h * 0.45, 1.5, h * 0.55);
+  if (hud.eclair[k] > 0) { g.fillStyle = 'rgba(255,255,255,' + (hud.eclair[k] / 12).toFixed(3) + ')'; g.fillRect(x0 - 10, y, largeur + 20, h); }
+  g.restore();
+  forme(largeur);
+  g.strokeStyle = 'rgba(255,255,255,0.75)'; g.lineWidth = 1.5; g.stroke();
+  g.strokeStyle = rgba(p.c.c1, 0.6); g.lineWidth = 1; g.strokeRect(x0 - 3, y - 3, largeur + 6, h + 6);
 
   // Le nom, les rounds gagnés.
   g.font = '900 15px Impact, "Arial Black", sans-serif';
@@ -135,6 +150,14 @@ function barre(g, c, j, k, hud, t) {
   for (const s of [JAUGE.specB, JAUGE.specA]) {
     const x = droite ? jx + jl - (jl * s) / 100 : jx + (jl * s) / 100;
     g.fillStyle = '#000'; g.fillRect(x - 1, jy, 2, 14);
+  }
+  // Le reflet sur ce qui est rempli ; un segment prêt s'allume.
+  const rempli = (jl * Math.min(100, j.sp)) / 100;
+  g.fillStyle = 'rgba(255,255,255,0.28)'; g.fillRect(droite ? jx + jl - rempli : jx, jy + 1, rempli, 4);
+  for (const [de, a] of [[0, JAUGE.specB], [JAUGE.specB, JAUGE.specA]]) {
+    if (j.sp < a) continue;
+    const x = droite ? jx + jl - (jl * a) / 100 : jx + (jl * de) / 100;
+    g.fillStyle = 'rgba(255,255,255,' + (0.12 + 0.12 * Math.sin(t / 6)).toFixed(3) + ')'; g.fillRect(x, jy, (jl * (a - de)) / 100, 14);
   }
   if (plein) { g.save(); g.shadowColor = '#ffd23f'; g.shadowBlur = 16; g.strokeStyle = '#ffd23f'; g.lineWidth = 2; g.strokeRect(jx - 2, jy - 2, jl + 4, 18); g.restore(); }
   g.font = '900 12px system-ui';

@@ -43,69 +43,188 @@ const CARRURES = {
  * Une pose : penché du buste (b), tête (tt), bras avant (av: épaule, coude),
  * bras arrière (ar), jambe avant (ja: hanche, genou), jambe arrière (jr),
  * hauteur des hanches (dy, positif = plus bas), rotation du corps entier (rot).
+ *
+ * Les angles : 0 vers le bas, 90 vers l'avant, 180 vers le haut. Un coude se
+ * plie vers l'avant (son angle est positif : l'avant-bras remonte), un genou
+ * vers l'arrière (négatif) : jamais l'inverse, sinon le membre a l'air cassé
+ * (test/street-poses.test.js le vérifie pour toutes les poses).
  */
-const GARDE = { b: 6, tt: 0, av: [55, -105], ar: [30, -115], ja: [16, -10], jr: [-16, 14], dy: 2, rot: 0 };
+const GARDE = { b: 6, tt: 0, av: [35, 115], ar: [20, 138], ja: [16, -10], jr: [-18, -6], dy: 2, rot: 0 };
 
+/** L'élan d'un coup : un petit recul, puis la frappe (k : sa vitesse). Va de -0,14 à 1. */
+const elan = (p, k) => (p < 0.1 ? -0.14 * doux(p / 0.1) : -0.14 + 1.14 * doux((p - 0.1) * k));
+/** Un coup pendant une saisie (u de 0 à 1, les dégâts à 0,5) : on arme, on frappe d'un coup, on tient, on revient. */
+export const coupSaisie = (u) => (u < 0.36 ? -0.3 * doux(u / 0.36) : u < 0.5 ? melange(-0.3, 1, doux((u - 0.36) / 0.14)) : u < 0.68 ? 1 : 1 - 0.8 * doux((u - 0.68) / 0.32));
+
+/** La pose, avec ses articulations toujours dans le bon sens (même pendant l'élan d'un coup). */
 function poseDe(nom, t, p = 0) {
+  const q = poseBrute(nom, t, p);
+  const n = (a) => ((a + 540) % 360) - 180;
+  for (const c of ['av', 'ar']) if (n(q[c][0]) >= -45 && n(q[c][0]) <= 165) q[c] = [q[c][0], Math.max(-6, Math.min(156, q[c][1]))];
+  for (const c of ['ja', 'jr']) q[c] = [q[c][0], Math.max(-160, Math.min(0, q[c][1]))];
+  return q;
+}
+
+function poseBrute(nom, t, p = 0) {
   const s = Math.sin(t / 9);
   switch (nom) {
-    case 'repos': return { ...GARDE, dy: 2 + s * 1.6, av: [55 + s * 3, -105], ar: [30 + s * 2, -115] };
+    case 'repos': return { ...GARDE, b: 6 + s * 1.2, dy: 2 + s * 1.6, av: [35 + s * 3, 113 - s * 3], ar: [20 + s * 2, 136 - s * 2] };
     case 'marche': {
       const m = Math.sin(t / 4.2);
-      return { ...GARDE, b: 9, ja: [m * 26, -Math.max(0, -m) * 30 - 6], jr: [-m * 26, -Math.max(0, m) * 30 - 6], dy: 3 - Math.abs(m) * 3 };
+      return { ...GARDE, b: 9, av: [35 + m * 8, 112], ar: [20 - m * 8, 134], ja: [m * 26, -Math.max(0, -m) * 30 - 6], jr: [-m * 26, -Math.max(0, m) * 30 - 6], dy: 3 - Math.abs(m) * 3 };
     }
-    case 'saut': return { ...GARDE, b: 8, ja: [55, -95], jr: [20, -85], av: [70, -100], ar: [45, -90], dy: 0 };
+    case 'saut': return { ...GARDE, b: 8, ja: [55, -95], jr: [20, -85], av: [55, 100], ar: [36, 118], dy: 0 };
     case 'accroupi': return { ...GARDE, b: 18, ja: [80, -125], jr: [-10, -110], dy: 34 };
-    case 'garde': return { ...GARDE, b: -4, av: [62, -130], ar: [52, -128], tt: 6, ja: [12, -8], jr: [-20, 18] };
-    case 'garde-bas': return { ...GARDE, b: 14, av: [70, -130], ar: [58, -128], ja: [80, -125], jr: [-10, -110], dy: 34, tt: 6 };
+    case 'garde': return { ...GARDE, b: -4, av: [58, 112], ar: [46, 124], tt: 6, ja: [12, -8], jr: [-22, -6] };
+    case 'garde-bas': return { ...GARDE, b: 14, av: [64, 104], ar: [52, 118], ja: [80, -125], jr: [-10, -110], dy: 34, tt: 6 };
     case 'poing': {
-      const e = doux(p * 1.6);
-      return { ...GARDE, b: melange(6, 16, e), av: [melange(55, 92, e), melange(-105, 0, e)], ar: [melange(30, -10, e), -120], ja: [24, -8], jr: [-24, 16] };
+      const e = elan(p, 1.9);
+      return { ...GARDE, b: melange(6, 16, e), tt: melange(0, 4, e), av: [melange(35, 92, e), melange(115, 0, e)], ar: [melange(20, -18, e), melange(138, 112, e)], ja: [24, -8], jr: [-26, -6] };
     }
     case 'pied': {
-      const e = doux(p * 1.5);
-      return { ...GARDE, b: melange(6, -18, e), ja: [melange(16, 98, e), melange(-10, 0, e)], jr: [-12, 8], av: [40, -110], ar: [-20, -60] };
+      // Le genou monte d'abord (armé), puis la jambe se détend.
+      const e = elan(p, 1.7);
+      const arme = Math.sin(Math.PI * Math.min(1, Math.max(0, e))) * 46;
+      return { ...GARDE, b: melange(6, -18, e), ja: [melange(16, 98, e), Math.min(0, melange(-10, 0, e) - arme)], jr: [-14, -4], av: [48, 104], ar: [melange(20, -36, e), melange(138, 70, e)] };
     }
     case 'poing-bas': {
-      const e = doux(p * 1.6);
-      return { ...GARDE, b: 20, ja: [80, -125], jr: [-10, -110], dy: 34, av: [melange(55, 88, e), melange(-105, -4, e)] };
+      const e = elan(p, 1.9);
+      return { ...GARDE, b: 20, ja: [80, -125], jr: [-10, -110], dy: 34, av: [melange(35, 86, e), melange(115, 0, e)] };
     }
     case 'balayage': {
-      const e = doux(p * 1.4);
-      return { ...GARDE, b: 30, dy: 52, ja: [melange(60, 88, e), melange(-120, 0, e)], jr: [-30, -120], av: [20, -40], ar: [-50, -30] };
+      const e = elan(p, 1.6);
+      return { ...GARDE, b: 30, dy: 52, ja: [melange(60, 88, e), melange(-120, 0, e)], jr: [-30, -120], av: [62, 30], ar: [-55, 45] };
     }
-    case 'poing-air': return { ...GARDE, b: 20, ja: [55, -95], jr: [20, -85], av: [118, 0], ar: [20, -110] };
-    case 'pied-air': return { ...GARDE, b: -10, ja: [70, 0], jr: [10, -100], av: [60, -120], ar: [-30, -60] };
-    case 'touche': return { ...GARDE, b: -24, tt: -18, av: [-10, -40], ar: [-40, -20], ja: [26, -16], jr: [-26, 10] };
-    case 'vol': return { ...GARDE, b: -30, tt: -20, av: [-80, -20], ar: [-120, -10], ja: [40, -30], jr: [10, -50], rot: -40 };
-    case 'sol': case 'ko': return { ...GARDE, b: 0, tt: -10, av: [-150, 0], ar: [-170, -20], ja: [5, -5], jr: [-5, 10], rot: -90, sol: true };
+    case 'poing-air': return { ...GARDE, b: 20, ja: [55, -95], jr: [20, -85], av: [112, 0], ar: [20, 125] };
+    case 'pied-air': return { ...GARDE, b: -10, ja: [70, 0], jr: [10, -100], av: [50, 108], ar: [-40, 55] };
+    case 'touche': return { ...GARDE, b: -24 + Math.sin(t * 1.3) * 2, tt: -18, av: [-18, 50], ar: [-45, 40], ja: [26, -16], jr: [-28, -6] };
+    case 'vol': return { ...GARDE, b: -30, tt: -20, av: [-80, 30], ar: [-120, 25], ja: [40, -30], jr: [10, -50], rot: -40 };
+    case 'sol': case 'ko': return { ...GARDE, b: 0, tt: -10, av: [-150, 10], ar: [-170, 10], ja: [5, -5], jr: [-5, -6], rot: -90, sol: true };
     /* Les poses de victoire (chaque combattant a la sienne : voir persos.js). */
-    case 'victoire': case 'v-poing': return { ...GARDE, b: -4, tt: -6, av: [172, -20 + s * 10], ar: [40, -120], ja: [14, -4], jr: [-14, 4] };
-    case 'v-deux-poings': return { ...GARDE, b: 6, tt: -14, av: [160, -12 + s * 8], ar: [200, 12 - s * 8], ja: [24, -4], jr: [-24, 4] };
-    case 'v-bras-croises': return { ...GARDE, b: 4, tt: -10, av: [32, -128], ar: [24, -122], ja: [8, -2], jr: [-8, 2], dy: 1 + s };
-    case 'v-salut': return { ...GARDE, b: -26 + s * 2, tt: 38, av: [78, -92], ar: [72, -84], ja: [4, 0], jr: [-4, 0] };
-    case 'v-salut-mili': return { ...GARDE, b: -2, tt: -4, av: [135, 94], ar: [6, -6], ja: [3, 0], jr: [-3, 0] };
-    case 'v-pointe': return { ...GARDE, b: -3, tt: -6, av: [94 + s * 2, -4], ar: [-35, 95], ja: [18, -4], jr: [-18, 6] };
-    case 'v-flex': return { ...GARDE, b: 2, tt: -6, av: [100, 82 + s * 6], ar: [-100, -82 - s * 6], ja: [28, -10], jr: [-28, 10], dy: 6 };
+    case 'victoire': case 'v-poing': return { ...GARDE, b: -4, tt: -6, av: [172, 4 + s * 5], ar: [22, 136], ja: [14, -4], jr: [-14, -4] };
+    case 'v-deux-poings': return { ...GARDE, b: 6, tt: -14, av: [160, 8 + s * 6], ar: [196, 8 - s * 6], ja: [24, -4], jr: [-24, -4] };
+    case 'v-bras-croises': return { ...GARDE, b: 4, tt: -10, av: [26, 78], ar: [18, 84], ja: [8, -2], jr: [-8, -2], dy: 1 + s };
+    case 'v-salut': return { ...GARDE, b: -26 + s * 2, tt: 38, av: [12, 25], ar: [6, 22], ja: [4, 0], jr: [-4, 0] };
+    case 'v-salut-mili': return { ...GARDE, b: -2, tt: -4, av: [135, 94], ar: [6, 8], ja: [3, 0], jr: [-3, 0] };
+    case 'v-pointe': return { ...GARDE, b: -3, tt: -6, av: [94 + s * 2, 0], ar: [-35, 95], ja: [18, -4], jr: [-18, -4] };
+    case 'v-flex': return { ...GARDE, b: 2, tt: -6, av: [100, 82 + s * 6], ar: [-100, -82 - s * 6], ja: [28, -10], jr: [-28, -6], dy: 6 };
     case 'v-meditation': return { ...GARDE, b: 0, tt: 10, av: [36, 140], ar: [30, 146], ja: [4, 0], jr: [-4, 0], dy: s };
-    case 'v-rire': return { ...GARDE, b: 14 + Math.sin(t / 3) * 3, tt: -34, av: [-30, 100], ar: [-36, 96], ja: [20, -4], jr: [-20, 4] };
-    case 'v-sautille': { const r = Math.abs(Math.sin(t / 4)); return { ...GARDE, flotte: true, b: 2, av: [62, -130], ar: [52, -128], ja: [16, -14], jr: [-18, 18], dy: -r * 12 }; }
+    case 'v-rire': return { ...GARDE, b: 14 + Math.sin(t / 3) * 3, tt: -34, av: [-30, 100], ar: [-36, 96], ja: [20, -4], jr: [-20, -4] };
+    case 'v-sautille': { const r = Math.abs(Math.sin(t / 4)); return { ...GARDE, flotte: true, b: 2, av: [50, 112], ar: [38, 126], ja: [16, -14], jr: [-18, -6], dy: -r * 12 }; }
     case 'v-levitation': return { ...GARDE, flotte: true, b: 4, tt: -12, av: [118, 14 + s * 6], ar: [-118, -14 - s * 6], ja: [12, -24], jr: [-8, -14], dy: -28 + s * 5 };
-    case 'v-genou': return { ...GARDE, b: -12, tt: 22, av: [70, -100], ar: [30, -40], ja: [88, -88], jr: [-30, -100], dy: 36 };
-    case 'v-bras-ecartes': return { ...GARDE, b: 8, tt: -20, av: [118 + s * 4, 18], ar: [-118 - s * 4, -18], ja: [20, -4], jr: [-20, 4] };
-    case 'v-poing-sol': return { ...GARDE, b: -40, tt: 34, av: [8, 4], ar: [40, -100], ja: [70, -110], jr: [-20, -80], dy: 30 };
-    case 'v-garde-honneur': return { ...GARDE, b: 0, tt: -4, av: [28, 26], ar: [34, 18], ja: [10, -2], jr: [-10, 2] };
-    case 'saisie': return { ...GARDE, b: 16, av: [84, -25], ar: [76, -40], ja: [26, -10], jr: [-26, 14] };
+    case 'v-genou': return { ...GARDE, b: -12, tt: 22, av: [62, 40], ar: [10, 30], ja: [88, -88], jr: [-30, -100], dy: 36 };
+    case 'v-bras-ecartes': return { ...GARDE, b: 8, tt: -20, av: [118 + s * 4, 18], ar: [-118 - s * 4, -18], ja: [20, -4], jr: [-20, -4] };
+    case 'v-poing-sol': return { ...GARDE, b: -40, tt: 34, av: [8, 4], ar: [30, 100], ja: [70, -110], jr: [-20, -80], dy: 30 };
+    case 'v-garde-honneur': return { ...GARDE, b: 0, tt: -4, av: [28, 26], ar: [34, 18], ja: [10, -2], jr: [-10, -2] };
     case 'lance': {
-      const e = doux(p * 1.5);
-      return { ...GARDE, b: melange(0, 14, e), av: [melange(30, 88, e), melange(-120, -6, e)], ar: [melange(20, 78, e), melange(-120, -18, e)], ja: [30, -12], jr: [-30, 16], dy: 6 };
+      const e = elan(p, 1.6);
+      return { ...GARDE, b: melange(0, 14, e), av: [melange(35, 88, e), melange(115, 0, e)], ar: [melange(20, 78, e), melange(138, 4, e)], ja: [30, -12], jr: [-32, -6], dy: 6 };
     }
-    case 'ruee': return { ...GARDE, b: 32, av: [96, -6], ar: [-30, -90], ja: [50, -60], jr: [-50, 10] };
-    case 'uppercut': return { ...GARDE, b: -6, av: [172, -6], ar: [-10, -100], ja: [70, -110], jr: [-6, 6], dy: 0 };
-    case 'tourne': return { ...GARDE, b: 0, av: [100, -20], ar: [-100, -20], ja: [92, 0], jr: [-10, -30], rot: (t * 30) % 360 };
-    case 'ulti': return { ...GARDE, b: -8, tt: -10, av: [140, -30], ar: [130, -40], ja: [34, -6], jr: [-34, 6], dy: 6 + s };
+    case 'ruee': return { ...GARDE, b: 32, av: [96, 0], ar: [-40, 60], ja: [50, -60], jr: [-50, -8] };
+    case 'uppercut': return { ...GARDE, b: -6, av: [172, 0], ar: [-10, 90], ja: [70, -110], jr: [-6, -4], dy: 0 };
+    case 'tourne': return { ...GARDE, b: 0, av: [100, 10], ar: [-100, -10], ja: [92, 0], jr: [-10, -30], rot: (t * 30) % 360 };
+    case 'ulti': return { ...GARDE, b: -8, tt: -10, av: [96, 4], ar: [90, 10], ja: [34, -6], jr: [-34, -6], dy: 6 + s };
+
+    /* La saisie : celui qui tient (sa main arrière reste sur le col de l'autre : voir `saisir`), et frappe de l'autre. p : l'avancée de l'étape. */
+    case 'saisie': return { ...GARDE, b: 16, av: [36, 112], ar: [80, 12], ja: [26, -10], jr: [-28, -6] };
+    case 'saisie-poing': {
+      const e = coupSaisie(p);
+      return { ...GARDE, b: melange(16, 26, e), tt: melange(0, 6, e), av: [melange(20, 86, e), melange(138, 2, e)], ar: [80, 12], ja: [melange(26, 32, e), -10], jr: [-30, -6] };
+    }
+    case 'saisie-crochet': {
+      const e = coupSaisie(p);
+      return { ...GARDE, b: melange(10, 24, e), tt: melange(-4, 8, e), av: [melange(-20, 96, e), melange(120, 28, e)], ar: [80, 12], ja: [28, -10], jr: [-30, -6] };
+    }
+    case 'saisie-genou': {
+      const e = coupSaisie(p);
+      return { ...GARDE, b: melange(16, 24, e), av: [40, 110], ar: [78, 14], ja: [melange(20, 104, e), melange(-10, -128, e)], jr: [-20, -6] };
+    }
+    case 'saisie-uppercut': {
+      const e = coupSaisie(p);
+      return { ...GARDE, b: melange(18, -10, e), tt: melange(4, -12, e), av: [melange(10, 166, e), melange(140, 2, e)], ar: [80, 12], ja: [melange(30, 50, e), melange(-20, -60, e)], jr: [-24, -6], dy: melange(10, 0, e) };
+    }
+    case 'saisie-ecrase': {
+      // Les deux poings levés, qui s'abattent.
+      const e = coupSaisie(p);
+      return { ...GARDE, b: melange(-6, 30, e), tt: melange(-10, 14, e), av: [melange(170, 72, e), melange(10, 4, e)], ar: [melange(80, 64, e), 12], ja: [34, -18], jr: [-30, -8], dy: melange(0, 12, e) };
+    }
+    case 'saisie-griffe': {
+      // Un revers en diagonale, du haut vers le bas.
+      const e = coupSaisie(p);
+      return { ...GARDE, b: melange(8, 24, e), av: [melange(160, 58, e), melange(16, 6, e)], ar: [80, 12], ja: [28, -10], jr: [-30, -6] };
+    }
+    case 'saisie-souffle': {
+      // La paume ouverte contre lui : l'élément jaillit.
+      const e = coupSaisie(p);
+      return { ...GARDE, b: melange(10, 20, e), tt: melange(0, -6, e), av: [melange(30, 88, e), melange(130, 0, e)], ar: [80, 12], ja: [30, -12], jr: [-32, -6], dy: melange(4, 8, e) };
+    }
+    case 'saisie-jet': {
+      // On s'abaisse, on charge, puis on soulève et on jette en avant, de tout le corps.
+      const e1 = doux(p / 0.42);
+      const e2 = doux((p - 0.42) / 0.3);
+      return { ...GARDE, b: melange(melange(16, 32, e1), -14, e2), tt: melange(melange(0, 10, e1), -16, e2), av: [melange(80, 150, e2), melange(melange(12, 30, e1), 4, e2)], ar: [melange(melange(36, 60, e1), 140, e2), melange(melange(112, 60, e1), 10, e2)], ja: [melange(40, 30, e2), melange(-40, -10, e2)], jr: [-36, -10], dy: melange(melange(4, 20, e1), 0, e2) };
+    }
+    /* Celui qui est tenu. p : le recul (0 à 1). */
+    case 'tenu': return { ...GARDE, b: -8 - 18 * p, tt: -8 - 16 * p, av: [-14 + 10 * p, 50], ar: [-34 - 10 * p, 40], ja: [20 + 6 * p, -12], jr: [-22, -6] };
+    case 'tenu-plie': return { ...GARDE, b: 6 + 30 * p, tt: 12 + 10 * p, av: [20, 70], ar: [10, 60], ja: [24 - 10 * p, -16 - 20 * p], jr: [-20, -10], dy: 4 + 8 * p };
+    case 'tenu-leve': return { ...GARDE, flotte: true, b: -14 - 20 * p, tt: -14 - 14 * p, av: [-30 - 30 * p, 40], ar: [-60 - 30 * p, 30], ja: [14, -26 - 20 * p], jr: [-10, -40 - 20 * p] };
+    case 'projete': return { ...GARDE, flotte: true, b: -10 - 20 * p, tt: -10 - 10 * p, av: [-20 - 60 * p, 40 - 10 * p], ar: [-50 - 70 * p, 30 - 5 * p], ja: [20 + 20 * p, -20 - 10 * p], jr: [-10 + 20 * p, -30 - 20 * p], rot: -40 * p };
     default: return GARDE;
   }
+}
+
+/** Toutes les poses du corps (pour les tests et l'atelier). */
+export const POSES = ['repos', 'marche', 'saut', 'accroupi', 'garde', 'garde-bas', 'poing', 'pied', 'poing-bas', 'balayage', 'poing-air', 'pied-air', 'touche', 'vol', 'sol', 'ko',
+  'v-poing', 'v-deux-poings', 'v-bras-croises', 'v-salut', 'v-salut-mili', 'v-pointe', 'v-flex', 'v-meditation', 'v-rire', 'v-sautille', 'v-levitation', 'v-genou', 'v-bras-ecartes', 'v-poing-sol', 'v-garde-honneur',
+  'lance', 'ruee', 'uppercut', 'tourne', 'ulti', 'saisie', 'saisie-poing', 'saisie-crochet', 'saisie-genou', 'saisie-uppercut', 'saisie-ecrase', 'saisie-griffe', 'saisie-souffle', 'saisie-jet', 'tenu', 'tenu-plie', 'tenu-leve', 'projete'];
+export { poseDe };
+
+/* ------------------------------------------------------------------ */
+/* Les transitions : d'une pose à l'autre, sans saut                    */
+/* ------------------------------------------------------------------ */
+
+/** Combien de temps (ms) pour passer à une pose : vite pour un coup ou un choc, plus doucement sinon. */
+function dureeVers(nom) {
+  if (nom.startsWith('saisie') || nom === 'touche' || nom === 'tenu') return 45;
+  if (['poing', 'pied', 'poing-bas', 'balayage', 'poing-air', 'pied-air', 'uppercut', 'ruee', 'tourne', 'lance'].includes(nom)) return 60;
+  return 110;
+}
+const angle = (a, b, k) => { let d = ((b - a + 540) % 360) - 180; return a + d * k; };
+function melangerPoses(a, b, k) {
+  const r = { ...b };
+  for (const c of ['b', 'tt', 'dy']) r[c] = melange(a[c] || 0, b[c] || 0, k);
+  r.rot = angle(a.rot || 0, b.rot || 0, k);
+  for (const c of ['av', 'ar', 'ja', 'jr']) r[c] = [melange(a[c][0], b[c][0], k), melange(a[c][1], b[c][1], k)];
+  return r;
+}
+const memoire = new Map();
+const maintenant = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+/** La pose affichée pour un combattant suivi (`cle`) : un fondu quand elle change. */
+function transition(cle, nom, cible) {
+  if (!cle) return cible;
+  const m = memoire.get(cle);
+  const t = maintenant();
+  if (!m) { memoire.set(cle, { nom, vu: cible, de: null }); return cible; }
+  if (nom !== m.nom) { m.de = m.vu; m.t0 = t; m.duree = dureeVers(nom); m.nom = nom; }
+  let res = cible;
+  if (m.de) {
+    const k = (t - m.t0) / m.duree;
+    if (k >= 1) m.de = null;
+    else res = melangerPoses(m.de, cible, doux(k));
+  }
+  m.vu = res;
+  return res;
+}
+
+/** Bras à deux segments : où mettre le coude pour que la main touche `cible` (le coude plié vers le bas, comme un vrai bras). */
+function atteindre(ep, cible, l1, l2) {
+  const dx = cible.x - ep.x, dy = cible.y - ep.y;
+  const d = Math.min(l1 + l2 - 0.5, Math.max(Math.abs(l1 - l2) + 0.5, Math.hypot(dx, dy)));
+  const a = Math.atan2(dx, dy);
+  const B = Math.acos(Math.max(-1, Math.min(1, (l1 * l1 + d * d - l2 * l2) / (2 * l1 * d))));
+  const a1 = a - B;
+  const coude = { x: ep.x + Math.sin(a1) * l1, y: ep.y + Math.cos(a1) * l1 };
+  return { coude, main: { x: ep.x + Math.sin(a) * d, y: ep.y + Math.cos(a) * d } };
 }
 
 /* ------------------------------------------------------------------ */
@@ -125,7 +244,8 @@ export function squelette(perso, o) {
   const car = CARRURES[L.corps] || CARRURES.normal;
   let nomPose = o.pose || 'repos';
   if (nomPose === 'victoire' || nomPose === 'victoire-round') nomPose = perso.victoire?.[nomPose === 'victoire' ? 1 : 0] || 'v-poing';
-  const pose = poseDe(nomPose, o.t || 0, o.p || 0);
+  // La pose, avec un fondu depuis la précédente si ce combattant est suivi (o.cle).
+  const pose = transition(o.cle, nomPose, poseDe(nomPose, o.t || 0, o.p || 0));
   const { cuisse, tibia, bras: brasH, avantBras } = SEGMENTS;
   let hanche = { x: 0, y: -(cuisse + tibia) + (pose.dy || 0) };
   const pieds = (h) => {
@@ -147,7 +267,9 @@ export function squelette(perso, o) {
   const epA = { x: epaule.x + 4, y: epaule.y + 2 };
   const epR = { x: epaule.x - 5, y: epaule.y + 1 };
   const coudeA = bout(epA, pose.av[0], brasH); const mainA = bout(coudeA, pose.av[0] + pose.av[1], avantBras);
-  const coudeR = bout(epR, pose.ar[0], brasH); const mainR = bout(coudeR, pose.ar[0] + pose.ar[1], avantBras);
+  let coudeR = bout(epR, pose.ar[0], brasH); let mainR = bout(coudeR, pose.ar[0] + pose.ar[1], avantBras);
+  // Une saisie : la main arrière va se poser là où on tient l'autre (son col), et y reste ; l'autre frappe.
+  if (o.saisir) ({ coude: coudeR, main: mainR } = atteindre(epR, o.saisir, brasH, avantBras));
   return { car, nomPose, pose, hanche, jambes, epaule, cou, tete, epA, epR, coudeA, mainA, coudeR, mainR };
 }
 
@@ -155,6 +277,8 @@ export function squelette(perso, o) {
 let rendu3D = null;
 export function brancher3D(r) { rendu3D = r; }
 export const en3D = () => !!rendu3D;
+/** La lumière de l'arène, pour les combattants en 3D. */
+export function ambianceArene(a) { rendu3D?.ambiance?.(a); }
 
 /* ------------------------------------------------------------------ */
 /* Le combattant                                                       */

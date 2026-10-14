@@ -630,6 +630,148 @@ export function dessinerPortraitUlti(g, fx) {
   g.restore();
 }
 
+/** Moins de mouvement si le joueur l'a demandé (pas de zoom, pas d'image négative). */
+const reduit = () => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const lisse = (u) => (u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u));
+/** L'image du coup (le moteur frappe à 70) ; quelques images figées juste après : l'arrêt sur image. */
+const IMPACT = 68;
+const FIGE = 6;
+const tCine = (t) => (t < IMPACT ? t : t < IMPACT + FIGE ? IMPACT : t - FIGE);
+
+
+/* ------------------------------------------------------------------ */
+/* Les traînées des coups : le poing ou le pied laisse un sillage       */
+/* ------------------------------------------------------------------ */
+
+/** Note où est le poing (ou le pied) qui frappe ; `actif` : le coup est en cours. */
+export function noterTrace(fx, n, x, y, couleur, actif) {
+  fx.traces ??= [[], []];
+  const tr = fx.traces[n];
+  if (actif) tr.push({ x, y, c: couleur, v: 1 });
+  for (const p of tr) p.v -= actif ? 0.14 : 0.3;
+  while (tr.length && (tr[0].v <= 0 || tr.length > 8)) tr.shift();
+}
+
+/** Le sillage : un ruban qui s'affine vers l'arrière, blanc au bout, de la couleur du combattant. */
+export function dessinerTraces(g, fx) {
+  if (!fx.traces) return;
+  lumiere(g, () => {
+    for (const tr of fx.traces) {
+      if (tr.length < 3) continue;
+      const bout = tr[tr.length - 1];
+      for (let i = 1; i < tr.length; i++) {
+        const a = tr[i - 1], b = tr[i];
+        const f = i / (tr.length - 1);
+        g.strokeStyle = rgba(f > 0.75 ? '#ffffff' : b.c, Math.max(0, b.v) * 0.8);
+        g.lineWidth = 2 + f * 12;
+        g.lineCap = 'round';
+        g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke();
+      }
+      halo(g, bout.x, bout.y, 16, bout.c, Math.max(0, bout.v) * 0.6);
+    }
+  });
+}
+
+/* ------------------------------------------------------------------ */
+/* La charge d'un ultime (pour ceux qui n'ont pas la leur)               */
+/* ------------------------------------------------------------------ */
+
+/** L'aura qui monte, l'énergie aspirée vers lui, aux couleurs du combattant. */
+function chargeUlti(g, t, A, k) {
+  if (t >= 54) return;
+  const p = Math.min(1, t / 40) * (1 - lisse((t - 44) / 10));
+  lumiere(g, () => {
+    for (let i = 0; i < 18; i++) {
+      const h = ((t * 2.6 + i * 23) % 60) / 60;
+      const a = hasardFixe(i) * TAU;
+      halo(g, A.x + Math.cos(a) * 42 * (1 - h * 0.5), A.y + 86 - h * 170, 26 * (1 - h), k.aura || k.c1, 0.5 * p * (1 - h));
+    }
+    for (let i = 0; i < 24; i++) {
+      const ph = ((t * 1.8 + i * 11) % 36) / 36;
+      const a = hasardFixe(i + 50) * TAU;
+      const r = 200 * (1 - ph * ph);
+      const x = A.x + Math.cos(a) * r, y = A.y + Math.sin(a) * r * 0.8;
+      g.strokeStyle = rgba(i % 3 ? k.c1 : '#ffffff', ph * p); g.lineWidth = 2.5;
+      g.beginPath(); g.moveTo(x, y); g.lineTo(x + (A.x - x) * 0.14, y + (A.y - y) * 0.14); g.stroke();
+    }
+    halo(g, A.x, A.y + 10, 120 * p, k.aura || k.c1, 0.35 * p);
+  });
+}
+
+/**
+ * La caméra d'un ultime : elle serre sur le combattant qui charge, suit le coup jusqu'à
+ * l'adversaire, encaisse l'impact, puis relâche. Rend { z, x, y } (le zoom et le point visé), ou null.
+ */
+export function cameraUlti(fx, c) {
+  const C = fx.cine;
+  if (!C || reduit()) return null;
+  const j = c.joueurs[C.joueur];
+  const o = c.joueurs[1 - C.joueur];
+  const t = C.t;
+  const serre = lisse(t / 36) * (1 - lisse((t - 96) / 30));
+  const suit = lisse((t - 46) / 20);
+  const z = 1 + 0.42 * serre - 0.1 * suit * serre + (t >= IMPACT && t < IMPACT + FIGE ? 0.08 : 0);
+  const vx = j.x + (o.x - j.x) * suit * 0.8;
+  const vy = j.y - 110 + (o.y - j.y) * suit * 0.8;
+  const x = L / 2 + (vx - L / 2) * serre;
+  const y = H / 2 + (vy - H / 2) * serre;
+  // On ne sort jamais de l'arène.
+  const mx = L / (2 * z), my = H / (2 * z);
+  return { z, x: Math.min(L - mx, Math.max(mx, x)), y: Math.min(H - my, Math.max(my, y)) };
+}
+
+/** Les images d'impact (en négatif, façon manga) : deux images au coup, une troisième juste après. */
+export function imageImpact(fx) {
+  const t = fx.cine?.t;
+  return t !== undefined && !reduit() && (t === IMPACT || t === IMPACT + 1 || t === IMPACT + 3);
+}
+
+/** Les lignes de concentration d'un manga : des traits qui filent du bord de l'écran vers le centre. */
+function lignesConcentration(g, cx, cy, a, t, c = '#ffffff') {
+  if (a <= 0) return;
+  g.save();
+  g.fillStyle = rgba(c, a);
+  const R = Math.hypot(L, H);
+  for (let i = 0; i < 70; i++) {
+    const h = hasardFixe(i * 7 + Math.floor(t / 2) * 131);
+    const ang = (i / 70) * TAU + h * 0.08;
+    const r1 = R * (0.34 + hasardFixe(i + Math.floor(t / 2) * 17) * 0.24);
+    const ep = 0.006 + h * 0.014;
+    g.beginPath();
+    g.moveTo(cx + Math.cos(ang) * r1, cy + Math.sin(ang) * r1);
+    g.lineTo(cx + Math.cos(ang - ep) * R, cy + Math.sin(ang - ep) * R);
+    g.lineTo(cx + Math.cos(ang + ep) * R, cy + Math.sin(ang + ep) * R);
+    g.closePath(); g.fill();
+  }
+  g.restore();
+}
+
+/** Une onde de choc : un anneau au sol, un anneau debout, qui s'ouvrent et s'effacent. */
+function ondeChoc(g, x, y, p, c) {
+  if (p <= 0 || p >= 1) return;
+  const a = 1 - p;
+  g.lineWidth = 14 * a + 2;
+  g.strokeStyle = rgba('#ffffff', a);
+  g.beginPath(); g.ellipse(x, SOL - 4, 40 + p * 360, 10 + p * 60, 0, 0, TAU); g.stroke();
+  g.strokeStyle = rgba(c, a * 0.9);
+  g.lineWidth = 10 * a + 2;
+  g.beginPath(); g.arc(x, y, 30 + p * 230, 0, TAU); g.stroke();
+}
+
+/** Une gerbe de rayons (l'éclat de l'impact). */
+function gerbe(g, x, y, n, long, c, a, graine = 0) {
+  g.fillStyle = rgba(c, a);
+  for (let i = 0; i < n; i++) {
+    const ang = (i / n) * TAU + hasardFixe(graine + i) * 0.3;
+    const l = long * (0.5 + hasardFixe(graine + i * 5) * 0.7);
+    g.beginPath();
+    g.moveTo(x + Math.cos(ang - 0.05) * 20, y + Math.sin(ang - 0.05) * 20);
+    g.lineTo(x + Math.cos(ang) * l, y + Math.sin(ang) * l);
+    g.lineTo(x + Math.cos(ang + 0.05) * 20, y + Math.sin(ang + 0.05) * 20);
+    g.closePath(); g.fill();
+  }
+}
+
 /** La cinématique de l'ultime, propre à chaque combattant. */
 export function dessinerCineUlti(g, fx, c) {
   const C = fx.cine;
@@ -637,21 +779,48 @@ export function dessinerCineUlti(g, fx, c) {
   const j = c.joueurs[C.joueur];
   const o = c.joueurs[1 - C.joueur];
   const k = teinteK(PERSO[j.id].c, PERSO[j.id].ulti?.teinte);
-  const t = C.t;
+  const t = tCine(C.t);
   const A = { id: j.id, x: j.x, y: j.y - 90, dir: j.dir };
   const D = { x: o.x, y: o.y - 90 };
   g.save();
-  // L'ambiance : un voile de la couleur du combattant.
-  g.fillStyle = rgba(k.c2, 0.25 + Math.sin(t / 8) * 0.05);
+  // L'ambiance : un voile de la couleur du combattant, les bords qui s'assombrissent.
+  g.fillStyle = rgba(k.c2, 0.16 + Math.sin(t / 8) * 0.04);
   g.fillRect(0, 0, L, H);
+  const v = g.createRadialGradient(L / 2, H / 2, H * 0.3, L / 2, H / 2, L * 0.7);
+  v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, `rgba(0,0,0,${0.55 * Math.min(1, C.t / 12)})`);
+  g.fillStyle = v; g.fillRect(0, 0, L, H);
   const f = ULTIS[C.visuel] || ULTIS_HEROS[C.visuel];
   // Le héros : son sceau sous ses pieds, à chaque ultime.
   if (PERSO[j.id]?.heros) lumiere(g, () => sceau(g, j.x, j.y, 120, k.c1, Math.min(1, t / 20), t / 20));
+  if (C.visuel !== 'hadoken') chargeUlti(g, t, A, k);
   if (f) f(g, t, A, D, k);
-  // Le grand coup (image 70 du moteur) : un éclair blanc.
-  if (t >= 68 && t < 80) { g.fillStyle = `rgba(255,255,255,${(80 - t) / 12})`; g.fillRect(0, 0, L, H); }
+  // L'impact, pour tous : l'onde de choc, la gerbe, un éclair blanc bref.
+  if (C.t >= IMPACT) {
+    const p = (C.t - IMPACT - FIGE) / 26;
+    lumiere(g, () => {
+      ondeChoc(g, D.x, D.y, p, k.faisceau);
+      ondeChoc(g, D.x, D.y, p - 0.25, k.c1);
+      if (C.t < IMPACT + FIGE + 10) gerbe(g, D.x, D.y, 18, 340, '#ffffff', 0.85 * (1 - Math.max(0, p) * 2.5), C.t);
+    });
+    if (C.t >= IMPACT + FIGE && C.t < IMPACT + FIGE + 10) { g.fillStyle = `rgba(255,255,255,${(IMPACT + FIGE + 10 - C.t) / 16})`; g.fillRect(0, 0, L, H); }
+  }
   g.restore();
-  // Les bandes de cinéma.
+}
+
+/** Ce qui se dessine par-dessus, à l'écran (pas dans l'arène zoomée) : les lignes de vitesse, les bandes de cinéma. */
+export function dessinerCineEcran(g, fx, c) {
+  const C = fx.cine;
+  if (!C) return;
+  const j = c.joueurs[C.joueur];
+  const o = c.joueurs[1 - C.joueur];
+  const k = teinteK(PERSO[j.id].c, PERSO[j.id].ulti?.teinte);
+  const t = C.t;
+  if (!reduit()) {
+    const charge = t < 50 ? lisse(t / 12) * 0.55 : 0;
+    const coup = t >= IMPACT && t < IMPACT + 22 ? 0.7 * (1 - (t - IMPACT) / 22) : 0;
+    if (charge) lignesConcentration(g, L / 2 + (j.x - L / 2) * 0.3, H * 0.45, charge, t);
+    if (coup) lignesConcentration(g, L / 2 + (o.x - L / 2) * 0.3, H * 0.45, coup, t, '#ffffff');
+  }
   const b = Math.min(1, t / 10) * 64;
   g.fillStyle = '#000';
   g.fillRect(0, 0, L, b); g.fillRect(0, H - b, L, b);
@@ -659,22 +828,84 @@ export function dessinerCineUlti(g, fx, c) {
 }
 
 const ULTIS = {
-  /* RYU-KEN : une rafale de boules de ki, puis la grande. */
+  /* RYU-KEN : le Shin Hadoken. Le ki se rassemble entre ses mains (des étincelles aspirées, des
+     arcs électriques, une aura qui monte), puis la grande boule part, traînant un faisceau. */
   hadoken(g, t, A, D, k) {
-    lumiere(g, () => {
-      for (let w = 0; w < 6; w++) {
-        const p = Math.max(0, Math.min(1, (t - w * 9) / 30));
-        if (p <= 0 || p >= 1) continue;
-        const x = A.x + (D.x - A.x) * p;
-        halo(g, x, A.y + Math.sin(w * 2) * 20, 50, k.faisceau, 0.9);
-        halo(g, x, A.y + Math.sin(w * 2) * 20, 18, '#ffffff', 1);
-      }
-      if (t > 55 && t < 95) {
-        const p = (t - 55) / 40;
-        halo(g, A.x + (D.x - A.x) * Math.min(1, p * 1.4), A.y, 140 * (1 - p * 0.5), k.faisceau, 0.95);
-        halo(g, A.x + (D.x - A.x) * Math.min(1, p * 1.4), A.y, 50, '#ffffff', 1);
-      }
-    });
+    const dir = Math.sign(D.x - A.x) || A.dir || 1;
+    const mx = A.x + dir * 62, my = A.y + 2;
+    const blanc = '#ffffff';
+    // 1. La charge.
+    if (t < 58) {
+      const p = Math.min(1, t / 48);
+      lumiere(g, () => {
+        // L'aura : des flammes de ki qui montent autour de lui.
+        for (let i = 0; i < 18; i++) {
+          const h = ((t * 2.6 + i * 23) % 60) / 60;
+          const a = hasardFixe(i) * TAU;
+          halo(g, A.x + Math.cos(a) * 40 * (1 - h * 0.5), A.y + 86 - h * 170, 26 * (1 - h), k.aura, 0.55 * p * (1 - h));
+        }
+        // Les étincelles aspirées vers ses mains.
+        for (let i = 0; i < 30; i++) {
+          const ph = ((t * 1.8 + i * 11) % 36) / 36;
+          const a = hasardFixe(i + 50) * TAU;
+          const r = 190 * (1 - ph * ph);
+          const x = mx + Math.cos(a) * r, y = my + Math.sin(a) * r * 0.75;
+          g.strokeStyle = rgba(blanc, ph * p); g.lineWidth = 2.5;
+          g.beginPath(); g.moveTo(x, y); g.lineTo(x + (mx - x) * 0.12, y + (my - y) * 0.12); g.stroke();
+        }
+        // La boule qui grossit, qui palpite.
+        const r = 8 + 36 * p + Math.sin(t / 1.6) * 3 * p;
+        halo(g, mx, my, r * 3.4, k.faisceau, 0.55 * p);
+        halo(g, mx, my, r * 1.5, k.faisceau, 1);
+        halo(g, mx, my, r * 0.75, blanc, 1);
+        // Les arcs électriques autour.
+        for (let e = 0; e < 3; e++) {
+          const a = t * 0.7 + e * 2.1;
+          eclair(g, mx, my, mx + Math.cos(a) * r * 2.6, my + Math.sin(a * 1.3) * r * 1.8, rgba('#e6f4ff', 0.9 * p), 2.2, 6, Math.floor(t / 2) * 9 + e * 31);
+        }
+      });
+    }
+    // 2. Le tir : la grande boule file, un faisceau la suit, des traits de vitesse.
+    if (t >= 50 && t <= IMPACT) {
+      const p = lisse((t - 50) / 18);
+      const x = mx + (D.x - mx) * p;
+      lumiere(g, () => {
+        const gr = g.createLinearGradient(mx, 0, x, 0);
+        gr.addColorStop(0, rgba(k.faisceau, 0)); gr.addColorStop(0.6, rgba(k.faisceau, 0.7)); gr.addColorStop(1, rgba(blanc, 0.95));
+        g.fillStyle = gr;
+        const bout = x - dir * 30;
+        g.beginPath(); g.moveTo(mx, my - 16); g.lineTo(bout, my - 50); g.quadraticCurveTo(x + dir * 30, my, bout, my + 50); g.lineTo(mx, my + 16); g.closePath(); g.fill();
+        for (let i = 0; i < 10; i++) {
+          const yy = my + (hasardFixe(i + t) - 0.5) * 150;
+          const l = 80 + hasardFixe(i * 3 + t) * 160;
+          g.strokeStyle = rgba(blanc, 0.7); g.lineWidth = 2;
+          g.beginPath(); g.moveTo(x - dir * 40, yy); g.lineTo(x - dir * (40 + l), yy); g.stroke();
+        }
+        halo(g, x, my, 190, k.faisceau, 0.8);
+        halo(g, x, my, 96, k.faisceau, 1);
+        halo(g, x, my, 58, blanc, 1);
+        halo(g, x, my, 30, blanc, 1);
+      });
+    }
+    // 3. L'explosion sur l'adversaire, puis les étincelles qui retombent.
+    if (t >= IMPACT) {
+      const p = (t - IMPACT) / 40;
+      lumiere(g, () => {
+        if (p < 1) {
+          halo(g, D.x, D.y, 260 * (0.6 + p), k.faisceau, 0.9 * (1 - p));
+          halo(g, D.x, D.y, 120 * (1 - p * 0.6), blanc, 1 - p);
+          for (let e = 0; e < 4; e++) eclair(g, D.x, D.y, D.x + Math.cos(e * 1.7 + t) * 200, D.y + Math.sin(e * 2.3 + t) * 150, rgba('#e6f4ff', 1 - p), 3, 7, t * 3 + e * 17);
+        }
+        for (let i = 0; i < 26; i++) {
+          const q = (t - IMPACT - hasardFixe(i) * 10) / 50;
+          if (q <= 0 || q >= 1) continue;
+          const a = hasardFixe(i + 9) * TAU;
+          const x = D.x + Math.cos(a) * (60 + q * 240);
+          const y = D.y + Math.sin(a) * (40 + q * 120) + q * q * 160;
+          halo(g, x, y, 10 * (1 - q) + 3, i % 3 ? k.faisceau : blanc, 1 - q);
+        }
+      });
+    }
   },
   /* BLAZERO : des météores de feu. */
   meteores(g, t, A, D) {
