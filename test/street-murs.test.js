@@ -99,3 +99,19 @@ test('sans l’option, pas de mur : on reste coincé, rien ne casse', () => {
   assert.ok(!evs.some((e) => e.type === 'mur' || e.type === 'mur-brise'));
   assert.equal(c.etage, undefined);
 });
+
+test('derrière chaque mur, une zone voisine qui existe (jamais la même, sauf les abysses)', async () => {
+  const { ARENES, ARENE, SUITE, areneApres } = await import('../public/games/street-combat/js/arenes.js');
+  for (const a of ARENES) {
+    const v = SUITE[a.id];
+    assert.ok(v && ARENE[v], `${a.id} a une zone voisine qui existe (${v})`);
+    if (a.id !== 'abysses') assert.notEqual(v, a.id, `${a.id} ne mène pas à elle-même`);
+    // Trois murs d'affilée : on reste toujours dans une arène qui existe.
+    for (let etage = 1; etage <= 3; etage++) assert.ok(ARENE[areneApres(a.id, etage).id], `${a.id}, mur ${etage}`);
+  }
+  // Quelques passages logiques : du dedans, on sort dehors.
+  assert.equal(SUITE.dojo, 'dojopluie');
+  assert.equal(SUITE.ring, 'neon');
+  assert.equal(SUITE.club, 'ruelle');
+  assert.equal(SUITE.labo, 'station');
+});

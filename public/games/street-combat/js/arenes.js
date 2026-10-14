@@ -796,14 +796,33 @@ function feuPilier(g, x, t) {
 /* Les murs qu'on brise, et la zone d'à côté                           */
 /* ------------------------------------------------------------------ */
 
-/** Derrière chaque mur, une autre zone : le dojo donne sur son jardin sous la pluie, le ring sur la rue… */
+/**
+ * Derrière chaque mur, la zone d'à côté — un endroit qui touche vraiment le précédent :
+ * d'un lieu fermé, on sort dehors (le dojo donne sur sa cour sous la pluie, le ring sur
+ * la rue) ; du dehors, on passe au lieu voisin. Les abysses n'ont pas de voisin : on va
+ * simplement plus loin dans les profondeurs.
+ */
 export const SUITE = {
-  dojo: 'dojopluie', dojopluie: 'dojo', neon: 'neonfeu', neonfeu: 'neon', citadelle: 'desert', desert: 'citadelle',
-  ruines: 'foret', foret: 'ruines', volcan: 'trone', trone: 'volcan', station: 'celeste', celeste: 'cathedrale',
-  cathedrale: 'celeste', jungle: 'ruines', toundra: 'abysses', abysses: 'jungle', ring: 'neon', horloge: 'engrenages',
-  engrenages: 'horloge', sommet: 'celeste', zero: 'horloge',
-  lucha: 'neon', ruelle: 'neon', bosquet: 'jungle', club: 'neon', papier: 'dojo', labo: 'station',
-  casino: 'neon', saloon: 'desert', renards: 'foret', clairiere: 'foret',
+  // Le dojo : la cour sous la pluie, le jardin de papier, et retour au dojo.
+  dojo: 'dojopluie', dojopluie: 'papier', papier: 'dojo',
+  // Néon City : la rue et sa ruelle ; on sort des salles (ring, lucha, casino) dans la rue ; du toit du club, on tombe dans la ruelle.
+  neon: 'ruelle', ruelle: 'neon', neonfeu: 'ruelle', ring: 'neon', lucha: 'neon', casino: 'neon', club: 'ruelle',
+  // Le volcan et l'antre où trône son maître.
+  volcan: 'trone', trone: 'volcan',
+  // Le désert : la citadelle et ses remparts, le saloon et sa ville.
+  citadelle: 'desert', desert: 'citadelle', saloon: 'desert',
+  // La jungle et ses ruines ; le bosquet sacré au bord de la jungle.
+  jungle: 'ruines', ruines: 'jungle', bosquet: 'jungle',
+  // Les bois : la forêt maudite, la clairière ; la forêt autour du temple des renards ; les sapins au bout de la toundra.
+  foret: 'clairiere', clairiere: 'foret', renards: 'foret', toundra: 'clairiere',
+  // Le ciel : la cathédrale et la cité céleste ; le sommet de la tour, au-dessus des nuages.
+  cathedrale: 'celeste', celeste: 'cathedrale', sommet: 'celeste',
+  // Le temps : l'horloge et ses engrenages ; la dimension zéro y mène.
+  horloge: 'engrenages', engrenages: 'horloge', zero: 'horloge',
+  // La station spatiale et le labo qu'elle abrite.
+  station: 'labo', labo: 'station',
+  // Les abysses : plus loin dans les profondeurs.
+  abysses: 'abysses',
 };
 /** L'arène où l'on se bat, après avoir brisé `etage` murs depuis celle du départ. */
 export function areneApres(depart, etage = 0) {
