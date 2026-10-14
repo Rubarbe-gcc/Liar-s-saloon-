@@ -1054,34 +1054,87 @@ function ouvrirEnLigne() {
   $('enligne-perso-nom').textContent = PERSO[perso].nom;
   $('enligne-attente').hidden = !EL.salle.code;
   $('enligne-actions').hidden = !!EL.salle.code;
+  dessinerArenesEnLigne();
   aller('s-enligne');
   EL.connecter({
     statut: (st) => { $('enligne-statut').textContent = { connexion: 'Connexion au serveur…', connecte: 'Connecté ! Créez une salle, ou rejoignez celle d’un ami avec son code.', perdu: 'Connexion perdue. Nouvelle tentative…', injoignable: 'Le serveur ne répond pas. On réessaie…' }[st] || ''; },
-    salle: (m) => { $('enligne-code-salle').textContent = m.code; $('enligne-attente').hidden = false; $('enligne-actions').hidden = true; son('annonce'); },
+    salle: (m) => { $('enligne-code-salle').textContent = m.code; $('enligne-attente').hidden = false; $('enligne-actions').hidden = true; dessinerArenesEnLigne(); son('annonce'); },
+    arene: (a) => {
+      dessinerArenesEnLigne();
+      // Pour la revanche : on le dit sur l'écran de fin.
+      if (!$('ov-fin').hidden && EL.salle.n === 1) $('fin').insertAdjacentHTML('beforeend', `<p class="regle">🏟️ Revanche à : ${esc(nomArene(a))}</p>`);
+    },
     debut: (m) => {
       fermer('ov-fin');
-      const normales = ARENES.filter((a) => !a.boss);
-      const arene = normales[m.graine % normales.length].id;
-      toast(`⚔️ ${esc(m.noms[0])} contre ${esc(m.noms[1])} — manche ${m.manche}`, 2500);
+      const arene = areneEnLigne(m.arene, m.graine);
+      toast(`⚔️ ${esc(m.noms[0])} contre ${esc(m.noms[1])} — ${esc(ARENE[arene].nom)} · manche ${m.manche}`, 3000);
       demarrerCombat({ mode: 'enligne', p1: m.persos[0], p2: m.persos[1], arene, ia: {}, graine: m.graine, n: m.n, noms: m.noms, musique: 'combat' });
+      // Le rollback : on ne s'arrête jamais pour attendre l'adversaire (voir shared/street/rollback.js).
+      EL.demarrerSession({
+        combat, n: m.n,
+        pasEv: (c, e) => { pas(c, e); return evenements(c); },
+        confirme: (f2, e) => { if (enregistrement) REPLAY.noter(enregistrement, e); },
+      });
     },
     revanche: () => { if (!$('ov-fin').hidden) $('fin').insertAdjacentHTML('beforeend', '<p class="regle">🔁 Votre adversaire veut une revanche !</p>'); },
     parti: () => { combat = null; fermer('ov-fin'); fermer('ov-pause'); majMenu(); toast('Votre adversaire a quitté le combat.', 3000); },
     erreur: (msg) => { $('enligne-statut').textContent = msg; son('ko'); },
   });
 }
+/** L'arène d'un combat en ligne : celle de l'hôte, ou « au hasard » tirée par la graine (la même pour les deux). */
+function areneEnLigne(id, graine) {
+  if (id && id !== 'hasard' && ARENE[id]) return id;
+  const normales = ARENES.filter((a) => !a.boss);
+  return normales[graine % normales.length].id;
+}
+const nomArene = (id) => (ARENE[id] ? ARENE[id].nom : 'Au hasard');
+/** Les arènes qu'on peut proposer en ligne : les normales, et celles des boss qu'on a débloqués. */
+const arenesEnLigne = () => ARENES.filter((a) => !a.boss || debloques().has(a.boss));
+/** Le choix de l'arène, dans le salon : avant de créer la salle, ou en attendant l'adversaire (l'hôte seulement). */
+function dessinerArenesEnLigne() {
+  const zone = $('enligne-arenes');
+  if (!zone) return;
+  const hote = !EL.salle.code || EL.salle.n === 0;
+  zone.parentElement.hidden = !hote;
+  if (!hote) return;
+  const choisie = EL.salle.code ? EL.salle.arene : (lire(CLE_ENLIGNE, {}).arene || 'hasard');
+  zone.innerHTML = '';
+  const carte = (id, nom, dessin) => {
+    const b = document.createElement('button');
+    b.className = `carte-arene mini${id === choisie ? ' on' : ''}`;
+    b.dataset.arene = id;
+    if (dessin) { const cv = document.createElement('canvas'); cv.width = 120; cv.height = 72; cv.getContext('2d').drawImage(dessin, 0, 0, 120, 72); b.append(cv); } else b.insertAdjacentHTML('beforeend', '<i>🎲</i>');
+    b.insertAdjacentHTML('beforeend', `<span>${esc(nom)}</span>`);
+    zone.append(b);
+  };
+  carte('hasard', 'Au hasard', null);
+  for (const a of arenesEnLigne()) carte(a.id, a.nom, fondArene(a, !fondPret(a)));
+}
+function choisirAreneEnLigne(id) {
+  ecrire(CLE_ENLIGNE, { ...lire(CLE_ENLIGNE, {}), arene: id });
+  if (EL.salle.code && EL.salle.n === 0) EL.choisirArene(id);
+  else dessinerArenesEnLigne();
+  son('choix');
+}
 const nomEnLigne = () => { const n = $('enligne-nom').value.trim().slice(0, 12) || 'Joueur'; ecrire(CLE_ENLIGNE, { ...lire(CLE_ENLIGNE, {}), nom: n }); return n; };
 const persoEnLigne = () => { const p = lire(CLE_ENLIGNE, {}).perso; return PERSO[p] && disponible(PERSO[p]) ? p : 'ryuken'; };
 let attenteAffichee = false;
-/** En ligne : si l'adversaire tarde, on le dit ; si les deux écrans divergent, aussi. */
+/** En ligne : si l'adversaire ne répond plus (sa connexion a lâché), on le dit ; et le diagnostic (F3). */
+let diagVisible = false;
 function attenteEnLigne() {
-  const lent = EL.LS.attente > 30;
+  const lent = EL.ETAT.attente > 30;
   if (lent !== attenteAffichee) {
     attenteAffichee = lent;
     $('allie-pret').hidden = !lent;
     if (lent) $('allie-pret').textContent = '⏳ En attente de l’adversaire…';
   }
-  if (EL.LS.desynchro && !EL.LS.signale) { EL.LS.signale = true; toast('⚠️ Les deux écrans ne sont plus d’accord. Recommencez le combat.', 4000); }
+  if (diagVisible) {
+    let el = $('diag-enligne');
+    if (!el) { el = document.createElement('div'); el.id = 'diag-enligne'; el.className = 'diag-enligne'; $('s-combat').append(el); }
+    const d = EL.diagnostic();
+    el.hidden = !d;
+    if (d) el.textContent = `ping ${d.ping} ms · délai ${d.delai} · avance ${d.avance} · corrections ${d.retours} (${d.rejouees} images) · retenues ${d.retenues} · figées ${d.attentes}${d.recalages ? ` · recalages ${d.recalages}` : ''}`;
+  }
 }
 
 /** Tout remettre à zéro : combattants débloqués, rencontres, sauvegardes, tournoi et tour en cours. */
@@ -1394,17 +1447,25 @@ function boucle() {
 
 function pasDeCombat() {
   // En ligne : les entrées des deux appareils, image par image (ou on attend celles de l'adversaire).
-  let entrees;
-  if (config.mode === 'replay') {
-    // Le replay : les entrées enregistrées (et l'allié, au bon moment).
-    for (const [, j, allie, degats] of lecture.allies()) assister(combat, j, allie, degats);
-    entrees = lecture.fini() ? [{}, {}] : lecture.suivantes();
-  } else entrees = config.mode === 'enligne' ? EL.entreesDuPas(() => entreesJoueur(0)) : [entreesJoueur(0), config.mode === 'deux' ? entreesJoueur(1) : {}];
-  if (!entrees) { attenteEnLigne(); return; }
-  if (enregistrement) REPLAY.noter(enregistrement, entrees);
-  pas(combat, entrees);
-  if (config.mode === 'enligne') { EL.apresPas(combat); attenteEnLigne(); }
-  const evs = evenements(combat);
+  let evs;
+  if (config.mode === 'enligne') {
+    // En ligne : on avance sans attendre (les touches de l'adversaire sont prédites, puis corrigées) ;
+    // les images rejouées par une correction ne refont pas leurs sons et leurs effets.
+    const r = EL.pasEnLigne(() => entreesJoueur(0));
+    attenteEnLigne();
+    if (!r || r.attente) return;
+    evs = r.evs;
+  } else {
+    let entrees;
+    if (config.mode === 'replay') {
+      // Le replay : les entrées enregistrées (et l'allié, au bon moment).
+      for (const [, j, allie, degats] of lecture.allies()) assister(combat, j, allie, degats);
+      entrees = lecture.fini() ? [{}, {}] : lecture.suivantes();
+    } else entrees = [entreesJoueur(0), config.mode === 'deux' ? entreesJoueur(1) : {}];
+    if (enregistrement) REPLAY.noter(enregistrement, entrees);
+    pas(combat, entrees);
+    evs = evenements(combat);
+  }
   if (config.tuto) suivreTuto(evs);
   if (config.mode === 'entrainement' && !config.tuto) suivreDefis(evs);
   for (const ev of evs) {
@@ -1427,7 +1488,7 @@ function pasDeCombat() {
     hpAvant[k] = j.hp;
     eclats[k] = Math.max(0, eclats[k] - 0.18);
   });
-  if (combat.phase === 'fin' && !finMontree) {
+  if (combat.phase === 'fin' && !finMontree && (config.mode !== 'enligne' || EL.toutConfirme())) {
     finMontree = true;
     setTimeout(montrerFin, 1400);
   }
@@ -1682,6 +1743,10 @@ function montrerFin() {
   if (config.mode === 'enligne') {
     titre = humainGagne ? 'VICTOIRE !' : 'DÉFAITE…';
     boutons = '<button class="btn" id="b-fin-quitter-el">Quitter</button><button class="btn rouge" id="b-fin-revanche-el">Revanche !</button>';
+    if (EL.salle.n === 0) {
+      const options = [['hasard', 'Au hasard'], ...arenesEnLigne().map((a) => [a.id, a.nom])].map(([id, nom]) => `<option value="${id}"${id === EL.salle.arene ? ' selected' : ''}>${esc(nom)}</option>`).join('');
+      extra += `<label class="arene-revanche">🏟️ Arène de la revanche <select id="fin-arene">${options}</select></label>`;
+    }
   }
   ecrire(CLE_RECORDS, r);
   $('fin').innerHTML = `<h2 class="fin-titre ${humainGagne ? 'victoire' : 'defaite'}">${titre}</h2>
@@ -1709,6 +1774,7 @@ function montrerFin() {
   if ($('b-fin-suite')) $('b-fin-suite').onclick = go(() => config.suite(humainGagne, fin));
   if ($('b-fin-retente')) $('b-fin-retente').onclick = go(() => config.reessayer());
   if ($('b-fin-quitter-el')) $('b-fin-quitter-el').onclick = go(() => { EL.quitter(); majMenu(); });
+  if ($('fin-arene')) $('fin-arene').onchange = (e) => { EL.choisirArene(e.target.value); ecrire(CLE_ENLIGNE, { ...lire(CLE_ENLIGNE, {}), arene: e.target.value }); };
   if ($('b-fin-revanche-el')) $('b-fin-revanche-el').onclick = () => { EL.revanche(); $('b-fin-revanche-el').disabled = true; $('b-fin-revanche-el').textContent = 'En attente de l’adversaire…'; };
 }
 
@@ -2112,7 +2178,8 @@ function brancher() {
   });
   $('b-enligne').addEventListener('click', () => { son('choix'); ouvrirEnLigne(); });
   $('enligne-choisir').addEventListener('click', () => { prep.p1 = persoEnLigne(); commencerMode('enligne'); });
-  $('enligne-creer').addEventListener('click', () => { son('valide'); EL.creer(persoEnLigne(), nomEnLigne()); });
+  $('enligne-creer').addEventListener('click', () => { son('valide'); EL.creer(persoEnLigne(), nomEnLigne(), lire(CLE_ENLIGNE, {}).arene || 'hasard'); });
+  $('enligne-arenes').addEventListener('click', (e) => { const b = e.target.closest('[data-arene]'); if (b) choisirAreneEnLigne(b.dataset.arene); });
   $('enligne-rejoindre').addEventListener('click', () => {
     const code = $('enligne-code').value.trim().toUpperCase();
     if (code.length < 4) { $('enligne-statut').textContent = 'Le code de la salle fait 4 lettres.'; return; }
@@ -2295,6 +2362,8 @@ function brancher() {
     }
     if (k === 'escape' && (!$('ov-coups').hidden || !$('ov-commandes').hidden)) { fermer('ov-coups'); fermer('ov-commandes'); return; }
     if ($('s-combat').classList.contains('is-active')) {
+      // F3 : le diagnostic du combat en ligne (ping, corrections…).
+      if (e.key === 'F3' && config?.mode === 'enligne') { e.preventDefault(); diagVisible = !diagVisible; if (!diagVisible && $('diag-enligne')) $('diag-enligne').hidden = true; return; }
       if (k === 'escape' || k === 'p') {
         enPause = !enPause;
         if (enPause) ouvrir('ov-pause'); else { fermer('ov-pause'); derniere = performance.now(); }

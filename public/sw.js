@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v112';
+const VERSION = 'v113';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -195,6 +195,7 @@ const SHELL = [
   '/shared/street/heros.js',
   '/shared/street/nuage.js',
   '/shared/street/replay.js',
+  '/shared/street/rollback.js',
   '/games/street-combat/js/trois/rendu3d.js',
   '/games/street-combat/js/trois/decors3d.js',
   '/vendor/three/three.module.min.js',

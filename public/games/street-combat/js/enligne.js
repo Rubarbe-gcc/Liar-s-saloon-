@@ -2,18 +2,18 @@
  * STREET COMBAT — le combat en ligne, à deux, chacun sur son appareil.
  *
  * Le moteur est déterministe : avec la même graine et les mêmes entrées,
- * deux appareils jouent exactement le même combat. Chacun envoie donc ses
- * entrées (dix touches, un nombre) avec DELAI images d'avance, et ne fait
- * avancer le combat d'une image que lorsqu'il a les entrées des deux
- * joueurs pour cette image (le « lockstep »). Le serveur ne fait que
- * relayer (server/street.js). De temps en temps, chacun envoie une
- * empreinte de l'état : si elles diffèrent, on le signale.
+ * deux appareils jouent exactement le même combat. Le combat ne s'arrête
+ * jamais pour attendre l'adversaire : on prédit ses touches et on corrige
+ * quand elles arrivent (le « rollback » : shared/street/rollback.js). Ici,
+ * on branche ce mécanisme sur le réseau : les messages, la mesure du ping
+ * (qui règle le délai de nos touches), le recalage si les deux écrans
+ * divergent, l'arène choisie par l'hôte. Le serveur ne fait que relayer
+ * (server/street.js).
  */
 
 import { creerConnexion } from '../../../shared/connexion.js';
+import { creerSession } from '../../../shared/street/rollback.js';
 
-/** Les entrées partent avec autant d'images d'avance (≈ 80 ms) : de quoi absorber le trajet. */
-export const DELAI = 5;
 const TOUCHES = ['g', 'd', 'h', 'b', 'P', 'K', 'G', 'A', 'B', 'U'];
 /** Dix touches → un nombre, et retour. */
 export const coder = (e) => TOUCHES.reduce((m, k, i) => (e[k] ? m | (1 << i) : m), 0);
@@ -23,52 +23,88 @@ export const decoder = (m) => Object.fromEntries(TOUCHES.map((k, i) => [k, !!(m 
 export function empreinte(c) {
   let h = c.f | 0;
   for (const j of c.joueurs) for (const v of [j.hp, Math.round(j.x), Math.round(j.y), j.sp, j.victoires]) h = (Math.imul(h, 31) + (v | 0)) | 0;
+  h = (Math.imul(h, 31) + (c.alea | 0)) | 0;
   return String(h >>> 0);
 }
 
 /* ------------------------------------------------------------------ */
-/* Le lockstep                                                         */
+/* Le ping, et le délai de nos touches                                 */
 /* ------------------------------------------------------------------ */
 
-export const LS = { actif: false, n: 0, f: 0, locales: new Map(), distantes: new Map(), attente: 0, empreintes: new Map(), desynchro: false };
+/** Ce qu'on mesure (affiché dans le diagnostic, touche F3). */
+export const DIAG = { ping: 0, mesures: 0 };
+let sondes = new Map();
+let minuteurSonde = 0;
 
-/** Un nouveau combat : les DELAI premières images se jouent sans rien toucher. */
-export function preparer(n) {
-  Object.assign(LS, { actif: true, n, f: 0, attente: 0, desynchro: false });
-  LS.locales.clear(); LS.distantes.clear(); LS.empreintes.clear();
-  for (let f = 0; f < DELAI; f++) { LS.locales.set(f, 0); LS.distantes.set(f, 0); }
+function sonder() {
+  const id = Math.floor(Math.random() * 1e9);
+  sondes.set(id, performance.now());
+  if (sondes.size > 20) sondes = new Map([...sondes].slice(-10));
+  envoyer({ t: 'sonde', id });
+}
+function recevoirSonde(id) {
+  const t0 = sondes.get(id);
+  if (t0 === undefined) return;
+  sondes.delete(id);
+  const rtt = performance.now() - t0;
+  DIAG.ping = DIAG.mesures ? DIAG.ping * 0.7 + rtt * 0.3 : rtt;
+  DIAG.mesures += 1;
+}
+/**
+ * Le délai de nos touches, selon le ping : un aller-retour jusqu'au serveur vaut
+ * à peu près un aller jusqu'à l'adversaire. Assez pour que la plupart des
+ * touches arrivent à temps, pas plus (le jeu doit rester vif).
+ */
+export const delaiSelonPing = (ping) => (!ping ? 2 : Math.max(1, Math.min(3, Math.round(ping / 16.7 / 2))));
+
+/* ------------------------------------------------------------------ */
+/* La session de combat                                                */
+/* ------------------------------------------------------------------ */
+
+let session = null;
+let dernierRecalage = -999;
+/** Pour le diagnostic : les images figées d'affilée. */
+export const ETAT = { attente: 0 };
+
+/**
+ * Un combat commence : `pasEv(c, entrees)` joue une image et rend ses événements ;
+ * `confirme(f, entrees)` reçoit chaque image confirmée (pour le replay).
+ */
+export function demarrerSession({ combat, n, pasEv, confirme }) {
+  session = creerSession({
+    n, delai: delaiSelonPing(DIAG.ping), etat: combat,
+    pas: (c, [a, b]) => pasEv(c, [decoder(a), decoder(b)]),
+    empreinte,
+    confirme: confirme && ((f, [a, b]) => confirme(f, [decoder(a), decoder(b)])),
+  });
+  ETAT.attente = 0;
+  dernierRecalage = -999;
 }
 
 /**
- * Les entrées de la prochaine image, [joueur 1, joueur 2] — ou null s'il
- * faut encore attendre celles de l'adversaire. `lireLocal` donne les touches
- * de ce joueur-ci, maintenant.
+ * Une image d'horloge en ligne. Rend { evs, attente } : les événements à
+ * montrer, et si l'image a été retenue (l'adversaire est trop loin derrière).
  */
-export function entreesDuPas(lireLocal) {
-  const cible = LS.f + DELAI;
-  if (!LS.locales.has(cible)) {
-    const m = coder(lireLocal());
-    LS.locales.set(cible, m);
-    envoyer({ t: 'entrees', f: cible, e: m });
+export function pasEnLigne(lireLocal) {
+  if (!session) return null;
+  const r = session.avancer(coder(lireLocal()));
+  envoyer({ t: 'entrees', ...r.envoi });
+  if (r.empreinte) envoyer({ t: 'hash', ...r.empreinte });
+  // Les deux écrans divergent : l'hôte envoie son état (pas plus d'une fois par seconde).
+  if (session.desynchro && salle.n === 0 && session.f - dernierRecalage > 60) {
+    const e = session.etatConfirme();
+    if (e) { envoyer({ t: 'etat', ...e }); dernierRecalage = session.f; session.acquitter(); }
   }
-  if (!LS.distantes.has(LS.f) || !LS.locales.has(LS.f)) { LS.attente += 1; return null; }
-  LS.attente = 0;
-  const moi = LS.locales.get(LS.f);
-  const lui = LS.distantes.get(LS.f);
-  LS.locales.delete(LS.f);
-  LS.distantes.delete(LS.f);
-  LS.f += 1;
-  return (LS.n === 0 ? [moi, lui] : [lui, moi]).map(decoder);
+  ETAT.attente = r.attente && !r.retenue ? ETAT.attente + 1 : 0;
+  return r;
 }
 
-/** Après chaque image : de temps en temps, on compare les empreintes. */
-export function apresPas(c) {
-  if (LS.f % 120 !== 0) return;
-  const h = empreinte(c);
-  const autre = LS.empreintes.get(LS.f);
-  if (autre !== undefined && autre !== h) LS.desynchro = true;
-  LS.empreintes.set(LS.f, h);
-  envoyer({ t: 'hash', f: LS.f, h });
+/** Toutes les images jouées sont confirmées (pour annoncer la fin d'un combat sans risque de correction). */
+export const toutConfirme = () => !session || session.confirmees >= session.f;
+/** Ce que montre le diagnostic. */
+export function diagnostic() {
+  if (!session) return null;
+  return { ping: Math.round(DIAG.ping), delai: session.delai, avance: session.avance(), ...session.stats };
 }
 
 /* ------------------------------------------------------------------ */
@@ -77,22 +113,20 @@ export function apresPas(c) {
 
 let rappels = {};
 let net = null;
-export const salle = { code: null, n: -1, enCombat: false };
+export const salle = { code: null, n: -1, enCombat: false, arene: 'hasard' };
 
 function traiter(m) {
   if (!m || m.g !== 'street') return;
   switch (m.t) {
-    case 'salle': salle.code = m.code; salle.n = m.n; rappels.salle?.(m); break;
-    case 'debut': salle.n = m.n; salle.enCombat = true; preparer(m.n); rappels.debut?.(m); break;
-    case 'entrees': LS.distantes.set(m.f, m.e); break;
-    case 'hash': {
-      const ici = LS.empreintes.get(m.f);
-      if (ici !== undefined && ici !== m.h) LS.desynchro = true;
-      LS.empreintes.set(m.f, m.h);
-      break;
-    }
+    case 'salle': salle.code = m.code; salle.n = m.n; salle.arene = m.arene || 'hasard'; rappels.salle?.(m); break;
+    case 'debut': salle.n = m.n; salle.enCombat = true; salle.arene = m.arene || 'hasard'; rappels.debut?.(m); break;
+    case 'arene': salle.arene = m.arene; rappels.arene?.(m.arene); break;
+    case 'entrees': session?.recevoir(m); break;
+    case 'hash': session?.recevoirEmpreinte(m); break;
+    case 'etat': session?.recaler(m); break;
+    case 'sonde': recevoirSonde(m.id); break;
     case 'revanche': rappels.revanche?.(m); break;
-    case 'parti': salle.code = null; salle.enCombat = false; LS.actif = false; rappels.parti?.(); break;
+    case 'parti': salle.code = null; salle.enCombat = false; session = null; rappels.parti?.(); break;
     case 'erreur': rappels.erreur?.(m.msg); break;
     default:
   }
@@ -113,19 +147,25 @@ export function connecter(r) {
       jeu: 'street', g: 'street', session: false,
       message: traiter,
       statut: (s) => rappels.statut?.(s),
-      ouverte: () => { if (enAttente) { const m = enAttente; enAttente = null; envoyer(m); } },
+      ouverte: () => { if (enAttente) { const m = enAttente; enAttente = null; envoyer(m); } sonder(); },
     });
   }
   net.ouvrir();
+  // Le ping, mesuré régulièrement (il règle le délai du prochain combat, et s'affiche dans le diagnostic).
+  clearInterval(minuteurSonde);
+  minuteurSonde = setInterval(() => { if (net?.ouverte()) sonder(); }, 2000);
 }
 
-export const creer = (perso, nom) => envoyer({ t: 'creer', perso, nom, arene: 'hasard' });
+export const creer = (perso, nom, arene = 'hasard') => envoyer({ t: 'creer', perso, nom, arene });
 export const rejoindre = (code, perso, nom) => envoyer({ t: 'rejoindre', code, perso, nom });
+/** L'hôte choisit l'arène (pour le combat qui vient, ou la revanche). */
+export const choisirArene = (arene) => envoyer({ t: 'arene', arene });
 export const revanche = () => envoyer({ t: 'revanche' });
 export function quitter() {
   enAttente = null;
   envoyer({ t: 'quitter' });
   salle.code = null;
   salle.enCombat = false;
-  LS.actif = false;
+  session = null;
+  clearInterval(minuteurSonde);
 }

@@ -499,3 +499,16 @@ kbd { display: inline-block; min-width: 22px; padding: 2px 6px; border-radius: 4
 /* L’aperçu : un écran de téléphone en petit (les commandes, réduites, sur toute la largeur). */
 .tactile-apercu .tactile { position: absolute; left: -45%; right: -45%; bottom: 0; background: none; pointer-events: none; transform: scale(.52); transform-origin: 50% 100%; }
 .tactile-apercu .tactile .manette-dir, .tactile-apercu .tactile .manette-boutons { opacity: var(--t-op); }
+
+/* ---------- en ligne : le choix de l'arène, le diagnostic ---------- */
+.enligne-arene { margin: 10px 0; }
+.arenes-ligne { display: flex; gap: 8px; overflow-x: auto; padding: 4px 2px 8px; scroll-snap-type: x proximity; }
+.carte-arene.mini { flex: none; width: 124px; padding: 2px; scroll-snap-align: start; }
+.carte-arene.mini canvas { width: 120px; height: 72px; display: block; border-radius: 4px; }
+.carte-arene.mini i { display: grid; place-items: center; width: 120px; height: 72px; font-size: 2rem; font-style: normal; }
+.carte-arene.mini span { font-size: .72rem; }
+.carte-arene.mini.on { outline: 3px solid #ffd23f; outline-offset: 1px; }
+.arene-revanche { display: flex; gap: 8px; align-items: center; justify-content: center; margin: 8px 0; font-size: .9rem; }
+.arene-revanche select { padding: 6px 8px; border-radius: 6px; border: 0; background: rgba(255,255,255,.1); color: #fff; }
+.arene-revanche option { color: #000; }
+.diag-enligne { position: absolute; left: 8px; bottom: 8px; z-index: 20; padding: 4px 8px; border-radius: 6px; background: rgba(0,0,0,.65); color: #9effc0; font: 600 12px/1.3 ui-monospace, monospace; pointer-events: none; }

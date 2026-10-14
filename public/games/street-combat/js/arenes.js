@@ -668,7 +668,7 @@ export function dessinerMurs(g, a, murs, pvMax, t) {
     if (degats > 0) {
       const xm = cote === 0 ? x0 + 24 : x0 + 2;
       g.strokeStyle = rgba('#120a04', 0.9); g.lineWidth = 2;
-      for (let i = 0; i < degats * 3; i++) {
+      for (let i = 0; i < Math.round((8 * degats) / pvMax); i++) {
         const y = SOL - 60 - ((i * 53) % 220);
         g.beginPath(); g.moveTo(xm, y);
         for (let s = 1; s <= 4; s++) g.lineTo(xm + (cote === 0 ? -1 : 1) * s * 5, y + Math.sin(i * 7 + s) * 14);

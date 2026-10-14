@@ -38,11 +38,12 @@ const JUGGLE_MAX = 4;
 export const VIE = 150;
 /**
  * Les murs de l'arène (option `murs`) : projeté contre un bord, on l'abîme ;
- * au troisième choc, il cède, et le combat passe dans la zone voisine (une
+ * au deuxième choc, il cède, et le combat passe dans la zone voisine (une
  * autre arène, `c.etage`), l'adversaire à terre. Une transition de
- * MUR_TRANSITION images, noire au milieu.
+ * MUR_TRANSITION images, noire au milieu. Les fissures restent d'une manche
+ * à l'autre : seul un mur brisé repart à neuf, dans la nouvelle zone.
  */
-export const MUR_PV = 3;
+export const MUR_PV = 2;
 export const MUR_TRANSITION = 60;
 const MUR_VITESSE = 5;
 const MUR_REPOS = 40;
@@ -809,7 +810,7 @@ function avancerCine(c) {
     return;
   }
   if (k.t === 70) {
-    const degats = Math.max(1, Math.round(ULTI_DEGATS * perso(j).dmg / perso(o).defMult));
+    const degats = Math.max(1, Math.round(ULTI_DEGATS * (perso(j).ulti.degats ?? 1) * perso(j).dmg / perso(o).defMult));
     o.hp = Math.max(0, o.hp - degats);
     j.combo = { n: 1, degats };
     evt(c, { type: 'texte', x: o.x, y: o.y - 200, texte: 'CRITICAL HIT !!', couleur: '#ffd84a', gros: true });
@@ -1051,8 +1052,7 @@ function nouveauRound(c) {
   c.projectiles = [];
   c.zones = [];
   c.gagnantRound = null;
-  // Les murs se reconstruisent ; on reste dans la zone où l’on est.
-  if (c.murs) c.murs = [MUR_PV, MUR_PV];
+  // On reste dans la zone où l’on est, et ses murs gardent leurs fissures.
   for (const j of c.joueurs) {
     Object.assign(j, {
       hp: j.hpMax, x: j.n === 0 ? 300 : 700, y: ARENE.SOL, vx: 0, vy: 0, dir: j.n === 0 ? 1 : -1, sol: true,

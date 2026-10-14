@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 
 import * as street from '../server/street.js';
 import * as C from '../public/shared/street/combat.js';
-import { coder, decoder, empreinte, preparer, entreesDuPas, LS, DELAI } from '../public/games/street-combat/js/enligne.js';
+import { coder, decoder, empreinte, delaiSelonPing } from '../public/games/street-combat/js/enligne.js';
 
 let id = 0;
 function joueur() {
@@ -48,8 +48,11 @@ test('les entrées passent de l’un à l’autre ; la revanche ; le départ', (
   b.dit({ t: 'rejoindre', code: a.dernier('salle').code, perso: 'maitre' });
   assert.deepEqual(a.dernier('debut').persos, ['ryuken', 'ryuken'], 'un combattant inconnu ou un figurant : Ryu-Ken');
   assert.equal(a.dernier('debut').noms[0], 'bAl/b', 'pas de balises dans les noms');
-  a.dit({ t: 'entrees', f: 7, e: 0b10001 });
-  assert.deepEqual(b.dernier('entrees'), { g: 'street', t: 'entrees', f: 7, e: 0b10001 });
+  a.dit({ t: 'entrees', f: 7, e: [0b1, 0b10001], fc: 5, vu: 3, av: 2 });
+  assert.deepEqual(b.dernier('entrees'), { g: 'street', t: 'entrees', f: 7, e: [0b1, 0b10001], fc: 5, vu: 3, av: 2 });
+  // L'ancien format (une seule touche) passe encore ; les nombres sont nettoyés.
+  a.dit({ t: 'entrees', f: 8, e: 0xffff, fc: 'x' });
+  assert.deepEqual(b.dernier('entrees'), { g: 'street', t: 'entrees', f: 8, e: [0x3ff], fc: 0, vu: -1, av: 0 });
   assert.equal(a.dernier('entrees'), undefined, 'on ne reçoit pas ses propres entrées');
   // La revanche : il faut les deux.
   const avant = a.recu.filter((m) => m.t === 'debut').length;
@@ -85,14 +88,50 @@ test('le lockstep : avec les mêmes entrées, deux appareils jouent exactement l
   assert.ok(a.joueurs.some((j) => j.hp < j.hpMax), 'il s’est vraiment passé quelque chose');
 });
 
-test('le lockstep : on attend les entrées de l’adversaire avant d’avancer', () => {
-  preparer(1);
-  // Les DELAI premières images se jouent tout de suite.
-  for (let f = 0; f < DELAI; f++) assert.ok(entreesDuPas(() => ({ P: true })));
-  // Puis il faut celles de l'adversaire.
-  assert.equal(entreesDuPas(() => ({})), null);
-  LS.distantes.set(DELAI, coder({ K: true }));
-  const e = entreesDuPas(() => ({}));
-  assert.ok(e[0].K, 'je suis le joueur 2 : l’adversaire est le joueur 1');
-  assert.ok(e[1].P, 'mes entrées, envoyées DELAI images plus tôt');
+test('l’arène : l’hôte la choisit, les deux la reçoivent, « au hasard » par défaut', () => {
+  const a = joueur();
+  const b = joueur();
+  a.dit({ t: 'creer', perso: 'ryuken', nom: 'A', arene: 'volcan' });
+  assert.equal(a.dernier('salle').arene, 'volcan');
+  // En attendant son adversaire, l'hôte change d'avis.
+  a.dit({ t: 'arene', arene: 'dojo' });
+  assert.equal(a.dernier('arene').arene, 'dojo');
+  b.dit({ t: 'rejoindre', code: a.dernier('salle').code, perso: 'blazero' });
+  assert.equal(a.dernier('debut').arene, 'dojo');
+  assert.equal(b.dernier('debut').arene, 'dojo');
+  // Celui qui a rejoint ne choisit pas.
+  b.dit({ t: 'arene', arene: 'volcan' });
+  assert.equal(b.dernier('arene'), undefined);
+  // Pour la revanche, l'hôte peut en changer ; une arène au nom bizarre devient « au hasard ».
+  a.dit({ t: 'arene', arene: '<script>' });
+  assert.equal(b.dernier('arene').arene, 'hasard');
+  a.dit({ t: 'arene', arene: 'neige' });
+  a.dit({ t: 'revanche' }); b.dit({ t: 'revanche' });
+  assert.equal(b.dernier('debut').arene, 'neige');
+  const c = joueur();
+  c.dit({ t: 'creer', perso: 'ryuken', nom: 'C' });
+  assert.equal(c.dernier('salle').arene, 'hasard');
+});
+
+test('le recalage : seul l’hôte envoie son état, et pas un état démesuré', () => {
+  const a = joueur();
+  const b = joueur();
+  a.dit({ t: 'creer', perso: 'ryuken', nom: 'A' });
+  b.dit({ t: 'rejoindre', code: a.dernier('salle').code, perso: 'blazero' });
+  a.dit({ t: 'etat', f: 120, etat: { f: 120, joueurs: [] } });
+  assert.deepEqual(b.dernier('etat').etat, { f: 120, joueurs: [] });
+  b.dit({ t: 'etat', f: 120, etat: { f: 120 } });
+  assert.equal(a.dernier('etat'), undefined, 'l’invité n’impose pas son état');
+  a.dit({ t: 'etat', f: 240, etat: { gros: 'x'.repeat(70000) } });
+  assert.equal(b.dernier('etat').f, 120, 'trop gros : ignoré');
+});
+
+test('le ping : une sonde revient ; le délai des touches suit le ping', () => {
+  const a = joueur();
+  a.dit({ t: 'sonde', id: 42 });
+  assert.equal(a.dernier('sonde').id, 42);
+  assert.equal(delaiSelonPing(0), 2, 'sans mesure : 2 images');
+  assert.equal(delaiSelonPing(20), 1);
+  assert.equal(delaiSelonPing(70), 2);
+  assert.equal(delaiSelonPing(400), 3, 'jamais plus de 3 images');
 });

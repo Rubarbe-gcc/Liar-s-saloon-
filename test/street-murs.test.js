@@ -1,6 +1,7 @@
 /**
- * STREET COMBAT — les murs qu'on brise : trois chocs, le mur cède, et le
- * combat passe dans la zone voisine (l'adversaire à terre).
+ * STREET COMBAT — les murs qu'on brise : deux chocs, le mur cède, et le
+ * combat passe dans la zone voisine (l'adversaire à terre). Les fissures
+ * restent d'une manche à l'autre.
  */
 
 import test from 'node:test';
@@ -21,7 +22,39 @@ function coincer(c, images) {
   return evs;
 }
 
-test('les murs : trois chocs, le mur cède, on passe dans la zone suivante', () => {
+/** Il est projeté contre le mur de droite. */
+function projeter(c) {
+  const [moi, lui] = c.joueurs;
+  lui.x = C.ARENE.L - C.ARENE.BORD - 2; lui.etat = 'touche'; lui.vx = 9; lui.stun = 20; lui.murRepos = 0;
+  moi.x = 820;
+  C.pas(c, [{}, {}]);
+  return C.evenements(c);
+}
+
+test('un mur cède au deuxième choc', () => {
+  const c = C.creerCombat({ p1: 'ryuken', p2: 'stoneback', graine: 7, murs: true });
+  c.phase = 'combat';
+  assert.equal(C.MUR_PV, 2);
+  const e1 = projeter(c);
+  assert.ok(e1.some((e) => e.type === 'mur' && e.reste === 1), 'le premier choc fissure le mur');
+  assert.ok(!e1.some((e) => e.type === 'mur-brise'));
+  const e2 = projeter(c);
+  assert.ok(e2.some((e) => e.type === 'mur-brise' && e.cote === 1), 'le deuxième le brise');
+});
+
+test('les fissures restent d’une manche à l’autre', () => {
+  const c = C.creerCombat({ p1: 'ryuken', p2: 'stoneback', graine: 7, murs: true });
+  c.phase = 'combat';
+  projeter(c);
+  assert.deepEqual(c.murs, [C.MUR_PV, C.MUR_PV - 1]);
+  // Le temps s'écoule : la manche suivante commence.
+  c.temps = 1;
+  for (let f = 0; f < 60 * 10 && c.round === 1; f++) { C.pas(c, [{}, {}]); C.evenements(c); }
+  assert.equal(c.round, 2, 'nouvelle manche');
+  assert.deepEqual(c.murs, [C.MUR_PV, C.MUR_PV - 1], 'le mur fissuré l’est toujours');
+});
+
+test('les murs : à force de chocs, le mur cède, on passe dans la zone suivante', () => {
   const c = C.creerCombat({ p1: 'ryuken', p2: 'stoneback', graine: 7, murs: true });
   c.phase = 'combat';
   c.joueurs[0].x = 820; c.joueurs[1].x = 900;
@@ -55,6 +88,7 @@ test('la transition fige le combat, puis place la victime à terre au bon endroi
   for (let f = 0; f < C.MUR_TRANSITION; f++) C.pas(c, [{}, {}]);
   assert.equal(c.transition, 0);
   assert.ok(lui.sol, 'il a touché le sol de la nouvelle zone');
+  assert.deepEqual(c.murs, [C.MUR_PV, C.MUR_PV], 'la nouvelle zone a des murs neufs');
 });
 
 test('sans l’option, pas de mur : on reste coincé, rien ne casse', () => {

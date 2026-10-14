@@ -375,7 +375,8 @@ export const PERSOS = [
     look: { corps: 'normal', tete: 'miroir', extras: ['eclats', 'armure'] },
     specA: { nom: 'PRISME !', ...faisceau({ portee: 700, epaisseur: 30, degats: 16, stun: 26, couleur: '#ffffff', prisme: true }) },
     specB: { nom: 'MIROIR BRISÉ !', ...proj({ vitesse: 13, rayon: 12, degats: 5, nb: 5, eventail: true, forme: 'eclat' }) },
-    ulti: { nom: 'MILLE REFLETS !!', portee: 300, visuel: 'miroirs' },
+    // Un ultime un peu moins écrasant que les autres (sa force, il l'a déjà partout ailleurs).
+    ulti: { nom: 'MILLE REFLETS !!', portee: 270, degats: 0.82, visuel: 'miroirs' },
     saisie: { nom: 'REFLET MORTEL', seq: [['REFLET !', 10, 6], ['DOUBLE !', 12, 7], ['TRIPLE !', 14, 8], ['BRISURE !', 18, 11], ['MIROIR FINAL !', 24, 15]] },
     combos: [
       { nom: 'REFLET FUGACE', entree: 'PPK', coup: ruee({ vx: 15, duree: 16, degats: 13, stun: 28, recul: 8, traverse: true, invincible: 12 }) },

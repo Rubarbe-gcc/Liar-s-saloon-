@@ -7,7 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import * as C from '../public/shared/street/combat.js';
-import { PERSOS, PERSO, ROSTER, BOSS, SECRETS, FIGURANTS, JAUGE, aDebloquer } from '../public/shared/street/persos.js';
+import { PERSOS, PERSO, ROSTER, BOSS, SECRETS, FIGURANTS, JAUGE, ULTI_DEGATS, aDebloquer } from '../public/shared/street/persos.js';
 
 /** Un combat d'entraînement, déjà lancé, les deux combattants face à face. */
 function duel(p1 = 'ryuken', p2 = 'ryuken', ecart = 90) {
@@ -168,6 +168,19 @@ test('l’ultime : la jauge pleine, la cinématique s’il est à portée, sinon
   const evs2 = jouer(c, 120, suite([{ U: true }]));
   assert.ok(evs2.some((e) => e.texte === 'ULTIME RATÉ !'));
   assert.equal(c.joueurs[1].hp, c.joueurs[1].hpMax);
+});
+
+test('l’ultime de Némésis : un peu moins fort que les autres, et de moins loin', () => {
+  const degatsUlti = (p1) => {
+    const c = duel(p1, 'ryuken', 150);
+    c.joueurs[0].sp = 100;
+    jouer(c, 260, suite([{ U: true }]));
+    return c.joueurs[1].hpMax - c.joueurs[1].hp;
+  };
+  const attendu = (p, facteur) => Math.round(ULTI_DEGATS * facteur * PERSO[p].dmg / PERSO.ryuken.defMult);
+  assert.equal(PERSO.nemesis.ulti.portee, 270);
+  assert.equal(degatsUlti('nemesis'), attendu('nemesis', 0.82));
+  assert.equal(degatsUlti('pyroclaw'), attendu('pyroclaw', 1), 'les autres ultimes ne changent pas');
 });
 
 test('les rounds : K.O., deux victoires, et un vainqueur', () => {

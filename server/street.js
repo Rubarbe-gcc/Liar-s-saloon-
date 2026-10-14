@@ -5,14 +5,18 @@
  * (un code de quatre lettres), leur donne la même graine, puis relaie leurs
  * entrées. Chaque appareil fait tourner le même moteur (déterministe :
  * shared/street/combat.js) avec les entrées des deux joueurs, image par
- * image : les deux écrans montrent exactement le même combat. Chacun envoie
- * ses entrées avec quelques images d'avance (voir games/street-combat/js/enligne.js).
+ * image : les deux écrans montrent exactement le même combat. Chacun prédit
+ * les entrées de l'autre et corrige quand elles arrivent (le « rollback » :
+ * shared/street/rollback.js) ; le serveur, lui, ne fait que relayer.
  *
  * Messages (le champ `g` vaut 'street') :
- *   → creer { perso, nom, arene }      ← salle { code, n: 0 }
+ *   → creer { perso, nom, arene }      ← salle { code, n: 0, arene }
  *   → rejoindre { code, perso, nom }   ← debut { n, graine, persos, noms, arene, manche } (aux deux)
- *   → entrees { f, e }                 ← entrees { f, e } (à l'autre)
+ *   → arene { arene }                  ← arene { arene } (aux deux) : l'hôte choisit l'arène (avant un combat, ou pour la revanche)
+ *   → entrees { f, e[], fc, vu, av }   ← entrees (à l'autre) : ses touches, et où il en est
  *   → hash { f, h }                    ← hash { f, h } (à l'autre : repérer une désynchronisation)
+ *   → etat { f, etat }                 ← etat (à l'autre) : l'hôte envoie son état pour que l'autre s'y recale
+ *   → sonde { id }                     ← sonde { id } : pour mesurer le ping
  *   → revanche                         ← revanche { n } puis debut quand les deux sont d'accord
  *   → quitter                          ← parti (à l'autre)
  */
@@ -42,6 +46,11 @@ const nettoyerNom = (s) => String(s ?? '').replace(/[\u0000-\u001f\u007f<>]/g, '
 /** Un vrai combattant (pas un figurant de l'histoire), sinon Ryu-Ken. */
 const persoValide = (id) => (PERSO[id] && PERSOS.includes(PERSO[id]) ? id : 'ryuken');
 const envoyer = (c, m) => { if (c?.conn) c.conn.send({ g: 'street', ...m }); };
+/** Une arène : son identifiant, ou « hasard » (alors tirée par la graine, la même pour les deux). */
+const areneValide = (a) => (typeof a === 'string' && /^[a-z0-9-]{1,24}$/.test(a) ? a : 'hasard');
+const entier = (v, min, max, defaut = min) => { const n = Math.trunc(Number(v)); return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : defaut; };
+/** L'état envoyé par l'hôte pour un recalage : au plus… */
+const ETAT_MAX = 60000;
 
 export function handleOpen(conn) {
   clients.set(conn.id, { conn, code: null, n: -1 });
@@ -78,14 +87,23 @@ export function handleMessage(conn, m) {
   switch (m.t) {
     case 'ping':
       return conn.send({ t: 'pong' });
+    case 'sonde':
+      return envoyer(c, { t: 'sonde', id: entier(m.id, 0, 1e9) });
+    case 'arene': {
+      // Seul l'hôte choisit ; l'arène vaut pour le prochain combat (ou la revanche).
+      if (!s || c.n !== 0) return;
+      s.arene = areneValide(m.arene);
+      for (const j of s.joueurs) envoyer(j, { t: 'arene', arene: s.arene });
+      return;
+    }
     case 'creer': {
       quitter(c);
       const code = nouveauCode();
-      const salle = { code, joueurs: [c, null], persos: [persoValide(m.perso), null], noms: [nettoyerNom(m.nom), null], arene: typeof m.arene === 'string' ? m.arene.slice(0, 20) : 'hasard', manche: 0, graine: 0, revanche: [false, false], cree: Date.now(), vu: Date.now() };
+      const salle = { code, joueurs: [c, null], persos: [persoValide(m.perso), null], noms: [nettoyerNom(m.nom), null], arene: areneValide(m.arene), manche: 0, graine: 0, revanche: [false, false], cree: Date.now(), vu: Date.now() };
       salles.set(code, salle);
       c.code = code;
       c.n = 0;
-      return envoyer(c, { t: 'salle', code, n: 0 });
+      return envoyer(c, { t: 'salle', code, n: 0, arene: salle.arene });
     }
     case 'rejoindre': {
       const code = String(m.code || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -100,12 +118,20 @@ export function handleMessage(conn, m) {
       c.n = 1;
       return demarrer(salle);
     }
-    case 'entrees': case 'hash': {
+    case 'entrees': case 'hash': case 'etat': {
       if (!s || !s.joueurs[1]) return;
       const f = Number(m.f);
       if (!Number.isInteger(f) || f < 0) return;
       const autre = s.joueurs[1 - c.n];
-      if (m.t === 'entrees') return envoyer(autre, { t: 'entrees', f, e: Number(m.e) & 0x3ff });
+      if (m.t === 'entrees') {
+        // Ses touches des dernières images (un nombre chacune), et où il en est.
+        const e = (Array.isArray(m.e) ? m.e.slice(-24) : [m.e]).map((x) => Number(x) & 0x3ff);
+        return envoyer(autre, { t: 'entrees', f, e, fc: entier(m.fc, 0, 1e7), vu: entier(m.vu, -1, 1e7), av: entier(m.av, -600, 600, 0) });
+      }
+      if (m.t === 'etat') {
+        if (c.n !== 0 || !m.etat || typeof m.etat !== 'object' || JSON.stringify(m.etat).length > ETAT_MAX) return;
+        return envoyer(autre, { t: 'etat', f, etat: m.etat });
+      }
       return envoyer(autre, { t: 'hash', f, h: String(m.h).slice(0, 40) });
     }
     case 'revanche': {
