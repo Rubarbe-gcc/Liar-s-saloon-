@@ -33,6 +33,8 @@ import {
   arbreDe, RANG_MAX, rangDe, pointsLibres, peutApprendre, apprendre, texteTalent,
 } from '../../../shared/raid/talents.js';
 import * as succes from '../../../shared/succes.js';
+import { creerPlateau, qualite as qualite3D, reglerQualite } from './trois/plateau3d.js';
+import { creerVignette } from './trois/etape3d.js';
 
 const $ = (id) => document.getElementById(id);
 /**
@@ -558,7 +560,7 @@ function rendreChapitres() {
       const n = +el.dataset.chapRevoir;
       const a = ACTES[n - 1];
       const boss = { ...MODELES_PAR_ID[a.boss], modeleId: a.boss, ecole: a.ecoleBoss || a.ecole };
-      jouerCinematique([...scenesChapitre(n, a.nom, a.ecole), ...scenesBoss(boss, n, a.nom)], { sfx });
+      jouerCinematique([...scenesChapitre(n, a.nom, a.ecole), ...scenesBoss(boss, n, a.nom)], { sfx, masque: a.boss });
     });
   }
   for (const el of zone.querySelectorAll('[data-chap-partir]')) {
@@ -652,6 +654,7 @@ function rendreCarte() {
     y: 100 - ((n.rangee + 0.5) / (RANGEES + 1)) * 100,
   });
   let lignes = '';
+  const liens = [];
   for (const n of av.carte.noeuds) {
     const a = pos(n);
     for (const id of n.suivants) {
@@ -661,6 +664,7 @@ function rendreCarte() {
       const fait = i >= 0 && av.visites[i + 1] === id;
       const ouvert = n.id === av.position && ouvertes.has(id);
       lignes += `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" class="${fait ? 'fait' : ouvert ? 'ouvert' : ''}"/>`;
+      liens.push({ a: n.id, b: id, fait, ouvert });
     }
   }
   // Brouillard : on ne sait ce qu'une salle cache qu'en y entrant. Seuls le
@@ -681,6 +685,32 @@ function rendreCarte() {
   for (const el of $('carte').querySelectorAll('.salle')) {
     el.addEventListener('click', () => entrerSalle(el.dataset.id));
   }
+  // En 3D : le plateau dessine la carte, et les boutons des salles (invisibles) se posent sur ses jetons.
+  const p3 = plateauCarte();
+  $('carte').parentElement.classList.toggle('en3d', !!p3);
+  if (p3) {
+    const boutons = [...$('carte').querySelectorAll('.salle')];
+    const ecole = acte.ecoleBoss || acte.ecole;
+    p3.maj({
+      acte: av.acte,
+      cle: `${av.acte}|${av.carte.noeuds.map((n) => n.id).join(',')}`,
+      noeuds: av.carte.noeuds.map((n) => ({
+        id: n.id, ...pos(n), type: n.type, glyphe: connue(n) ? TYPES[n.type].glyphe : '🚪',
+        ouverte: ouvertes.has(n.id), ici: n.id === av.position, vue: vues.has(n.id), cachee: !connue(n),
+      })),
+      liens,
+      position: av.position,
+      visitesPremiere: av.visites[0],
+      boss: acte.boss,
+      ecoleBoss: ecole,
+      chef: av.groupe[0] && { id: av.groupe[0].id, peuple: av.groupe[0].peuple, ecole: av.groupe[0].ecole, role: av.groupe[0].role, classe: av.groupe[0].classe },
+    }, () => {
+      for (const b of boutons) { const e = p3.ecran(b.dataset.id); if (e) { b.style.left = `${e.x}px`; b.style.top = `${e.y}px`; } }
+    });
+    for (const b of boutons) {
+      for (const [ev, id] of [['pointerenter', b.dataset.id], ['focus', b.dataset.id], ['pointerleave', null], ['blur', null]]) b.addEventListener(ev, () => p3.survol(id));
+    }
+  }
   $('carte-aide').textContent = av.position
     ? 'Choisissez une porte qui brille. Seuls les marchands 💰 se voient de loin.'
     : `${acte.texte} Choisissez une porte pour commencer.`;
@@ -692,6 +722,21 @@ function rendreCarte() {
   $('quete-note').textContent = q ? A.texteQuete(q)
     : (av.offresQuetes || []).length ? `${av.offresQuetes.length} quête${av.offresQuetes.length > 1 ? 's' : ''} proposée${av.offresQuetes.length > 1 ? 's' : ''} pour ce chapitre` : 'Rien à faire ici pour l’instant';
   $('legende').innerHTML = '<span>🚪 Porte close</span>' + Object.values(TYPES).map((t) => `<span>${t.glyphe} ${t.nom}</span>`).join('');
+}
+
+/** La vignette 3D des étapes (créée une fois) ; null sans WebGL, ou en qualité 2D. */
+let vignette;
+function vignetteEtape() {
+  if (vignette === undefined) vignette = creerVignette($('vignette-etape'));
+  $('s-etape').classList.toggle('en3d', !!vignette);
+  return vignette;
+}
+
+/** Le plateau 3D de la carte (créé une fois) ; null sans WebGL, ou en qualité 2D. */
+let plateau;
+function plateauCarte() {
+  if (plateau === undefined) plateau = creerPlateau(document.querySelector('.carte-wrap'));
+  return plateau;
 }
 
 function entrerSalle(id) {
@@ -720,7 +765,7 @@ function combattre() {
     av.cines = [...(av.cines || []), cle];
     sauver();
     const boss = e.ennemis.find((x) => x.rang === 'boss') || e.ennemis[0];
-    jouerCinematique(scenesBoss(boss, av.acte, ACTES[av.acte - 1].nom), { sfx }).then(combattre);
+    jouerCinematique(scenesBoss(boss, av.acte, ACTES[av.acte - 1].nom), { sfx, masque: boss.modeleId }).then(combattre);
     return;
   }
   aller('combat');
@@ -793,6 +838,12 @@ function rendreEtape() {
     victoire: etapeVictoire,
   };
   zone.innerHTML = rendus[e.type] ? rendus[e.type](e) : '';
+  // En 3D, une petite scène sur la table du Conteur, au-dessus des choix.
+  const v = vignetteEtape();
+  if (v) {
+    const fig = (p) => ({ id: p.id, peuple: p.peuple, ecole: p.ecole, role: p.role, classe: p.classe });
+    v.montrer(e.type, { groupe: av.groupe.map(fig), offres: (e.offres || []).map((id) => PAR_ID[id]).filter(Boolean).map(fig) });
+  }
   const clic = (sel, f) => { for (const el of zone.querySelectorAll(sel)) el.addEventListener('click', () => { sfx.clic(); f(el); }); };
 
   switch (e.type) {
@@ -1226,6 +1277,9 @@ function brancher() {
     jouerCinematique(scenesIntro(A.heros(av), ACTES[0].nom), { sfx }).then(suite);
   });
   $('b-son').addEventListener('click', () => { basculerSon(); rendreMenu(); });
+  // Les graphismes : la carte en 3D (haute, moyenne) ou en 2D ; on recharge pour l'appliquer.
+  $('b-graphismes').value = qualite3D();
+  $('b-graphismes').addEventListener('change', (e) => { reglerQualite(e.target.value); location.reload(); });
   $('sy-activer').addEventListener('click', () => { debloquer(); sfx.clic(); activerSynchro(); });
   $('sy-relier').addEventListener('click', () => { debloquer(); sfx.clic(); relierSynchro(); });
   $('sy-saisie').addEventListener('keydown', (e) => { if (e.key === 'Enter') relierSynchro(); });

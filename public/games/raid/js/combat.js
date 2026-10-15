@@ -16,6 +16,16 @@ import { txt, teinte, texteSort, TRAITS_RPG } from './textes.js';
 import { aUnPortrait, portraitSvg, criDePhase } from './boss.js';
 import { texteEveil } from '../../../shared/raid/eveils.js';
 import { RAGE } from '../../../shared/raid/bataille.js';
+import { creerTableCombat } from './trois/combat3d.js';
+
+/** La table du Conteur, en 3D (créée une fois) ; null sans WebGL, ou en qualité 2D. */
+let table;
+function tableCombat() {
+  const arene = document.querySelector('#s-combat .arene');
+  if (table === undefined) table = creerTableCombat(arene);
+  arene.classList.toggle('en3d', !!table);
+  return table;
+}
 
 const $ = (id) => document.getElementById(id);
 const attendre = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -47,6 +57,7 @@ export function lancerCombat(bataille, options) {
   $('journal').innerHTML = o.intro || 'Le combat commence.';
   construire();
   $('commandes').innerHTML = '';
+  tableCombat()?.relancer();
   const boss = b.ennemis.find((e) => e.rang === 'boss');
   if (!boss) { jouer(demarrer(b)); return; }
   // Un boss se présente : son nom barre l'écran avant le premier coup.
@@ -80,7 +91,11 @@ function carteUnite(u) {
   const traits = ennemi ? u.traits.map((t) => (TRAITS_RPG[t] || {}).glyphe || '').join('') : '';
   const portrait = ennemi && aUnPortrait(u);
   const classe = `unite${portrait ? (u.rang === 'boss' ? ' boss' : ' elite') : ''}`;
-  return `<div class="${classe}" data-u="${cle(u.camp, u.idx)}" style="--aff:${teinte(u.ecole)}">
+  // Ce qu'il faut pour sculpter sa figurine (la table 3D lit ces attributs).
+  const fig = ennemi
+    ? `data-modele="${u.modeleId || ''}" data-silhouette="${u.silhouette || ''}" data-rang="${u.rang || ''}"`
+    : `data-id="${u.id || ''}" data-peuple="${u.peuple || ''}" data-role="${u.role || ''}" data-classe="${txt(u.ref?.classe || '')}"`;
+  return `<div class="${classe}" data-u="${cle(u.camp, u.idx)}" data-ecole="${u.ecole || ''}" ${fig} style="--aff:${teinte(u.ecole)}">
     <span class="ecole-pt"></span>
     <span class="etats"></span>
     ${portrait ? `<div class="cadre-portrait">${portraitSvg(u)}</div>` : `<div class="pied">${spriteSvg(u)}</div>`}`

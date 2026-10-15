@@ -64,6 +64,8 @@ function souffle(duree, filtre, freq, vol, q = 1, vers = null, retard = 0) {
 
 export const sfx = {
   tap() { note(880, 0.04, 'square', 0.05); },
+  /** La voix du Conteur : un grognement grave, bref, jamais tout à fait le même. */
+  voix() { const f = 62 + Math.random() * 38; note(f, 0.12, 'sawtooth', 0.11, f * 0.78); note(f * 2.02, 0.07, 'square', 0.03, f * 1.6); },
   clic() { note(600, 0.07, 'triangle', 0.12); },
 
   /** Une globe ramassée : la note monte avec la longueur du chemin. */

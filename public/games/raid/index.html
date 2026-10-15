@@ -50,6 +50,11 @@
       <div class="menu-row">
         <button class="btn btn-thin" data-go="regles"><span class="bi">❓</span> Règles</button>
         <button class="btn btn-thin" id="b-son"><span class="bi">🔊</span> Son</button>
+        <select class="btn btn-thin" id="b-graphismes" aria-label="Qualité graphique">
+          <option value="haute">✨ 3D : haute</option>
+          <option value="moyenne">✨ 3D : moyenne</option>
+          <option value="2d">✨ 2D</option>
+        </select>
       </div>
       <a class="menu-back" href="/">‹ Retour à l'arcade</a>
     </nav>
@@ -119,6 +124,7 @@
 
 <!-- ============================== ÉTAPE ============================= -->
 <section class="screen" id="s-etape">
+  <div class="vignette3d" id="vignette-etape" aria-hidden="true"></div>
   <div class="page etape" id="etape"></div>
 </section>
 
