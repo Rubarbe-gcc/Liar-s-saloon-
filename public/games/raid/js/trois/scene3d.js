@@ -241,7 +241,8 @@ export function creerScene(hote, o = {}) {
   }
   let raf = 0;
   let dernier = performance.now();
-  const visible = () => hote.isConnected && hote.offsetParent !== null && !document.hidden;
+  // Visible : affichée (getClientRects marche aussi pour un élément en position fixe), onglet au premier plan.
+  const visible = () => hote.isConnected && hote.getClientRects().length > 0 && !document.hidden;
   function boucle(maintenant) {
     raf = 0;
     if (!visible()) return;

@@ -478,6 +478,112 @@ button { font: inherit; color: inherit; border: 0; background: none; cursor: poi
 
 .etape { padding-top: 4vh; }
 .et-tete { text-align: center; margin-bottom: 16px; }
+
+/* ================================================================== */
+/* La table du Conteur : le menu et le choix du héros (trois/fond3d.js) */
+/* ================================================================== */
+.fond3d { display: none; }
+.bi-graphismes { display: none; }
+body.table3d .fond3d { display: block; position: fixed; inset: 0; z-index: 0; }
+body.table3d .fond3d .scene3d { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+body.table3d .bg { display: none; }
+body.table3d .screen { position: relative; z-index: 1; }
+/* Les boutons deviennent des étiquettes posées sur la table : on voit l'objet à travers. */
+body.table3d #s-menu .btn, body.table3d #s-choix .depart, body.table3d #s-choix .diff {
+  background: linear-gradient(180deg, rgba(16, 10, 6, .1), rgba(16, 10, 6, .5));
+  border: 1px dashed rgba(232, 192, 96, .3); box-shadow: none;
+}
+body.table3d #s-menu .btn:hover, body.table3d #s-menu .btn:focus-visible, body.table3d #s-choix .depart:hover, body.table3d #s-choix .diff:hover { border-color: rgba(255, 233, 168, .8); border-style: solid; }
+body.table3d #s-menu .btn .bt b, body.table3d #s-choix .depart b, body.table3d .diff { font-family: "Segoe Print", "Comic Sans MS", cursive; color: #f0dcae; text-shadow: 0 2px 4px #000; }
+body.table3d #s-menu .btn .bi, body.table3d #s-menu .emp-portrait { color: transparent; font-size: 0; width: 70px; height: 58px; flex: none; }
+body.table3d #s-menu .emp-portrait svg { visibility: hidden; }
+body.table3d #s-menu .menu-row .btn .bi { width: 42px; height: 40px; }
+body.table3d .bi-graphismes { display: inline-block; width: 40px; height: 40px; flex: none; }
+body.table3d #s-menu .menu-row { align-items: center; }
+body.table3d #s-menu .btn .bt { min-width: 0; }
+body.table3d #s-menu .btn .bt b { white-space: normal; overflow-wrap: anywhere; }
+@media (max-width: 480px) { body.table3d #s-menu .btn .bi, body.table3d #s-menu .emp-portrait { width: 54px; height: 48px; } }
+body.table3d .logo-title { color: #d8b070; text-shadow: 0 3px 0 #3a2410, 0 0 24px rgba(0, 0, 0, .9); font-family: "Segoe Print", "Comic Sans MS", cursive; }
+body.table3d .logo-kicker, body.table3d .logo-tag { text-shadow: 0 2px 4px #000; }
+body.table3d #s-choix .depart svg, body.table3d .fp-tete svg { visibility: hidden; }
+body.table3d #s-choix .depart .sprite { width: 64px; height: 76px; }
+body.table3d #s-choix .depart.choisi { transform: none; }
+body.table3d #s-choix .diff span { color: transparent; display: block; height: 52px; }
+/* La fiche du héros : une carte en parchemin, écrite à la main. */
+body.table3d .fiche-depart {
+  background: linear-gradient(170deg, #ead9b2, #d2bb8c); color: #2a1a0c;
+  border: 2px solid #8a6a3a; box-shadow: 0 12px 26px rgba(0, 0, 0, .6), inset 0 0 34px rgba(120, 80, 30, .3);
+  font-family: "Segoe Print", "Comic Sans MS", cursive;
+}
+body.table3d .fiche-depart p, body.table3d .fiche-depart i, body.table3d .fiche-depart span, body.table3d .fiche-depart b, body.table3d .fiche-depart h3 { color: #2a1a0c; }
+body.table3d .fiche-depart > div:not(.fp-tete), body.table3d .fiche-depart .tag { background: rgba(90, 60, 25, .12); border-color: rgba(90, 60, 25, .35); }
+body.table3d .fp-tete .sprite { width: 86px; height: 96px; }
+img.portrait3d.grand { width: 84px; height: 84px; }
+body.table3d .page-titre, body.table3d .section { font-family: "Segoe Print", "Comic Sans MS", cursive; color: #f0dcae; }
+
+/* ================================================================== */
+/* Les objets sculptés, en images (trois/objets3d.js), et l'écran de la carte */
+/* ================================================================== */
+img.obj3d { width: 22px; height: 22px; image-rendering: pixelated; vertical-align: -6px; }
+.btn .bi img.obj3d { width: 34px; height: 34px; vertical-align: middle; }
+img.portrait3d { width: 34px; height: 34px; flex: none; image-rendering: pixelated; border-radius: 50%; background: radial-gradient(circle, rgba(90, 60, 25, .25), transparent 70%); }
+body.objets3d #s-carte .barre {
+  padding: 6px 10px; border-radius: 10px; border: 2px solid #1e1209;
+  background: repeating-linear-gradient(180deg, #4a2e1a 0 14px, #3e2614 14px 16px), #4a2e1a;
+  box-shadow: inset 0 2px 0 rgba(255, 220, 170, .12), 0 6px 14px rgba(0, 0, 0, .5);
+}
+body.objets3d #s-carte .barre-acte b { font-family: "Segoe Print", "Comic Sans MS", cursive; color: #f4e2b8; text-shadow: 0 2px 0 #1e1209; }
+body.objets3d #s-carte .barre-res span { background: rgba(10, 6, 4, .55); border-radius: 999px; padding: 2px 9px 2px 4px; font-family: "Segoe Print", "Comic Sans MS", cursive; color: #f0e8d8; }
+/* Le groupe : des cartes en parchemin, épinglées. */
+body.objets3d #s-carte .mini {
+  position: relative; background: linear-gradient(170deg, #e6d4ac, #cdb487); color: #2a1a0c;
+  border: 1px solid #7a5a2a; box-shadow: 0 6px 12px rgba(0, 0, 0, .45);
+}
+body.objets3d #s-carte .mini b { color: #2a1a0c; font-family: "Segoe Print", "Comic Sans MS", cursive; }
+body.objets3d #s-carte .mini::before { content: ''; position: absolute; top: -5px; left: 50%; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ff8a7a, #8a1a10); box-shadow: 0 2px 2px rgba(0, 0, 0, .5); }
+body.objets3d #s-carte .mini.vide { background: rgba(230, 212, 172, .12); color: #cdb487; border: 1px dashed rgba(205, 180, 135, .45); font-family: "Segoe Print", "Comic Sans MS", cursive; }
+body.objets3d #s-carte .mini.vide::before { opacity: .5; }
+/* L'aide et la légende : une note manuscrite. */
+body.objets3d #s-carte .carte-aide, body.objets3d #s-carte .legende {
+  background: linear-gradient(175deg, #e2d0a6, #cbb283); color: #3a2410;
+  font-family: "Segoe Print", "Comic Sans MS", cursive; padding: 6px 12px; margin: 8px auto 0; border-radius: 3px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, .45); max-width: 560px;
+}
+body.objets3d #s-carte .carte-aide { transform: rotate(-.6deg); }
+body.objets3d #s-carte .legende { transform: rotate(.4deg); margin-bottom: 12px; }
+/* Quêtes, Groupe et sac, Rôder : des objets sculptés, sur une planche. */
+body.objets3d #s-carte .quete-bouton, body.objets3d #s-carte .carte-actions .btn {
+  background: linear-gradient(180deg, #4a2e1a, #34200f); border: 2px solid #1e1209; color: #f4e2b8;
+  font-family: "Segoe Print", "Comic Sans MS", cursive;
+}
+
+/* Sur grand écran : la carte au centre, le groupe à gauche, le reste à droite. */
+@media (min-width: 1100px) {
+  body.objets3d #s-carte .page {
+    max-width: min(1560px, 96vw);
+    display: grid; grid-template-columns: 250px minmax(0, 1fr) 310px;
+    grid-template-areas: "groupe carte barre" "groupe carte quete" "groupe carte actions" "groupe carte aide" "groupe carte legende" "groupe carte reste";
+    grid-template-rows: auto auto auto auto auto 1fr; column-gap: 20px; row-gap: 12px; align-items: start; padding-top: 12px;
+  }
+  body.objets3d #s-carte .barre { grid-area: barre; flex-wrap: wrap; margin: 0; }
+  body.objets3d #s-carte .barre-res { justify-content: flex-start; width: 100%; }
+  body.objets3d #s-carte .groupe-mini { grid-area: groupe; grid-template-columns: 1fr; gap: 14px; margin: 0; }
+  body.objets3d #s-carte .mini { min-height: 74px; padding: 10px; }
+  body.objets3d #s-carte img.portrait3d { width: 54px; height: 54px; }
+  body.objets3d #s-carte .carte-wrap, body.objets3d #s-carte .carte-wrap.en3d { grid-area: carte; height: calc(100svh - 36px); }
+  body.objets3d #s-carte .carte-aide { grid-area: aide; margin: 0; }
+  body.objets3d #s-carte .legende { grid-area: legende; margin: 0; }
+  body.objets3d #s-carte .quete-bouton { grid-area: quete; }
+  body.objets3d #s-carte .carte-actions { grid-area: actions; grid-template-columns: 1fr; }
+  /* Le combat : une table plus grande. */
+  body.objets3d .arene { max-width: 1000px; }
+  body.objets3d .arene .unite { width: min(30%, 200px); }
+  body.objets3d .arene .heros .unite { max-width: 200px; }
+  /* Les étapes : la scène à gauche, les choix à droite. */
+  #s-etape.en3d.is-active { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 640px); gap: 26px; width: 100%; max-width: 1440px; margin: 0 auto; align-items: start; box-sizing: border-box; }
+  body #s-etape.en3d .vignette3d { position: sticky; top: 16px; width: 100%; height: calc(100svh - 36px); max-width: none; margin: 0; }
+  #s-etape.en3d .page { margin: 0; width: 100%; }
+}
 /* En 3D, la scène de l'étape (trois/etape3d.js) remplace le grand emoji de l'en-tête. */
 .vignette3d { display: none; }
 #s-etape.en3d .vignette3d { display: block; position: relative; height: clamp(170px, 30vh, 250px); max-width: 720px; margin: 0 auto -6px; border-radius: var(--rayon); overflow: hidden; }

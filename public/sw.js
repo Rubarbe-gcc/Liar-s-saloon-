@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v118';
+const VERSION = 'v119';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -112,6 +112,8 @@ const SHELL = [
   '/games/raid/js/trois/figurines3d.js',
   '/games/raid/js/trois/combat3d.js',
   '/games/raid/js/trois/etape3d.js',
+  '/games/raid/js/trois/objets3d.js',
+  '/games/raid/js/trois/fond3d.js',
   '/games/raid/icons/icon-192.png',
   '/shared/hasard.js',
   '/shared/musique.js',

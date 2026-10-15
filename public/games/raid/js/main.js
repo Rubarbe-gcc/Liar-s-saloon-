@@ -35,6 +35,9 @@ import {
 import * as succes from '../../../shared/succes.js';
 import { creerPlateau, qualite as qualite3D, reglerQualite } from './trois/plateau3d.js';
 import { creerVignette } from './trois/etape3d.js';
+import { creerFond } from './trois/fond3d.js';
+import { OBJETS as SCULPTURES, icone, portrait } from './trois/objets3d.js';
+import { figurineHeros } from './trois/figurines3d.js';
 
 const $ = (id) => document.getElementById(id);
 /**
@@ -335,6 +338,9 @@ const RENDUS = {
 
 function aller(nom) {
   for (const s of document.querySelectorAll('.screen')) s.classList.toggle('is-active', s.id === `s-${nom}`);
+  // Le menu et le choix du héros se jouent sur la table du Conteur (en 3D).
+  document.body.classList.toggle('table3d', (nom === 'menu' || nom === 'choix') && !!fondTable());
+  document.body.classList.toggle('objets3d', qualite3D() !== '2d' && !!icone('or'));
   if (RENDUS[nom]) RENDUS[nom]();
   scrollTo(0, 0);
 }
@@ -435,6 +441,7 @@ function rendreMenu() {
   $('b-son').querySelector('.bi').textContent = sonActif() ? '🔊' : '🔇';
   $('chapitres-note').textContent = progres.fini ? 'Histoire terminée · 10/10 débloqués'
     : `${progres.max}/${ACTES.length} débloqué${progres.max > 1 ? 's' : ''}`;
+  poserMenu3D();
 }
 
 function statsHtml(p, bonus = {}) {
@@ -478,6 +485,47 @@ const CONSEILS = {
   soigneur: 'Se soigne seul et tient longtemps : seul, il frappe plus fort. Un départ patient.',
 };
 
+function poserMenu3D() {
+  const f = fondTable();
+  if (!f) return;
+  document.body.classList.add('objets3d');
+  document.body.classList.toggle('table3d', $('s-menu').classList.contains('is-active'));
+  const q = (s) => document.querySelector(s);
+  const objets = [];
+  for (const b of $('emplacements').querySelectorAll('[data-emp], [data-neuf]')) {
+    const i = +(b.dataset.emp ?? b.dataset.neuf);
+    const x = b.dataset.emp !== undefined ? (i === emplacement ? av : lireBrut(i)) : null;
+    const h = x && A.heros(x);
+    objets.push({ ancre: b.querySelector('.bi, .emp-portrait'), bouton: b, fabrique: () => (h ? boiteDe(h) : SCULPTURES.boite()), taille: 1.0, angle: (i - 1) * 0.12 });
+  }
+  objets.push({ ancre: q('[data-go="chapitres"] .bi'), bouton: q('[data-go="chapitres"]'), fabrique: SCULPTURES.livre, taille: 1.2, angle: -0.3 });
+  objets.push({ ancre: q('[data-go="transfert"] .bi'), bouton: q('[data-go="transfert"]'), fabrique: SCULPTURES.lettre, taille: 1.2, angle: 0.2 });
+  objets.push({ ancre: q('[data-go="regles"] .bi'), bouton: q('[data-go="regles"]'), fabrique: SCULPTURES.parchemin, taille: 1.3, angle: 0.4 });
+  objets.push({ ancre: q('#b-son .bi'), bouton: $('b-son'), fabrique: SCULPTURES.cloche, taille: 1.1 });
+  objets.push({ ancre: q('#bi-graphismes'), bouton: $('b-graphismes'), fabrique: SCULPTURES.bougie, taille: 1.1 });
+  f.poser(objets);
+}
+
+function poserChoix3D() {
+  const f = fondTable();
+  if (!f) return;
+  document.body.classList.toggle('table3d', $('s-choix').classList.contains('is-active'));
+  const objets = [];
+  for (const b of $('departs').querySelectorAll('.depart')) {
+    const id = b.dataset.id;
+    objets.push({ ancre: b.querySelector('svg'), bouton: b, fabrique: () => figDe(PAR_ID[id]), taille: 1.15, bas: 0.95, angle: 0.3, choisi: () => id === depart, tourne: true, depart: id === depart });
+  }
+  // Sur la fiche en parchemin : le portrait du héros, peint (pas de 3D sous la carte, elle le cacherait).
+  const tete = $('fiche-depart').querySelector('.fp-tete svg');
+  const visage = portrait(PAR_ID[depart]);
+  if (tete && visage) tete.outerHTML = `<img class="portrait3d grand" src="${visage}" alt="">`;
+  for (const b of $('difficultes').querySelectorAll('.diff')) {
+    const k = b.dataset.d;
+    if (SCULPTURES[k]) objets.push({ ancre: b.querySelector('span'), bouton: b, fabrique: SCULPTURES[k], taille: 1.35, bas: 0.7, choisi: () => k === difficulte });
+  }
+  f.poser(objets);
+}
+
 function rendreChoix() {
   $('departs').innerHTML = DEPARTS.map((id) => {
     const f = PAR_ID[id];
@@ -504,6 +552,7 @@ function rendreChoix() {
     });
   }
   $('choix-sous').textContent = `Emplacement ${cible + 1}. Il part seul : les compagnons viendront en chemin.`;
+  poserChoix3D();
   $('diff-texte').textContent = A.texteDifficulte(difficulte);
   const dc = $('depart-chapitre');
   dc.hidden = chapitreDepart <= 1;
@@ -617,9 +666,9 @@ function rendreChapitres() {
 
 function ressources() {
   const i = av.inventaire;
-  return `<span title="Or">💰 ${av.or}</span><span title="Potions">🧪 ${i.potion}</span>`
-    + `<span title="Élixirs">🔷 ${i.elixir}</span><span title="Plumes de phénix">🪶 ${i.phenix}</span>`
-    + `<span title="Chance">🍀 ${av.chance}</span>`;
+  return `<span title="Or">${img('or', '💰')} ${av.or}</span><span title="Potions">${img('potion', '🧪')} ${i.potion}</span>`
+    + `<span title="Élixirs">${img('elixir', '🔷')} ${i.elixir}</span><span title="Plumes de phénix">${img('phenix', '🪶')} ${i.phenix}</span>`
+    + `<span title="Chance">${img('chance', '🍀')} ${av.chance}</span>`;
 }
 
 function groupeMini() {
@@ -627,7 +676,9 @@ function groupeMini() {
   const cases = av.groupe.map((p) => {
     const s = statsDe(p, bonus);
     const v = Math.max(0, p.pv) / s.pvMax;
-    return `<div class="mini${p.pv <= 0 ? ' tombe' : ''}" style="--aff:${teinte(p.ecole)}">${spriteSvg(p)}
+    // En 3D : le portrait de sa figurine ; sinon son sprite.
+    const visage = qualite3D() !== '2d' && portrait(p);
+    return `<div class="mini${p.pv <= 0 ? ' tombe' : ''}" style="--aff:${teinte(p.ecole)}">${visage ? `<img class="portrait3d" src="${visage}" alt="">` : spriteSvg(p)}
       <div class="mini-corps"><b>${txt(p.nom)} · ${p.niveau}</b>
         <div class="jauge pv${v < 0.3 ? ' bas' : ''}" style="--v:${v.toFixed(3)}"><i></i></div>
         <div class="jauge pm" style="--v:${(p.pm / s.pmMax).toFixed(3)}"><i></i></div></div></div>`;
@@ -646,6 +697,11 @@ function rendreCarte() {
   $('acte-num').innerHTML = `Chapitre ${av.acte} / ${ACTES.length}${A.cycleDe(av) > 1 ? ` · <span class="badge-plus">⭐ Partie +${A.cycleDe(av) > 2 ? A.cycleDe(av) - 1 : ''}</span>` : ''} · <span class="badge-diff" style="--d:${COULEUR_DIFF[av.difficulte] || COULEUR_DIFF.normal}">${A.difficulteDe(av).glyphe} ${A.difficulteDe(av).nom}</span>`;
   $('ressources').innerHTML = ressources();
   $('groupe-mini').innerHTML = groupeMini();
+  // Les boutons du bas : un parchemin roulé, une besace, une boussole.
+  for (const [sel, nom, emoji] of [['#b-quetes .bi', 'parchemin', '📜'], ['[data-go="groupe"] .bi', 'sac', '🎒'], ['#b-roder .bi', 'boussole', '🧭']]) {
+    const el = document.querySelector(`#s-carte ${sel}`);
+    if (el) el.innerHTML = img(nom, emoji);
+  }
 
   const ouvertes = new Set(A.sallesAccessibles(av).map((n) => n.id));
   const vues = new Set(av.visites);
@@ -723,6 +779,25 @@ function rendreCarte() {
     : (av.offresQuetes || []).length ? `${av.offresQuetes.length} quête${av.offresQuetes.length > 1 ? 's' : ''} proposée${av.offresQuetes.length > 1 ? 's' : ''} pour ce chapitre` : 'Rien à faire ici pour l’instant';
   $('legende').innerHTML = '<span>🚪 Porte close</span>' + Object.values(TYPES).map((t) => `<span>${t.glyphe} ${t.nom}</span>`).join('');
 }
+
+/** La table du Conteur derrière le menu et le choix du héros (créée une fois) ; null sans 3D. */
+let fond;
+function fondTable() {
+  if (fond === undefined) fond = creerFond($('fond3d'));
+  return fond;
+}
+/** Une figurine à partir d'un héros (ou de sa fiche). */
+const figDe = (p) => figurineHeros({ id: p.id, peuple: p.peuple, ecole: p.ecole, role: p.role, classe: p.classe });
+/** La boîte ouverte d'une sauvegarde, son chef debout dedans. */
+function boiteDe(h) {
+  const b = SCULPTURES.boiteOuverte();
+  const f = figDe(h);
+  f.scale.setScalar(0.62); f.position.set(0, 0.34, 0.05);
+  b.add(f);
+  return b;
+}
+/** Une petite image d'objet sculpté (ou l'emoji d'avant, sans 3D). */
+const img = (nom, secours) => { const u = qualite3D() === '2d' ? null : icone(nom); return u ? `<img class="obj3d" src="${u}" alt="">` : secours; };
 
 /** La vignette 3D des étapes (créée une fois) ; null sans WebGL, ou en qualité 2D. */
 let vignette;
@@ -1263,8 +1338,10 @@ function brancher() {
   }
   $('b-quetes').addEventListener('click', () => { debloquer(); sfx.clic(); if (av && A.ouvrirQuetes(av).ok) suite(); });
   $('b-roder').addEventListener('click', () => { debloquer(); sfx.clic(); if (av && A.roder(av).ok) suite(); });
-  $('b-partir').addEventListener('click', () => {
+  $('b-partir').addEventListener('click', async () => {
     debloquer();
+    // Sur la table : la figurine choisie s'envole, emportée dans le noir par le Conteur.
+    if (fondTable() && document.body.classList.contains('table3d')) { fondTable().envoler((o) => o.depart); await new Promise((r) => setTimeout(r, 650)); }
     // L'aventure en cours reste dans son emplacement ; la nouvelle prend le sien.
     if (cible !== emplacement) { sauver(); choisirEmplacement(cible); derniereEcriture = ''; }
     else if (gardee(av)) { if (!preparerNouvelle()) return; sauver(); choisirEmplacement(cible); derniereEcriture = ''; }
