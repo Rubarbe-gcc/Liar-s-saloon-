@@ -153,8 +153,8 @@ export function handleMessage(conn, m) {
       if (!Number.isInteger(f) || f < 0) return;
       const autre = s.joueurs[1 - c.n];
       if (m.t === 'entrees') {
-        // Ses touches des dernières images (un nombre de 8 bits chacune), et où il en est.
-        const e = (Array.isArray(m.e) ? m.e.slice(-64) : [m.e]).map((x) => Number(x) & 0xff);
+        // Ses touches des dernières images (un nombre de 9 bits chacune), et où il en est.
+        const e = (Array.isArray(m.e) ? m.e.slice(-64) : [m.e]).map((x) => Number(x) & 0x1ff);
         return envoyer(autre, { t: 'entrees', f, e, fc: entier(m.fc, 0, 1e7), vu: entier(m.vu, -1, 1e7), av: entier(m.av, -600, 600, 0) });
       }
       if (m.t === 'etat') {

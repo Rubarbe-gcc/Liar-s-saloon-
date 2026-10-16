@@ -266,6 +266,8 @@ export function creerRendu(hote, o) {
       while (da > Math.PI) da -= Math.PI * 2;
       while (da < -Math.PI) da += Math.PI * 2;
       f.racine.rotation.y += da * Math.min(1, dtj * 16);
+      // La roulette : un tour complet sur lui-même.
+      if (p.spin) f.racine.rotation.y = ang + p.spin * Math.PI * 2;
       const pose = poseDe(f, { p, vitesse: vit, sprint: vit > 6.9, t: temps, gardien: (i % 5) === 0, cote, humeur: v.humeurs?.[i] || null, tab: v.tab, charge: p.charge }, dtj);
       poser(f, pose, Math.min(1, dtj * (vit > 0.4 ? 22 : 12)));
       f.ombre.position.set(p.x, 0.012, -p.y);
@@ -357,6 +359,7 @@ export function creerRendu(hote, o) {
           break;
         }
         case 'poteau': cam.secousse = Math.max(cam.secousse, 0.18); excitation = Math.max(excitation, 0.6); break;
+        case 'geste': excitation = Math.max(excitation, ev.nom === 'arc-en-ciel' ? 0.9 : 0.5); if (ev.nom === 'arc-en-ciel') cam.secousse = Math.max(cam.secousse, 0.06); break;
         case 'filet': { const cote = b.x > 0 ? 0 : 1; stade.buts[cote].gonfle = Math.max(stade.buts[cote].gonfle, 0.6); break; }
         case 'arret': excitation = Math.max(excitation, 0.5); break;
         case 'tacle': if (ev.reussi) { const p = v.joueurs[ev.joueur]; poussiere(p.x, -p.y, 7, o.stade === 'plage' ? '#f0d9a8' : o.stade === 'halle' ? '#d8c8b0' : '#cfe0b0'); } break;

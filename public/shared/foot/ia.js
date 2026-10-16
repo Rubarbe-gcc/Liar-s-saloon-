@@ -175,6 +175,25 @@ function cheminDribble(m, p, st) {
   return { dx: dx / l, dy: dy / l, espace };
 }
 
+/**
+ * De quel côté partir en roulette : là où l'on pousse (sur le côté de sa course) ; sans
+ * direction, loin de l'adversaire le plus proche. Rend le vecteur latéral (unitaire).
+ */
+export function coteRoulette(m, p, mx, my) {
+  // Les deux côtés possibles : la gauche et la droite de sa course.
+  const gx = -p.dy, gy = p.dx;
+  let s;
+  if (mx || my) s = mx * gx + my * gy >= 0 ? 1 : -1;
+  else {
+    let q = null, bd = 1e9;
+    for (let k = 0; k < 5; k++) { const o = m.joueurs[(1 - p.e) * 5 + k]; const d = dist(o.x, o.y, p.x, p.y); if (d < bd) { bd = d; q = o; } }
+    s = q && (q.x - p.x) * gx + (q.y - p.y) * gy > 0 ? -1 : 1;
+  }
+  // Pas contre la bande : si l'on y va, l'autre côté.
+  if (Math.abs(p.y + gy * s * 1.5) > DEMI_W - 0.8) s = -s;
+  return { lx: gx * s, ly: gy * s };
+}
+
 /* ------------------------------------------------------------------ */
 /* Le gardien                                                          */
 /* ------------------------------------------------------------------ */
@@ -316,6 +335,10 @@ function porteurIA(m, p, N, st) {
     return { mx: ch.dx * 0.6, my: ch.dy * 0.6, sprint: false, action: null, charge: true };
   }
   if (choix.type === 'passe') return { mx: ch.dx * 0.5, my: ch.dy * 0.5, sprint: false, action: { type: 'passe', cible: choix.cible, lob: choix.lob } };
+  // Un défenseur au contact : parfois une roulette pour l'éliminer (les dribbleurs plus souvent).
+  if (!garde && choix.type === 'dribble' && pression < 1.4 && p.gesteRepos <= 0 && hasard(m) < 0.05 * Math.max(0.2, st.dribble - 0.8)) {
+    return { mx: ch.dx, my: ch.dy, sprint: false, action: { type: 'geste', arc: false, ...coteRoulette(m, p, 0, 0) } };
+  }
   if (garde) return RIEN;
   return { mx: ch.dx, my: ch.dy, sprint: ch.espace > 3.5 && p.endu > 0.35, action: null };
 }

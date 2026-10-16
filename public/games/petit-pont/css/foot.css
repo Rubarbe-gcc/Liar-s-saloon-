@@ -232,6 +232,7 @@ body.doigt .dirige { bottom: max(8px, env(safe-area-inset-bottom)); }
 .bj-b { right: 0; bottom: 38px; width: 86px; height: 86px; background: radial-gradient(circle at 40% 30%, #ff6a7a, #c4122f); }
 .bj-a { right: 92px; bottom: 0; width: 72px; height: 72px; background: radial-gradient(circle at 40% 30%, #5ad37a, #178a3a); }
 .bj-x { right: 82px; bottom: 96px; width: 62px; height: 62px; background: radial-gradient(circle at 40% 30%, #6ab8ff, #1a6fd0); }
+.bj-g { right: 150px; bottom: 76px; width: 56px; height: 56px; background: radial-gradient(circle at 40% 30%, #c38aff, #6b2fb3); font-size: .72em; }
 .bj-s { right: 6px; bottom: 132px; width: 58px; height: 58px; background: radial-gradient(circle at 40% 30%, #ffe27a, #d9a400); color: #2a1a00; text-shadow: none; }
 .tourne { display: none; position: absolute; left: 50%; top: 58px; transform: translateX(-50%); padding: 6px 12px; border-radius: 4px; background: rgba(0, 0, 0, .7); font-size: .85em; pointer-events: none; white-space: nowrap; }
 @media (orientation: portrait) and (pointer: coarse) { .tourne { display: block; } }

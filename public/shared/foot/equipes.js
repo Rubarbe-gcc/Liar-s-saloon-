@@ -32,7 +32,7 @@ export const STYLES = {
   court: { nom: 'Jeu court', passe: 0.25, progres: 0.7, tir: 1.12, dribble: 0.85, lob: 0.4, pressing: 0.5, ligne: 0, largeur: 0.9, tacle: 0.5 },
   contre: { nom: 'Contre-attaque', passe: 0, progres: 1.5, tir: 1, dribble: 1.05, lob: 1.1, pressing: 0.35, ligne: -2.5, largeur: 1, tacle: 0.6 },
   physique: { nom: 'Pressing et duels', passe: 0, progres: 1, tir: 1, dribble: 1, lob: 0.8, pressing: 0.85, ligne: 1.5, largeur: 0.95, tacle: 1 },
-  tirloin: { nom: 'Frappes de loin', passe: 0, progres: 1, tir: 0.88, dribble: 0.95, lob: 0.8, pressing: 0.55, ligne: 0, largeur: 1, tacle: 0.6 },
+  tirloin: { nom: 'Frappes de loin', passe: 0, progres: 1, tir: 0.95, dribble: 0.95, lob: 0.8, pressing: 0.55, ligne: 0, largeur: 1, tacle: 0.6 },
   equilibre: { nom: 'Équilibré', passe: 0.08, progres: 1, tir: 1, dribble: 1, lob: 0.8, pressing: 0.55, ligne: 0, largeur: 1, tacle: 0.65 },
   ailes: { nom: 'Jeu sur les ailes', passe: 0.05, progres: 1, tir: 1, dribble: 1, lob: 1.3, pressing: 0.5, ligne: 0, largeur: 1.3, tacle: 0.6 },
   dribble: { nom: 'Dribbles', passe: -0.05, progres: 1, tir: 1, dribble: 1.25, lob: 0.6, pressing: 0.5, ligne: 0.5, largeur: 1, tacle: 0.55 },

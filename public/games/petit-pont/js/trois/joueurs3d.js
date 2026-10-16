@@ -248,6 +248,15 @@ export function poseDe(fig, o, dt) {
     P.hancheA = -0.1; P.genouA = 0.35;
     P.epAz = 0.9; P.epBz = -0.4; P.epBx = -0.6; P.torse = -0.05;
   }
+  if (p.gesteType === 1 && p.geste > 0) {
+    // La roulette : penché, les bras écartés pour l'équilibre.
+    Object.assign(P, { torse: 0.25, epAz: 1.1, epBz: -1.1, epAx: 0, epBx: 0, coudeA: -0.3, coudeB: -0.3, by: 0.86, genouA: 0.5, genouB: 0.5 });
+  }
+  if (p.gesteType === 2 && p.geste > 10) {
+    // L'arc-en-ciel : le talon fouette vers le haut, dans le dos.
+    const u = 1 - (p.geste - 10) / 12;
+    Object.assign(P, { torse: 0.4, hancheB: 0.9 * doux(u * 2), genouB: 2.3 * doux(u * 2), hancheA: -0.1, genouA: 0.3, epAz: 0.8, epBz: -0.8 });
+  }
   if (p.volee > 0) {
     // La reprise de volée : il s'envole, se couche en arrière, la jambe fouette en l'air.
     const u = 1 - p.volee / 30;

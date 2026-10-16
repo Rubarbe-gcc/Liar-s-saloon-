@@ -5,8 +5,8 @@
  * celui que lit le moteur et qui part sur le réseau :
  *   directions g, d, h, b ; S sprint ; A passe / changer ; B tir / tacle ; X lob / pressing.
  *
- * Clavier : flèches ou ZQSD/WASD ; J (ou C) passe, K (ou X) tir, L (ou V) lob, Maj sprint.
- * Manette : stick gauche ou croix ; A passe, B tir, X lob, gâchettes sprint, LB changer.
+ * Clavier : flèches ou ZQSD/WASD ; J (ou C) passe, K (ou X) tir, L (ou V) lob, I (ou U) geste technique, Maj sprint.
+ * Manette : stick gauche ou croix ; A passe, B tir, X lob, Y geste technique, gâchettes sprint, LB changer.
  * Tactile : un joystick à gauche (là où le doigt se pose), quatre boutons à droite.
  */
 
@@ -22,6 +22,7 @@ const CLAVIER = {
   KeyO: T.A, KeyJ: T.A, KeyC: T.A, Space: T.A,
   KeyK: T.B, KeyX: T.B,
   KeyL: T.X, KeyV: T.X,
+  KeyI: T.G, KeyU: T.G,
 };
 
 let actif = false;
@@ -102,7 +103,8 @@ function manette() {
     if (ay > 0.35 || btn(13)) m |= T.b;
     if (btn(0)) m |= T.A;
     if (btn(1)) m |= T.B;
-    if (btn(2) || btn(3)) m |= T.X;
+    if (btn(2)) m |= T.X;
+    if (btn(3)) m |= T.G;
     if (btn(5) || btn(6) || btn(7)) m |= T.S;
     if (btn(4)) m |= T.A;
     const start = btn(9);

@@ -144,7 +144,7 @@ function instantane(m) {
   return {
     f: m.f,
     phase: m.phase,
-    joueurs: m.joueurs.map((p) => ({ x: p.x, y: p.y, vx: p.vx, vy: p.vy, dx: p.dx, dy: p.dy, etat: p.etat, frappe: p.frappe, charge: p.charge > 0 ? Math.min(1, p.charge / 48) : 0, volee: p.volee, haut: p.haut, vyPlonge: p.etat === 'plonge' ? p.vy : 0 })),
+    joueurs: m.joueurs.map((p) => ({ x: p.x, y: p.y, vx: p.vx, vy: p.vy, dx: p.dx, dy: p.dy, etat: p.etat, frappe: p.frappe, charge: p.charge > 0 ? Math.min(1, p.charge / 48) : 0, volee: p.volee, geste: p.geste, gesteType: p.gesteType, spin: p.gesteType === 1 && p.geste > 0 ? (p.dx * p.gly - p.dy * p.glx >= 0 ? 1 : -1) * (1 - p.geste / 24) : 0, haut: p.haut, vyPlonge: p.etat === 'plonge' ? p.vy : 0 })),
     ballon: { x: b.x, y: b.y, z: b.z, vx: b.vx, vy: b.vy, vz: b.vz, porteur: b.porteur },
   };
 }
@@ -336,7 +336,7 @@ function reagir(evs) {
 
 /* ---------------- L'affichage ---------------- */
 
-const libContexte = { att: ['Passe', 'Tir', 'Lob'], def: ['Changer', 'Tacle', 'Pressing'], tab: ['—', 'Tir', '—'], recoit: ['Remise', 'Volée', '—'] };
+const libContexte = { att: ['Passe', 'Tir', 'Lob', 'Geste'], def: ['Changer', 'Tacle', 'Pressing', '—'], tab: ['—', 'Tir', '—', '—'], recoit: ['Remise', 'Volée', '—', '—'] };
 let contexte = '';
 
 function afficher(dt) {
@@ -411,8 +411,8 @@ function afficher(dt) {
   const ctx = m.phase === 'tab' ? 'tab' : recoit ? 'recoit' : attaque ? 'att' : 'def';
   if (ctx !== contexte) {
     contexte = ctx;
-    const [a, bb, x] = libContexte[ctx];
-    $('lab-a').textContent = a; $('lab-b').textContent = bb; $('lab-x').textContent = x;
+    const [a, bb, x, g] = libContexte[ctx];
+    $('lab-a').textContent = a; $('lab-b').textContent = bb; $('lab-x').textContent = x; $('lab-g').textContent = g;
   }
   // La rumeur du public : elle monte quand le ballon approche d'un but.
   const prox = Math.max(0, 1 - (20 - Math.abs(b.x)) / 12);

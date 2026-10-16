@@ -81,6 +81,9 @@ export function creerCommentateur(ctx) {
           return dire(choisir([`Parade de ${n(ev.joueur)} !`, `Quel réflexe de ${n(ev.joueur)} !`, `${n(ev.joueur)} repousse !`]), true);
         case 'poteau':
           return dire(ev.barre ? choisir(['Sur la barre !!', 'La transversale tremble encore !']) : choisir(['Sur le poteau !!', 'Le poteau sauve le gardien !']), true);
+        case 'geste':
+          if (ev.nom === 'arc-en-ciel') return dire(choisir([`Un arc-en-ciel de ${n(ev.joueur)} !! Le public se lève !`, `Par-dessus la tête ! L'arc-en-ciel de ${n(ev.joueur)} !`, `Quelle audace, ${n(ev.joueur)} ! Un arc-en-ciel !`]), true);
+          return dire(choisir([`Roulette de ${n(ev.joueur)} !`, `${n(ev.joueur)} tourne autour de son adversaire !`, `Superbe roulette de ${n(ev.joueur)}.`]));
         case 'tacle':
           if (ev.reussi) return dire(choisir([`Tacle parfait de ${n(ev.joueur)} !`, `${n(ev.joueur)} récupère proprement.`, `Superbe intervention de ${n(ev.joueur)}.`]));
           return dire(choisir([`${n(ev.joueur)} arrive trop tard…`, `${n(ev.joueur)} manque son tacle.`]));

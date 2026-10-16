@@ -12,6 +12,9 @@
  *                le ballon arrive vers soi : A la remise, B la reprise de volée ;
  *   en défense : A change de joueur, B tacle glissé, X appelle un coéquipier au pressing ;
  *   S : sprint (l'endurance baisse).
+ *   G : un geste technique, ballon au pied : la roulette (on tourne autour du défenseur, du côté
+ *       où l'on pousse) ; en sprintant, l'arc-en-ciel (le ballon passe par-dessus sa tête et celle
+ *       du défenseur, on le récupère devant).
  *
  * Déterministe : même graine, mêmes touches → même match, image par image,
  * sur tous les appareils (le jeu en ligne en dépend : shared/rollback.js).
@@ -24,10 +27,11 @@
 
 import {
   FPS, DT, DEMI_L, DEMI_W, DEMI_BUT, BUT_H, BUT_P, SURFACE, BALLON_R, G, CHARGE_MAX, CHARGE_PASSE, T,
+  DUREE_ROULETTE, DUREE_ARC, REPOS_GESTE,
   hasard, gauss, clamp, dist, vitesseMax, trajectoire,
 } from './terrain.js';
 import { EQUIPE, POSTES, STYLES, notesJoueur } from './equipes.js';
-import { decider, niveauDe, bonusGardien, interception, valeurPasse } from './ia.js';
+import { decider, niveauDe, bonusGardien, interception, valeurPasse, coteRoulette } from './ia.js';
 
 export { FPS, T, CHARGE_MAX, CHARGE_PASSE, DEMI_L, DEMI_W, DEMI_BUT, BUT_H, BUT_P, SURFACE };
 
@@ -58,7 +62,7 @@ export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['hum
     tabSiNul: !!tab, score: [0, 0], engage: 0, premierEngage: 0,
     equipes: [0, 1].map((e) => ({ id: equipes[e], style: EQUIPE[equipes[e]].style, sens: e === 0 ? 1 : -1, ctrl: controles[e], niveau: niveaux[e] ?? 1, actif: -1, pressing: 0, auto: 0 })),
     joueurs: [],
-    ballon: { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, porteur: -1, dernier: -1, passeur: -1, cible: -1, tireur: -1, tir: null, dansBut: false, guide: false },
+    ballon: { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, porteur: -1, dernier: -1, passeur: -1, cible: -1, tireur: -1, tir: null, dansBut: false, guide: false, arc: 0 },
     prec: [0, 0],
     stats: { tirs: [0, 0], cadres: [0, 0], passes: [0, 0], possession: [0, 0], tacles: [0, 0] },
     buts: [],
@@ -75,6 +79,7 @@ export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['hum
         x: 0, y: 0, vx: 0, vy: 0, dx: 1, dy: 0, etat: 'normal', t: 0, endu: 1,
         charge: 0, chargeCible: 0, vise: 0, verrou: 0, dec: 0, recu: 0, frappe: 0,
         reprise: 0, remise: 0, rx: 0, ry: 0, haut: false, chargeP: 0, passeLob: false, volee: 0,
+        geste: 0, gesteType: 0, glx: 0, gly: 0, gesteRepos: 0, surpris: 0,
       });
     }
   }
@@ -87,10 +92,10 @@ function placerEngagement(m) {
     const s = m.equipes[p.e].sens;
     let [X, Y] = PLACES[p.i];
     if (p.i === 4 && p.e === m.engage) X = -0.42;
-    Object.assign(p, { x: X * s, y: Y, vx: 0, vy: 0, dx: s, dy: 0, etat: 'normal', t: 0, charge: 0, verrou: 0, dec: 8, reprise: 0, remise: 0, frappe: 0, recu: 20 });
+    Object.assign(p, { x: X * s, y: Y, vx: 0, vy: 0, dx: s, dy: 0, etat: 'normal', t: 0, charge: 0, verrou: 0, dec: 8, reprise: 0, remise: 0, frappe: 0, recu: 20, geste: 0, gesteType: 0, gesteRepos: 0, surpris: 0 });
   }
   const a = m.engage * 5 + 4;
-  Object.assign(m.ballon, { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, porteur: a, dernier: a, passeur: -1, cible: -1, tireur: -1, tir: null, dansBut: false, guide: false });
+  Object.assign(m.ballon, { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, porteur: a, dernier: a, passeur: -1, cible: -1, tireur: -1, tir: null, dansBut: false, guide: false, arc: 0 });
   for (const eq of m.equipes) { eq.pressing = 0; eq.auto = 0; }
   m.equipes[0].actif = 4;
   m.equipes[1].actif = 9;
@@ -154,11 +159,14 @@ function jouer(m, k, ap, rel, evs) {
     if (p.t > 0) p.t -= 1;
     if (p.frappe > 0) p.frappe -= 1;
     if (p.volee > 0) p.volee -= 1;
+    if (p.geste > 0) p.geste -= 1;
+    if (p.gesteRepos > 0) p.gesteRepos -= 1;
+    if (p.surpris > 0) p.surpris -= 1;
     if (p.reprise > 0) p.reprise -= 1;
     if (p.remise > 0) p.remise -= 1;
     if (b.porteur === p.id) p.recu += 1;
     // Plus de ballon (chipé, taclé…) : plus de passe ni de frappe en préparation.
-    else { p.charge = 0; p.chargeP = 0; }
+    else { p.charge = 0; p.chargeP = 0; if (p.gesteType === 1) p.geste = 0; }
   }
   for (const eq of m.equipes) { if (eq.pressing > 0) eq.pressing -= 1; if (eq.auto > 0) eq.auto -= 1; }
 
@@ -215,6 +223,16 @@ function plusProche(m, e, sauf = -1) {
     if (d < bd) { bd = d; best = p.id; }
   }
   return best;
+}
+
+/** Les adversaires juste devant le dribbleur (à moins de `portee` m) se font prendre : ils se retournent. */
+function surprendre(m, p, portee, duree) {
+  for (let k = 0; k < 5; k++) {
+    const q = m.joueurs[(1 - p.e) * 5 + k];
+    if (q.i === 0) continue;
+    const dx = q.x - p.x, dy = q.y - p.y, d = Math.sqrt(dx * dx + dy * dy);
+    if (d < portee && dx * p.dx + dy * p.dy > -0.3 * d) { q.surpris = duree; q.verrou = Math.max(q.verrou, Math.round(duree * 0.6)); }
+  }
 }
 
 /** Le coéquipier le mieux placé pour recevoir (le même calcul que l'ordinateur), sinon le plus proche devant. */
@@ -287,6 +305,9 @@ function humain(m, e, k, ap, rel, cons, evs, traj) {
         action = { type: 'passe', cible, lob: p.passeLob, puissance: Math.min(1, p.chargeP / CHARGE_PASSE), guide: true };
         p.chargeP = 0;
       }
+    } else if (ap & T.G && !(p.charge > 0) && p.geste <= 0 && p.gesteRepos <= 0) {
+      // Le geste technique : en sprintant, l'arc-en-ciel ; sinon la roulette, du côté où l'on pousse.
+      action = k & T.S ? { type: 'geste', arc: true } : { type: 'geste', arc: false, ...coteRoulette(m, p, mx, my) };
     } else if (ap & (T.A | T.X) && !(p.charge > 0)) { p.chargeP = 1; p.passeLob = !(ap & T.A); p.rx = mx; p.ry = my; }
     else if (ap & T.B) { p.charge = 1; p.vise = my; }
     else if (k & T.B && p.charge > 0) {
@@ -348,6 +369,26 @@ function agir(m, p, a, evs) {
         evs.push({ type: 'glisse', joueur: p.id });
       }
       break;
+    case 'geste':
+      if (b.porteur === p.id && p.etat === 'normal' && p.geste <= 0 && p.gesteRepos <= 0) {
+        p.gesteRepos = REPOS_GESTE;
+        if (a.arc) {
+          // L'arc-en-ciel : le ballon, coincé entre les talons, passe par-dessus la tête et retombe devant.
+          const sp = Math.max(3, Math.sqrt(p.vx * p.vx + p.vy * p.vy)) + 1;
+          lancer(m, p, p.dx * sp, p.dy * sp, 7.2);
+          p.frappe = 0;
+          b.cible = p.id; b.passeur = -1; b.arc = 60;
+          p.verrou = 18; p.geste = DUREE_ARC; p.gesteType = 2;
+          surprendre(m, p, 3.2, 40);
+          evs.push({ type: 'geste', joueur: p.id, nom: 'arc-en-ciel' });
+        } else {
+          // La roulette : on tourne sur soi en contournant le défenseur, le ballon collé au pied.
+          p.geste = DUREE_ROULETTE; p.gesteType = 1; p.glx = a.lx; p.gly = a.ly;
+          surprendre(m, p, 1.8, 16);
+          evs.push({ type: 'geste', joueur: p.id, nom: 'roulette' });
+        }
+      }
+      break;
     case 'plonge':
       if (p.etat === 'normal' && p.i === 0 && b.porteur !== p.id) {
         p.etat = 'plonge'; p.t = 40; p.vx = 0; p.vy = a.vy; p.haut = !!a.haut;
@@ -362,7 +403,7 @@ function agir(m, p, a, evs) {
 function lancer(m, p, vx, vy, vz) {
   const b = m.ballon;
   b.porteur = -1; b.vx = vx; b.vy = vy; b.vz = vz;
-  b.dernier = p.id; b.tir = null; b.cible = -1; b.passeur = -1; b.tireur = -1; b.guide = false;
+  b.dernier = p.id; b.tir = null; b.cible = -1; b.passeur = -1; b.tireur = -1; b.guide = false; b.arc = 0;
   p.verrou = 14; p.frappe = 16; p.charge = 0; p.chargeP = 0; p.recu = 0;
 }
 
@@ -463,6 +504,12 @@ function deplacer(m, p, c) {
     if (p.t <= 0) { p.etat = 'sol'; p.t = 22; }
   } else if (p.etat === 'tient') {
     p.vx *= 0.75; p.vy *= 0.75;
+  } else if (p.geste > 0 && p.gesteType === 1) {
+    // La roulette : un arc de côté (vite au milieu du geste), en avançant un peu.
+    const u = 1 - p.geste / DUREE_ROULETTE;
+    const f = 1 - Math.abs(2 * u - 1);
+    p.vx = p.dx * 3.6 + p.glx * 5.4 * f;
+    p.vy = p.dy * 3.6 + p.gly * 5.4 * f;
   } else {
     const porte = b.porteur === p.id;
     let vmax = vitesseMax(p) * (eq.ctrl === 'ia' ? niveauDe(eq).vitesse : 1);
@@ -471,6 +518,8 @@ function deplacer(m, p, c) {
     if (porte) vmax *= 0.9;
     if (p.charge > 0) vmax *= 0.62;
     if (p.chargeP > 0) vmax *= 0.85;
+    // Un défenseur pris par un geste technique se retourne : il repart lentement.
+    if (p.surpris > 0) vmax *= 0.35;
     let dvx = c.mx * vmax - p.vx, dvy = c.my * vmax - p.vy;
     const dv = Math.sqrt(dvx * dvx + dvy * dvy), acc = (porte ? 22 : 28) * DT;
     if (dv > acc) { dvx *= acc / dv; dvy *= acc / dv; }
@@ -501,6 +550,8 @@ function separer(m) {
   for (let i = 0; i < 10; i++) {
     for (let j = i + 1; j < 10; j++) {
       const a = J[i], c = J[j];
+      // Pendant son arc-en-ciel, le dribbleur passe à côté de son adversaire (on ne le bloque pas).
+      if (a.e !== c.e && ((a.geste > 0 && a.gesteType === 2) || (c.geste > 0 && c.gesteType === 2))) continue;
       const dx = c.x - a.x, dy = c.y - a.y;
       const d2 = dx * dx + dy * dy;
       if (d2 >= 0.4624) continue;
@@ -691,8 +742,11 @@ function contacts(m, avant, evs) {
   if (b.porteur >= 0) { duels(m, evs); return; }
   if (b.dansBut) return;
   let best = null, bk = 1;
+  if (b.arc > 0) b.arc -= 1;
   for (const p of m.joueurs) {
     if (p.verrou > 0 || p.etat === 'sol' || p.etat === 'tient') continue;
+    // L'arc-en-ciel passe au-dessus des têtes : tant qu'il est en l'air, seul le gardien peut le capter.
+    if (b.arc > 0 && b.z > 0.35 && p.id !== b.cible && p.i > 0) continue;
     const mains = p.i === 0 && dansSurface(m, p);
     let fx = p.x, fy = p.y, reach, zmax, demi = 0;
     if (p.etat === 'tacle') { fx += p.dx * 0.45; fy += p.dy * 0.45; reach = 0.75; zmax = 0.55; }
@@ -726,9 +780,12 @@ function toucher(m, p, mains, evs) {
       // Face à la frappe d'un humain, le gardien est plus battable (une frappe forte et bien placée doit pouvoir rentrer) ;
       // face à l'ordinateur, il reste solide (sinon les matchs contre l'ordinateur deviendraient des festivals).
       const parHumain = m.equipes[b.tir.e].ctrl === 'humain';
+      // La distance compte beaucoup : de près, le gardien n'a pas le temps de réagir ; de loin, il voit tout venir.
+      const ecart9 = b.tir.d - 9;
+      const loin = ecart9 < 0 ? Math.max(-0.45, ecart9 * (parHumain ? 0.075 : 0.035)) : Math.min(0.35, ecart9 * (parHumain ? 0.045 : 0.035));
       let pr = parHumain
-        ? 0.64 + (gard - 75) * 0.012 - (speed - 20) * 0.03 + (b.tir.d - 9) * 0.012 - (Math.abs(b.y) > 0.9 ? 0.18 : 0) + (p.etat === 'plonge' ? 0 : 0.1)
-        : 0.85 + (gard - 75) * 0.012 - (speed - 20) * 0.02 + (b.tir.d - 9) * 0.012 - (Math.abs(b.y) > 0.9 ? 0.1 : 0) + (p.etat === 'plonge' ? 0 : 0.1);
+        ? 0.64 + (gard - 75) * 0.012 - (speed - 20) * 0.03 + loin - (Math.abs(b.y) > 0.9 ? 0.18 : 0) + (p.etat === 'plonge' ? 0 : 0.1)
+        : 0.88 + (gard - 75) * 0.012 - (speed - 20) * 0.02 + loin - (Math.abs(b.y) > 0.9 ? 0.1 : 0) + (p.etat === 'plonge' ? 0 : 0.1);
       pr = clamp(pr, 0.1, 0.96);
       if (hasard(m) < pr) {
         if (speed < 19 && hasard(m) < 0.4 + (gard - 75) * 0.015) { prendre(m, p, true, evs); evs.push({ type: 'arret', joueur: p.id, capte: true }); return; }
@@ -776,7 +833,7 @@ function prendre(m, p, mains, evs) {
   const b = m.ballon, eq = m.equipes[p.e];
   const pourLui = b.cible === p.id, enLAir = b.z > 0.45;
   const passeur = b.cible === p.id ? b.passeur : -1;
-  if (passeur >= 0 && m.joueurs[passeur].e === p.e) m.dernierePasse = { de: passeur, a: p.id, f: m.f };
+  if (passeur >= 0 && passeur !== p.id && m.joueurs[passeur].e === p.e) m.dernierePasse = { de: passeur, a: p.id, f: m.f };
   const recupere = b.dernier >= 0 && m.joueurs[b.dernier].e !== p.e;
   b.porteur = p.id; b.vx = 0; b.vy = 0; b.vz = 0;
   b.tir = null; b.cible = -1; b.passeur = -1; b.tireur = -1; b.dernier = p.id;
@@ -826,6 +883,8 @@ function duels(m, evs) {
       continue;
     }
     if (q.etat !== 'normal') continue;
+    // Pendant la roulette, on ne lui chipe pas le ballon dans les pieds (un tacle glissé, si).
+    if (c.geste > 0 && c.gesteType === 1) continue;
     if (q.i === 0 && !dansSurface(m, q)) continue;
     if (dist(q.x, q.y, b.x, b.y) > 0.62) continue;
     const eq = m.equipes[q.e];

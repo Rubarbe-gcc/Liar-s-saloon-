@@ -34,8 +34,12 @@ export const CHARGE_MAX = 48;
 /** Une passe chargée au maximum, en images. */
 export const CHARGE_PASSE = 30;
 
-/** Les touches : un nombre de 8 bits (le même pour le clavier, la manette, le doigt et le réseau). */
-export const T = { g: 1, d: 2, h: 4, b: 8, S: 16, A: 32, B: 64, X: 128 };
+/** Les touches : un nombre de 9 bits (le même pour le clavier, la manette, le doigt et le réseau). G : le geste technique. */
+export const T = { g: 1, d: 2, h: 4, b: 8, S: 16, A: 32, B: 64, X: 128, G: 256 };
+/** La durée d'une roulette, d'un arc-en-ciel (en images), et le repos entre deux gestes. */
+export const DUREE_ROULETTE = 24;
+export const DUREE_ARC = 22;
+export const REPOS_GESTE = 45;
 
 /** Le hasard du match : un nombre dans [0, 1), tiré de l'état (le même partout). */
 export function hasard(m) {

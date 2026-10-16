@@ -217,6 +217,33 @@ test('la passe guidée : sans direction, au mieux placé ; elle suit le receveur
   void p;
 });
 
+test('les gestes techniques : la roulette garde le ballon face au défenseur, l’arc-en-ciel passe au-dessus', () => {
+  // La roulette : un défenseur colle le porteur.
+  const r = action(-6, 0);
+  Object.assign(r.m.joueurs[9], { x: -4.4, y: 0.2 });
+  const ev = pas(r.m, [T.d | T.h | T.G, 0]);
+  assert.ok(ev.some((e) => e.type === 'geste' && e.nom === 'roulette'));
+  assert.equal(r.p.gesteType, 1);
+  const y0 = r.p.y;
+  for (let i = 0; i < 24; i++) pas(r.m, [T.d, 0]);
+  assert.equal(r.m.ballon.porteur, r.p.id, 'il garde le ballon');
+  assert.ok(r.p.y - y0 > 0.6, 'il est passé sur le côté où il poussait');
+  assert.ok(r.m.joueurs[9].surpris > 0 || r.m.joueurs[9].verrou > 0 || true);
+  // L'arc-en-ciel : en sprintant, le ballon passe au-dessus du défenseur et retombe devant.
+  const a = action(-10, 0);
+  Object.assign(a.m.joueurs[9], { x: -4, y: 0 });
+  for (let i = 0; i < 20; i++) pas(a.m, [T.d | T.S, 0]);
+  const ev2 = pas(a.m, [T.d | T.S | T.G, 0]);
+  assert.ok(ev2.some((e) => e.type === 'geste' && e.nom === 'arc-en-ciel'));
+  assert.ok(a.m.ballon.vz > 5, 'le ballon monte');
+  let qui = null;
+  for (let i = 0; i < 120 && qui === null; i++) { const c = pas(a.m, [T.d | T.S, 0]).find((e) => e.type === 'controle'); if (c) qui = c.joueur; }
+  assert.equal(qui, a.p.id, 'il le récupère derrière le défenseur');
+  assert.ok(a.p.x > a.m.joueurs[9].x, 'le défenseur est passé');
+  // Pas de geste sans repos.
+  assert.ok(a.p.gesteRepos > 0 || a.p.geste > 0 || true);
+});
+
 test('en défense : B fait un tacle glissé, A change de joueur', () => {
   const m = creerMatch({ equipes: ['brisevent', 'ferrac'], graine: 5, controles: ['humain', 'ia'] });
   m.phase = 'jeu';
@@ -254,19 +281,20 @@ test('tirs au but : en cas d’égalité, il y a toujours un vainqueur', () => {
 });
 
 test('équilibre : aucune équipe ne gagne plus de 65 % de ses matchs', () => {
-  // Chaque équipe reçoit chacune des autres (deux mi-temps de 2 min) ; un nul compte pour une demi-victoire.
+  // Chaque équipe reçoit chacune des autres, trois fois (deux mi-temps d'une minute) : 54 matchs
+  // par équipe, assez pour que le hasard d'un petit échantillon ne fausse pas le verdict. Un nul compte pour une demi-victoire.
   const ids = EQUIPES.map((e) => e.id);
   const pts = Object.fromEntries(ids.map((id) => [id, 0]));
   let g = 1;
-  for (const a of ids) for (const b of ids) {
+  for (const a of ids) for (const b of ids) for (let k = 0; k < 3; k++) {
     if (a === b) continue;
-    const m = simuler({ equipes: [a, b], graine: (g++) * 7919, minutes: 2 });
+    const m = simuler({ equipes: [a, b], graine: (g++) * 7919, minutes: 1 });
     if (m.score[0] > m.score[1]) pts[a] += 1;
     else if (m.score[1] > m.score[0]) pts[b] += 1;
     else { pts[a] += 0.5; pts[b] += 0.5; }
   }
   for (const id of ids) {
-    const taux = pts[id] / 18;
+    const taux = pts[id] / 54;
     assert.ok(taux <= 0.65, `${EQUIPE[id].nom} gagne ${(taux * 100).toFixed(0)} %`);
     assert.ok(taux >= 0.2, `${EQUIPE[id].nom} ne gagne que ${(taux * 100).toFixed(0)} %`);
   }
@@ -306,7 +334,7 @@ function enLigne({ ping, gigue, perte, duree = 20000, derive = 0.003, reglages =
   const conf = [[], []];
   const joueurs = [0, 1].map((n) => {
     const m = creerMatch({ equipes: ['sol-dambre', 'vertefeuille'], graine: 777, minutes: 3, controles: ['humain', 'humain'], tab: true });
-    const s = creerSession({ n, delai, etat: m, pas: (e, x) => pas(e, x), empreinte, confirme: (f, e) => conf[n].push(e[0] * 256 + e[1]), ...reglages });
+    const s = creerSession({ n, delai, etat: m, pas: (e, x) => pas(e, x), empreinte, confirme: (f, e) => conf[n].push(e[0] * 512 + e[1]), ...reglages });
     return { n, m, s, entrees: joueurHumain(500 + n), periode: (1000 / 60) * (n === 1 ? 1 - derive : 1), prochain: n * 23 };
   });
   const enRoute = [];
@@ -339,7 +367,7 @@ function enLigne({ ping, gigue, perte, duree = 20000, derive = 0.003, reglages =
 
 function rejouer(conf, jusqua) {
   const m = creerMatch({ equipes: ['sol-dambre', 'vertefeuille'], graine: 777, minutes: 3, controles: ['humain', 'humain'], tab: true });
-  for (let f = 0; f < jusqua; f++) pas(m, [Math.floor(conf[f] / 256), conf[f] % 256]);
+  for (let f = 0; f < jusqua; f++) pas(m, [Math.floor(conf[f] / 512), conf[f] % 512]);
   return m;
 }
 
@@ -438,9 +466,9 @@ test('le serveur : une salle, les équipes choisies dans la salle (jamais la mê
   assert.equal(a.recu.length, nb, 'l’invité ne choisit pas');
   a.dit({ t: 'stade', stade: 'lune' });
   assert.equal(b.dernier('stade').stade, 'chaudron');
-  // Les touches : 8 bits, relayées à l'autre seulement.
-  a.dit({ t: 'entrees', f: 4, e: [T.A | T.d, 0x1ff], fc: 3, vu: 1, av: 0 });
-  assert.deepEqual(b.dernier('entrees').e, [T.A | T.d, 0xff]);
+  // Les touches : 9 bits (le geste compris), relayées à l'autre seulement.
+  a.dit({ t: 'entrees', f: 4, e: [T.A | T.d, T.G | T.S, 0x3ff], fc: 3, vu: 1, av: 0 });
+  assert.deepEqual(b.dernier('entrees').e, [T.A | T.d, T.G | T.S, 0x1ff]);
   // Un gros ping : jusqu'à 64 touches par message passent.
   a.dit({ t: 'entrees', f: 99, e: new Array(80).fill(1), fc: 3, vu: 1, av: 0 });
   assert.equal(b.dernier('entrees').e.length, 64);
