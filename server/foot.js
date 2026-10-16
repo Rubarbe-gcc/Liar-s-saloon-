@@ -27,6 +27,11 @@
  *   → sonde { id }                     ← sonde { id } : pour mesurer le ping
  *   → revanche                         ← revanche { n } puis debut quand les deux sont d'accord
  *   → quitter                          ← parti (à l'autre)
+ *
+ * Une connexion qui tombe en pleine salle n'est pas un départ : la place attend
+ * quelques minutes (server/hub.js) ; l'autre est prévenu (absent), puis du retour
+ * (revenu). Les touches perdues entre-temps repartent toutes seules (le rollback
+ * renvoie celles qui ne sont pas confirmées).
  */
 
 import { EQUIPE, STADE } from '../public/shared/foot/equipes.js';
@@ -174,6 +179,31 @@ export function handleMessage(conn, m) {
       return quitter(c);
     default:
   }
+}
+
+/** Une place à garder si sa connexion tombe : un joueur dans une salle à deux. */
+export function enPartie(conn) {
+  const c = clients.get(conn.id);
+  const s = c && c.code && salles.get(c.code);
+  return !!(s && s.joueurs[0] && s.joueurs[1]);
+}
+
+/** Sa connexion vient de tomber : l'autre attend (au lieu d'un écran figé sans explication). */
+export function handleAway(conn) {
+  const c = clients.get(conn.id);
+  const s = c && c.code && salles.get(c.code);
+  if (!s) return;
+  envoyer(s.joueurs[1 - c.n], { t: 'absent', n: c.n, nom: s.noms[c.n] });
+}
+
+/** Il est revenu : on le dit à l'autre, et on lui redonne la salle (le match, lui, continue sur son appareil). */
+export function handleResume(conn) {
+  const c = clients.get(conn.id);
+  const s = c && c.code && salles.get(c.code);
+  if (!s) return;
+  s.vu = Date.now();
+  envoyer(s.joueurs[1 - c.n], { t: 'revenu', n: c.n, nom: s.noms[c.n] });
+  if (!s.enJeu) salon(s);
 }
 
 export function handleClose(conn) {

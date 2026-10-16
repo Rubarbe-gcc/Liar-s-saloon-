@@ -480,3 +480,20 @@ test('le serveur : une salle, les équipes choisies dans la salle (jamais la mê
   b.dit({ t: 'quitter' });
   assert.ok(a.dernier('parti'));
 });
+
+test('le serveur : une connexion qui tombe en plein match garde sa place, et l’autre est prévenu', () => {
+  const a = client(), b = client();
+  a.dit({ t: 'creer', nom: 'Alice', stade: 'toit' });
+  b.dit({ t: 'rejoindre', code: a.dernier('salle').code, nom: 'Bob' });
+  assert.equal(foot.enPartie(a.conn), true, 'une salle à deux : la place vaut d’être gardée');
+  foot.handleAway(b.conn);
+  assert.deepEqual([a.dernier('absent').n, a.dernier('absent').nom], [1, 'Bob']);
+  foot.handleResume(b.conn);
+  assert.equal(a.dernier('revenu').nom, 'Bob');
+  assert.ok(b.dernier('salon'), 'de retour dans la salle (avant le match), on lui redonne le salon');
+  const seul = client();
+  seul.dit({ t: 'creer', nom: 'Zoé' });
+  assert.equal(foot.enPartie(seul.conn), false, 'seul dans sa salle : rien à garder');
+  a.dit({ t: 'quitter' });
+  seul.dit({ t: 'quitter' });
+});

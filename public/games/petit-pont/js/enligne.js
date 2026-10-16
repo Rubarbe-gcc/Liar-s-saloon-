@@ -108,6 +108,9 @@ function traiter(m) {
     case 'revanche': rappels.revanche?.(m); break;
     case 'parti': salle.code = null; salle.enMatch = false; session = null; rappels.parti?.(); break;
     case 'erreur': rappels.erreur?.(m.msg); break;
+    case 'absent': rappels.absent?.(m); break;
+    case 'revenu': rappels.revenu?.(m); break;
+    case 'session': rappels.session?.(m); break;
     default:
   }
 }
@@ -123,7 +126,8 @@ export function connecter(r) {
   rappels = r;
   if (!net) {
     net = creerConnexion({
-      jeu: 'foot', g: 'foot', session: false,
+      // La clé de session : si la connexion tombe en plein match, le serveur garde la place quelques minutes.
+      jeu: 'foot', g: 'foot',
       message: traiter,
       statut: (s) => rappels.statut?.(s),
       ouverte: () => { if (enAttente) { const m = enAttente; enAttente = null; envoyer(m); } sonder(); },

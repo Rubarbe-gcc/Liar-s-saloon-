@@ -219,6 +219,7 @@ function arreterMatch() {
   if (partie) { partie.com?.arreter(); partie.rendu.detruire(); partie = null; }
   son.couperPublic();
   $('v-pause').classList.add('cache');
+  $('attente-net').classList.add('cache');
 }
 
 function ecranGeant(texte) {
@@ -252,7 +253,9 @@ function uneImage() {
   if (P.o.mode === 'enligne') {
     // En ligne : nos touches partent, celles de l'adversaire sont prédites (et corrigées si besoin).
     const r = net.pasEnLigne(toucheForcee ?? saisie.lire());
-    if (!r || r.attente) return;
+    if (!r) return;
+    P.gel = r.attente && !r.retenue ? (P.gel || 0) + 1 : 0;
+    if (r.attente) return;
     P.prec = P.cour;
     P.cour = instantane(P.m);
     // Une correction du rollback a déplacé des joueurs d'un coup : l'affichage, lui, glisse.
@@ -428,6 +431,15 @@ function afficher(dt) {
     if (P.finVue <= 0 && (P.o.mode !== 'enligne' || net.toutConfirme())) finDuMatch();
     else if (P.finVue <= 0) P.finVue = 0.05;
   }
+  // En ligne : la connexion a lâché, l'adversaire aussi, ou ses touches n'arrivent plus. On le dit (pas d'écran figé muet).
+  if (P.o.mode === 'enligne') {
+    const nomAdv = P.o.noms?.[1 - P.local] || 'Ton adversaire';
+    const raison = P.netPerdu ? ['Connexion perdue', 'Reconnexion en cours… le match reprend tout seul.']
+      : P.absent ? [`${nomAdv} a perdu la connexion`, 'On l’attend : sa place est gardée quelques minutes.']
+        : (P.gel || 0) > 45 ? ['En attente…', `Les touches de ${nomAdv} n’arrivent plus pour l’instant.`] : null;
+    $('attente-net').classList.toggle('cache', !raison);
+    if (raison) { $('attente-titre').textContent = raison[0]; $('attente-texte').textContent = raison[1]; }
+  }
   if (P.o.mode === 'enligne' && !$('net-diag').classList.contains('cache')) {
     const d = net.diagnostic();
     if (d) $('net-diag').textContent = `ping ${d.ping} ms · délai ${d.delai} · avance ${d.avance} · rejouées ${d.rejouees} · recalages ${d.recalages}`;
@@ -556,6 +568,7 @@ function brancher() {
     if (o?.abandon) o.abandon(); else aller('menu');
   });
   $('b-passer').addEventListener('click', passerRalenti);
+  $('attente-quitter').addEventListener('click', () => { arreterMatch(); net.quitter(); enPause = false; aller('menu'); });
   const majSon = () => { $('b-son').textContent = son.estMuet() ? '🔇 Son' : '🔊 Son'; $('b-son').setAttribute('aria-pressed', String(son.estMuet())); };
   $('b-son').addEventListener('click', () => { son.basculerSon(); majSon(); });
   majSon();
@@ -733,7 +746,35 @@ function ouvrirEnLigne() {
   $('enligne-salle').classList.toggle('cache', !net.salle.code);
   aller('enligne');
   net.connecter({
-    statut: (st) => { if (!net.salle.code) $('enligne-statut').textContent = STATUTS[st] || ''; },
+    statut: (st) => {
+      if (!net.salle.code) $('enligne-statut').textContent = STATUTS[st] || '';
+      if (partie?.o.mode === 'enligne' && (st === 'perdu' || st === 'injoignable' || st === 'connexion')) partie.netPerdu = true;
+    },
+    // Après une reconnexion : le serveur nous a-t-il gardé notre place ?
+    session: (m) => {
+      if (m.repris) { if (partie) partie.netPerdu = false; return; }
+      if (partie?.o.mode === 'enligne') {
+        arreterMatch();
+        net.quitter();
+        $('enligne-accueil').classList.remove('cache');
+        $('enligne-salle').classList.add('cache');
+        $('enligne-statut').textContent = 'La connexion a été coupée trop longtemps (ou le serveur a redémarré) : le match est interrompu.';
+        aller('enligne');
+      } else if (net.salle.code) {
+        net.quitter();
+        $('enligne-accueil').classList.remove('cache');
+        $('enligne-salle').classList.add('cache');
+        $('enligne-statut').textContent = 'La connexion a été coupée : la salle est fermée. Crées-en une autre.';
+      }
+    },
+    absent: (m) => {
+      if (partie?.o.mode === 'enligne') partie.absent = true;
+      else $('salle-attente').textContent = `${m.nom} a perdu la connexion… on l’attend.`;
+    },
+    revenu: (m) => {
+      if (partie) partie.absent = false;
+      if (!partie) $('salle-attente').textContent = `${m.nom} est de retour.`;
+    },
     salle: (m) => {
       $('enligne-accueil').classList.add('cache');
       $('enligne-salle').classList.remove('cache');
