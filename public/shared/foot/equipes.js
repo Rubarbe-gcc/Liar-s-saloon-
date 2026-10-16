@@ -43,7 +43,7 @@ export const STYLES = {
   bloc: { nom: 'Bloc bas', passe: 0.05, progres: 1.2, tir: 1, dribble: 0.95, lob: 1, pressing: 0.3, ligne: -2.5, largeur: 0.85, tacle: 0.6 },
   pressing: { nom: 'Pressing haut', passe: 0, progres: 1.1, tir: 1, dribble: 1, lob: 0.8, pressing: 1, ligne: 3, largeur: 1, tacle: 0.85 },
   long: { nom: 'Jeu long', passe: 0, progres: 1.35, tir: 1, dribble: 0.9, lob: 1.8, pressing: 0.45, ligne: -1, largeur: 1.1, tacle: 0.6 },
-  direct: { nom: 'Jeu direct', passe: -0.02, progres: 1.7, tir: 0.95, dribble: 0.95, lob: 1.1, pressing: 0.5, ligne: 0.5, largeur: 1, tacle: 0.6 },
+  direct: { nom: 'Jeu direct', passe: -0.02, progres: 1.45, tir: 0.95, dribble: 0.95, lob: 1.1, pressing: 0.5, ligne: 0.5, largeur: 1, tacle: 0.6 },
   contrepress: { nom: 'Contre-pressing', passe: 0.05, progres: 1.1, tir: 1, dribble: 1, lob: 0.7, pressing: 0.6, ligne: 1.5, largeur: 0.95, tacle: 0.8, contre: true },
 };
 
@@ -100,7 +100,7 @@ export const EQUIPES = [
     gardien: '#ff5ab4',
     ecusson: { forme: 'blason', fond: '#151515', fond2: '#2a2a2a', motif: 'chevron', symbole: 'etoile', symboleC: '#e8b923', bord: '#e8b923' },
     style: 'tirloin',
-    notes: { vitesse: 80, tir: 92, passe: 77, defense: 82, gardien: 82 },
+    notes: { vitesse: 82, tir: 92, passe: 77, defense: 82, gardien: 82 },
     joueurs: [j('Victor Daumal', 12), j('Paolo Verin', 2), j('Léandre Aubry', 14, 'tir'), j('Ismaël Cortès', 10), j('Jonas Valère', 9)],
   },
   {
@@ -122,7 +122,7 @@ export const EQUIPES = [
     gardien: '#2a2a2a',
     ecusson: { forme: 'rond', fond: '#14b8a6', fond2: '#0f766e', motif: 'uni', symbole: 'vague', symboleC: '#ff6f61', bord: '#f5f5f5' },
     style: 'ailes',
-    notes: { vitesse: 85, tir: 80, passe: 83, defense: 76, gardien: 76 },
+    notes: { vitesse: 85, tir: 80, passe: 83, defense: 78, gardien: 76 },
     joueurs: [j('Raphaël Lenoble', 1), j('Diego Altamar', 4), j('Lilian Morvan', 7, 'vitesse'), j('Iker Solano', 11), j('Adam Kessler', 9)],
   },
   {
@@ -133,7 +133,7 @@ export const EQUIPES = [
     gardien: '#c6ff3a',
     ecusson: { forme: 'bouclier', fond: '#2b1150', fond2: '#6b2fb3', motif: 'demi', symbole: 'lune', symboleC: '#ff9b54', bord: '#c9ccd6' },
     style: 'dribble',
-    notes: { vitesse: 82, tir: 78, passe: 80, defense: 70, gardien: 73 },
+    notes: { vitesse: 83, tir: 80, passe: 80, defense: 70, gardien: 73 },
     joueurs: [j('Corentin Labbé', 1), j('Wassim Ferhat', 2), j('Oscar Lindqvist', 6), j('Zayan Morel', 10, 'passe'), j('Luca Benvenuti', 7)],
   },
   {
@@ -188,7 +188,7 @@ export const EQUIPES = [
     gardien: '#e9ff70',
     ecusson: { forme: 'rond', fond: '#0b5563', fond2: '#0e6f80', motif: 'uni', symbole: 'ancre', symboleC: '#f28c28', bord: '#f28c28' },
     style: 'long',
-    notes: { vitesse: 80, tir: 81, passe: 80, defense: 79, gardien: 79 },
+    notes: { vitesse: 83, tir: 81, passe: 80, defense: 81, gardien: 79 },
     joueurs: [j('Matthias Quillec', 1), j('Abel Carène', 4), j('Sohan Bastingue', 7), j('Pierrick Amarre', 10, 'passe'), j('Dario Spinnaker', 9)],
   },
   {
@@ -221,7 +221,7 @@ export const EQUIPES = [
     gardien: '#ffd400',
     ecusson: { forme: 'losange', fond: '#1d2d50', fond2: '#ff5d8f', motif: 'chevron', symbole: 'aile', symboleC: '#ffffff', bord: '#ff5d8f' },
     style: 'contrepress',
-    notes: { vitesse: 86, tir: 78, passe: 80, defense: 78, gardien: 75 },
+    notes: { vitesse: 84, tir: 78, passe: 80, defense: 78, gardien: 75 },
     joueurs: [j('Séraphin Duvet', 1), j('Noé Rémige', 4), j('Jules Ailette', 7, 'vitesse'), j('Eliott Pennon', 10), j('Aymeric Rapace', 11)],
   },
   {
@@ -232,7 +232,7 @@ export const EQUIPES = [
     gardien: '#ff7a1a',
     ecusson: { forme: 'bouclier', fond: '#14204a', fond2: '#2b59ff', motif: 'bande', symbole: 'fleche', symboleC: '#e6ebf2', bord: '#b8c0cc' },
     style: 'direct',
-    notes: { vitesse: 87, tir: 80, passe: 77, defense: 77, gardien: 76 },
+    notes: { vitesse: 85, tir: 80, passe: 77, defense: 77, gardien: 76 },
     joueurs: [j('Axel Mercurin', 1), j('Timéo Argentan', 3), j('Ruben Fulgor', 8), j('Lisandro Vélocé', 10), j('Sacha Comète', 9, 'tir')],
   },
 ];

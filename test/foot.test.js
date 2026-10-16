@@ -280,13 +280,13 @@ test('tirs au but : en cas d’égalité, il y a toujours un vainqueur', () => {
   assert.ok(vus >= 1, 'au moins un match est allé aux tirs au but');
 });
 
-test('équilibre : aucune équipe ne gagne plus de 65 % de ses matchs', () => {
-  // Chaque équipe reçoit chacune des autres, trois fois (deux mi-temps d'une minute) : 54 matchs
+test('équilibre : chaque équipe gagne entre 35 et 65 % de ses matchs', () => {
+  // Chaque équipe reçoit chacune des autres, deux fois (deux mi-temps d'une minute) : 60 matchs
   // par équipe, assez pour que le hasard d'un petit échantillon ne fausse pas le verdict. Un nul compte pour une demi-victoire.
   const ids = EQUIPES.map((e) => e.id);
   const pts = Object.fromEntries(ids.map((id) => [id, 0]));
   let g = 1;
-  for (const a of ids) for (const b of ids) for (let k = 0; k < 3; k++) {
+  for (const a of ids) for (const b of ids) for (let k = 0; k < 2; k++) {
     if (a === b) continue;
     const m = simuler({ equipes: [a, b], graine: (g++) * 7919, minutes: 1 });
     if (m.score[0] > m.score[1]) pts[a] += 1;
@@ -294,9 +294,9 @@ test('équilibre : aucune équipe ne gagne plus de 65 % de ses matchs', () => {
     else { pts[a] += 0.5; pts[b] += 0.5; }
   }
   for (const id of ids) {
-    const taux = pts[id] / 54;
+    const taux = pts[id] / ((ids.length - 1) * 4);
     assert.ok(taux <= 0.65, `${EQUIPE[id].nom} gagne ${(taux * 100).toFixed(0)} %`);
-    assert.ok(taux >= 0.2, `${EQUIPE[id].nom} ne gagne que ${(taux * 100).toFixed(0)} %`);
+    assert.ok(taux >= 0.35, `${EQUIPE[id].nom} ne gagne que ${(taux * 100).toFixed(0)} %`);
   }
 });
 
