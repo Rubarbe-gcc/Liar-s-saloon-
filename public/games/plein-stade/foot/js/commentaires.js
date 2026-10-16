@@ -50,7 +50,7 @@ export function creerCommentateur(ctx) {
         `Ambiance des grands soirs ${ctx.stade} pour ${a.court} contre ${b.court} !`,
       ]), {
         important: true, emotion: 0.5, clip: 'bienvenue',
-        apres: ch('debut-cons', [`${a.court} joue « ${a.devise} » : on va voir si c’est vrai ce soir.`, `Attention à ${b.court}, une équipe qui ne lâche jamais rien.`, 'Deux styles très différents, ça promet.']),
+        apresClip: 'cons_debut', apres: ch('debut-cons', [`${a.court} joue « ${a.devise} » : on va voir si c’est vrai ce soir.`, `Attention à ${b.court}, une équipe qui ne lâche jamais rien.`, 'Deux styles très différents, ça promet.']),
       });
     },
     evenement(ev, m) {
@@ -69,16 +69,16 @@ export function creerCommentateur(ctx) {
           if (m.phase === 'tab') return C.dire(ch('tab-arret', [`${n(ev.joueur)} détourne la tentative !`, `Arrêté par ${n(ev.joueur)} !`, `${n(ev.joueur)} a deviné !`]), { important: true, emotion: 0.85, clip: 'arret' });
           if (ev.capte) {
             return C.dire(ch('capte', [`Bien capté par ${n(ev.joueur)}.`, `${n(ev.joueur)} s’interpose et bloque le ballon.`, `Pas de souci pour ${n(ev.joueur)}.`, `${n(ev.joueur)} se couche bien.`]), {
-              emotion: 0.4, apres: parfois(0.3) ? ch('capte-cons', ['Il fallait mieux la placer.', 'Pas assez appuyée, cette frappe.', 'Le gardien était bien placé.']) : null,
+              emotion: 0.4, apresClip: 'cons_capte', apres: parfois(0.3) ? ch('capte-cons', ['Il fallait mieux la placer.', 'Pas assez appuyée, cette frappe.', 'Le gardien était bien placé.']) : null,
             });
           }
           return C.dire(ch('parade', [`Parade de ${n(ev.joueur)} !`, `Quel réflexe de ${n(ev.joueur)} !`, `${n(ev.joueur)} repousse !`, `Énorme ${n(ev.joueur)} !`]), {
             important: true, emotion: 0.85, clip: 'arret',
-            apres: parfois(0.5) ? ch('parade-cons', ['Grosse parade, il a lu la trajectoire jusqu’au bout.', 'Il sauve son équipe, là.', 'Celle-là, elle valait un but.']) : null,
+            apresClip: 'cons_parade', apres: parfois(0.5) ? ch('parade-cons', ['Grosse parade, il a lu la trajectoire jusqu’au bout.', 'Il sauve son équipe, là.', 'Celle-là, elle valait un but.']) : null,
           });
         case 'poteau':
           return C.dire(ev.barre ? ch('barre', ['Sur la barre !!', 'La transversale tremble encore !', 'La barre ! Il n’y avait qu’un centimètre !']) : ch('poteau', ['Sur le poteau !!', 'Le poteau sauve le gardien !', 'Poteau ! Quelle malchance !']), {
-            important: true, emotion: 0.9, clip: ev.barre ? 'barre' : 'poteau', apres: parfois(0.5) ? ch('poteau-cons', ['Le football, c’est une question de centimètres.', 'Il fallait la mettre au fond !', 'Il y avait la place de l’autre côté.']) : null,
+            important: true, emotion: 0.9, clip: ev.barre ? 'barre' : 'poteau', apresClip: 'cons_poteau', apres: parfois(0.5) ? ch('poteau-cons', ['Le football, c’est une question de centimètres.', 'Il fallait la mettre au fond !', 'Il y avait la place de l’autre côté.']) : null,
           });
         case 'tacle':
           if (ev.reussi) return C.dire(ch('tacle', [`Tacle parfait de ${n(ev.joueur)} !`, `${n(ev.joueur)} récupère proprement.`, `Superbe intervention de ${n(ev.joueur)}.`, `${n(ev.joueur)} glisse et prend tout le ballon.`]), { clip: 'tacle' });
@@ -86,19 +86,19 @@ export function creerCommentateur(ctx) {
         case 'vol':
           return C.dire(ch('vol', [`${n(ev.joueur)} chipe le ballon à ${n(ev.victime)}.`, `Bien joué ${n(ev.joueur)}, ballon récupéré.`, `${n(ev.joueur)} gagne son duel.`]));
         case 'geste':
-          if (ev.nom === 'arc-en-ciel') return C.dire(ch('arc', [`Un arc-en-ciel de ${n(ev.joueur)} !! Le public se lève !`, `Par-dessus la tête ! L’arc-en-ciel de ${n(ev.joueur)} !`, `Quelle audace, ${n(ev.joueur)} ! Un arc-en-ciel !`]), { important: true, emotion: 0.9, clip: 'arc_en_ciel', apres: parfois(0.5) ? 'Il faut oser faire ça en match !' : null });
+          if (ev.nom === 'arc-en-ciel') return C.dire(ch('arc', [`Un arc-en-ciel de ${n(ev.joueur)} !! Le public se lève !`, `Par-dessus la tête ! L’arc-en-ciel de ${n(ev.joueur)} !`, `Quelle audace, ${n(ev.joueur)} ! Un arc-en-ciel !`]), { important: true, emotion: 0.9, clip: 'arc_en_ciel', apresClip: 'cons_arc', apres: parfois(0.5) ? 'Il faut oser faire ça en match !' : null });
           return C.dire(ch('roulette', [`Roulette de ${n(ev.joueur)} !`, `${n(ev.joueur)} tourne autour de son adversaire !`, `Superbe roulette de ${n(ev.joueur)}.`, `${n(ev.joueur)} efface son vis-à-vis d’une roulette !`]), { emotion: 0.6, clip: 'roulette' });
         case 'but': {
           const e = ev.equipe;
           const [s, t] = [m.score[e], m.score[1 - e]];
           const etat = s === t ? `${eq(e)} égalise !` : s === t + 1 ? `${eq(e)} passe devant !` : `${eq(e)} creuse l’écart !`;
-          if (ev.csc) return C.dire(`Contre son camp de ${n(ev.joueur)}… cruel ! ${etat}`, { important: true, emotion: 0.8, clip: 'but', apres: 'Ça arrive, mais à ce moment-là, ça fait mal.' });
+          if (ev.csc) return C.dire(`Contre son camp de ${n(ev.joueur)}… cruel ! ${etat}`, { important: true, emotion: 0.8, clip: 'but', apresClip: 'cons_csc', apres: 'Ça arrive, mais à ce moment-là, ça fait mal.' });
           const nb = butsDe(m, ev.joueur);
           const qui = nb === 2 ? `Et c’est le doublé pour ${n(ev.joueur)} !` : nb === 3 ? `TRIPLÉ !! ${n(ev.joueur)} entre dans l’histoire !` : nb > 3 ? `${n(ev.joueur)} est intenable, c’est son ${nb}e !` : ch('but', [`BUT de ${n(ev.joueur)} !!!`, `GOAAAL ! ${n(ev.joueur)} !`, `C’est au fond ! ${n(ev.joueur)} !`, `Il marque ! ${n(ev.joueur)} !`]);
           const passe = ev.passeur >= 0 ? ch('passe-dec', [` Sur un service de ${n(ev.passeur)}.`, ` Bien servi par ${n(ev.passeur)}.`, ` Quelle passe de ${n(ev.passeur)} !`]) : '';
           return C.dire(`${qui} ${etat}${passe}`, {
             important: true, emotion: 1, clip: 'but',
-            apres: ch('but-cons', ['Quelle finition !', 'La défense a dormi sur ce coup-là.', 'Imparable pour le gardien.', 'Ça, c’est un but de grand joueur.', 'Tout est allé très vite, magnifique.']),
+            apresClip: 'cons_but', apres: ch('but-cons', ['Quelle finition !', 'La défense a dormi sur ce coup-là.', 'Imparable pour le gardien.', 'Ça, c’est un but de grand joueur.', 'Tout est allé très vite, magnifique.']),
           });
         }
         case 'mitemps': {
@@ -107,21 +107,21 @@ export function creerCommentateur(ctx) {
           const dom = p0 >= 55 ? 0 : p0 <= 45 ? 1 : -1;
           return C.dire(`C’est la pause. ${eq(0)} ${m.score[0]} – ${m.score[1]} ${eq(1)}.`, {
             important: true, emotion: 0.5, clip: 'mi_temps',
-            apres: dom >= 0 ? `${eq(dom)} a eu le ballon plus souvent : ${dom === 0 ? p0 : 100 - p0} % de possession.` : 'Un match très équilibré pour l’instant.',
+            apresClip: dom >= 0 ? null : 'cons_mitemps', apres: dom >= 0 ? `${eq(dom)} a eu le ballon plus souvent : ${dom === 0 ? p0 : 100 - p0} % de possession.` : 'Un match très équilibré pour l’instant.',
           });
         }
         case 'reprise':
           return C.dire(ch('reprise', ['Les deux équipes reviennent pour la seconde période !', 'C’est reparti pour la deuxième mi-temps !', 'Deuxième mi-temps ! Tout reste à faire.']), { important: true, emotion: 0.5, clip: 'reprise' });
         case 'tab':
-          return C.dire('Égalité ! Place à la loterie des tirs au but…', { important: true, emotion: 0.7, clip: 'tirs_au_but', apres: 'Maintenant, c’est une question de nerfs.' });
+          return C.dire('Égalité ! Place à la loterie des tirs au but…', { important: true, emotion: 0.7, clip: 'tirs_au_but', apresClip: 'cons_tab', apres: 'Maintenant, c’est une question de nerfs.' });
         case 'tab-but':
           return C.dire(ch('tab-but', [`${n(ev.joueur)} ne tremble pas !`, `Transformé par ${n(ev.joueur)} !`, `Dans le coin, ${n(ev.joueur)} !`]), { important: true, emotion: 0.8, clip: 'tab_marque' });
         case 'tab-rate':
           return C.dire(ch('tab-rate', [`${n(ev.joueur)} manque le cadre !`, `À côté pour ${n(ev.joueur)}…`, `Oh non, ${n(ev.joueur)} !`]), { important: true, emotion: 0.8, clip: 'tab_rate' });
         case 'fin': {
           const v = ev.vainqueur;
-          if (v < 0) return C.dire(`C’est terminé : match nul, ${m.score[0]} partout.`, { important: true, emotion: 0.6, clip: 'match_nul', apres: 'Un partage des points logique.' });
-          return C.dire(`C’est terminé ! Victoire de ${ctx.equipe(v).nom}${ev.tab ? ' aux tirs au but' : ''} !`, { important: true, emotion: 0.9, clip: 'victoire', apres: ch('fin-cons', ['Une victoire méritée.', 'Ils ont su faire la différence au bon moment.', 'Quelle soirée pour eux !']) });
+          if (v < 0) return C.dire(`C’est terminé : match nul, ${m.score[0]} partout.`, { important: true, emotion: 0.6, clip: 'match_nul', apresClip: 'cons_nul', apres: 'Un partage des points logique.' });
+          return C.dire(`C’est terminé ! Victoire de ${ctx.equipe(v).nom}${ev.tab ? ' aux tirs au but' : ''} !`, { important: true, emotion: 0.9, clip: 'victoire', apresClip: 'cons_fin', apres: ch('fin-cons', ['Une victoire méritée.', 'Ils ont su faire la différence au bon moment.', 'Quelle soirée pour eux !']) });
         }
         default:
       }

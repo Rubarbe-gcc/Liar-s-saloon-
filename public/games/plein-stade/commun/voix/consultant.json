@@ -1,0 +1,124 @@
+{
+  "lignes": [
+    {
+      "id": "cons_but_1",
+      "energie": 2,
+      "texte": "Quelle finition !"
+    },
+    {
+      "id": "cons_but_2",
+      "energie": 2,
+      "texte": "La défense a dormi sur ce coup-là."
+    },
+    {
+      "id": "cons_but_3",
+      "energie": 2,
+      "texte": "Imparable pour le gardien."
+    },
+    {
+      "id": "cons_but_4",
+      "energie": 2,
+      "texte": "Ça, c'est un but de grand joueur."
+    },
+    {
+      "id": "cons_but_5",
+      "energie": 2,
+      "texte": "Tout est allé très vite, magnifique."
+    },
+    {
+      "id": "cons_csc_1",
+      "energie": 2,
+      "texte": "Ça arrive, mais à ce moment-là, ça fait mal."
+    },
+    {
+      "id": "cons_parade_1",
+      "energie": 2,
+      "texte": "Grosse parade, il a lu la trajectoire jusqu'au bout."
+    },
+    {
+      "id": "cons_parade_2",
+      "energie": 2,
+      "texte": "Il sauve son équipe, là."
+    },
+    {
+      "id": "cons_parade_3",
+      "energie": 2,
+      "texte": "Celle-là, elle valait un but."
+    },
+    {
+      "id": "cons_capte_1",
+      "energie": 2,
+      "texte": "Il fallait mieux la placer."
+    },
+    {
+      "id": "cons_capte_2",
+      "energie": 2,
+      "texte": "Pas assez appuyée, cette frappe."
+    },
+    {
+      "id": "cons_capte_3",
+      "energie": 2,
+      "texte": "Le gardien était bien placé."
+    },
+    {
+      "id": "cons_poteau_1",
+      "energie": 2,
+      "texte": "Le football, c'est une question de centimètres."
+    },
+    {
+      "id": "cons_poteau_2",
+      "energie": 2,
+      "texte": "Il fallait la mettre au fond !"
+    },
+    {
+      "id": "cons_poteau_3",
+      "energie": 2,
+      "texte": "Il y avait la place de l'autre côté."
+    },
+    {
+      "id": "cons_arc_1",
+      "energie": 2,
+      "texte": "Il faut oser faire ça en match !"
+    },
+    {
+      "id": "cons_debut_1",
+      "energie": 2,
+      "texte": "Deux styles très différents, ça promet."
+    },
+    {
+      "id": "cons_mitemps_1",
+      "energie": 2,
+      "texte": "Un match très équilibré pour l'instant."
+    },
+    {
+      "id": "cons_tab_1",
+      "energie": 2,
+      "texte": "Maintenant, c'est une question de nerfs."
+    },
+    {
+      "id": "cons_nul_1",
+      "energie": 2,
+      "texte": "Un partage des points logique."
+    },
+    {
+      "id": "cons_fin_1",
+      "energie": 2,
+      "texte": "Une victoire méritée."
+    },
+    {
+      "id": "cons_fin_2",
+      "energie": 2,
+      "texte": "Ils ont su faire la différence au bon moment."
+    },
+    {
+      "id": "cons_fin_3",
+      "energie": 2,
+      "texte": "Quelle soirée pour eux !"
+    },
+    {
+      "id": "cons_trophee_1",
+      "energie": 2,
+      "texte": "Ils l'ont méritée, ce trophée."
+    }
+  ]
+}

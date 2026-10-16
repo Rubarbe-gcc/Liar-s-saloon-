@@ -4,7 +4,7 @@
  * par réplique, nommé comme son id. On coupe entre les trames MP3 (pas de
  * réencodage, pas de perte), puis on met à jour liste.json.
  *
- *   node scripts/decouper-voix.mjs <enregistrement.mp3> <moments.json>
+ *   node scripts/decouper-voix.mjs <enregistrement.mp3> <moments.json> [lignes.json | consultant.json]
  * moments.json : [[début, fin], …] en secondes, une paire par réplique (repérés
  * dans les silences de l'enregistrement).
  */
@@ -15,8 +15,8 @@ import { fileURLToPath } from 'node:url';
 
 const ici = path.dirname(fileURLToPath(import.meta.url));
 const dossier = path.join(ici, '..', 'public', 'games', 'plein-stade', 'commun', 'voix');
-const [source, fichierMoments] = process.argv.slice(2);
-const { lignes } = JSON.parse(fs.readFileSync(path.join(dossier, 'lignes.json'), 'utf8'));
+const [source, fichierMoments, fichierLignes = 'lignes.json'] = process.argv.slice(2);
+const { lignes } = JSON.parse(fs.readFileSync(path.join(dossier, fichierLignes), 'utf8'));
 const moments = JSON.parse(fs.readFileSync(fichierMoments, 'utf8'));
 if (moments.length !== lignes.length) throw new Error(`${moments.length} moments pour ${lignes.length} répliques : l'enregistrement ne correspond pas à la liste.`);
 
@@ -49,6 +49,7 @@ moments.forEach(([debut, fin], k) => {
   fs.writeFileSync(path.join(dossier, `${lignes[k].id}.mp3`), Buffer.concat(choisies.map((t) => b.subarray(t.o, t.o + t.long))));
   n += 1;
 });
-const presentes = lignes.map((l) => l.id).filter((id) => fs.existsSync(path.join(dossier, `${id}.mp3`)));
+// Toutes les répliques présentes (commentateur et consultant).
+const presentes = fs.readdirSync(dossier).filter((x) => x.endsWith('.mp3')).map((x) => x.slice(0, -4)).sort();
 fs.writeFileSync(path.join(dossier, 'liste.json'), JSON.stringify(presentes, null, 2) + '\n');
 console.log(`${n} répliques découpées (${trames.length} trames, ${temps.toFixed(1)} s). liste.json : ${presentes.length}.`);

@@ -167,7 +167,7 @@ export function trophee(P, e) {
       debut: (api) => {
         api.afficher(htmlTitre('Champions !', eq.nom));
         R.confettis(0, e);
-        P.com?.dire(`${eq.nom} soulève la Coupe ! Quelle soirée, quel parcours !`, { important: true, emotion: 1, clip: 'champions', apres: 'Ils l’ont méritée, ce trophée.' });
+        P.com?.dire(`${eq.nom} soulève la Coupe ! Quelle soirée, quel parcours !`, { important: true, emotion: 1, clip: 'champions', apresClip: 'cons_trophee', apres: 'Ils l’ont méritée, ce trophée.' });
         prochainFeu = 0;
       },
       maj: (t, dt) => {

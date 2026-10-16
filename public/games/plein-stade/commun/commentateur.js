@@ -61,7 +61,7 @@ const familles = new Map();
 let voixChargee = false;
 /** Ce que dit chaque réplique enregistrée (pour l'afficher mot pour mot). */
 const textes = new Map();
-fetch(new URL('./voix/lignes.json', import.meta.url)).then((r) => (r.ok ? r.json() : { lignes: [] })).then((j) => {
+for (const fichier of ['lignes.json', 'consultant.json']) fetch(new URL('./voix/' + fichier, import.meta.url)).then((r) => (r.ok ? r.json() : { lignes: [] })).then((j) => {
   for (const l of j.lignes) textes.set(new URL('./voix/' + l.id + '.mp3', import.meta.url).href, l.texte);
 }).catch(() => {});
 fetch(new URL('./voix/liste.json', import.meta.url)).then((r) => (r.ok ? r.json() : [])).then((ids) => {
@@ -154,10 +154,11 @@ export function creerCommentateur({ el, noms = { comm: 'Commentateur', cons: 'Co
      * Dit une phrase. role : 'comm' ou 'cons' ; important : coupe la phrase en cours ;
      * emotion : de 0 à 1 ; apres : une réplique du consultant à enchaîner.
      */
-    dire(texte, { role = 'comm', important = false, emotion, apres = null, clip = null } = {}) {
+    dire(texte, { role = 'comm', important = false, emotion, apres = null, apresClip = null, clip = null } = {}) {
       if (reglage === 'aucun' || !texte) return;
       const item = { texte, role, important, emotion, clip };
-      const suites = apres ? [{ texte: apres, role: 'cons', important: false, emotion: 0.3 }] : [];
+      // La réplique du consultant : sa vraie voix aussi, s'il a une phrase enregistrée pour ce moment.
+      const suites = apres ? [{ texte: apres, role: 'cons', important: false, emotion: 0.3, clip: apresClip }] : [];
       if (important) {
         window.speechSynthesis?.cancel();
         if (son) { son.onended = son.onerror = null; son.pause(); son = null; }
