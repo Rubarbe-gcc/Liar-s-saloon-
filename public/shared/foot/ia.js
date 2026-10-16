@@ -138,10 +138,16 @@ function valeurPasse(m, p, r, st) {
   return { v, lob };
 }
 
-/** Le chemin du porteur : vers le but, en contournant les adversaires devant lui. */
+/**
+ * Le chemin du porteur : vers le but, en contournant les adversaires devant lui.
+ * Près du but, il rentre vers l'axe ; près d'une bande, il s'en écarte (jamais coincé dans un coin).
+ */
 function cheminDribble(m, p, st) {
   const s = m.equipes[p.e].sens;
+  const X = p.x * s;
   let dx = s, dy = -p.y * 0.06;
+  // Près de la ligne de but, on rentre vers l'axe (pas vers le poteau de corner).
+  if (X > 12) dy -= p.y * 0.12 * (X - 12);
   let espace = 7;
   for (let k = 0; k < 5; k++) {
     const q = m.joueurs[(1 - p.e) * 5 + k];
@@ -151,15 +157,18 @@ function cheminDribble(m, p, st) {
     const devant = (ox * s) / d;
     if (devant > 0.2) espace = Math.min(espace, d);
     if (devant > -0.3) {
-      // On s'écarte sur le côté (le plus libre), d'autant plus qu'il est proche.
-      const cote = oy > 0 ? -1 : 1;
+      // On s'écarte sur le côté (le plus libre), d'autant plus qu'il est proche ;
+      // près d'une bande, toujours vers l'intérieur (sinon on finit coincé).
+      let cote = oy > 0 ? -1 : 1;
+      if (Math.abs(p.y) > 5 && cote * p.y > 0) cote = -cote;
       const f = ((5 - d) / 5) * (0.9 + 0.6 * st.dribble);
       dy += cote * f * 1.2;
       dx -= s * f * 0.25;
     }
   }
-  if (p.y > 7.5) dy -= 0.8;
-  if (p.y < -7.5) dy += 0.8;
+  // Les bandes repoussent, d'autant plus qu'on s'en approche ; la ligne de but aussi.
+  if (Math.abs(p.y) > 6.5) dy -= Math.sign(p.y) * (Math.abs(p.y) - 6.5) * 0.9;
+  if (X > 15.5) { dx -= s * (X - 15.5) * 0.5; dy -= Math.sign(p.y) * (X - 15.5) * 0.4; }
   const l = Math.sqrt(dx * dx + dy * dy) || 1;
   return { dx: dx / l, dy: dy / l, espace };
 }
@@ -281,13 +290,16 @@ function porteurIA(m, p, N, st) {
     if (r === p) continue;
     const o = valeurPasse(m, p, r, st);
     if (!o) continue;
-    const v = o.v + (pression < 1.4 ? 0.18 : 0) - (p.recu < 30 ? 0.15 : 0) + bruit();
+    // Dans un coin ou collé à une bande : la passe (en retrait) vaut mieux que de s'entêter.
+    const coince = (p.x * s > 15 && Math.abs(p.y) > 4) || Math.abs(p.y) > 8.3;
+    const v = o.v + (pression < 1.4 ? 0.18 : 0) - (p.recu < 30 && !coince ? 0.15 : 0) + (coince ? 0.3 : 0) + bruit();
     if (v > choix.v) choix = { v, type: 'passe', cible: r.id, lob: o.lob };
   }
   // Garder le ballon ?
   if (!garde) {
     // Garder le ballon trop longtemps finit par ne plus rien donner : il faut passer ou tirer.
-    const vd = 0.4 + Math.min(ch.espace, 6) * 0.06 * st.dribble - (pression < 1.2 ? 0.3 : 0) - Math.max(0, p.recu - 150) * 0.002 + bruit();
+    const coince = (p.x * s > 15 && Math.abs(p.y) > 4) || Math.abs(p.y) > 8.3;
+    const vd = 0.4 + Math.min(ch.espace, 6) * 0.06 * st.dribble - (pression < 1.2 ? 0.3 : 0) - (coince ? 0.3 : 0) - Math.max(0, p.recu - 150) * 0.002 + bruit();
     if (vd > choix.v || p.recu < 10) choix = { v: vd, type: 'dribble' };
   }
   if (choix.type === 'tir') {
