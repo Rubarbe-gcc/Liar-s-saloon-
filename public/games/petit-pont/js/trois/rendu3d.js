@@ -287,6 +287,12 @@ export function creerRendu(hote, o) {
     // Le ballon : il roule (la rotation suit sa vitesse).
     const b = v.ballon;
     ballon.position.set(b.x, b.z + R_BALLON, -b.y);
+    // Pendant la roulette, le ballon reste collé à la semelle et tourne avec le joueur.
+    const porteurV = b.porteur >= 0 ? v.joueurs[b.porteur] : null;
+    if (porteurV && porteurV.spin) {
+      const a0 = Math.atan2(porteurV.dx, -porteurV.dy) + porteurV.spin * Math.PI * 2;
+      ballon.position.set(porteurV.x + Math.sin(a0) * 0.32, R_BALLON, -porteurV.y + Math.cos(a0) * 0.32);
+    }
     vBallon.set(b.vx, 0, -b.vy);
     const sp = vBallon.length();
     if (sp > 0.05) {

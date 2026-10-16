@@ -505,11 +505,13 @@ function deplacer(m, p, c) {
   } else if (p.etat === 'tient') {
     p.vx *= 0.75; p.vy *= 0.75;
   } else if (p.geste > 0 && p.gesteType === 1) {
-    // La roulette : un arc de côté (vite au milieu du geste), en avançant un peu.
+    // La roulette, comme la vraie : il freine en posant la semelle sur le ballon, pivote dos au
+    // défenseur en le glissant de côté, puis repart en accélérant.
     const u = 1 - p.geste / DUREE_ROULETTE;
-    const f = 1 - Math.abs(2 * u - 1);
-    p.vx = p.dx * 3.6 + p.glx * 5.4 * f;
-    p.vy = p.dy * 3.6 + p.gly * 5.4 * f;
+    const avance = u < 0.3 ? 2.6 - u * 5 : u < 0.75 ? 1.1 : 1.1 + (u - 0.75) * 16;
+    const cote = u < 0.2 ? 0 : u < 0.8 ? 3.4 : 3.4 * (1 - (u - 0.8) * 4);
+    p.vx = p.dx * avance + p.glx * cote;
+    p.vy = p.dy * avance + p.gly * cote;
   } else {
     const porte = b.porteur === p.id;
     let vmax = vitesseMax(p) * (eq.ctrl === 'ia' ? niveauDe(eq).vitesse : 1);

@@ -9,6 +9,7 @@
 
 import { EQUIPES, EQUIPE, STADES, STYLES, noteGenerale } from '../../../shared/foot/equipes.js';
 import { creerMatch, pas, chronoTexte, acteursTab, FPS } from '../../../shared/foot/match.js';
+import { DUREE_ROULETTE } from '../../../shared/foot/terrain.js';
 import { NIVEAUX } from '../../../shared/foot/ia.js';
 import { creerCoupe, matchDuJoueur, stadeDuTour, enregistrer, jouerSansMoi, aJouer, avancer, TOURS } from '../../../shared/foot/coupe.js';
 import { creerRendu, qualite, reglerQualite } from './trois/rendu3d.js';
@@ -138,13 +139,16 @@ let partie = null;
 let enPause = false;
 let raf = 0;
 
+/** La roulette tourne lentement au début (la semelle freine), vite au milieu, et finit face au jeu. */
+const tourRoulette = (u) => { const t = Math.min(1, Math.max(0, (u - 0.15) / 0.65)); return t * t * (3 - 2 * t); };
+
 /** Ce que la 3D a besoin de savoir d'une image du match. */
 function instantane(m) {
   const b = m.ballon;
   return {
     f: m.f,
     phase: m.phase,
-    joueurs: m.joueurs.map((p) => ({ x: p.x, y: p.y, vx: p.vx, vy: p.vy, dx: p.dx, dy: p.dy, etat: p.etat, frappe: p.frappe, charge: p.charge > 0 ? Math.min(1, p.charge / 48) : 0, volee: p.volee, geste: p.geste, gesteType: p.gesteType, spin: p.gesteType === 1 && p.geste > 0 ? (p.dx * p.gly - p.dy * p.glx >= 0 ? 1 : -1) * (1 - p.geste / 24) : 0, haut: p.haut, vyPlonge: p.etat === 'plonge' ? p.vy : 0 })),
+    joueurs: m.joueurs.map((p) => ({ x: p.x, y: p.y, vx: p.vx, vy: p.vy, dx: p.dx, dy: p.dy, etat: p.etat, frappe: p.frappe, charge: p.charge > 0 ? Math.min(1, p.charge / 48) : 0, volee: p.volee, geste: p.geste, gesteType: p.gesteType, spin: p.gesteType === 1 && p.geste > 0 ? (p.dx * p.gly - p.dy * p.glx >= 0 ? 1 : -1) * tourRoulette(1 - p.geste / DUREE_ROULETTE) : 0, roul: p.gesteType === 1 && p.geste > 0 ? 1 - p.geste / DUREE_ROULETTE : 0, haut: p.haut, vyPlonge: p.etat === 'plonge' ? p.vy : 0 })),
     ballon: { x: b.x, y: b.y, z: b.z, vx: b.vx, vy: b.vy, vz: b.vz, porteur: b.porteur },
   };
 }

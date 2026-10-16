@@ -249,8 +249,12 @@ export function poseDe(fig, o, dt) {
     P.epAz = 0.9; P.epBz = -0.4; P.epBx = -0.6; P.torse = -0.05;
   }
   if (p.gesteType === 1 && p.geste > 0) {
-    // La roulette : penché, les bras écartés pour l'équilibre.
-    Object.assign(P, { torse: 0.25, epAz: 1.1, epBz: -1.1, epAx: 0, epBx: 0, coudeA: -0.3, coudeB: -0.3, by: 0.86, genouA: 0.5, genouB: 0.5 });
+    // La roulette : une semelle posée sur le ballon, puis l'autre, les bras écartés pour l'équilibre.
+    const u = p.roul || 0;
+    const premier = u < 0.5;
+    const appui = Math.sin(Math.min(1, (premier ? u : u - 0.5) * 2) * Math.PI);
+    Object.assign(P, { torse: 0.12, torseZ: (premier ? 1 : -1) * 0.12, epAz: 1.25, epBz: -1.25, epAx: 0, epBx: 0, coudeA: -0.35, coudeB: -0.35, by: 0.86, y: 0,
+      hancheA: premier ? -0.55 * appui : 0.1, genouA: premier ? 0.7 * appui : 0.35, hancheB: premier ? 0.1 : -0.55 * appui, genouB: premier ? 0.35 : 0.7 * appui });
   }
   if (p.gesteType === 2 && p.geste > 10) {
     // L'arc-en-ciel : le talon fouette vers le haut, dans le dos.
