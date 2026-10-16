@@ -1,120 +1,133 @@
 /**
- * PETIT PONT — le commentateur.
+ * PETIT PONT — ce que disent les commentateurs du foot.
  *
- * À partir des événements du match (moteur : shared/foot/match.js), une
- * phrase courte, au ton d'un commentaire télé, affichée en bas de l'écran
- * (et lue à voix haute si le joueur l'a choisi). Pas de bavardage : une
- * phrase banale (une frappe, un tacle) attend que la précédente ait eu le
- * temps d'être lue ; un but, un poteau ou un arrêt passent toujours.
+ * Le moteur des voix est commun à tous les sports (commun/commentateur.js) :
+ * ici, seulement les phrases, choisies selon les événements du match
+ * (shared/foot/match.js) et le contexte (le score, le temps qui reste, le
+ * doublé d'un buteur…). Le commentateur suit l'action ; le consultant
+ * ajoute parfois son analyse, juste après.
  */
 
-const CLE = 'petitpont.commentaires';
-/** 'texte', 'voix' (texte et voix) ou 'aucun'. */
-export let reglage = 'texte';
-try { reglage = localStorage.getItem(CLE) || 'texte'; } catch { /* ignore */ }
-export function regler(v) {
-  reglage = v;
-  try { localStorage.setItem(CLE, v); } catch { /* ignore */ }
-  if (v !== 'voix') speechSynthesis?.cancel?.();
-}
+import { creerCommentateur as moteur, reglage, regler, REGLAGES } from '../../commun/commentateur.js';
 
-const choisir = (l) => l[Math.floor(Math.random() * l.length)];
+export { reglage, regler, REGLAGES };
+
 const nomCourt = (n) => n.split(' ').slice(-1)[0];
+const parfois = (p) => Math.random() < p;
 
 /**
- * Le commentateur d'un match. ctx : { nom(id) → nom complet, equipe(e) → équipe, stade, el (l'élément où écrire) }
+ * Le commentateur d'un match. ctx : { nom(id) → nom complet, equipe(e) → équipe, stade, el }
  */
 export function creerCommentateur(ctx) {
-  let dernier = -99, temps = 0, minuteur = 0, dejaTrente = false;
-  const el = ctx.el;
+  const C = moteur({ el: ctx.el, noms: { comm: 'Commentaire', cons: 'Consultant' } });
+  const ch = (cle, l) => C.choisir(cle, l);
+  let dejaTrente = false, dejaDix = false;
+  const n = (id) => (id >= 0 ? `<b>${nomCourt(ctx.nom(id))}</b>` : '');
+  const eq = (e) => ctx.equipe(e).court;
 
-  function dire(texte, important = false) {
-    if (reglage === 'aucun' || !texte) return;
-    if (!important && temps - dernier < 2.2) return;
-    dernier = temps;
-    el.innerHTML = `<span class="micro" aria-hidden="true">🎙️</span>${texte}`;
-    el.classList.remove('montre');
-    void el.offsetWidth;
-    el.classList.add('montre');
-    clearTimeout(minuteur);
-    minuteur = setTimeout(() => el.classList.remove('montre'), important ? 4200 : 3000);
-    if (reglage === 'voix' && window.speechSynthesis) {
-      const u = new SpeechSynthesisUtterance(texte.replace(/<[^>]+>/g, ''));
-      u.lang = 'fr-FR';
-      u.rate = important ? 1.15 : 1.08;
-      u.pitch = important ? 1.2 : 1;
-      if (important) speechSynthesis.cancel();
-      speechSynthesis.speak(u);
-    }
-  }
+  /** Le nombre de buts d'un joueur dans ce match (contre son camp exclu). */
+  const butsDe = (m, id) => m.buts.filter((b) => b.j === id && !b.csc).length;
 
   return {
-    /** Le temps qui passe (pour ne pas parler trop souvent). */
     avancer(dt, m) {
-      temps += dt;
-      if (!dejaTrente && m.mi === 2 && m.phase === 'jeu' && m.duree - m.chrono < 30 * 60 && m.duree > 60 * 60) {
+      if (m.mi !== 2 || m.phase !== 'jeu' || m.duree < 60 * 60) return;
+      const reste = (m.duree - m.chrono) / 60;
+      const ecart = m.score[0] - m.score[1];
+      if (!dejaTrente && reste < 30) {
         dejaTrente = true;
-        dire(m.score[0] === m.score[1] ? 'Plus que trente secondes, et tout est encore possible !' : 'Plus que trente secondes à jouer !', true);
+        C.dire(ecart === 0 ? ch('30nul', ['Plus que trente secondes, et tout est encore possible !', 'Trente secondes ! Qui va faire la différence ?'])
+          : ch('30', [`Plus que trente secondes pour ${eq(ecart > 0 ? 1 : 0)} !`, 'Trente secondes à jouer, ça pousse !']), { important: true, emotion: 0.6, clip: 'trente_secondes' });
+      } else if (!dejaDix && reste < 10) {
+        dejaDix = true;
+        C.dire(ch('10', ['Dix secondes !', 'Les dernières secondes !', 'C’est la dernière action !']), { important: true, emotion: 0.8 });
       }
     },
-    debut(m) {
+    debut() {
       const [a, b] = [ctx.equipe(0), ctx.equipe(1)];
-      dire(choisir([`Bienvenue ${ctx.stade} pour ce ${a.court} – ${b.court} !`, `C'est parti ${ctx.stade} : ${a.nom} contre ${b.nom} !`]), true);
-      void m;
+      C.dire(ch('debut', [
+        `Bonsoir et bienvenue ${ctx.stade} pour ce ${a.court} – ${b.court} !`,
+        `C’est l’heure ${ctx.stade} : ${a.nom} face à ${b.nom} !`,
+        `Ambiance des grands soirs ${ctx.stade} pour ${a.court} contre ${b.court} !`,
+      ]), {
+        important: true, emotion: 0.5, clip: 'bienvenue',
+        apres: ch('debut-cons', [`${a.court} joue « ${a.devise} » : on va voir si c’est vrai ce soir.`, `Attention à ${b.court}, une équipe qui ne lâche jamais rien.`, 'Deux styles très différents, ça promet.']),
+      });
     },
     evenement(ev, m) {
-      const n = (id) => (id >= 0 ? `<b>${nomCourt(ctx.nom(id))}</b>` : '');
       switch (ev.type) {
         case 'tir':
           if (m.phase === 'tab') return;
-          if (ev.geste === 'volee') return dire(choisir([`Reprise de volée de ${n(ev.joueur)} !!`, `Quelle reprise de volée de ${n(ev.joueur)} !`, `${n(ev.joueur)} la reprend de volée !`]), true);
-          if (ev.geste === 'premiere') return dire(choisir([`${n(ev.joueur)} frappe en une touche !`, `Du premier coup, ${n(ev.joueur)} !`]), true);
-          if (ev.distance > 15) return dire(choisir([`${n(ev.joueur)} tente sa chance de loin…`, `Frappe lointaine de ${n(ev.joueur)} !`, `${n(ev.joueur)} déclenche de très loin !`]));
-          if (ev.puissance > 0.85) return dire(choisir([`Une mine de ${n(ev.joueur)} !`, `${n(ev.joueur)} frappe fort !`, `Quelle frappe de ${n(ev.joueur)} !`]));
-          return dire(choisir([`${n(ev.joueur)} frappe !`, `Tir de ${n(ev.joueur)}…`, `${n(ev.joueur)} tente le cadre !`]));
+          if (ev.geste === 'volee') return C.dire(ch('volee', [`Reprise de volée de ${n(ev.joueur)} !!`, `${n(ev.joueur)} la reprend de volée !`, `Quelle volée de ${n(ev.joueur)} !`]), { important: true, emotion: 0.9, clip: 'volee' });
+          if (ev.geste === 'premiere') return C.dire(ch('premiere', [`${n(ev.joueur)} frappe en une touche !`, `Du premier coup, ${n(ev.joueur)} !`]), { important: true, emotion: 0.7 });
+          if (ev.distance > 15) return C.dire(ch('loin', [`${n(ev.joueur)} tente sa chance de loin…`, `Frappe lointaine de ${n(ev.joueur)} !`, `${n(ev.joueur)} déclenche de très loin !`, `De loin, ${n(ev.joueur)}… pourquoi pas !`]), { emotion: 0.5, clip: 'frappe' });
+          if (ev.puissance > 0.85) return C.dire(ch('fort', [`Une mine de ${n(ev.joueur)} !`, `${n(ev.joueur)} frappe fort !`, `Quelle frappe de ${n(ev.joueur)} !`, `${n(ev.joueur)} arme une frappe terrible !`]), { emotion: 0.6, clip: 'frappe' });
+          return C.dire(ch('tir', [`${n(ev.joueur)} frappe !`, `Tir de ${n(ev.joueur)}…`, `${n(ev.joueur)} tente le cadre !`, `${n(ev.joueur)} essaie !`, `C’est ${n(ev.joueur)} qui frappe !`]), { emotion: 0.45 });
         case 'passe':
-          if (ev.lob && Math.random() < 0.4) dire(choisir([`${n(ev.joueur)} cherche ${n(ev.cible)} par-dessus…`, `Ballon piqué de ${n(ev.joueur)}.`]));
+          if (ev.lob && parfois(0.35)) C.dire(ch('lob', [`${n(ev.joueur)} cherche ${n(ev.cible)} par-dessus…`, `Ballon piqué de ${n(ev.joueur)}.`, `${n(ev.joueur)} lève la tête et envoie loin devant.`]));
           return;
         case 'arret':
-          if (m.phase === 'tab') return dire(choisir([`${n(ev.joueur)} détourne la tentative !`, `Arrêté par ${n(ev.joueur)} !`]), true);
-          if (ev.capte) return dire(choisir([`Bien capté par ${n(ev.joueur)}.`, `${n(ev.joueur)} s'interpose et bloque le ballon.`, `Pas de souci pour ${n(ev.joueur)}.`]), true);
-          return dire(choisir([`Parade de ${n(ev.joueur)} !`, `Quel réflexe de ${n(ev.joueur)} !`, `${n(ev.joueur)} repousse !`]), true);
+          if (m.phase === 'tab') return C.dire(ch('tab-arret', [`${n(ev.joueur)} détourne la tentative !`, `Arrêté par ${n(ev.joueur)} !`, `${n(ev.joueur)} a deviné !`]), { important: true, emotion: 0.85, clip: 'arret' });
+          if (ev.capte) {
+            return C.dire(ch('capte', [`Bien capté par ${n(ev.joueur)}.`, `${n(ev.joueur)} s’interpose et bloque le ballon.`, `Pas de souci pour ${n(ev.joueur)}.`, `${n(ev.joueur)} se couche bien.`]), {
+              emotion: 0.4, apres: parfois(0.3) ? ch('capte-cons', ['Il fallait mieux la placer.', 'Pas assez appuyée, cette frappe.', 'Le gardien était bien placé.']) : null,
+            });
+          }
+          return C.dire(ch('parade', [`Parade de ${n(ev.joueur)} !`, `Quel réflexe de ${n(ev.joueur)} !`, `${n(ev.joueur)} repousse !`, `Énorme ${n(ev.joueur)} !`]), {
+            important: true, emotion: 0.85, clip: 'arret',
+            apres: parfois(0.5) ? ch('parade-cons', ['Grosse parade, il a lu la trajectoire jusqu’au bout.', 'Il sauve son équipe, là.', 'Celle-là, elle valait un but.']) : null,
+          });
         case 'poteau':
-          return dire(ev.barre ? choisir(['Sur la barre !!', 'La transversale tremble encore !']) : choisir(['Sur le poteau !!', 'Le poteau sauve le gardien !']), true);
-        case 'geste':
-          if (ev.nom === 'arc-en-ciel') return dire(choisir([`Un arc-en-ciel de ${n(ev.joueur)} !! Le public se lève !`, `Par-dessus la tête ! L'arc-en-ciel de ${n(ev.joueur)} !`, `Quelle audace, ${n(ev.joueur)} ! Un arc-en-ciel !`]), true);
-          return dire(choisir([`Roulette de ${n(ev.joueur)} !`, `${n(ev.joueur)} tourne autour de son adversaire !`, `Superbe roulette de ${n(ev.joueur)}.`]));
+          return C.dire(ev.barre ? ch('barre', ['Sur la barre !!', 'La transversale tremble encore !', 'La barre ! Il n’y avait qu’un centimètre !']) : ch('poteau', ['Sur le poteau !!', 'Le poteau sauve le gardien !', 'Poteau ! Quelle malchance !']), {
+            important: true, emotion: 0.9, clip: ev.barre ? 'barre' : 'poteau', apres: parfois(0.5) ? ch('poteau-cons', ['Le football, c’est une question de centimètres.', 'Il fallait la mettre au fond !', 'Il y avait la place de l’autre côté.']) : null,
+          });
         case 'tacle':
-          if (ev.reussi) return dire(choisir([`Tacle parfait de ${n(ev.joueur)} !`, `${n(ev.joueur)} récupère proprement.`, `Superbe intervention de ${n(ev.joueur)}.`]));
-          return dire(choisir([`${n(ev.joueur)} arrive trop tard…`, `${n(ev.joueur)} manque son tacle.`]));
+          if (ev.reussi) return C.dire(ch('tacle', [`Tacle parfait de ${n(ev.joueur)} !`, `${n(ev.joueur)} récupère proprement.`, `Superbe intervention de ${n(ev.joueur)}.`, `${n(ev.joueur)} glisse et prend tout le ballon.`]), { clip: 'tacle' });
+          return C.dire(ch('tacle-rate', [`${n(ev.joueur)} arrive trop tard…`, `${n(ev.joueur)} manque son tacle.`, `Raté pour ${n(ev.joueur)}, il est au sol.`]));
         case 'vol':
-          return dire(choisir([`${n(ev.joueur)} chipe le ballon à ${n(ev.victime)}.`, `Bien joué ${n(ev.joueur)}, ballon récupéré.`]));
+          return C.dire(ch('vol', [`${n(ev.joueur)} chipe le ballon à ${n(ev.victime)}.`, `Bien joué ${n(ev.joueur)}, ballon récupéré.`, `${n(ev.joueur)} gagne son duel.`]));
+        case 'geste':
+          if (ev.nom === 'arc-en-ciel') return C.dire(ch('arc', [`Un arc-en-ciel de ${n(ev.joueur)} !! Le public se lève !`, `Par-dessus la tête ! L’arc-en-ciel de ${n(ev.joueur)} !`, `Quelle audace, ${n(ev.joueur)} ! Un arc-en-ciel !`]), { important: true, emotion: 0.9, clip: 'arc_en_ciel', apres: parfois(0.5) ? 'Il faut oser faire ça en match !' : null });
+          return C.dire(ch('roulette', [`Roulette de ${n(ev.joueur)} !`, `${n(ev.joueur)} tourne autour de son adversaire !`, `Superbe roulette de ${n(ev.joueur)}.`, `${n(ev.joueur)} efface son vis-à-vis d’une roulette !`]), { emotion: 0.6, clip: 'roulette' });
         case 'but': {
-          const eq = ctx.equipe(ev.equipe);
-          const [s, t] = [m.score[ev.equipe], m.score[1 - ev.equipe]];
-          const etat = s === t ? `${eq.court} égalise !` : s === t + 1 ? `${eq.court} passe devant !` : `${eq.court} creuse l'écart !`;
-          if (ev.csc) return dire(`Contre son camp de ${n(ev.joueur)}… cruel ! ${etat}`, true);
-          const passe = ev.passeur >= 0 ? ` Sur un service de ${n(ev.passeur)}.` : '';
-          return dire(`BUT de ${n(ev.joueur)} !!! ${etat}${passe}`, true);
+          const e = ev.equipe;
+          const [s, t] = [m.score[e], m.score[1 - e]];
+          const etat = s === t ? `${eq(e)} égalise !` : s === t + 1 ? `${eq(e)} passe devant !` : `${eq(e)} creuse l’écart !`;
+          if (ev.csc) return C.dire(`Contre son camp de ${n(ev.joueur)}… cruel ! ${etat}`, { important: true, emotion: 0.8, clip: 'but', apres: 'Ça arrive, mais à ce moment-là, ça fait mal.' });
+          const nb = butsDe(m, ev.joueur);
+          const qui = nb === 2 ? `Et c’est le doublé pour ${n(ev.joueur)} !` : nb === 3 ? `TRIPLÉ !! ${n(ev.joueur)} entre dans l’histoire !` : nb > 3 ? `${n(ev.joueur)} est intenable, c’est son ${nb}e !` : ch('but', [`BUT de ${n(ev.joueur)} !!!`, `GOAAAL ! ${n(ev.joueur)} !`, `C’est au fond ! ${n(ev.joueur)} !`, `Il marque ! ${n(ev.joueur)} !`]);
+          const passe = ev.passeur >= 0 ? ch('passe-dec', [` Sur un service de ${n(ev.passeur)}.`, ` Bien servi par ${n(ev.passeur)}.`, ` Quelle passe de ${n(ev.passeur)} !`]) : '';
+          return C.dire(`${qui} ${etat}${passe}`, {
+            important: true, emotion: 1, clip: 'but',
+            apres: ch('but-cons', ['Quelle finition !', 'La défense a dormi sur ce coup-là.', 'Imparable pour le gardien.', 'Ça, c’est un but de grand joueur.', 'Tout est allé très vite, magnifique.']),
+          });
         }
-        case 'mitemps':
-          return dire(`C'est la pause. ${ctx.equipe(0).court} ${m.score[0]} – ${m.score[1]} ${ctx.equipe(1).court}.`, true);
+        case 'mitemps': {
+          const st = m.stats;
+          const p0 = Math.round((st.possession[0] / Math.max(1, st.possession[0] + st.possession[1])) * 100);
+          const dom = p0 >= 55 ? 0 : p0 <= 45 ? 1 : -1;
+          return C.dire(`C’est la pause. ${eq(0)} ${m.score[0]} – ${m.score[1]} ${eq(1)}.`, {
+            important: true, emotion: 0.5, clip: 'mi_temps',
+            apres: dom >= 0 ? `${eq(dom)} a eu le ballon plus souvent : ${dom === 0 ? p0 : 100 - p0} % de possession.` : 'Un match très équilibré pour l’instant.',
+          });
+        }
         case 'reprise':
-          return dire(choisir(['Les deux équipes reviennent pour la seconde période !', "C'est reparti pour la deuxième mi-temps !"]), true);
+          return C.dire(ch('reprise', ['Les deux équipes reviennent pour la seconde période !', 'C’est reparti pour la deuxième mi-temps !', 'Deuxième mi-temps ! Tout reste à faire.']), { important: true, emotion: 0.5, clip: 'reprise' });
         case 'tab':
-          return dire('Égalité ! Place à la loterie des tirs au but…', true);
+          return C.dire('Égalité ! Place à la loterie des tirs au but…', { important: true, emotion: 0.7, clip: 'tirs_au_but', apres: 'Maintenant, c’est une question de nerfs.' });
         case 'tab-but':
-          return dire(choisir([`${n(ev.joueur)} ne tremble pas !`, `Transformé par ${n(ev.joueur)} !`]), true);
+          return C.dire(ch('tab-but', [`${n(ev.joueur)} ne tremble pas !`, `Transformé par ${n(ev.joueur)} !`, `Dans le coin, ${n(ev.joueur)} !`]), { important: true, emotion: 0.8, clip: 'tab_marque' });
         case 'tab-rate':
-          return dire(choisir([`${n(ev.joueur)} manque le cadre !`, `À côté pour ${n(ev.joueur)}…`]), true);
+          return C.dire(ch('tab-rate', [`${n(ev.joueur)} manque le cadre !`, `À côté pour ${n(ev.joueur)}…`, `Oh non, ${n(ev.joueur)} !`]), { important: true, emotion: 0.8, clip: 'tab_rate' });
         case 'fin': {
           const v = ev.vainqueur;
-          if (v < 0) return dire(`C'est terminé : match nul, ${m.score[0]} partout.`, true);
-          return dire(`C'est terminé ! Victoire de ${ctx.equipe(v).nom}${ev.tab ? ' aux tirs au but' : ''} !`, true);
+          if (v < 0) return C.dire(`C’est terminé : match nul, ${m.score[0]} partout.`, { important: true, emotion: 0.6, clip: 'match_nul', apres: 'Un partage des points logique.' });
+          return C.dire(`C’est terminé ! Victoire de ${ctx.equipe(v).nom}${ev.tab ? ' aux tirs au but' : ''} !`, { important: true, emotion: 0.9, clip: 'victoire', apres: ch('fin-cons', ['Une victoire méritée.', 'Ils ont su faire la différence au bon moment.', 'Quelle soirée pour eux !']) });
         }
         default:
       }
     },
-    arreter() { clearTimeout(minuteur); el.classList.remove('montre'); if (window.speechSynthesis) speechSynthesis.cancel(); },
+    /** Pour les cinématiques : une phrase libre. */
+    dire: (texte, o) => C.dire(texte, o),
+    arreter() { C.arreter(); },
   };
 }

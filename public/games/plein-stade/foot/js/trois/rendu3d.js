@@ -15,6 +15,7 @@
 import * as THREE from '../../../../../vendor/three/three.module.min.js';
 import { creerJoueur, poseDe, poser } from '../../../commun/trois/joueurs3d.js';
 import { creerStade } from './stade3d.js';
+import { creerTrophee, creerFeux } from '../../../commun/trois/fete3d.js';
 
 export { THREE };
 
@@ -172,6 +173,11 @@ export function creerRendu(hote, o) {
   // L'éclair d'une frappe.
   const eclair = new THREE.Sprite(new THREE.SpriteMaterial({ map: texRond('rgba(255,250,220,1)'), transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
   scene.add(eclair);
+  // La fête : le trophée (caché jusqu'à la victoire en Coupe) et les feux d'artifice.
+  const trophee = creerTrophee();
+  trophee.visible = false;
+  scene.add(trophee);
+  const feux = creerFeux(scene);
 
   /* ---------------- La caméra ---------------- */
   const cam = { mode: 'tele', cx: 0, cz: 0, pos: new THREE.Vector3(0, 14, 26), vise: new THREE.Vector3(0, 0, 0), secousse: 0, zoom: 1 };
@@ -198,7 +204,11 @@ export function creerRendu(hote, o) {
     const bx = b.x, bz = -b.y;
     const k = Math.min(1, dt * 3.2);
     let pos, vise;
-    if (cam.mode === 'tab') {
+    if (cam.mode === 'libre' && cam.libre) {
+      // Les cinématiques : la caméra va où on lui dit (repère du moteur → 3D).
+      pos = cam.libre.pos.clone();
+      vise = cam.libre.vise.clone();
+    } else if (cam.mode === 'tab') {
       // Derrière le tireur, un peu de côté : on voit le but, le gardien et la frappe.
       pos = new THREE.Vector3(8.2, 3, 3.4);
       vise = new THREE.Vector3(20, 0.9, -0.5);
@@ -341,6 +351,7 @@ export function creerRendu(hote, o) {
       confettis.material.opacity = Math.min(1, confVie);
       confettis.visible = confVie > 0;
     }
+    feux.maj(dt);
     stade.maj(dt, Math.min(1, excitation));
     renderer.render(scene, camera);
   }
@@ -406,6 +417,20 @@ export function creerRendu(hote, o) {
       return { x: (proj.x * 0.5 + 0.5) * largeur, y: (-proj.y * 0.5 + 0.5) * hauteur, devant: proj.z < 1 };
     },
     camera(mode, saut = false) { if (cam.mode !== mode) { cam.mode = mode; cam.saut = saut; } },
+    /** Une cinématique : la caméra en (x, y, z) du moteur, qui regarde (x, y, z) ; saut : sans glisser. */
+    cadrer(pos, vise, saut = false) {
+      cam.libre = { pos: new THREE.Vector3(pos[0], pos[2], -pos[1]), vise: new THREE.Vector3(vise[0], vise[2], -vise[1]) };
+      if (cam.mode !== 'libre' || saut) cam.saut = saut;
+      cam.mode = 'libre';
+    },
+    /** Le trophée : en (x, y) du moteur, à la hauteur h ; null pour le cacher. */
+    trophee(o) {
+      trophee.visible = !!o;
+      if (o) { trophee.position.set(o.x, o.h, -o.y); trophee.rotation.y += 0.02; trophee.scale.setScalar(o.echelle || 1.2); }
+    },
+    /** Une gerbe de feu d'artifice au-dessus du stade, aux couleurs données. */
+    feuArtifice(couleurs) { feux.lancer((Math.random() - 0.5) * 34, 12 + Math.random() * 6, -12 - Math.random() * 10, couleurs); },
+    confettis(cote, e) { lancerConfettis(cote, e); },
     ecran: stade.ecran || null,
     secouer(f) { cam.secousse = Math.max(cam.secousse, f); },
     exciter(f) { excitation = Math.max(excitation, f); },

@@ -291,6 +291,12 @@ export function poseDe(fig, o, dt) {
   } else if (o.humeur === 'heros') {
     if (vitesse > 1.5) Object.assign(P, { epAz: 1.5, epBz: -1.5, epAx: 0, epBx: 0, coudeA: 0, coudeB: 0, torseZ: Math.sin(o.t * 4) * 0.25 });
     else Object.assign(P, { by: 0.5, hancheA: -0.2, hancheB: -0.2, genouA: 1.75, genouB: 1.75, torse: -0.35, epAz: 2.5, epBz: -2.5, epAx: -0.3, epBx: -0.3, coudeA: -0.4, coudeB: -0.4, tete: -0.4, y: 0 });
+  } else if (o.humeur === 'trophee') {
+    // Il soulève la coupe : les deux bras tendus au-dessus de la tête.
+    Object.assign(P, { epAz: 2.95, epBz: -2.95, epAx: -0.1, epBx: -0.1, coudeA: -0.05, coudeB: -0.05, torse: -0.12, tete: -0.35, y: Math.abs(Math.sin(o.t * 3)) * 0.08 });
+  } else if (o.humeur === 'presente') {
+    // La présentation : droit, les mains derrière le dos, le regard vers la caméra.
+    Object.assign(P, { epAx: 0.35, epBx: 0.35, epAz: 0.12, epBz: -0.12, coudeA: -0.9, coudeB: -0.9, torse: 0, tete: -0.05 });
   } else if (o.humeur === 'decu') {
     Object.assign(P, { tete: 0.55, torse: 0.2, epAz: 0.5, epBz: -0.5, epAx: -0.2, epBx: -0.2, coudeA: -1.9, coudeB: -1.9 });
   }

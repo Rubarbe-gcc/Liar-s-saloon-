@@ -199,6 +199,8 @@ button { font: inherit; color: inherit; }
 }
 .commentaire.montre { opacity: 1; transform: none; }
 .commentaire .micro { margin-right: 8px; }
+.commentaire i { font-style: normal; font-size: .72em; letter-spacing: .14em; text-transform: uppercase; color: var(--doux); margin-right: 6px; }
+.commentaire.cons { border-left-color: var(--bleu); }
 .commentaire b { color: var(--jaune); }
 body.doigt .commentaire { bottom: auto; top: calc(max(10px, env(safe-area-inset-top)) + 44px); max-width: 52vw; font-size: .82em; }
 /* La passe arrive : le rappel de la reprise de volée, au-dessus du receveur. */
@@ -285,6 +287,9 @@ body.doigt .dirige { bottom: max(8px, env(safe-area-inset-bottom)); }
 .rencontre .ligne.perd { opacity: .45; }
 .rencontre .ligne.toi { color: var(--jaune); }
 .rencontre .ligne b { font-family: var(--titre); }
+.tableau.tirage .tour:first-child .ligne { animation: tirage .5s cubic-bezier(.2, 1.4, .4, 1) both; animation-delay: calc(var(--i) * 170ms); }
+.tableau.tirage .tour:not(:first-child) { animation: tirage .5s both; animation-delay: 1.5s; }
+@keyframes tirage { from { opacity: 0; transform: translateX(-24px) scale(.85); } }
 .coupe-trophee { display: flex; justify-content: center; font-size: 64px; filter: drop-shadow(0 6px 10px rgba(0, 0, 0, .5)); }
 .coupe-actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 16px; }
 @media (max-width: 700px) { .tableau { grid-template-columns: repeat(4, minmax(130px, 1fr)); } }

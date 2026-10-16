@@ -14,12 +14,15 @@ import { NIVEAUX } from '../../../../shared/foot/ia.js';
 import { creerCoupe, matchDuJoueur, stadeDuTour, enregistrer, jouerSansMoi, aJouer, avancer, TOURS } from '../../../../shared/foot/coupe.js';
 import { creerRendu, qualite, reglerQualite } from './trois/rendu3d.js';
 import { ecussonSVG, tenues } from '../../commun/ecusson.js';
+import { creerCinematique } from '../../commun/cinematique.js';
+import { intro, miTemps, hommeDuMatch, trophee } from './cinematiques.js';
 import * as saisie from '../../commun/saisie.js';
 import * as son from '../../commun/son.js';
 import * as succes from '../../../../shared/succes.js';
 import * as net from './enligne.js';
 import { creerLissage } from '../../commun/lissage.js';
-import { creerCommentateur, reglage as reglageCommentaires, regler as reglerCommentaires } from './commentaires.js';
+import { creerCommentateur, reglage as reglageCommentaires, regler as reglerCommentaires, REGLAGES as REGLAGES_COMM } from './commentaires.js';
+import { voixDisponible } from '../../commun/commentateur.js';
 
 const $ = (id) => document.getElementById(id);
 const PAS = 1 / FPS;
@@ -134,6 +137,10 @@ function ouvrirEquipes(mode, suite = null) {
 /* Le match                                                            */
 /* ------------------------------------------------------------------ */
 
+const LIEUX = { chaudron: 'au Chaudron', toit: 'sur le Toit', halle: 'à la Halle', plage: 'à la Plage' };
+/** Les mini-cinématiques (avant-match, mi-temps, homme du match, trophée) : par-dessus la 3D. */
+const cine = creerCinematique(document.getElementById('s-match'));
+
 /** Le match en cours : le moteur, la 3D, ce qui est enregistré pour les ralentis. */
 let partie = null;
 let enPause = false;
@@ -204,9 +211,13 @@ function lancerMatch(o) {
   $('aide-tab').classList.add('cache');
   ecranGeant();
   // Le commentateur.
-  const LIEUX = { chaudron: 'au Chaudron', toit: 'sur le Toit', halle: 'à la Halle', plage: 'à la Plage' };
   partie.com = creerCommentateur({ nom: (id) => nomDe(id), equipe: (e) => eqs[e], stade: LIEUX[o.stade] || '', el: $('commentaire') });
   partie.com.debut(m);
+  partie.lieu = LIEUX[o.stade] || '';
+  partie.perf = new Array(10).fill(0);
+  partie.arrets = new Array(10).fill(0);
+  // L'avant-match (on peut le passer, sauf en ligne : il dure autant chez les deux joueurs).
+  cine.lancer(intro(partie), { passable: o.mode !== 'enligne', fin: () => partie?.rendu.camera('tele', true) });
   enPause = false;
   saisie.siJeuEnCours(() => ecran === 'match' && !enPause);
   son.public_(0.15);
@@ -216,6 +227,7 @@ function lancerMatch(o) {
 function arreterMatch() {
   cancelAnimationFrame(raf);
   if (partie?.o.mode === 'enligne') net.finirSession();
+  cine.arreter(false);
   if (partie) { partie.com?.arreter(); partie.rendu.detruire(); partie = null; }
   son.couperPublic();
   $('v-pause').classList.add('cache');
@@ -234,7 +246,8 @@ function boucle(t) {
   const P = partie;
   const dt = Math.min(0.1, Math.max(0, (t - P.dernier) / 1000));
   P.dernier = t;
-  if (!enPause || P.o.mode === 'enligne') {
+  if (cine.actif) { cine.maj(dt); P.acc = 0; }
+  else if (!enPause || P.o.mode === 'enligne') {
     P.acc += dt;
     // En ligne, si l'on est en avance sur l'adversaire, l'horloge ralentit à peine (jusqu'à 8 %) :
     // les deux se recalent sans qu'on sente d'à-coup.
@@ -293,6 +306,14 @@ function reagir(evs) {
   if (!evs.length) return;
   P.rendu.evenements(evs, P.cour);
   for (const ev of evs) {
+    const PERF = { tir: 0.4, arret: 1, vol: 0.5, geste: 0.3, passe: 0.04 };
+    if (P.perf && ev.joueur >= 0) {
+      if (ev.type === 'but' && !ev.csc) P.perf[ev.joueur] += 3;
+      else if (ev.type === 'tacle' && ev.reussi) P.perf[ev.joueur] += 0.6;
+      else if (PERF[ev.type]) P.perf[ev.joueur] += PERF[ev.type];
+      if (ev.type === 'arret') P.arrets[ev.joueur] += 1;
+    }
+    if (P.perf && ev.type === 'but' && ev.passeur >= 0) P.perf[ev.passeur] += 2;
     P.com?.evenement(ev, m);
     switch (ev.type) {
       case 'passe': son.frappe(ev.lob ? 0.45 : 0.28); break;
@@ -322,7 +343,9 @@ function reagir(evs) {
         P.ralenti = { attente: 1.9, film: P.film.slice(-150), t: 0 };
         break;
       }
-      case 'mitemps': son.sifflet(2, true); bandeau('Mi-temps', `${P.eqs[0].court} ${m.score[0]} - ${m.score[1]} ${P.eqs[1].court}`, true); break;
+      case 'geste': if (ev.nom === 'arc-en-ciel') son.acclamation(0.8); break;
+      case 'mitemps': if (P.o.mode !== 'enligne') cine.lancer(miTemps(P), { passable: true, fin: () => { if (partie?.m.phase === 'mitemps') partie.m.t = Math.min(partie.m.t, 30); partie?.rendu.camera('tele', true); } });
+        son.sifflet(2, true); son.acclamation(1); bandeau('Mi-temps', `${P.eqs[0].court} ${m.score[0]} - ${m.score[1]} ${P.eqs[1].court}`, true); break;
       case 'reprise': ecranGeant('2E MI-TEMPS'); break;
       case 'engagement': ecranGeant(); break;
       case 'tab': son.sifflet(2, true); bandeau('Tirs au but', 'Cinq tirs chacun', true); $('tab-score').classList.remove('cache'); ecranGeant('TIRS AU BUT'); break;
@@ -363,13 +386,15 @@ function afficher(dt) {
     }
   }
   $('replay').classList.toggle('cache', !(R && R.attente <= 0 && P.ralenti));
+  const vueCine = cine.actif ? cine.vue() : null;
+  if (vueCine) { P.rendu.afficher(vueCine, dt, 1); return; }
   if (!vue) {
     vue = melanger(P.prec, P.cour, P.acc / (P.periode || PAS));
     if (P.lisse) vue = P.lisse.appliquer(vue, dt);
   }
   const { h, heros } = humeurs(m);
   const enRalenti = !!(P.ralenti && P.ralenti.attente <= 0);
-  P.rendu.camera(m.phase === 'tab' ? 'tab' : enRalenti ? 'ralenti' : m.phase === 'but' ? 'but' : 'tele', enRalenti && R.t < 0.02);
+  if (!cine.actif) P.rendu.camera(m.phase === 'tab' ? 'tab' : enRalenti ? 'ralenti' : m.phase === 'but' ? 'but' : 'tele', enRalenti && R.t < 0.02);
   const actifs = [-1, -1];
   m.equipes.forEach((eq, e) => { if (eq.ctrl === 'humain') actifs[e === P.local ? 0 : 1] = eq.actif; });
   P.rendu.afficher({ ...vue, actifs: enRalenti ? [-1, -1] : actifs, humeurs: enRalenti ? null : h, heros, tab: m.phase === 'tab' }, dt, vitesse);
@@ -428,7 +453,13 @@ function afficher(dt) {
   if (m.phase === 'fin' && P.finVue > 0) {
     P.finVue -= dt;
     // En ligne, on attend que tout soit confirmé : le résultat ne peut plus changer.
-    if (P.finVue <= 0 && (P.o.mode !== 'enligne' || net.toutConfirme())) finDuMatch();
+    if (P.finVue <= 0 && (P.o.mode !== 'enligne' || net.toutConfirme())) {
+      P.finVue = -1;
+      const gagneFinale = P.o.finale && P.m.vainqueur === P.local;
+      const etapes = [...hommeDuMatch(P), ...(gagneFinale ? trophee(P, P.local) : [])];
+      if (etapes.length) cine.lancer(etapes, { passable: true, fin: finDuMatch });
+      else finDuMatch();
+    }
     else if (P.finVue <= 0) P.finVue = 0.05;
   }
   // En ligne : la connexion a lâché, l'adversaire aussi, ou ses touches n'arrivent plus. On le dit (pas d'écran figé muet).
@@ -572,8 +603,17 @@ function brancher() {
   const majSon = () => { $('b-son').textContent = son.estMuet() ? '🔇 Son' : '🔊 Son'; $('b-son').setAttribute('aria-pressed', String(son.estMuet())); };
   $('b-son').addEventListener('click', () => { son.basculerSon(); majSon(); });
   majSon();
-  $('b-commentaires').value = reglageCommentaires;
+  // Les voix du navigateur arrivent parfois un peu après la page : la liste se met à jour.
+  const majComm = () => {
+    $('b-commentaires').innerHTML = REGLAGES_COMM.map(([v, l]) => `<option value="${v}">${v === 'voix' && !voixDisponible() ? 'Commentaires : texte (pas de voix française)' : l}</option>`).join('');
+    $('b-commentaires').value = reglageCommentaires;
+  };
+  majComm();
+  window.speechSynthesis?.addEventListener?.('voiceschanged', majComm);
   $('b-commentaires').addEventListener('change', (e) => reglerCommentaires(e.target.value));
+  $('b-public').innerHTML = son.AMBIANCES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+  $('b-public').value = son.ambiancePublic();
+  $('b-public').addEventListener('change', (e) => { son.reglerPublic(e.target.value); son.reveiller(); son.acclamation(0.5); });
   $('b-qualite').value = qualite();
   $('b-qualite').addEventListener('change', (e) => reglerQualite(e.target.value));
   brancherEquipes();
@@ -646,6 +686,13 @@ function rendreCoupe() {
   }
   html += `<div class="tour"><h4>Vainqueur</h4><div class="coupe-trophee">🏆</div>${c.champion ? `<div class="rencontre${c.champion === c.moi ? ' joueur' : ''}">${ligneCoupe({}, c.champion, '')}</div>` : ''}</div>`;
   $('tableau').innerHTML = html;
+  // Le tirage : la première fois, les équipes arrivent une à une dans le tableau.
+  $('tableau').classList.toggle('tirage', !c.tirageVu);
+  if (!c.tirageVu) {
+    $('tableau').querySelectorAll('.tour:first-child .ligne').forEach((el, i) => el.style.setProperty('--i', i));
+    c.tirageVu = true;
+    garderCoupe();
+  }
   const m = matchDuJoueur(c);
   const adv = m && (m.a === c.moi ? m.b : m.a);
   $('coupe-info').textContent = c.fini
@@ -674,7 +721,7 @@ function jouerCoupe() {
     finirTour();
   };
   lancerMatch({
-    equipes: [c.moi, adv], controles: ['humain', 'ia'], niveaux: [1, c.niveau], minutes: c.minutes, stade: stadeDuTour(c), mode: 'coupe', tab: true,
+    equipes: [c.moi, adv], controles: ['humain', 'ia'], niveaux: [1, c.niveau], minutes: c.minutes, stade: stadeDuTour(c), mode: 'coupe', tab: true, finale: c.tour === 2,
     apres: (res, bouton) => {
       noter(res);
       const gagne = res.vainqueur === 0;
@@ -865,7 +912,7 @@ window.petitPont = {
   partie: () => partie,
   avancer(n = 60, touches = null) {
     toucheForcee = touches;
-    for (let k = 0; k < n && partie; k++) { uneImage(); if (k % 4 === 0 || k === n - 1) afficher(PAS * 4); }
+    for (let k = 0; k < n && partie; k++) { if (cine.actif) cine.maj(PAS); else uneImage(); if (partie && (k % 4 === 0 || k === n - 1)) afficher(PAS * 4); }
     toucheForcee = null;
     return partie && { f: partie.m.f, phase: partie.m.phase, score: partie.m.score };
   },

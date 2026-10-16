@@ -14,6 +14,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Plein Stade">
 <link rel="stylesheet" href="/games/plein-stade/foot/css/foot.css">
+<link rel="stylesheet" href="/games/plein-stade/commun/cinematique.css">
 <script src="/maj.js" defer></script>
 </head>
 <body>
@@ -33,9 +34,8 @@
     <div class="menu-bas">
       <button class="btn fin" id="b-commandes">🎮 Commandes</button>
       <button class="btn fin" id="b-son" aria-pressed="false">🔊 Son</button>
-      <label class="btn fin choix-qualite">🎙️ <select id="b-commentaires" aria-label="Commentaires">
-        <option value="texte">Commentaires</option><option value="voix">Commentaires + voix</option><option value="aucun">Sans commentaires</option>
-      </select></label>
+      <label class="btn fin choix-qualite">🎙️ <select id="b-commentaires" aria-label="Commentaires"></select></label>
+      <label class="btn fin choix-qualite">📣 <select id="b-public" aria-label="Ambiance du public"></select></label>
       <label class="btn fin choix-qualite">✨ <select id="b-qualite" aria-label="Qualité graphique">
         <option value="haute">Haute</option><option value="moyenne">Moyenne</option><option value="basse">Basse</option>
       </select></label>
