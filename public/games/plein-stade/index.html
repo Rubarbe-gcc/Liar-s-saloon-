@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#06121f">
+<meta name="description" content="PLEIN STADE — les sports de l’arcade en 3D : le foot à cinq (Petit Pont) et le basket à trois (Double Pas). En solo, en tournoi et en ligne.">
+<title>Plein Stade</title>
+<link rel="icon" href="/games/plein-stade/icons/icon-192.png">
+<link rel="manifest" href="/games/plein-stade/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/games/plein-stade/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Plein Stade">
+<link rel="stylesheet" href="/games/plein-stade/css/stade.css">
+<script src="/maj.js" defer></script>
+</head>
+<body>
+<div class="fond" aria-hidden="true"><div class="projecteur g"></div><div class="projecteur d"></div><div class="pelouse"></div></div>
+<main class="accueil">
+  <header class="tete">
+    <p class="sur-titre">Les sports de l’arcade</p>
+    <h1 class="logo"><span>PLEIN</span> <span class="or">STADE</span></h1>
+  </header>
+
+  <div class="sports">
+    <a class="sport foot" href="/games/plein-stade/foot/">
+      <span class="vignette"><span class="balle foot" aria-hidden="true"></span></span>
+      <span class="texte">
+        <small>Foot à cinq</small>
+        <b>Petit Pont</b>
+        <span>Seize équipes, la Coupe, les gestes techniques, en ligne avec un ami.</span>
+        <em id="info-foot"></em>
+      </span>
+    </a>
+    <a class="sport basket" href="/games/plein-stade/basket/" id="carte-basket">
+      <span class="vignette"><span class="balle basket" aria-hidden="true"></span></span>
+      <span class="texte">
+        <small>Basket à trois</small>
+        <b>Double Pas</b>
+        <span>Trois contre trois sur tout le terrain : dunks, tirs à trois points, contres.</span>
+        <em id="info-basket"></em>
+      </span>
+    </a>
+    <div class="sport boxe bientot" aria-disabled="true">
+      <span class="vignette"><span class="gant" aria-hidden="true">🥊</span></span>
+      <span class="texte">
+        <small>Boxe</small>
+        <b>Crochet</b>
+        <span>Bientôt sur le ring.</span>
+        <em>Bientôt</em>
+      </span>
+    </div>
+  </div>
+
+  <a class="retour" href="/">‹ Retour à l’arcade</a>
+</main>
+<script type="module" src="/games/plein-stade/js/accueil.js"></script>
+</body>
+</html>

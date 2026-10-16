@@ -1,0 +1,66 @@
+/* PLEIN STADE — l'accueil de l'appli : le choix du sport, la nuit, sous les projecteurs. */
+
+:root {
+  --nuit: #06121f;
+  --nuit2: #0c2236;
+  --jaune: #ffd23f;
+  --texte: #f4f8ff;
+  --doux: #9fb4c8;
+  --police: "Bahnschrift", "Arial Narrow", "Roboto Condensed", system-ui, sans-serif;
+  --titre: "Arial Black", "Bahnschrift", Impact, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; background: var(--nuit); color: var(--texte); font-family: var(--police); }
+
+.fond { position: fixed; inset: 0; z-index: 0; overflow: hidden; background: radial-gradient(130% 90% at 50% 0%, #143a5c 0%, var(--nuit) 62%); }
+.projecteur { position: absolute; top: -12%; width: 60vmax; height: 90vmax; background: linear-gradient(180deg, rgba(255, 250, 220, .2), transparent 70%); filter: blur(10px); }
+.projecteur.g { left: -18vmax; transform: rotate(-24deg); transform-origin: top; }
+.projecteur.d { right: -18vmax; transform: rotate(24deg); transform-origin: top; }
+.pelouse { position: absolute; left: -20%; right: -20%; bottom: -12%; height: 46%; background: repeating-linear-gradient(90deg, #1b7a37 0 9%, #22903f 9% 18%); transform: perspective(500px) rotateX(58deg); transform-origin: bottom; opacity: .5; -webkit-mask-image: linear-gradient(to top, #000 30%, transparent); mask-image: linear-gradient(to top, #000 30%, transparent); }
+
+.accueil { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; padding: max(24px, env(safe-area-inset-top)) 16px max(24px, env(safe-area-inset-bottom)); }
+.tete { text-align: center; }
+.sur-titre { margin: 0 0 4px; color: var(--doux); letter-spacing: .35em; text-transform: uppercase; font-size: .8em; }
+.logo { margin: 0; font-family: var(--titre); font-style: italic; font-size: clamp(44px, 10vw, 92px); line-height: .9; letter-spacing: -.02em; text-shadow: 0 5px 0 #0c2236, 0 0 40px rgba(58, 168, 255, .35); }
+.logo .or { color: var(--jaune); text-shadow: 0 5px 0 #6a4a00, 0 0 40px rgba(255, 210, 63, .35); }
+
+.sports { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; width: min(1000px, 100%); }
+.sport {
+  position: relative; display: flex; flex-direction: column; overflow: hidden; border-radius: 12px; text-decoration: none; color: inherit;
+  background: linear-gradient(180deg, #12304a, #0a1c2c); box-shadow: 0 0 0 2px rgba(255, 255, 255, .08), 0 14px 30px rgba(0, 0, 0, .45);
+  transition: transform .15s, box-shadow .15s;
+}
+.sport:not(.bientot):hover, .sport:not(.bientot):focus-visible { transform: translateY(-4px); box-shadow: 0 0 0 3px var(--jaune), 0 18px 36px rgba(0, 0, 0, .5); outline: none; }
+.sport .vignette { position: relative; height: 150px; display: grid; place-items: center; overflow: hidden; }
+.sport.foot .vignette { background: repeating-linear-gradient(90deg, #1f8a3e 0 22px, #27a049 22px 44px); }
+.sport.basket .vignette { background: repeating-linear-gradient(90deg, #c8955a 0 14px, #c08a50 14px 28px); }
+.sport.boxe .vignette { background: radial-gradient(circle at 50% 120%, #b52b3a, #3a0b14); }
+.sport .vignette::after { content: ''; position: absolute; inset: auto 0 0; height: 50%; background: linear-gradient(transparent, rgba(6, 18, 31, .7)); }
+.balle { width: 92px; height: 92px; border-radius: 50%; position: relative; z-index: 1; box-shadow: 0 12px 18px rgba(0, 0, 0, .4); animation: rebond 1.8s cubic-bezier(.3, 0, .4, 1) infinite; }
+.balle.foot { background: radial-gradient(circle at 35% 30%, #fff 0 30%, #d8dde3 60%, #9aa4ae 100%); }
+.balle.foot::after { content: ''; position: absolute; inset: 32%; background: #1a1a1a; clip-path: polygon(50% 0, 100% 38%, 82% 100%, 18% 100%, 0 38%); }
+.balle.basket { background: radial-gradient(circle at 35% 30%, #ffb070 0, #f07a28 45%, #b24a10 100%); }
+.balle.basket::before, .balle.basket::after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 3px solid #2a1408; }
+.balle.basket::before { clip-path: inset(0 47% 0 47%); border-radius: 0; border: 0; background: #2a1408; }
+.balle.basket::after { border-color: transparent #2a1408; transform: scaleX(.55); }
+.gant { font-size: 72px; position: relative; z-index: 1; filter: grayscale(.4); }
+@keyframes rebond { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-22px); } }
+.sport .texte { display: grid; gap: 4px; padding: 14px 16px 18px; }
+.sport small { color: var(--doux); text-transform: uppercase; letter-spacing: .22em; font-size: .72em; }
+.sport b { font-family: var(--titre); font-style: italic; text-transform: uppercase; font-size: 1.6em; color: var(--jaune); }
+.sport .texte > span { color: #dbe6f2; font-size: .92em; line-height: 1.35; }
+.sport em { font-style: normal; font-weight: 800; color: #c6ff3a; font-size: .85em; min-height: 1em; }
+.sport.bientot { opacity: .55; cursor: default; }
+.sport.bientot em { color: var(--doux); }
+
+.retour { color: var(--doux); text-decoration: none; }
+.retour:hover { color: var(--texte); }
+
+@media (max-width: 760px) {
+  .sports { grid-template-columns: 1fr; }
+  .sport { flex-direction: row; }
+  .sport .vignette { height: auto; min-height: 110px; width: 120px; flex: none; }
+  .balle { width: 64px; height: 64px; }
+  .gant { font-size: 50px; }
+}
+@media (prefers-reduced-motion: reduce) { .balle { animation: none; } }

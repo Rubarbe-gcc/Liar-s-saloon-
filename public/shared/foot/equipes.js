@@ -1,10 +1,12 @@
 /**
- * PETIT PONT — les dix équipes (toutes inventées, villes comprises).
+ * PETIT PONT — les seize équipes (toutes inventées, villes comprises).
  *
  * Chaque équipe a ses couleurs (maillot, short, chaussettes, et une tenue de
  * rechange quand les deux se ressemblent trop), son écusson (dessiné par le
  * code : voir games/petit-pont/js/ecusson.js), cinq joueurs nommés, ses notes
  * sur 100 et un style de jeu que l'ordinateur respecte (shared/foot/ia.js).
+ *
+ * Seize équipes en tout (six ajoutées quand le foot est entré dans PLEIN STADE).
  *
  * Les notes : vitesse, tir, passe (et conduite de balle), défense, gardien.
  * Un joueur part des notes de son équipe, ajustées selon son poste ; la
@@ -27,6 +29,8 @@
  *   bloc     : on défend bas et serré, on repart en contre
  *   pressing : on presse haut, tout le temps
  *   long     : de longs ballons, par-dessus les lignes
+ *   direct   : vers l'avant tout de suite, le moins de passes possible
+ *   contrepress : le ballon perdu, on le reprend aussitôt, à deux, très haut
  */
 export const STYLES = {
   court: { nom: 'Jeu court', passe: 0.25, progres: 0.7, tir: 1.12, dribble: 0.85, lob: 0.4, pressing: 0.5, ligne: 0, largeur: 0.9, tacle: 0.5 },
@@ -39,6 +43,8 @@ export const STYLES = {
   bloc: { nom: 'Bloc bas', passe: 0.05, progres: 1.2, tir: 1, dribble: 0.95, lob: 1, pressing: 0.3, ligne: -2.5, largeur: 0.85, tacle: 0.6 },
   pressing: { nom: 'Pressing haut', passe: 0, progres: 1.1, tir: 1, dribble: 1, lob: 0.8, pressing: 1, ligne: 3, largeur: 1, tacle: 0.85 },
   long: { nom: 'Jeu long', passe: 0, progres: 1.35, tir: 1, dribble: 0.9, lob: 1.8, pressing: 0.45, ligne: -1, largeur: 1.1, tacle: 0.6 },
+  direct: { nom: 'Jeu direct', passe: -0.02, progres: 1.7, tir: 0.95, dribble: 0.95, lob: 1.1, pressing: 0.5, ligne: 0.5, largeur: 1, tacle: 0.6 },
+  contrepress: { nom: 'Contre-pressing', passe: 0.05, progres: 1.1, tir: 1, dribble: 1, lob: 0.7, pressing: 0.6, ligne: 1.5, largeur: 0.95, tacle: 0.8, contre: true },
 };
 
 /** Les postes : G (gardien), D (défenseur), M (milieu, deux), A (attaquant). */
@@ -162,6 +168,72 @@ export const EQUIPES = [
     style: 'long',
     notes: { vitesse: 83, tir: 81, passe: 81, defense: 78, gardien: 77 },
     joueurs: [j('Clément Aurier', 1), j('Hector Balmain', 4), j('Silvio Marchal', 8), j('Ibrahim Sorel', 10), j('Nils Ambrose', 9, 'tir')],
+  },
+  {
+    id: 'fournaise', nom: 'Les Braises de Fournaise', court: 'Fournaise', abr: 'BRF', ville: 'Fournaise',
+    devise: 'Perdre le ballon ? Juste le temps de le reprendre.',
+    maillot: { fond: '#d7263d', motif: 'uni', motifC: '#141414', short: '#141414', bas: '#d7263d', num: '#ffffff' },
+    exterieur: { fond: '#141414', motif: 'bande', motifC: '#d7263d', short: '#141414', bas: '#141414', num: '#ff8a3d' },
+    gardien: '#30d5c8',
+    ecusson: { forme: 'bouclier', fond: '#141414', fond2: '#d7263d', motif: 'chevron', symbole: 'flamme', symboleC: '#ff8a3d', bord: '#d7263d' },
+    style: 'contrepress',
+    notes: { vitesse: 84, tir: 78, passe: 77, defense: 82, gardien: 76 },
+    joueurs: [j('Tristan Brasier', 1), j('Kofi Mensah-Ardent', 5), j('Valentin Escarbille', 6, 'defense'), j('Ludovic Tison', 8), j('Rafael Fumerol', 9)],
+  },
+  {
+    id: 'port-ancre', nom: 'Racing Port-Ancre', court: 'Port-Ancre', abr: 'RPA', ville: 'Port-Ancre',
+    devise: 'Jetez l’ancre, on s’occupe du reste.',
+    maillot: { fond: '#0b5563', motif: 'rayures', motifC: '#f28c28', short: '#0b5563', bas: '#f28c28', num: '#ffffff' },
+    exterieur: { fond: '#f28c28', motif: 'uni', motifC: '#0b5563', short: '#f28c28', bas: '#0b5563', num: '#0b5563' },
+    gardien: '#e9ff70',
+    ecusson: { forme: 'rond', fond: '#0b5563', fond2: '#0e6f80', motif: 'uni', symbole: 'ancre', symboleC: '#f28c28', bord: '#f28c28' },
+    style: 'long',
+    notes: { vitesse: 80, tir: 81, passe: 80, defense: 79, gardien: 79 },
+    joueurs: [j('Matthias Quillec', 1), j('Abel Carène', 4), j('Sohan Bastingue', 7), j('Pierrick Amarre', 10, 'passe'), j('Dario Spinnaker', 9)],
+  },
+  {
+    id: 'rouages', nom: 'Union des Rouages', court: 'Les Rouages', abr: 'UDR', ville: 'Engrenay',
+    devise: 'Chaque dent compte.',
+    maillot: { fond: '#2d2f33', motif: 'bande', motifC: '#ffcc00', short: '#2d2f33', bas: '#ffcc00', num: '#ffcc00' },
+    exterieur: { fond: '#ffcc00', motif: 'uni', motifC: '#2d2f33', short: '#2d2f33', bas: '#ffcc00', num: '#2d2f33' },
+    gardien: '#ff6fd8',
+    ecusson: { forme: 'hexagone', fond: '#2d2f33', fond2: '#45484f', motif: 'croix', symbole: 'roue', symboleC: '#ffcc00', bord: '#ffcc00' },
+    style: 'direct',
+    notes: { vitesse: 83, tir: 82, passe: 76, defense: 79, gardien: 77 },
+    joueurs: [j('Gustave Pignon', 1), j('Marius Boulon', 3), j('Ilan Crémaillère', 6), j('Achille Piston', 8), j('Yoann Bielle', 9, 'vitesse')],
+  },
+  {
+    id: 'tour-blanche', nom: 'Tour-Blanche FC', court: 'Tour-Blanche', abr: 'TBF', ville: 'Tour-Blanche',
+    devise: 'Nos murs ne tombent pas.',
+    maillot: { fond: '#f4f1ea', motif: 'demi', motifC: '#a4161a', short: '#a4161a', bas: '#f4f1ea', num: '#a4161a' },
+    exterieur: { fond: '#a4161a', motif: 'uni', motifC: '#f4f1ea', short: '#a4161a', bas: '#a4161a', num: '#f4f1ea' },
+    gardien: '#2bd17e',
+    ecusson: { forme: 'blason', fond: '#f4f1ea', fond2: '#a4161a', motif: 'demi', symbole: 'tour', symboleC: '#1f1f1f', bord: '#a4161a' },
+    style: 'bloc',
+    notes: { vitesse: 76, tir: 77, passe: 79, defense: 84, gardien: 83 },
+    joueurs: [j('Baudouin Créneau', 1, 'gardien'), j('Edgar Mâchicoulis', 2), j('Firmin Herse', 5), j('Lazare Donjon', 8), j('Côme Bastion', 9)],
+  },
+  {
+    id: 'plume-haute', nom: 'Envol de Plume-Haute', court: 'Plume-Haute', abr: 'EPH', ville: 'Plume-Haute',
+    devise: 'On vole le ballon, puis on s’envole.',
+    maillot: { fond: '#ff5d8f', motif: 'cerceaux', motifC: '#1d2d50', short: '#1d2d50', bas: '#ff5d8f', num: '#ffffff' },
+    exterieur: { fond: '#1d2d50', motif: 'uni', motifC: '#ff5d8f', short: '#1d2d50', bas: '#1d2d50', num: '#ff5d8f' },
+    gardien: '#ffd400',
+    ecusson: { forme: 'losange', fond: '#1d2d50', fond2: '#ff5d8f', motif: 'chevron', symbole: 'aile', symboleC: '#ffffff', bord: '#ff5d8f' },
+    style: 'contrepress',
+    notes: { vitesse: 86, tir: 78, passe: 80, defense: 78, gardien: 75 },
+    joueurs: [j('Séraphin Duvet', 1), j('Noé Rémige', 4), j('Jules Ailette', 7, 'vitesse'), j('Eliott Pennon', 10), j('Aymeric Rapace', 11)],
+  },
+  {
+    id: 'vif-argent', nom: 'Flèche de Vif-Argent', court: 'Vif-Argent', abr: 'FVA', ville: 'Vif-Argent',
+    devise: 'Le plus court chemin vers le but : tout droit.',
+    maillot: { fond: '#b8c0cc', motif: 'bande', motifC: '#2b59ff', short: '#2b59ff', bas: '#b8c0cc', num: '#14204a' },
+    exterieur: { fond: '#14204a', motif: 'uni', motifC: '#2b59ff', short: '#14204a', bas: '#14204a', num: '#b8c0cc' },
+    gardien: '#ff7a1a',
+    ecusson: { forme: 'bouclier', fond: '#14204a', fond2: '#2b59ff', motif: 'bande', symbole: 'fleche', symboleC: '#e6ebf2', bord: '#b8c0cc' },
+    style: 'direct',
+    notes: { vitesse: 87, tir: 80, passe: 77, defense: 77, gardien: 76 },
+    joueurs: [j('Axel Mercurin', 1), j('Timéo Argentan', 3), j('Ruben Fulgor', 8), j('Lisandro Vélocé', 10), j('Sacha Comète', 9, 'tir')],
   },
 ];
 

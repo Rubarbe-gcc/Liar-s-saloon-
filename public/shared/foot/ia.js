@@ -419,13 +419,14 @@ export function decider(m, e, cons, traj) {
   const presseurs = [];
   const humainPresse = humain && humain.i > 0 && dist(humain.x, humain.y, porteur.x, porteur.y) < 3.2;
   if (restants.length && !humainPresse) presseurs.push(restants.shift());
-  if (restants.length && (eq.pressing > 0 || (st.pressing > 0.8 && porteur.x * s < 6))) presseurs.push(restants.shift());
+  const contre = st.contre && eq.contre > 0;
+  if (restants.length && (eq.pressing > 0 || contre || (st.pressing > 0.8 && porteur.x * s < 6))) presseurs.push(restants.shift());
   const dangerBut = dist(porteur.x, porteur.y, gx, 0);
   for (const p of presseurs) {
     const d = dist(p.x, p.y, porteur.x, porteur.y);
     // Il se place entre le porteur et le but, puis vient au contact (plus ou moins vite selon le style).
     const ux = (gx - porteur.x) / Math.max(0.5, dangerBut), uy = -porteur.y / Math.max(0.5, dangerBut);
-    const engage = st.pressing > 0.5 || dangerBut < 15 || p !== presseurs[0];
+    const engage = st.pressing > 0.5 || contre || dangerBut < 15 || p !== presseurs[0];
     const ecart = engage ? 0.25 : 2.2;
     const c = vers(p, b.x + ux * ecart, b.y + uy * ecart, engage && d > 2.5, 0.05);
     // Le tacle glissé : bien placé, face au ballon, et l'envie (le style, le niveau).

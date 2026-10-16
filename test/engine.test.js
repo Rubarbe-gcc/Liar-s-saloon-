@@ -515,6 +515,7 @@ test('une partie en ligne se joue de bout en bout contre le vrai serveur', async
       '/games/zenith/manifest.webmanifest': '/games/zenith/',
       '/games/echo/manifest.webmanifest': '/games/echo/',
       '/games/brasier/manifest.webmanifest': '/games/brasier/',
+      '/games/plein-stade/manifest.webmanifest': '/games/plein-stade/',
       '/games/petit-pont/manifest.webmanifest': '/games/petit-pont/',
     };
 
@@ -550,6 +551,7 @@ test('une partie en ligne se joue de bout en bout contre le vrai serveur', async
       '/games/zenith/icons/apple-touch-icon.png',
       '/games/echo/icons/apple-touch-icon.png',
       '/games/brasier/icons/apple-touch-icon.png',
+      '/games/plein-stade/icons/apple-touch-icon.png',
       '/games/petit-pont/icons/apple-touch-icon.png',
     ]) {
       assert.equal((await fetch(`${base}${apple}`)).status, 200, `${apple} introuvable`);
@@ -571,7 +573,7 @@ test('une partie en ligne se joue de bout en bout contre le vrai serveur', async
   });
 
   await t.test('les pages declarent de quoi s\'installer sur un telephone', async () => {
-    for (const page of ['/', '/games/liars-saloon/', '/games/zenith/', '/games/echo/', '/games/brasier/', '/games/petit-pont/']) {
+    for (const page of ['/', '/games/liars-saloon/', '/games/zenith/', '/games/echo/', '/games/brasier/', '/games/plein-stade/', '/games/plein-stade/foot/', '/games/petit-pont/']) {
       const html = await (await fetch(`${base}${page}`)).text();
       assert.match(html, /<link rel="manifest"/, `${page} ne declare pas de manifeste`);
       assert.match(html, /apple-touch-icon/, `${page} n'a pas d'icone iOS`);

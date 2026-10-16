@@ -56,6 +56,21 @@ function symbole(nom, c, fond) {
     case 'lune': return `<path d="M60 30 A30 30 0 1 0 72 82 A24 24 0 1 1 60 30 Z" fill="${c}" ${contour}/>`;
     case 'mouette': return `<path d="M16 54 Q32 40 50 60 Q68 40 84 54 Q68 50 52 70 L50 74 L48 70 Q32 50 16 54 Z" fill="${c}" ${contour}/>`;
     case 'feuille': return `<path d="M50 26 Q80 50 52 94 Q20 54 50 26 Z" fill="${c}" ${contour}/><path d="M50 34 Q54 62 52 90" stroke="${fond}" stroke-width="2.5" fill="none"/>`;
+    case 'flamme': return `<path d="M50 24 C62 42 74 50 68 70 C65 83 57 90 50 90 C39 90 30 81 31 68 C32 57 41 53 43 42 C47 51 52 53 54 48 C57 41 53 33 50 24 Z" fill="${c}" ${contour}/><path d="M50 58 C55 66 60 70 57 79 C55 84 52 86 50 86 C46 86 42 82 43 76 C44 71 48 69 50 58 Z" fill="${fond}" opacity=".55"/>`;
+    case 'ancre': return `<circle cx="50" cy="31" r="7" fill="none" stroke="${c}" stroke-width="5"/><path d="M46 38 H54 V80 Q66 78 71 66 L64 68 L74 56 L79 71 L73 69 Q67 88 50 90 Q33 88 27 69 L21 71 L26 56 L36 68 L29 66 Q34 78 46 80 Z M38 46 H62 V53 H38 Z" fill="${c}" ${contour}/>`;
+    case 'roue': {
+      let d = '';
+      for (let k = 0; k < 16; k++) {
+        const a = (k * Math.PI) / 8;
+        const r = k % 2 ? 22 : 30;
+        const a1 = a - Math.PI / 16, a2 = a + Math.PI / 16;
+        d += `${k ? 'L' : 'M'}${(50 + Math.cos(a1) * r).toFixed(1)} ${(60 + Math.sin(a1) * r).toFixed(1)} L${(50 + Math.cos(a2) * r).toFixed(1)} ${(60 + Math.sin(a2) * r).toFixed(1)} `;
+      }
+      return `<path d="${d}Z" fill="${c}" ${contour}/><circle cx="50" cy="60" r="9" fill="${fond}"/>`;
+    }
+    case 'tour': return `<path d="M30 90 V48 H36 V38 H44 V46 H47 V38 H53 V46 H56 V38 H64 V48 H70 V90 H57 V76 Q50 66 43 76 V90 Z" fill="${c}" ${contour}/><rect x="46" y="54" width="8" height="10" rx="4" fill="${fond}"/>`;
+    case 'aile': return `<path d="M20 70 Q26 42 60 34 Q78 31 84 40 Q71 42 63 47 Q78 47 82 54 Q67 56 59 60 Q71 62 73 69 Q56 72 45 78 Q31 83 20 70 Z" fill="${c}" ${contour}/>`;
+    case 'fleche': return `<path d="M26 86 L58 54 L50 52 L76 30 L72 58 L66 50 L34 92 Z" fill="${c}" ${contour}/>`;
     case 'couronne': return `<path d="M24 80 V46 L37 60 L50 38 L63 60 L76 46 V80 Z" fill="${c}" ${contour}/><circle cx="24" cy="44" r="4" fill="${c}"/><circle cx="50" cy="36" r="4" fill="${c}"/><circle cx="76" cy="44" r="4" fill="${c}"/>`;
     default: return '';
   }

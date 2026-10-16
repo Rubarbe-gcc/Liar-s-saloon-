@@ -60,7 +60,7 @@ export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['hum
     f: 0, alea: (graine >>> 0) || 1,
     phase: 'engagement', t: ENGAGEMENT, mi: 1, chrono: 0, duree: Math.round(minutes * 60 * FPS),
     tabSiNul: !!tab, score: [0, 0], engage: 0, premierEngage: 0,
-    equipes: [0, 1].map((e) => ({ id: equipes[e], style: EQUIPE[equipes[e]].style, sens: e === 0 ? 1 : -1, ctrl: controles[e], niveau: niveaux[e] ?? 1, actif: -1, pressing: 0, auto: 0 })),
+    equipes: [0, 1].map((e) => ({ id: equipes[e], style: EQUIPE[equipes[e]].style, sens: e === 0 ? 1 : -1, ctrl: controles[e], niveau: niveaux[e] ?? 1, actif: -1, pressing: 0, auto: 0, contre: 0 })),
     joueurs: [],
     ballon: { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, porteur: -1, dernier: -1, passeur: -1, cible: -1, tireur: -1, tir: null, dansBut: false, guide: false, arc: 0 },
     prec: [0, 0],
@@ -168,7 +168,7 @@ function jouer(m, k, ap, rel, evs) {
     // Plus de ballon (chipé, taclé…) : plus de passe ni de frappe en préparation.
     else { p.charge = 0; p.chargeP = 0; if (p.gesteType === 1) p.geste = 0; }
   }
-  for (const eq of m.equipes) { if (eq.pressing > 0) eq.pressing -= 1; if (eq.auto > 0) eq.auto -= 1; }
+  for (const eq of m.equipes) { if (eq.pressing > 0) eq.pressing -= 1; if (eq.auto > 0) eq.auto -= 1; if (eq.contre > 0) eq.contre -= 1; }
 
   const traj = b.porteur < 0 ? trajectoire(b) : null;
   const cons = new Array(10).fill(null);
@@ -837,6 +837,8 @@ function prendre(m, p, mains, evs) {
   const passeur = b.cible === p.id ? b.passeur : -1;
   if (passeur >= 0 && passeur !== p.id && m.joueurs[passeur].e === p.e) m.dernierePasse = { de: passeur, a: p.id, f: m.f };
   const recupere = b.dernier >= 0 && m.joueurs[b.dernier].e !== p.e;
+  // L'équipe qui vient de perdre le ballon : trois secondes pour le contre-pressing (si c'est son style).
+  if (recupere) m.equipes[1 - p.e].contre = 180;
   b.porteur = p.id; b.vx = 0; b.vy = 0; b.vz = 0;
   b.tir = null; b.cible = -1; b.passeur = -1; b.tireur = -1; b.dernier = p.id;
   p.recu = 0; p.dec = 3; p.charge = 0; p.chargeP = 0;

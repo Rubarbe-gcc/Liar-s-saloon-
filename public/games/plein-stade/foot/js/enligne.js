@@ -11,9 +11,9 @@
  * le stade choisi par l'hôte. Le serveur ne fait que relayer (server/foot.js).
  */
 
-import { creerConnexion } from '../../../shared/connexion.js';
-import { creerSession } from '../../../shared/rollback.js';
-import { pas, empreinte } from '../../../shared/foot/match.js';
+import { creerConnexion } from '../../../../shared/connexion.js';
+import { creerSession } from '../../../../shared/rollback.js';
+import { pas, empreinte } from '../../../../shared/foot/match.js';
 
 /* ---------------- Le ping, et le délai de nos touches ---------------- */
 

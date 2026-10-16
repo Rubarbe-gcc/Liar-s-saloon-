@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v130';
+const VERSION = 'v131';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -204,20 +204,23 @@ const SHELL = [
   '/shared/street/replay.js',
   '/shared/street/rollback.js',
   '/shared/rollback.js',
-  '/games/petit-pont/',
-  '/games/petit-pont/manifest.webmanifest',
-  '/games/petit-pont/css/foot.css',
-  '/games/petit-pont/js/main.js',
-  '/games/petit-pont/js/ecusson.js',
-  '/games/petit-pont/js/saisie.js',
-  '/games/petit-pont/js/son.js',
-  '/games/petit-pont/js/enligne.js',
-  '/games/petit-pont/js/commentaires.js',
-  '/games/petit-pont/js/lissage.js',
-  '/games/petit-pont/js/trois/rendu3d.js',
-  '/games/petit-pont/js/trois/joueurs3d.js',
-  '/games/petit-pont/js/trois/stade3d.js',
-  '/games/petit-pont/icons/icon-192.png',
+  '/games/plein-stade/',
+  '/games/plein-stade/manifest.webmanifest',
+  '/games/plein-stade/css/stade.css',
+  '/games/plein-stade/js/accueil.js',
+  '/games/plein-stade/icons/icon-192.png',
+  '/games/plein-stade/commun/ecusson.js',
+  '/games/plein-stade/commun/saisie.js',
+  '/games/plein-stade/commun/son.js',
+  '/games/plein-stade/commun/lissage.js',
+  '/games/plein-stade/commun/trois/joueurs3d.js',
+  '/games/plein-stade/foot/',
+  '/games/plein-stade/foot/css/foot.css',
+  '/games/plein-stade/foot/js/main.js',
+  '/games/plein-stade/foot/js/enligne.js',
+  '/games/plein-stade/foot/js/commentaires.js',
+  '/games/plein-stade/foot/js/trois/rendu3d.js',
+  '/games/plein-stade/foot/js/trois/stade3d.js',
   '/shared/foot/terrain.js',
   '/shared/foot/equipes.js',
   '/shared/foot/ia.js',

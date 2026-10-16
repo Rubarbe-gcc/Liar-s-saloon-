@@ -12,8 +12,8 @@
  * Repère : moteur (x, y, z) → 3D (x, z, -y).
  */
 
-import * as THREE from '../../../../vendor/three/three.module.min.js';
-import { creerJoueur, poseDe, poser } from './joueurs3d.js';
+import * as THREE from '../../../../../vendor/three/three.module.min.js';
+import { creerJoueur, poseDe, poser } from '../../../commun/trois/joueurs3d.js';
 import { creerStade } from './stade3d.js';
 
 export { THREE };

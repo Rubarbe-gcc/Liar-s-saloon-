@@ -7,18 +7,18 @@
  * la 3D (trois/rendu3d.js) ne fait que le montrer.
  */
 
-import { EQUIPES, EQUIPE, STADES, STYLES, noteGenerale } from '../../../shared/foot/equipes.js';
-import { creerMatch, pas, chronoTexte, acteursTab, FPS } from '../../../shared/foot/match.js';
-import { DUREE_ROULETTE } from '../../../shared/foot/terrain.js';
-import { NIVEAUX } from '../../../shared/foot/ia.js';
-import { creerCoupe, matchDuJoueur, stadeDuTour, enregistrer, jouerSansMoi, aJouer, avancer, TOURS } from '../../../shared/foot/coupe.js';
+import { EQUIPES, EQUIPE, STADES, STYLES, noteGenerale } from '../../../../shared/foot/equipes.js';
+import { creerMatch, pas, chronoTexte, acteursTab, FPS } from '../../../../shared/foot/match.js';
+import { DUREE_ROULETTE } from '../../../../shared/foot/terrain.js';
+import { NIVEAUX } from '../../../../shared/foot/ia.js';
+import { creerCoupe, matchDuJoueur, stadeDuTour, enregistrer, jouerSansMoi, aJouer, avancer, TOURS } from '../../../../shared/foot/coupe.js';
 import { creerRendu, qualite, reglerQualite } from './trois/rendu3d.js';
-import { ecussonSVG, tenues } from './ecusson.js';
-import * as saisie from './saisie.js';
-import * as son from './son.js';
-import * as succes from '../../../shared/succes.js';
+import { ecussonSVG, tenues } from '../../commun/ecusson.js';
+import * as saisie from '../../commun/saisie.js';
+import * as son from '../../commun/son.js';
+import * as succes from '../../../../shared/succes.js';
 import * as net from './enligne.js';
-import { creerLissage } from './lissage.js';
+import { creerLissage } from '../../commun/lissage.js';
 import { creerCommentateur, reglage as reglageCommentaires, regler as reglerCommentaires } from './commentaires.js';
 
 const $ = (id) => document.getElementById(id);

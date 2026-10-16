@@ -30,7 +30,8 @@ export const JEUX = {
   street: { nom: 'Street Combat', glyphe: '🥊', url: '/games/street-combat/' },
   echo: { nom: 'ÉCHO', glyphe: '🎤', url: '/games/echo/' },
   velours: { nom: 'Le Velours Noir', glyphe: '🎰', url: '/games/velours-noir/' },
-  petitpont: { nom: 'Petit Pont', glyphe: '⚽', url: '/games/petit-pont/' },
+  // La clé « petitpont » date du foot seul : on la garde (succès et visites déjà gagnés), c'est l'appli PLEIN STADE.
+  petitpont: { nom: 'Plein Stade', glyphe: '🏟️', url: '/games/plein-stade/' },
 };
 /** Les jeux qu'il faut avoir ouverts pour le succès « Touche-à-tout ». */
 const A_VISITER = Object.keys(JEUX).filter((j) => j !== 'arcade');

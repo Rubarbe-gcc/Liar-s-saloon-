@@ -13,8 +13,8 @@
  * le fond de l'écran est vers -z).
  */
 
-import * as THREE from '../../../../vendor/three/three.module.min.js';
-import { ecussonImage, nuance } from '../ecusson.js';
+import * as THREE from '../../../../../vendor/three/three.module.min.js';
+import { ecussonImage, nuance } from '../../../commun/ecusson.js';
 
 const L = 20, W = 10;
 

@@ -13,8 +13,8 @@ import { EQUIPES, EQUIPE, STYLES, STADES, notesJoueur } from '../public/shared/f
 import { creerCoupe, matchDuJoueur, enregistrer, jouerSansMoi, aJouer, avancer } from '../public/shared/foot/coupe.js';
 import { creerSession, FENETRE } from '../public/shared/rollback.js';
 import * as foot from '../server/foot.js';
-import { creerLissage } from '../public/games/petit-pont/js/lissage.js';
-import { delaiSelonPing, REGLAGES } from '../public/games/petit-pont/js/enligne.js';
+import { creerLissage } from '../public/games/plein-stade/commun/lissage.js';
+import { delaiSelonPing, REGLAGES } from '../public/games/plein-stade/foot/js/enligne.js';
 
 /** Un petit hasard reproductible (pour les touches des faux joueurs). */
 function rng(graine) {
@@ -41,10 +41,10 @@ const jouerImages = (m, n, a, b) => { for (let i = 0; i < n; i++) pas(m, [a(), b
 /* ------------------------------------------------------------------ */
 
 test('les dix équipes : complètes, toutes différentes, des notes sensées', () => {
-  assert.equal(EQUIPES.length, 10);
-  assert.equal(new Set(EQUIPES.map((e) => e.id)).size, 10);
-  assert.equal(new Set(EQUIPES.map((e) => e.abr)).size, 10);
-  assert.equal(new Set(EQUIPES.map((e) => e.nom)).size, 10);
+  assert.equal(EQUIPES.length, 16);
+  assert.equal(new Set(EQUIPES.map((e) => e.id)).size, 16);
+  assert.equal(new Set(EQUIPES.map((e) => e.abr)).size, 16);
+  assert.equal(new Set(EQUIPES.map((e) => e.nom)).size, 16);
   for (const e of EQUIPES) {
     assert.equal(e.joueurs.length, 5, e.id);
     assert.ok(STYLES[e.style], `${e.id} : style ${e.style}`);
