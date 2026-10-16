@@ -190,8 +190,20 @@ function gardien(m, e, cons, N, traj) {
   if (p.etat !== 'normal') { cons[p.id] = RIEN; return; }
   if (b.porteur === p.id) return; // il a le ballon au pied : c'est le porteur qui décide (plus bas)
 
-  // Une frappe arrive : il plonge (s'il a eu le temps de la voir partir).
+  // Un ballon haut file vers son but (un lob, une frappe de loin) et passerait au-dessus de lui :
+  // il recule sur sa ligne, sous le ballon, pour le cueillir.
   const gard = p.n.gardien + N.gardien;
+  const adverse = b.tir ? b.tir.e !== e : b.dernier >= 0 && m.joueurs[b.dernier].e !== e;
+  if (b.porteur < 0 && adverse && b.vx * -s > 3) {
+    const tl = (gx - b.x) / b.vx, tk = (p.x - b.x) / b.vx;
+    const yl = b.y + b.vy * tl;
+    const zk = b.z + b.vz * tk - (G * tk * tk) / 2;
+    if (tl > 0.15 && tl < 2.5 && Math.abs(yl) < DEMI_BUT + 0.5 && zk > 1.9) {
+      cons[p.id] = vers(p, gx + s * 0.35, clamp(yl, -DEMI_BUT + 0.2, DEMI_BUT - 0.2), true, 0.05);
+      return;
+    }
+  }
+  // Une frappe arrive : il plonge (s'il a eu le temps de la voir partir).
   if (b.tir && b.tir.e !== e && b.porteur < 0 && b.vx * -s > 2) {
     const tk = (p.x - b.x) / b.vx;
     const reaction = Math.round(N.reaction * 0.6 + (95 - gard) * 0.12);
@@ -200,7 +212,8 @@ function gardien(m, e, cons, N, traj) {
       const zk = b.z + b.vz * tk - (G * tk * tk) / 2;
       const dy = yk - p.y;
       if (Math.abs(yk) < DEMI_BUT + 0.7) {
-        if (Math.abs(dy) > 0.5 && tk < 0.6) {
+        // Pas trop tôt : un plongeon dure un peu plus d'une demi-seconde, il serait au sol à l'arrivée.
+        if (Math.abs(dy) > 0.5 && tk < 0.42) {
           const vd = 3.6 + gard * 0.032;
           cons[p.id] = { mx: 0, my: 0, sprint: false, action: { type: 'plonge', vy: clamp(dy / Math.max(tk, 0.1), -vd, vd), haut: zk > 1.1 } };
           return;

@@ -120,7 +120,7 @@ test('un tir cadré, sans gardien devant : but ; puis l’équipe qui a encaiss�
   assert.equal(m.buts[0].j, p.id, 'le buteur');
   assert.equal(m.buts[0].e, 0);
   // Après la fête, coup d'envoi pour l'équipe qui a encaissé.
-  for (let i = 0; i < 400 && m.phase === 'but'; i++) pas(m, [0, 0]);
+  for (let i = 0; i < 600 && m.phase === 'but'; i++) pas(m, [0, 0]);
   assert.equal(m.phase, 'engagement');
   assert.equal(m.ballon.porteur, 9, 'l’attaquant adverse a le ballon au centre');
   assert.ok(Math.abs(m.ballon.x) < 0.01 && Math.abs(m.ballon.y) < 0.01);

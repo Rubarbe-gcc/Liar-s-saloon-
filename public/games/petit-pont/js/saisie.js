@@ -19,7 +19,7 @@ const CLAVIER = {
   ArrowUp: T.h, KeyW: T.h, KeyZ: T.h,
   ArrowDown: T.b, KeyS: T.b,
   ShiftLeft: T.S, ShiftRight: T.S,
-  KeyJ: T.A, KeyC: T.A, Space: T.A,
+  KeyO: T.A, KeyJ: T.A, KeyC: T.A, Space: T.A,
   KeyK: T.B, KeyX: T.B,
   KeyL: T.X, KeyV: T.X,
 };

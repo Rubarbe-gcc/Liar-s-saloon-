@@ -33,7 +33,7 @@ export { FPS, T, CHARGE_MAX, DEMI_L, DEMI_W, DEMI_BUT, BUT_H, BUT_P, SURFACE };
 
 /** Les images d'attente : avant le coup d'envoi, après un but, à la mi-temps. */
 const ENGAGEMENT = 75;
-const APRES_BUT = 330;
+const APRES_BUT = 450;
 const MI_TEMPS = 200;
 /** Les places au coup d'envoi (dans le sens de l'attaque) : G, D, M, M, A. */
 const PLACES = [[-19.2, 0], [-9, 0], [-5, 5], [-5, -5], [-3.4, 0]];
@@ -322,7 +322,7 @@ function agir(m, p, a, evs) {
       break;
     case 'plonge':
       if (p.etat === 'normal' && p.i === 0 && b.porteur !== p.id) {
-        p.etat = 'plonge'; p.t = 34; p.vx = 0; p.vy = a.vy; p.haut = !!a.haut;
+        p.etat = 'plonge'; p.t = 40; p.vx = 0; p.vy = a.vy; p.haut = !!a.haut;
         evs.push({ type: 'plonge', joueur: p.id, cote: a.vy > 0 ? 1 : -1 });
       }
       break;
@@ -643,7 +643,7 @@ function contacts(m, avant, evs) {
     let fx = p.x, fy = p.y, reach, zmax, demi = 0;
     if (p.etat === 'tacle') { fx += p.dx * 0.45; fy += p.dy * 0.45; reach = 0.75; zmax = 0.55; }
     else if (p.etat === 'plonge') { reach = 0.5; demi = 0.75; zmax = p.haut ? 2.35 : 1.45; }
-    else if (mains) { reach = 0.62; zmax = 2.3; }
+    else if (mains) { reach = 0.62; zmax = 2.45; }
     else { reach = 0.52; zmax = 1.9; }
     // Quelques points le long du trajet du ballon pendant l'image (il va vite).
     for (let s = 1; s <= 4; s++) {
