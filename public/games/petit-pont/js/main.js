@@ -365,7 +365,9 @@ function afficher(dt) {
     if (pj) {
       $('dirige-nom').textContent = `${P.eqs[pj.e].joueurs[pj.i].numero} · ${P.eqs[pj.e].joueurs[pj.i].nom}`;
       $('dirige-endu').style.width = `${Math.round(pj.endu * 100)}%`;
-      jauge = pj.charge > 0 ? Math.min(1, pj.charge / 48) : 0;
+      // La jauge : celle de la frappe, ou celle de la passe (en bleu).
+      jauge = pj.charge > 0 ? Math.min(1, pj.charge / 48) : pj.chargeP > 0 ? Math.min(1, pj.chargeP / 30) : 0;
+      $('jauge').classList.toggle('passe', !(pj.charge > 0) && pj.chargeP > 0);
     }
   }
   $('dirige').classList.toggle('cache', !pj || m.phase === 'but' || m.phase === 'fin');

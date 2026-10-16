@@ -31,6 +31,8 @@ export const JOUEUR_R = 0.36;
 export const G = 13;
 /** Une frappe chargée au maximum, en images. */
 export const CHARGE_MAX = 48;
+/** Une passe chargée au maximum, en images. */
+export const CHARGE_PASSE = 30;
 
 /** Les touches : un nombre de 8 bits (le même pour le clavier, la manette, le doigt et le réseau). */
 export const T = { g: 1, d: 2, h: 4, b: 8, S: 16, A: 32, B: 64, X: 128 };

@@ -8,7 +8,7 @@
  * dirige aussi les coéquipiers de l'humain et les gardiens.
  *
  * Les touches de chaque équipe, à chaque image : un nombre (terrain.js, T).
- *   en attaque : A passe, X passe lobée, B tir (plus on tient, plus c'est fort) ;
+ *   en attaque : A passe, X passe lobée, B tir (pour les trois, plus on tient, plus c'est fort) ;
  *                le ballon arrive vers soi : A la remise, B la reprise de volée ;
  *   en défense : A change de joueur, B tacle glissé, X appelle un coéquipier au pressing ;
  *   S : sprint (l'endurance baisse).
@@ -23,13 +23,13 @@
  */
 
 import {
-  FPS, DT, DEMI_L, DEMI_W, DEMI_BUT, BUT_H, BUT_P, SURFACE, BALLON_R, G, CHARGE_MAX, T,
+  FPS, DT, DEMI_L, DEMI_W, DEMI_BUT, BUT_H, BUT_P, SURFACE, BALLON_R, G, CHARGE_MAX, CHARGE_PASSE, T,
   hasard, gauss, clamp, dist, vitesseMax, trajectoire,
 } from './terrain.js';
 import { EQUIPE, POSTES, notesJoueur } from './equipes.js';
 import { decider, niveauDe, interception } from './ia.js';
 
-export { FPS, T, CHARGE_MAX, DEMI_L, DEMI_W, DEMI_BUT, BUT_H, BUT_P, SURFACE };
+export { FPS, T, CHARGE_MAX, CHARGE_PASSE, DEMI_L, DEMI_W, DEMI_BUT, BUT_H, BUT_P, SURFACE };
 
 /** Les images d'attente : avant le coup d'envoi, après un but, à la mi-temps. */
 const ENGAGEMENT = 75;
@@ -74,7 +74,7 @@ export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['hum
         id: e * 5 + i, e, i, poste: POSTES[i], n: notesJoueur(eq, i),
         x: 0, y: 0, vx: 0, vy: 0, dx: 1, dy: 0, etat: 'normal', t: 0, endu: 1,
         charge: 0, chargeCible: 0, vise: 0, verrou: 0, dec: 0, recu: 0, frappe: 0,
-        reprise: 0, remise: 0, rx: 0, ry: 0, haut: false,
+        reprise: 0, remise: 0, rx: 0, ry: 0, haut: false, chargeP: 0, passeLob: false,
       });
     }
   }
@@ -156,6 +156,8 @@ function jouer(m, k, ap, rel, evs) {
     if (p.reprise > 0) p.reprise -= 1;
     if (p.remise > 0) p.remise -= 1;
     if (b.porteur === p.id) p.recu += 1;
+    // Plus de ballon (chipé, taclé…) : plus de passe ni de frappe en préparation.
+    else { p.charge = 0; p.chargeP = 0; }
   }
   for (const eq of m.equipes) { if (eq.pressing > 0) eq.pressing -= 1; if (eq.auto > 0) eq.auto -= 1; }
 
@@ -260,8 +262,16 @@ function humain(m, e, k, ap, rel, cons, evs, traj) {
   if (mx && my) { mx *= Math.SQRT1_2; my *= Math.SQRT1_2; }
   let action = null;
   if (porteur === p) {
-    if (ap & T.A) action = { type: 'passe', cible: choisirReceveur(m, p, mx, my), lob: false };
-    else if (ap & T.X) action = { type: 'passe', cible: choisirReceveur(m, p, mx, my), lob: true };
+    if (p.chargeP > 0) {
+      // La passe se charge tant qu'on tient (A, ou X pour le lob) ; elle part quand on lâche.
+      if (mx || my) { p.rx = mx; p.ry = my; }
+      const tient = k & (p.passeLob ? T.X : T.A);
+      if (tient) p.chargeP += 1;
+      if (!tient || p.chargeP >= CHARGE_PASSE + 10) {
+        action = { type: 'passe', cible: choisirReceveur(m, p, p.rx, p.ry), lob: p.passeLob, puissance: Math.min(1, p.chargeP / CHARGE_PASSE) };
+        p.chargeP = 0;
+      }
+    } else if (ap & (T.A | T.X) && !(p.charge > 0)) { p.chargeP = 1; p.passeLob = !(ap & T.A); p.rx = mx; p.ry = my; }
     else if (ap & T.B) { p.charge = 1; p.vise = my; }
     else if (k & T.B && p.charge > 0) {
       p.charge += 1;
@@ -270,6 +280,7 @@ function humain(m, e, k, ap, rel, cons, evs, traj) {
     } else if (rel & T.B && p.charge > 0) action = { type: 'tir', puissance: Math.min(1, p.charge / CHARGE_MAX), vise: my || p.vise };
   } else {
     p.charge = 0;
+    p.chargeP = 0;
     if (attaque) {
       // Le ballon vient vers nous : on prépare une reprise (B) ou une remise (A).
       if (ap & T.B) { p.reprise = 26; p.vise = my; }
@@ -299,7 +310,7 @@ function agir(m, p, a, evs) {
   const b = m.ballon;
   switch (a.type) {
     case 'passe':
-      if (b.porteur === p.id && a.cible >= 0 && p.etat === 'normal') passer(m, p, m.joueurs[a.cible], a.lob, evs);
+      if (b.porteur === p.id && a.cible >= 0 && p.etat === 'normal') passer(m, p, m.joueurs[a.cible], a.lob, evs, false, a.puissance);
       break;
     case 'relance':
       if (b.porteur === p.id && p.etat === 'tient') {
@@ -335,18 +346,23 @@ function lancer(m, p, vx, vy, vz) {
   const b = m.ballon;
   b.porteur = -1; b.vx = vx; b.vy = vy; b.vz = vz;
   b.dernier = p.id; b.tir = null; b.cible = -1; b.passeur = -1; b.tireur = -1;
-  p.verrou = 14; p.frappe = 16; p.charge = 0; p.recu = 0;
+  p.verrou = 14; p.frappe = 16; p.charge = 0; p.chargeP = 0; p.recu = 0;
 }
 
-function passer(m, p, r, lob, evs, main = false) {
+/**
+ * Une passe de p vers r. puissance (de 0 à 1, une passe chargée par un humain) : douce, elle
+ * arrive lentement ; forte, elle fuse. Sans puissance (l'ordinateur), une passe normale.
+ */
+function passer(m, p, r, lob, evs, main = false, puissance = null) {
   const b = m.ballon;
+  const force = puissance === null || puissance === undefined ? 1 : 0.82 + 0.45 * puissance;
   const ox = b.x, oy = b.y;
   let tx = r.x, ty = r.y, t = 0, v0 = 0, vh = 0;
   // Là où sera le receveur quand le ballon arrivera.
   for (let k = 0; k < 3; k++) {
     const d = Math.max(0.5, dist(ox, oy, tx, ty));
-    if (lob) { vh = clamp(6 + d * 0.42, 7.5, 15.5); t = d / vh; }
-    else { v0 = clamp(Math.sqrt(30 + 7.5 * d), 7.5, 21); t = d / ((v0 + 5.5) / 2); }
+    if (lob) { vh = clamp(6 + d * 0.42, 7.5, 15.5) * force; t = d / vh; }
+    else { v0 = clamp(Math.sqrt(30 + 7.5 * d), 7.5, 21) * force; t = d / ((v0 + 5.5) / 2); }
     tx = clamp(r.x + r.vx * t * 0.8, -DEMI_L + 0.6, DEMI_L - 0.6);
     ty = clamp(r.y + r.vy * t * 0.8, -DEMI_W + 0.6, DEMI_W - 0.6);
   }
@@ -433,6 +449,7 @@ function deplacer(m, p, c) {
     if (sprint) vmax *= 1.3;
     if (porte) vmax *= 0.9;
     if (p.charge > 0) vmax *= 0.62;
+    if (p.chargeP > 0) vmax *= 0.85;
     let dvx = c.mx * vmax - p.vx, dvy = c.my * vmax - p.vy;
     const dv = Math.sqrt(dvx * dvx + dvy * dvy), acc = (porte ? 22 : 28) * DT;
     if (dv > acc) { dvx *= acc / dv; dvy *= acc / dv; }
@@ -720,7 +737,7 @@ function prendre(m, p, mains, evs) {
   const recupere = b.dernier >= 0 && m.joueurs[b.dernier].e !== p.e;
   b.porteur = p.id; b.vx = 0; b.vy = 0; b.vz = 0;
   b.tir = null; b.cible = -1; b.passeur = -1; b.tireur = -1; b.dernier = p.id;
-  p.recu = 0; p.dec = 3; p.charge = 0;
+  p.recu = 0; p.dec = 3; p.charge = 0; p.chargeP = 0;
   if (mains) { p.etat = 'tient'; p.dec = 40 + Math.floor(hasard(m) * 30); p.vx *= 0.3; p.vy *= 0.3; }
   else evs.push({ type: 'controle', joueur: p.id, recupere });
   if (eq.ctrl === 'humain' && p.i > 0) eq.actif = p.id;

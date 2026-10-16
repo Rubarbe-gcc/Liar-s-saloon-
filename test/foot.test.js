@@ -144,7 +144,9 @@ test('une passe part vers le coéquipier visé, et le joueur dirigé devient le 
   // Un coéquipier en haut, un autre en bas : on pousse vers le haut (h).
   Object.assign(m.joueurs[3], { x: 2, y: 6 });
   Object.assign(m.joueurs[2], { x: 2, y: -6 });
-  const evs = pas(m, [T.h | T.A, 0]);
+  // Appuyer charge la passe ; elle part quand on lâche.
+  assert.ok(!pas(m, [T.h | T.A, 0]).some((e) => e.type === 'passe'), 'pas encore partie');
+  const evs = pas(m, [T.h, 0]);
   const passe = evs.find((e) => e.type === 'passe');
   assert.ok(passe, 'la passe est partie');
   assert.equal(passe.joueur, p.id);
@@ -155,6 +157,18 @@ test('une passe part vers le coéquipier visé, et le joueur dirigé devient le 
   let recu = false;
   for (let i = 0; i < 120 && !recu; i++) recu = pas(m, [0, 0]).some((e) => e.type === 'controle' && e.joueur === 3);
   assert.ok(recu, 'il contrôle le ballon');
+});
+
+test('la passe se charge aussi : tenue longtemps, elle part plus vite', () => {
+  const vitesse = (n) => {
+    const { m } = action(0, 0);
+    Object.assign(m.joueurs[3], { x: 8, y: 0 });
+    for (let i = 0; i < n; i++) pas(m, [T.d | T.A, 0]);
+    pas(m, [0, 0]);
+    return Math.hypot(m.ballon.vx, m.ballon.vy);
+  };
+  const douce = vitesse(1), forte = vitesse(30);
+  assert.ok(douce > 0 && forte > douce * 1.3, `${douce.toFixed(1)} → ${forte.toFixed(1)} m/s`);
 });
 
 test('en défense : B fait un tacle glissé, A change de joueur', () => {
