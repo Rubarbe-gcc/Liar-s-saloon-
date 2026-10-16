@@ -26,8 +26,8 @@ import {
   FPS, DT, DEMI_L, DEMI_W, DEMI_BUT, BUT_H, BUT_P, SURFACE, BALLON_R, G, CHARGE_MAX, CHARGE_PASSE, T,
   hasard, gauss, clamp, dist, vitesseMax, trajectoire,
 } from './terrain.js';
-import { EQUIPE, POSTES, notesJoueur } from './equipes.js';
-import { decider, niveauDe, bonusGardien, interception } from './ia.js';
+import { EQUIPE, POSTES, STYLES, notesJoueur } from './equipes.js';
+import { decider, niveauDe, bonusGardien, interception, valeurPasse } from './ia.js';
 
 export { FPS, T, CHARGE_MAX, CHARGE_PASSE, DEMI_L, DEMI_W, DEMI_BUT, BUT_H, BUT_P, SURFACE };
 
@@ -58,7 +58,7 @@ export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['hum
     tabSiNul: !!tab, score: [0, 0], engage: 0, premierEngage: 0,
     equipes: [0, 1].map((e) => ({ id: equipes[e], style: EQUIPE[equipes[e]].style, sens: e === 0 ? 1 : -1, ctrl: controles[e], niveau: niveaux[e] ?? 1, actif: -1, pressing: 0, auto: 0 })),
     joueurs: [],
-    ballon: { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, porteur: -1, dernier: -1, passeur: -1, cible: -1, tireur: -1, tir: null, dansBut: false },
+    ballon: { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, porteur: -1, dernier: -1, passeur: -1, cible: -1, tireur: -1, tir: null, dansBut: false, guide: false },
     prec: [0, 0],
     stats: { tirs: [0, 0], cadres: [0, 0], passes: [0, 0], possession: [0, 0], tacles: [0, 0] },
     buts: [],
@@ -90,7 +90,7 @@ function placerEngagement(m) {
     Object.assign(p, { x: X * s, y: Y, vx: 0, vy: 0, dx: s, dy: 0, etat: 'normal', t: 0, charge: 0, verrou: 0, dec: 8, reprise: 0, remise: 0, frappe: 0, recu: 20 });
   }
   const a = m.engage * 5 + 4;
-  Object.assign(m.ballon, { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, porteur: a, dernier: a, passeur: -1, cible: -1, tireur: -1, tir: null, dansBut: false });
+  Object.assign(m.ballon, { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, porteur: a, dernier: a, passeur: -1, cible: -1, tireur: -1, tir: null, dansBut: false, guide: false });
   for (const eq of m.equipes) { eq.pressing = 0; eq.auto = 0; }
   m.equipes[0].actif = 4;
   m.equipes[1].actif = 9;
@@ -217,6 +217,19 @@ function plusProche(m, e, sauf = -1) {
   return best;
 }
 
+/** Le coéquipier le mieux placé pour recevoir (le même calcul que l'ordinateur), sinon le plus proche devant. */
+export function meilleurReceveur(m, p) {
+  const st = STYLES[m.equipes[p.e].style];
+  let best = -1, bv = -1e9;
+  for (let i = 1; i < 5; i++) {
+    const r = m.joueurs[p.e * 5 + i];
+    if (r === p) continue;
+    const o = valeurPasse(m, p, r, st);
+    if (o && o.v > bv) { bv = o.v; best = r.id; }
+  }
+  return best >= 0 ? best : choisirReceveur(m, p, 0, 0);
+}
+
 /** Le coéquipier qu'on vise en passant dans la direction (dx, dy) (sinon : là où l'on regarde). */
 export function choisirReceveur(m, p, dx, dy) {
   if (!dx && !dy) { dx = p.dx; dy = p.dy; }
@@ -269,7 +282,9 @@ function humain(m, e, k, ap, rel, cons, evs, traj) {
       const tient = k & (p.passeLob ? T.X : T.A);
       if (tient) p.chargeP += 1;
       if (!tient || p.chargeP >= CHARGE_PASSE + 10) {
-        action = { type: 'passe', cible: choisirReceveur(m, p, p.rx, p.ry), lob: p.passeLob, puissance: Math.min(1, p.chargeP / CHARGE_PASSE) };
+        // Avec une direction, le coéquipier de ce côté ; sans, le mieux placé. La passe est guidée : on ne règle que la force.
+        const cible = p.rx || p.ry ? choisirReceveur(m, p, p.rx, p.ry) : meilleurReceveur(m, p);
+        action = { type: 'passe', cible, lob: p.passeLob, puissance: Math.min(1, p.chargeP / CHARGE_PASSE), guide: true };
         p.chargeP = 0;
       }
     } else if (ap & (T.A | T.X) && !(p.charge > 0)) { p.chargeP = 1; p.passeLob = !(ap & T.A); p.rx = mx; p.ry = my; }
@@ -312,7 +327,7 @@ function agir(m, p, a, evs) {
   const b = m.ballon;
   switch (a.type) {
     case 'passe':
-      if (b.porteur === p.id && a.cible >= 0 && p.etat === 'normal') passer(m, p, m.joueurs[a.cible], a.lob, evs, false, a.puissance);
+      if (b.porteur === p.id && a.cible >= 0 && p.etat === 'normal') passer(m, p, m.joueurs[a.cible], a.lob, evs, false, a.puissance, a.guide);
       break;
     case 'relance':
       if (b.porteur === p.id && p.etat === 'tient') {
@@ -347,7 +362,7 @@ function agir(m, p, a, evs) {
 function lancer(m, p, vx, vy, vz) {
   const b = m.ballon;
   b.porteur = -1; b.vx = vx; b.vy = vy; b.vz = vz;
-  b.dernier = p.id; b.tir = null; b.cible = -1; b.passeur = -1; b.tireur = -1;
+  b.dernier = p.id; b.tir = null; b.cible = -1; b.passeur = -1; b.tireur = -1; b.guide = false;
   p.verrou = 14; p.frappe = 16; p.charge = 0; p.chargeP = 0; p.recu = 0;
 }
 
@@ -355,7 +370,7 @@ function lancer(m, p, vx, vy, vz) {
  * Une passe de p vers r. puissance (de 0 à 1, une passe chargée par un humain) : douce, elle
  * arrive lentement ; forte, elle fuse. Sans puissance (l'ordinateur), une passe normale.
  */
-function passer(m, p, r, lob, evs, main = false, puissance = null) {
+function passer(m, p, r, lob, evs, main = false, puissance = null, guide = false) {
   const b = m.ballon;
   const force = puissance === null || puissance === undefined ? 1 : 0.82 + 0.45 * puissance;
   const ox = b.x, oy = b.y;
@@ -372,12 +387,14 @@ function passer(m, p, r, lob, evs, main = false, puissance = null) {
   const d = Math.sqrt(ux * ux + uy * uy) || 1;
   ux /= d; uy /= d;
   const N = niveauDe(m.equipes[p.e]);
-  const err = (gauss(m) * (1.05 - p.n.passe / 100) * (lob ? 0.16 : 0.09)) / N.precision;
+  // Une passe guidée (celle d'un humain) part droit sur le receveur ; celles de l'ordinateur dévient un peu selon sa note.
+  const err = guide ? 0 : (gauss(m) * (1.05 - p.n.passe / 100) * (lob ? 0.16 : 0.09)) / N.precision;
   const ex = ux - uy * err, ey = uy + ux * err, el = Math.sqrt(ex * ex + ey * ey);
   ux = ex / el; uy = ey / el;
   if (lob) lancer(m, p, ux * vh, uy * vh, (G * t) / 2 - (b.z > 0.3 ? b.z / t : 0));
   else lancer(m, p, ux * v0, uy * v0, main ? 0.6 : 0);
   b.cible = r.id;
+  b.guide = !!guide;
   b.passeur = p.id;
   m.stats.passes[p.e] += 1;
   const eq = m.equipes[p.e];
@@ -394,8 +411,10 @@ function tirer(m, p, puissance, vise, evs, geste = null) {
   let tz = 0.22 + puissance * puissance * 1.3;
   const d = Math.max(2, dist(b.x, b.y, gx, ty));
   const fd = clamp(d / 12, 0.6, 2.2);
-  const sy = ((0.24 + (1 - p.n.tir / 100) * 0.9 + p3 * 0.45) * fd) / N.precision;
-  const sz = ((0.08 + p3 * 0.5) * fd) / N.precision;
+  // Les frappes d'un humain partent un peu plus droit (il a visé lui-même) ; celles de l'ordinateur dépendent de son niveau.
+  const humain = m.equipes[p.e].ctrl === 'humain';
+  const sy = ((humain ? 0.2 + (1 - p.n.tir / 100) * 0.8 + p3 * 0.3 : 0.24 + (1 - p.n.tir / 100) * 0.9 + p3 * 0.45) * fd) / N.precision;
+  const sz = ((0.08 + p3 * (humain ? 0.34 : 0.5)) * fd) / N.precision;
   ty += gauss(m) * sy;
   tz = Math.max(0.12, tz + gauss(m) * sz);
   const vit = 14.5 + puissance * 12.5 + (p.n.tir - 75) * 0.09;
@@ -513,6 +532,22 @@ function physiqueBallon(m, evs) {
     }
     b.vx = p.vx; b.vy = p.vy; b.vz = 0;
     return;
+  }
+  // Une passe guidée suit son receveur (sans faire demi-tour) : elle arrive même s'il a bougé.
+  if (b.guide && b.cible >= 0) {
+    const r = m.joueurs[b.cible];
+    const sp = Math.sqrt(b.vx * b.vx + b.vy * b.vy);
+    let dx = r.x - b.x, dy = r.y - b.y;
+    const d = Math.sqrt(dx * dx + dy * dy);
+    if (sp > 0.5 && d > 0.4) {
+      dx /= d; dy /= d;
+      const ux = b.vx / sp, uy = b.vy / sp;
+      if (ux * dx + uy * dy > 0) {
+        const k = b.z > 0.3 ? 0.05 : 0.12;
+        const nx = ux + (dx - ux) * k, ny = uy + (dy - uy) * k, nl = Math.sqrt(nx * nx + ny * ny);
+        b.vx = (nx / nl) * sp; b.vy = (ny / nl) * sp;
+      }
+    }
   }
   const v = Math.sqrt(b.vx * b.vx + b.vy * b.vy + b.vz * b.vz);
   const n = Math.min(6, 1 + Math.floor((v * DT) / 0.12));
@@ -688,7 +723,12 @@ function toucher(m, p, mains, evs) {
     if (tirAdverse && !b.tir.teste) {
       b.tir.teste = true;
       const gard = p.n.gardien + bonusGardien(eq);
-      let pr = 0.9 + (gard - 75) * 0.012 - (speed - 20) * 0.02 + (b.tir.d - 9) * 0.012 - (Math.abs(b.y) > 0.9 ? 0.1 : 0) + (p.etat === 'plonge' ? 0 : 0.1);
+      // Face à la frappe d'un humain, le gardien est plus battable (une frappe forte et bien placée doit pouvoir rentrer) ;
+      // face à l'ordinateur, il reste solide (sinon les matchs contre l'ordinateur deviendraient des festivals).
+      const parHumain = m.equipes[b.tir.e].ctrl === 'humain';
+      let pr = parHumain
+        ? 0.64 + (gard - 75) * 0.012 - (speed - 20) * 0.03 + (b.tir.d - 9) * 0.012 - (Math.abs(b.y) > 0.9 ? 0.18 : 0) + (p.etat === 'plonge' ? 0 : 0.1)
+        : 0.85 + (gard - 75) * 0.012 - (speed - 20) * 0.02 + (b.tir.d - 9) * 0.012 - (Math.abs(b.y) > 0.9 ? 0.1 : 0) + (p.etat === 'plonge' ? 0 : 0.1);
       pr = clamp(pr, 0.1, 0.96);
       if (hasard(m) < pr) {
         if (speed < 19 && hasard(m) < 0.4 + (gard - 75) * 0.015) { prendre(m, p, true, evs); evs.push({ type: 'arret', joueur: p.id, capte: true }); return; }
@@ -754,8 +794,8 @@ function prendre(m, p, mains, evs) {
   }
   else if (p.remise > 0) {
     p.remise = 0;
-    const r = choisirReceveur(m, p, p.rx, p.ry);
-    if (r >= 0) passer(m, p, m.joueurs[r], false, evs);
+    const r = p.rx || p.ry ? choisirReceveur(m, p, p.rx, p.ry) : meilleurReceveur(m, p);
+    if (r >= 0) passer(m, p, m.joueurs[r], false, evs, false, 0.6, true);
   }
 }
 

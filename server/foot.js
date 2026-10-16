@@ -10,9 +10,16 @@
  * quand elles arrivent (le « rollback » : shared/rollback.js, le même que
  * STREET COMBAT) ; le serveur, lui, ne fait que relayer.
  *
+ * Les équipes se choisissent dans la salle, une fois les deux joueurs là :
+ * chacun prend la sienne (pas celle de l'autre), puis se dit prêt ; le match
+ * part quand les deux le sont.
+ *
  * Messages (le champ `g` vaut 'foot') :
- *   → creer { equipe, nom, stade }     ← salle { code, n: 0, stade }
- *   → rejoindre { code, equipe, nom }  ← debut { n, graine, equipes, noms, stade, manche } (aux deux)
+ *   → creer { nom, stade }             ← salle { code, n: 0, stade }
+ *   → rejoindre { code, nom }          ← salon { n, code, noms, equipes, prets, stade } (aux deux)
+ *   → equipe { equipe }                ← salon (aux deux), ou erreur si l'autre l'a déjà prise
+ *   → pret { pret }                    ← salon (aux deux), puis debut quand les deux sont prêts
+ *   ← debut { n, graine, equipes, noms, stade, manche } (aux deux)
  *   → stade { stade }                  ← stade { stade } (aux deux) : l'hôte choisit le stade (avant un match, ou pour la revanche)
  *   → entrees { f, e[], fc, vu, av }   ← entrees (à l'autre) : ses touches, et où il en est
  *   → hash { f, h }                    ← hash { f, h } (à l'autre : repérer une désynchronisation)
@@ -44,8 +51,8 @@ function nouveauCode() {
   return Date.now().toString(36).toUpperCase().slice(-6);
 }
 const nettoyerNom = (s) => String(s ?? '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim().slice(0, 12) || 'Joueur';
-/** Une vraie équipe, sinon la première. */
-const equipeValide = (id) => (typeof id === 'string' && EQUIPE[id] ? id : 'brisevent');
+/** Une vraie équipe, sinon rien. */
+const equipeValide = (id) => (typeof id === 'string' && EQUIPE[id] ? id : null);
 const envoyer = (c, m) => { if (c?.conn) c.conn.send({ g: 'foot', ...m }); };
 /** Un stade connu, sinon le Chaudron. */
 const stadeValide = (x) => (typeof x === 'string' && STADE[x] ? x : 'chaudron');
@@ -57,7 +64,13 @@ export function handleOpen(conn) {
   clients.set(conn.id, { conn, code: null, n: -1 });
 }
 
+/** Où en est le salon (les équipes choisies, qui est prêt) : à chacun des deux. */
+function salon(s) {
+  s.joueurs.forEach((j, n) => envoyer(j, { t: 'salon', n, code: s.code, noms: s.noms, equipes: s.equipes, prets: s.prets, stade: s.stade }));
+}
+
 function demarrer(s) {
+  s.enJeu = true;
   s.graine = rnd(2 ** 31);
   s.revanche = [false, false];
   s.manche += 1;
@@ -100,7 +113,7 @@ export function handleMessage(conn, m) {
     case 'creer': {
       quitter(c);
       const code = nouveauCode();
-      const salle = { code, joueurs: [c, null], equipes: [equipeValide(m.equipe), null], noms: [nettoyerNom(m.nom), null], stade: stadeValide(m.stade), manche: 0, graine: 0, revanche: [false, false], cree: Date.now(), vu: Date.now() };
+      const salle = { code, joueurs: [c, null], equipes: [null, null], prets: [false, false], enJeu: false, noms: [nettoyerNom(m.nom), null], stade: stadeValide(m.stade), manche: 0, graine: 0, revanche: [false, false], cree: Date.now(), vu: Date.now() };
       salles.set(code, salle);
       c.code = code;
       c.n = 0;
@@ -113,11 +126,26 @@ export function handleMessage(conn, m) {
       if (salle.joueurs[1] || salle.joueurs[0] === c) return envoyer(c, { t: 'erreur', msg: 'Cette salle est déjà pleine.' });
       quitter(c);
       salle.joueurs[1] = c;
-      salle.equipes[1] = equipeValide(m.equipe);
       salle.noms[1] = nettoyerNom(m.nom);
       c.code = code;
       c.n = 1;
-      return demarrer(salle);
+      return salon(salle);
+    }
+    case 'equipe': {
+      // Une équipe par joueur : pas celle de l'autre. En changer annule « prêt ».
+      if (!s || s.enJeu) return;
+      const id = equipeValide(m.equipe);
+      if (!id) return;
+      if (s.equipes[1 - c.n] === id) return envoyer(c, { t: 'erreur', msg: 'Ton adversaire a déjà pris cette équipe.' });
+      s.equipes[c.n] = id;
+      s.prets[c.n] = false;
+      return salon(s);
+    }
+    case 'pret': {
+      if (!s || s.enJeu || !s.equipes[c.n]) return;
+      s.prets[c.n] = m.pret !== false;
+      if (s.joueurs[1] && s.prets[0] && s.prets[1] && s.equipes[0] && s.equipes[1]) return demarrer(s);
+      return salon(s);
     }
     case 'entrees': case 'hash': case 'etat': {
       if (!s || !s.joueurs[1]) return;
@@ -126,7 +154,7 @@ export function handleMessage(conn, m) {
       const autre = s.joueurs[1 - c.n];
       if (m.t === 'entrees') {
         // Ses touches des dernières images (un nombre de 8 bits chacune), et où il en est.
-        const e = (Array.isArray(m.e) ? m.e.slice(-24) : [m.e]).map((x) => Number(x) & 0xff);
+        const e = (Array.isArray(m.e) ? m.e.slice(-64) : [m.e]).map((x) => Number(x) & 0xff);
         return envoyer(autre, { t: 'entrees', f, e, fc: entier(m.fc, 0, 1e7), vu: entier(m.vu, -1, 1e7), av: entier(m.av, -600, 600, 0) });
       }
       if (m.t === 'etat') {
@@ -136,7 +164,7 @@ export function handleMessage(conn, m) {
       return envoyer(autre, { t: 'hash', f, h: String(m.h).slice(0, 40) });
     }
     case 'revanche': {
-      if (!s || !s.joueurs[1]) return;
+      if (!s || !s.joueurs[1] || !s.enJeu) return;
       s.revanche[c.n] = true;
       envoyer(s.joueurs[1 - c.n], { t: 'revanche', n: c.n });
       if (s.revanche[0] && s.revanche[1]) demarrer(s);

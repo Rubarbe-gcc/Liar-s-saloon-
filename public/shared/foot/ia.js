@@ -117,7 +117,7 @@ function plusProcheAdv(m, e, x, y, gardienAussi = false) {
 }
 
 /** Une passe vers r, vue de p : ce qu'elle vaut, et s'il faut la lever. */
-function valeurPasse(m, p, r, st) {
+export function valeurPasse(m, p, r, st) {
   const s = m.equipes[p.e].sens;
   const d = dist(p.x, p.y, r.x, r.y);
   if (d < 2.5 || d > 27) return null;

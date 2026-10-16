@@ -14,7 +14,7 @@ import { creerCoupe, matchDuJoueur, enregistrer, jouerSansMoi, aJouer, avancer }
 import { creerSession, FENETRE } from '../public/shared/rollback.js';
 import * as foot from '../server/foot.js';
 import { creerLissage } from '../public/games/petit-pont/js/lissage.js';
-import { delaiSelonPing } from '../public/games/petit-pont/js/enligne.js';
+import { delaiSelonPing, REGLAGES } from '../public/games/petit-pont/js/enligne.js';
 
 /** Un petit hasard reproductible (pour les touches des faux joueurs). */
 function rng(graine) {
@@ -196,6 +196,27 @@ test('le gardien d’un humain est un cran au-dessus', async () => {
   assert.equal(bonusGardien(ordi), niveauDe(ordi).gardien);
 });
 
+test('la passe guidée : sans direction, au mieux placé ; elle suit le receveur même s’il bouge', () => {
+  const { m, p } = action(0, 0);
+  Object.assign(m.joueurs[3], { x: 9, y: 3 });
+  Object.assign(m.joueurs[2], { x: -6, y: -6 });
+  pas(m, [T.A, 0]);
+  const evs = pas(m, [0, 0]);
+  const passe = evs.find((e) => e.type === 'passe');
+  assert.ok(passe, 'la passe est partie');
+  assert.equal(passe.cible, 3, 'vers le coéquipier le mieux placé (devant)');
+  assert.ok(m.ballon.guide, 'guidée');
+  // Le receveur se décale de 3 m pendant que le ballon roule : la passe le suit.
+  let recu = false;
+  for (let i = 0; i < 150 && !recu; i++) {
+    const r = m.joueurs[3];
+    r.y = Math.min(6, r.y + 0.05); r.vx = 0; r.vy = 0;
+    recu = pas(m, [0, 0]).some((e) => e.type === 'controle' && e.joueur === 3);
+  }
+  assert.ok(recu, 'il reçoit le ballon');
+  void p;
+});
+
 test('en défense : B fait un tacle glissé, A change de joueur', () => {
   const m = creerMatch({ equipes: ['brisevent', 'ferrac'], graine: 5, controles: ['humain', 'ia'] });
   m.phase = 'jeu';
@@ -280,12 +301,12 @@ test('la Coupe : quarts, demies, finale, un champion', () => {
 /* En ligne                                                            */
 /* ------------------------------------------------------------------ */
 
-function enLigne({ ping, gigue, perte, duree = 20000, derive = 0.003 }) {
+function enLigne({ ping, gigue, perte, duree = 20000, derive = 0.003, reglages = {}, delai = 2 }) {
   const R = rng(ping * 13 + 1);
   const conf = [[], []];
   const joueurs = [0, 1].map((n) => {
     const m = creerMatch({ equipes: ['sol-dambre', 'vertefeuille'], graine: 777, minutes: 3, controles: ['humain', 'humain'], tab: true });
-    const s = creerSession({ n, delai: 2, etat: m, pas: (e, x) => pas(e, x), empreinte, confirme: (f, e) => conf[n].push(e[0] * 256 + e[1]) });
+    const s = creerSession({ n, delai, etat: m, pas: (e, x) => pas(e, x), empreinte, confirme: (f, e) => conf[n].push(e[0] * 256 + e[1]), ...reglages });
     return { n, m, s, entrees: joueurHumain(500 + n), periode: (1000 / 60) * (n === 1 ? 1 - derive : 1), prochain: n * 23 };
   });
   const enRoute = [];
@@ -325,6 +346,8 @@ function rejouer(conf, jusqua) {
 for (const [nom, reseau] of [
   ['ping 40 ms', { ping: 40, gigue: 10, perte: 0 }],
   ['ping 150 ms, ça varie, 5 % de pertes', { ping: 150, gigue: 80, perte: 0.05 }],
+  // Les touches passent par le serveur : jusqu'à l'autre, environ un ping entier. Avec 300 ms, il ne faut jamais se figer.
+  ['gros ping (300 ms jusqu’à l’autre), réglages du foot', { ping: 600, gigue: 120, perte: 0.03, reglages: REGLAGES, delai: delaiSelonPing(300) }],
 ]) {
   test(`en ligne (${nom}) : le même match des deux côtés, sans se figer`, () => {
     const { A, B, confA, confB } = enLigne(reseau);
@@ -338,7 +361,7 @@ for (const [nom, reseau] of [
       assert.equal(empreinte(etat), empreinte(rejouer(conf, f)), `état à l'image ${f}`);
     }
     assert.ok((A.stats.attentes + B.stats.attentes) / 2 < 30, 'presque jamais figé');
-    assert.ok(A.stats.rejouees / Math.max(1, A.stats.retours) <= FENETRE, 'des corrections courtes');
+    assert.ok(A.stats.rejouees / Math.max(1, A.stats.retours) <= (reseau.reglages?.fenetre ?? FENETRE), 'des corrections courtes');
   });
 }
 
@@ -376,21 +399,40 @@ function client() {
   return { conn, recu, dit: (m) => foot.handleMessage(conn, m), dernier: (t) => [...recu].reverse().find((m) => m.t === t) };
 }
 
-test('le serveur : une salle, la même graine, l’hôte choisit le stade, il relaie les touches', () => {
+test('le serveur : une salle, les équipes choisies dans la salle (jamais la même), la même graine, il relaie les touches', () => {
   const a = client(), b = client();
-  a.dit({ t: 'creer', equipe: 'kerbrume', nom: 'Alice', stade: 'plage' });
+  a.dit({ t: 'creer', nom: 'Alice', stade: 'plage' });
   const { code, stade } = a.dernier('salle');
   assert.match(code, /^[A-Z2-9]{4}$/);
   assert.equal(stade, 'plage');
   // Seul l'hôte change le stade ; un stade inconnu devient le Chaudron.
   a.dit({ t: 'stade', stade: 'toit' });
   assert.equal(a.dernier('stade').stade, 'toit');
-  b.dit({ t: 'rejoindre', code: code.toLowerCase(), equipe: 'inconnue', nom: '<i>Bob</i>' });
+  b.dit({ t: 'rejoindre', code: code.toLowerCase(), nom: '<i>Bob</i>' });
+  // Les deux sont dans la salle : pas encore de match, chacun choisit son équipe.
+  assert.equal(a.dernier('debut'), undefined);
+  assert.deepEqual(b.dernier('salon').noms, ['Alice', 'iBob/i']);
+  assert.equal(b.dernier('salon').n, 1);
+  a.dit({ t: 'equipe', equipe: 'kerbrume' });
+  assert.deepEqual(b.dernier('salon').equipes, ['kerbrume', null]);
+  b.dit({ t: 'equipe', equipe: 'kerbrume' });
+  assert.match(b.dernier('erreur').msg, /déjà pris/);
+  assert.deepEqual(a.dernier('salon').equipes, ['kerbrume', null], 'pas deux fois la même équipe');
+  b.dit({ t: 'equipe', equipe: 'inconnue' });
+  b.dit({ t: 'pret' });
+  assert.deepEqual(a.dernier('salon').prets, [false, false], 'pas prêt sans équipe');
+  b.dit({ t: 'equipe', equipe: 'corail' });
+  b.dit({ t: 'pret' });
+  assert.equal(a.dernier('debut'), undefined, 'il faut les deux');
+  a.dit({ t: 'pret' });
   const da = a.dernier('debut'), db = b.dernier('debut');
   assert.equal(da.graine, db.graine);
-  assert.deepEqual(da.equipes, ['kerbrume', 'brisevent'], 'une équipe inconnue : la première');
+  assert.deepEqual(da.equipes, ['kerbrume', 'corail']);
   assert.deepEqual(db.noms, ['Alice', 'iBob/i']);
   assert.equal(da.stade, 'toit');
+  // En plein match, on ne change plus d'équipe.
+  a.dit({ t: 'equipe', equipe: 'ferrac' });
+  assert.deepEqual(a.dernier('salon').equipes, ['kerbrume', 'corail']);
   const nb = a.recu.length;
   b.dit({ t: 'stade', stade: 'halle' });
   assert.equal(a.recu.length, nb, 'l’invité ne choisit pas');
@@ -399,6 +441,9 @@ test('le serveur : une salle, la même graine, l’hôte choisit le stade, il re
   // Les touches : 8 bits, relayées à l'autre seulement.
   a.dit({ t: 'entrees', f: 4, e: [T.A | T.d, 0x1ff], fc: 3, vu: 1, av: 0 });
   assert.deepEqual(b.dernier('entrees').e, [T.A | T.d, 0xff]);
+  // Un gros ping : jusqu'à 64 touches par message passent.
+  a.dit({ t: 'entrees', f: 99, e: new Array(80).fill(1), fc: 3, vu: 1, av: 0 });
+  assert.equal(b.dernier('entrees').e.length, 64);
   assert.equal(a.dernier('entrees'), undefined);
   // La revanche, puis le départ.
   const avant = a.recu.filter((m) => m.t === 'debut').length;

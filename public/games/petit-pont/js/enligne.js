@@ -47,9 +47,20 @@ export const delaiSelonPing = (ping) => (!ping ? 2 : Math.max(2, Math.min(5, Mat
 let session = null;
 let dernierRecalage = -999;
 
+/**
+ * Les réglages du rollback pour le foot. Les touches passent par le serveur : elles mettent
+ * à peu près un ping pour arriver chez l'autre (souvent 150 à 300 ms avec l'hébergement).
+ *   fenetre    : on peut jouer jusqu'à une demi-seconde d'avance sans s'arrêter ;
+ *   redondance : chaque message renvoie toutes les touches pas encore confirmées (jusqu'à 64),
+ *                sinon, avec un gros ping, les plus récentes partaient en retard et le jeu se figeait ;
+ *   rythmeDoux : quand on est en avance sur l'autre, on ralentit à peine l'horloge (voir `ecart`)
+ *                au lieu de sauter une image (un à-coup).
+ */
+export const REGLAGES = { fenetre: 30, redondance: 64, rythmeDoux: true };
+
 /** Un match commence : m est l'état du moteur (modifié sur place), n notre place. */
 export function demarrerSession({ m, n }) {
-  session = creerSession({ n, delai: delaiSelonPing(DIAG.ping), etat: m, pas: (c, e) => pas(c, e), empreinte });
+  session = creerSession({ n, delai: delaiSelonPing(DIAG.ping), etat: m, pas: (c, e) => pas(c, e), empreinte, ...REGLAGES });
   dernierRecalage = -999;
 }
 
@@ -68,6 +79,8 @@ export function pasEnLigne(local) {
 }
 
 /** Toutes les images jouées sont confirmées (on peut annoncer la fin sans risque de correction). */
+/** De combien d'images on est en avance sur l'adversaire : le jeu ralentit un peu son horloge au-delà de 1. */
+export const ecart = () => session?.ecart ?? 0;
 export const toutConfirme = () => !session || session.confirmees >= session.f;
 export function diagnostic() {
   if (!session) return null;
@@ -85,6 +98,7 @@ function traiter(m) {
   if (!m || m.g !== 'foot') return;
   switch (m.t) {
     case 'salle': salle.code = m.code; salle.n = m.n; salle.stade = m.stade; rappels.salle?.(m); break;
+    case 'salon': salle.n = m.n; salle.code = m.code || salle.code; salle.stade = m.stade; salle.salon = m; rappels.salon?.(m); break;
     case 'debut': salle.n = m.n; salle.enMatch = true; salle.stade = m.stade; rappels.debut?.(m); break;
     case 'stade': salle.stade = m.stade; rappels.stade?.(m.stade); break;
     case 'entrees': session?.recevoir(m); break;
@@ -120,8 +134,11 @@ export function connecter(r) {
   minuteurSonde = setInterval(() => { if (net?.ouverte()) sonder(); }, 2000);
 }
 
-export const creer = (equipe, nom, stade) => envoyer({ t: 'creer', equipe, nom, stade });
-export const rejoindre = (code, equipe, nom) => envoyer({ t: 'rejoindre', code, equipe, nom });
+export const creer = (nom, stade) => envoyer({ t: 'creer', nom, stade });
+export const rejoindre = (code, nom) => envoyer({ t: 'rejoindre', code, nom });
+/** Dans la salle : son équipe (pas celle de l'autre), puis « prêt ». */
+export const choisirEquipe = (equipe) => envoyer({ t: 'equipe', equipe });
+export const pret = (oui = true) => envoyer({ t: 'pret', pret: oui });
 export const choisirStade = (stade) => envoyer({ t: 'stade', stade });
 export const revanche = () => envoyer({ t: 'revanche' });
 export function quitter() {

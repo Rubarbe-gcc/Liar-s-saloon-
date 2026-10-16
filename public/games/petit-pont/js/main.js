@@ -231,8 +231,11 @@ function boucle(t) {
   P.dernier = t;
   if (!enPause || P.o.mode === 'enligne') {
     P.acc += dt;
+    // En ligne, si l'on est en avance sur l'adversaire, l'horloge ralentit à peine (jusqu'à 8 %) :
+    // les deux se recalent sans qu'on sente d'à-coup.
+    P.periode = P.o.mode === 'enligne' ? PAS * (1 + Math.min(0.08, Math.max(0, (net.ecart() - 1) * 0.03))) : PAS;
     let n = 0;
-    while (P.acc >= PAS && n < 6) { uneImage(); P.acc -= PAS; n += 1; }
+    while (P.acc >= P.periode && n < 6) { uneImage(); P.acc -= P.periode; n += 1; }
     if (n >= 6) P.acc = 0;
   }
   if (!partie) return;
@@ -354,7 +357,7 @@ function afficher(dt) {
   }
   $('replay').classList.toggle('cache', !(R && R.attente <= 0 && P.ralenti));
   if (!vue) {
-    vue = melanger(P.prec, P.cour, P.acc / PAS);
+    vue = melanger(P.prec, P.cour, P.acc / (P.periode || PAS));
     if (P.lisse) vue = P.lisse.appliquer(vue, dt);
   }
   const { h, heros } = humeurs(m);
@@ -677,12 +680,44 @@ function nomEnLigne() {
   return n;
 }
 
-function majEquipeEnLigne() {
-  $('enligne-equipe').innerHTML = `${ecussonSVG(EQUIPE[conf.moi], 22)} ${EQUIPE[conf.moi].nom}`;
+/**
+ * Le salon : les deux joueurs dans la salle, chacun choisit son équipe (l'équipe de
+ * l'autre est prise), puis « Prêt ! ». Le match part quand les deux sont prêts.
+ */
+let autoChoix = false;
+function rendreSalon(s) {
+  const moi = s.n, lui = 1 - s.n;
+  const present = !!s.noms[lui];
+  const carte = (n) => {
+    const eq = s.equipes[n] && EQUIPE[s.equipes[n]];
+    const nom = s.noms[n] || '…';
+    return `<div class="salon-joueur${n === moi ? ' moi' : ''}${s.prets[n] ? ' pret' : ''}" style="--c1:${eq ? eq.maillot.fond : '#1c3a58'}">
+      ${eq ? ecussonSVG(eq, 40) : '<span class="ec-vide">?</span>'}
+      <span><small>${n === moi ? 'Toi' : 'Adversaire'}</small><b>${nom}</b><i>${eq ? eq.court : present || n === moi ? 'choisit son équipe…' : 'pas encore là'}</i></span>
+      <em>${s.prets[n] ? '✓ Prêt' : ''}</em></div>`;
+  };
+  $('salon-joueurs').innerHTML = carte(moi) + carte(lui);
+  $('salon-equipes').innerHTML = EQUIPES.map((eq) => {
+    const a = s.equipes[moi] === eq.id, b = s.equipes[lui] === eq.id;
+    return `<button class="equipe${a ? ' moi' : ''}${b ? ' lui pris' : ''}" data-id="${eq.id}" style="--c1:${eq.maillot.fond}"${b ? ' disabled' : ''}>
+      ${a ? '<span class="marque">TOI</span>' : b ? `<span class="marque">${s.noms[lui]}</span>` : ''}<span class="note">${noteGenerale(eq)}</span>
+      ${ecussonSVG(eq, 46)}<span class="nom">${eq.nom}</span><span class="style">${STYLES[eq.style].nom}</span></button>`;
+  }).join('');
+  const pret = s.prets[moi];
+  $('salon-pret').innerHTML = pret ? '<b>Pas encore prêt</b><small>Changer d’avis</small>' : '<b>Prêt !</b><small>Le match part quand vous l’êtes tous les deux</small>';
+  $('salon-pret').className = `btn grand ${pret ? '' : 'vert'}`;
+  $('salon-pret').disabled = !s.equipes[moi] || !present;
+  $('salle-attente').textContent = !present ? 'En attente d’un adversaire… Donne-lui ce code.'
+    : s.prets[lui] && !pret ? `${s.noms[lui]} est prêt : à toi !`
+      : pret && !s.prets[lui] ? `En attente de ${s.noms[lui]}…` : 'Choisissez vos équipes (pas la même), puis « Prêt ! ».';
+  // La première fois, on propose l'équipe de d'habitude (si l'autre ne l'a pas prise).
+  if (!autoChoix && !s.equipes[moi] && s.equipes[lui] !== conf.moi) { autoChoix = true; net.choisirEquipe(conf.moi); }
 }
 
 function rendreStadesSalle() {
   const hote = net.salle.n === 0;
+  const hote2 = net.salle.salon?.noms?.[0];
+  $('salle-stade-bloc').firstElementChild.textContent = hote ? 'Le stade (c’est toi qui choisis)' : `Le stade (choisi par ${hote2 || 'l’hôte'})`;
   $('salle-stades').innerHTML = STADES.map((s) => `<button data-id="${s.id}" class="${net.salle.stade === s.id ? 'oui' : ''}"${hote ? '' : ' disabled'}>${s.nom}</button>`).join('');
 }
 
@@ -690,7 +725,6 @@ function ouvrirEnLigne() {
   let nom = '';
   try { nom = localStorage.getItem(CLE_NOM) || ''; } catch { /* ignore */ }
   $('enligne-nom').value = nom || succes.pseudo() || '';
-  majEquipeEnLigne();
   $('enligne-accueil').classList.toggle('cache', !!net.salle.code);
   $('enligne-salle').classList.toggle('cache', !net.salle.code);
   aller('enligne');
@@ -702,6 +736,17 @@ function ouvrirEnLigne() {
       $('salle-code').textContent = m.code;
       $('salle-attente').textContent = 'En attente d’un adversaire… Donne-lui ce code.';
       $('enligne-statut').textContent = '';
+      autoChoix = false;
+      rendreSalon({ n: 0, noms: [nomEnLigne(), null], equipes: [null, null], prets: [false, false] });
+      rendreStadesSalle();
+    },
+    salon: (m) => {
+      $('enligne-accueil').classList.add('cache');
+      $('enligne-salle').classList.remove('cache');
+      if (net.salle.code) $('salle-code').textContent = net.salle.code;
+      if (ecran !== 'enligne' && ecran !== 'match') aller('enligne');
+      $('enligne-statut').textContent = '';
+      rendreSalon(m);
       rendreStadesSalle();
     },
     stade: () => rendreStadesSalle(),
@@ -739,12 +784,26 @@ function lancerEnLigne(d) {
 
 function brancherEnLigne() {
   $('enligne-retour').addEventListener('click', () => { if (net.salle.code) net.quitter(); aller('menu'); });
-  $('enligne-changer').addEventListener('click', () => ouvrirEquipes('enligne', () => { majEquipeEnLigne(); aller('enligne'); }));
-  $('enligne-creer').addEventListener('click', () => { net.creer(conf.moi, nomEnLigne(), conf.stade); $('enligne-statut').textContent = 'Création de la salle…'; });
+  $('enligne-creer').addEventListener('click', () => { net.creer(nomEnLigne(), conf.stade); $('enligne-statut').textContent = 'Création de la salle…'; });
+  $('salon-equipes').addEventListener('click', (e) => {
+    const b = e.target.closest('.equipe');
+    if (!b || b.disabled) return;
+    son.bip();
+    conf.moi = b.dataset.id;
+    garder();
+    net.choisirEquipe(b.dataset.id);
+  });
+  $('salon-pret').addEventListener('click', () => {
+    const s = net.salle.salon;
+    if (!s) return;
+    son.reveiller();
+    net.pret(!s.prets[s.n]);
+  });
   const rejoindre = () => {
     const code = $('enligne-code').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (code.length < 4) { $('enligne-statut').textContent = 'Le code de la salle fait 4 caractères.'; return; }
-    net.rejoindre(code, conf.moi, nomEnLigne());
+    autoChoix = false;
+    net.rejoindre(code, nomEnLigne());
     $('enligne-statut').textContent = 'On rejoint la salle…';
   };
   $('enligne-rejoindre').addEventListener('click', rejoindre);

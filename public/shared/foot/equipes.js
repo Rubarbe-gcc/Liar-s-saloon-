@@ -127,7 +127,7 @@ export const EQUIPES = [
     gardien: '#c6ff3a',
     ecusson: { forme: 'bouclier', fond: '#2b1150', fond2: '#6b2fb3', motif: 'demi', symbole: 'lune', symboleC: '#ff9b54', bord: '#c9ccd6' },
     style: 'dribble',
-    notes: { vitesse: 83, tir: 80, passe: 80, defense: 70, gardien: 73 },
+    notes: { vitesse: 82, tir: 78, passe: 80, defense: 70, gardien: 73 },
     joueurs: [j('Corentin Labbé', 1), j('Wassim Ferhat', 2), j('Oscar Lindqvist', 6), j('Zayan Morel', 10, 'passe'), j('Luca Benvenuti', 7)],
   },
   {

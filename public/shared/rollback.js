@@ -57,8 +57,13 @@ function restaurer(c, snap, cloner) {
  * @param {(c) => string} [o.empreinte]   l'empreinte d'un état (pour voir une désynchronisation)
  * @param {(f:number, entrees:[number, number]) => void} [o.confirme]  appelé pour chaque image confirmée, dans l'ordre
  * @param {(x) => any} [o.cloner]
+ * @param {number} [o.fenetre]      combien d'images on peut jouer d'avance sur les touches reçues (FENETRE par défaut)
+ * @param {boolean} [o.rythmeDoux]  au lieu de retenir une image quand on est en avance (un petit à-coup),
+ *                                  laisser le jeu ralentir doucement son horloge (voir `ecart`)
+ * @param {number} [o.redondance]   au plus, combien de touches non confirmées repartent dans chaque message
+ *                                  (avec un gros ping, il en faut plus : environ deux fois le ping, en images)
  */
-export function creerSession({ n, delai = 2, etat, pas, empreinte = null, confirme = null, cloner = structuredClone, intervalleEmpreinte = 120 }) {
+export function creerSession({ n, delai = 2, etat, pas, empreinte = null, confirme = null, cloner = structuredClone, intervalleEmpreinte = 120, fenetre = FENETRE, rythmeDoux = false, redondance = REDONDANCE }) {
   const S = {
     n, delai, c: etat, f: 0,
     locales: new Map(), distantes: new Map(), predites: new Map(), snaps: new Map(), vus: new Map(),
@@ -151,7 +156,7 @@ export function creerSession({ n, delai = 2, etat, pas, empreinte = null, confir
   function message() {
     // À partir de la première qu'il n'a pas : s'il en manque beaucoup, les plus anciennes d'abord.
     const debut = Math.min(Math.max(S.vuDistant + 1, 0), S.dernierLocal);
-    const fin = Math.min(S.dernierLocal, debut + REDONDANCE - 1);
+    const fin = Math.min(S.dernierLocal, debut + redondance - 1);
     const e = [];
     for (let f = debut; f <= fin; f++) e.push(S.locales.get(f) ?? 0);
     return { f: fin, e, fc: S.f, vu: S.dernierDistant, av: S.f - S.fcDistant };
@@ -162,6 +167,8 @@ export function creerSession({ n, delai = 2, etat, pas, empreinte = null, confir
     get confirmees() { return S.confirmees; },
     get desynchro() { return S.desynchro; },
     get delai() { return S.delai; },
+    /** De combien d'images on est en avance sur l'adversaire (lissé) : au-delà de 1, ralentir un peu. */
+    get ecart() { return S.ecart; },
     stats: S.stats,
     /** L'avance qu'on a sur ce qu'on sait de l'adversaire (en images). */
     avance: () => S.f - (S.dernierDistant + 1),
@@ -174,7 +181,7 @@ export function creerSession({ n, delai = 2, etat, pas, empreinte = null, confir
       const sortie = { evs: [], attente: false, envoi: null };
       corriger(sortie.evs);
       // Trop d'avance sur l'adversaire : sa connexion a lâché, on l'attend.
-      if (S.f - S.dernierDistant > FENETRE) {
+      if (S.f - S.dernierDistant > fenetre) {
         S.stats.attentes += 1;
         sortie.attente = true;
         sortie.envoi = message();
@@ -183,7 +190,7 @@ export function creerSession({ n, delai = 2, etat, pas, empreinte = null, confir
       // Au même rythme : si l'on est nettement en avance sur lui, on retient une image de temps en temps.
       // (l'écart est lissé : le réseau qui varie ne doit pas faire hoqueter le jeu)
       if (S.fcDistant > 0) S.ecart = S.ecart * 0.94 + ((S.f - S.fcDistant) - S.avanceDistante) * 0.06;
-      if (S.fcDistant > 0 && S.ecart >= SEUIL_AVANCE && S.f - S.retenue >= ESPACE_RETENUE) {
+      if (!rythmeDoux && S.fcDistant > 0 && S.ecart >= SEUIL_AVANCE && S.f - S.retenue >= ESPACE_RETENUE) {
         S.retenue = S.f;
         S.ecart -= 2;
         S.stats.retenues += 1;

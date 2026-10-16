@@ -91,7 +91,7 @@
     <p class="statut" id="enligne-statut">Connexion…</p>
     <div class="enligne-bloc" id="enligne-accueil">
       <label class="champ">Ton nom <input id="enligne-nom" maxlength="12" autocomplete="nickname"></label>
-      <p class="consigne">Ton équipe : <b id="enligne-equipe"></b> <button class="btn fin" id="enligne-changer">Changer</button></p>
+      <p class="consigne">Les équipes se choisissent dans la salle, une fois que vous y êtes tous les deux.</p>
       <button class="btn vert grand" id="enligne-creer"><b>Créer une salle</b><small>Tu recevras un code à donner</small></button>
       <div class="rejoindre">
         <input id="enligne-code" maxlength="6" placeholder="CODE" autocapitalize="characters" aria-label="Code de la salle">
@@ -101,6 +101,9 @@
     <div class="enligne-bloc cache" id="enligne-salle">
       <p class="code-salle">Salle <b id="salle-code"></b></p>
       <p class="consigne" id="salle-attente">En attente d’un adversaire… Donne-lui ce code.</p>
+      <div class="salon-joueurs" id="salon-joueurs"></div>
+      <div class="grille-equipes petite" id="salon-equipes"></div>
+      <button class="btn vert grand" id="salon-pret" disabled><b>Prêt !</b></button>
       <div class="option" id="salle-stade-bloc"><span>Le stade (c’est toi qui choisis)</span><div class="segments" id="salle-stades"></div></div>
       <button class="btn fin" id="salle-quitter">Quitter la salle</button>
     </div>
@@ -159,9 +162,9 @@
       <tbody>
         <tr><td>Bouger</td><td>Flèches · ZQSD</td><td>Stick · croix</td><td colspan="2">Courir dans 8 directions</td></tr>
         <tr><td>Sprint</td><td>Maj</td><td>Gâchettes</td><td colspan="2">Plus vite, tant qu’il reste du souffle</td></tr>
-        <tr><td>A</td><td>O · J · Espace</td><td>A</td><td>Passe vers où l’on pousse (tiens pour plus de force)</td><td>Changer de joueur</td></tr>
+        <tr><td>A</td><td>O · J · Espace</td><td>A</td><td>Passe guidée vers le coéquipier (celui vers qui l’on pousse, sinon le mieux placé) : tiens pour plus de force</td><td>Changer de joueur</td></tr>
         <tr><td>B</td><td>K</td><td>B</td><td>Tir : tiens pour plus de puissance, ↑ ↓ pour viser un coin</td><td>Tacle glissé</td></tr>
-        <tr><td>X</td><td>L</td><td>X · Y</td><td>Passe lobée (tiens pour plus de force)</td><td>Un coéquipier vient presser</td></tr>
+        <tr><td>X</td><td>L</td><td>X · Y</td><td>Passe lobée guidée : tiens pour plus de force</td><td>Un coéquipier vient presser</td></tr>
       </tbody>
     </table>
     <p class="astuce">Quand une passe arrive vers toi : <b>B</b> pour une reprise de volée, <b>A</b> pour une remise en une touche.<br>Tirs au but : ↑ ↓ pour viser, tiens <b>B</b> ; dans les cages, ↑ ou ↓ au moment de la frappe pour plonger.</p>
