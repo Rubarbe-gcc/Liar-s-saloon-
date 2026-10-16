@@ -30,6 +30,7 @@ export const JEUX = {
   street: { nom: 'Street Combat', glyphe: '🥊', url: '/games/street-combat/' },
   echo: { nom: 'ÉCHO', glyphe: '🎤', url: '/games/echo/' },
   velours: { nom: 'Le Velours Noir', glyphe: '🎰', url: '/games/velours-noir/' },
+  petitpont: { nom: 'Petit Pont', glyphe: '⚽', url: '/games/petit-pont/' },
 };
 /** Les jeux qu'il faut avoir ouverts pour le succès « Touche-à-tout ». */
 const A_VISITER = Object.keys(JEUX).filter((j) => j !== 'arcade');
@@ -120,6 +121,15 @@ export const SUCCES = [
   s('velours-flambeur', 'velours', '🎩', 'Grand flambeur', 'Avoir 10 000 jetons dans sa caisse.'),
 
   s('echo-90', 'echo', '🎶', 'Imitation parfaite', 'Obtenir 90 / 100 ou plus à une imitation.'),
+
+  s('foot-victoire', 'petitpont', '⚽', 'Premier match, première victoire', 'Gagner un match amical à PETIT PONT.'),
+  s('foot-difficile', 'petitpont', '🔥', 'Sans trembler', 'Gagner un match amical contre l’ordinateur en Difficile.'),
+  s('foot-clean', 'petitpont', '🧤', 'Cage inviolée', 'Gagner un match sans encaisser de but.'),
+  s('foot-triple', 'petitpont', '🎩', 'Coup du chapeau', 'Marquer trois buts avec le même joueur dans un match.'),
+  s('foot-tab', 'petitpont', '🎯', 'Nerfs d’acier', 'Gagner un match aux tirs au but.'),
+  s('foot-coupe', 'petitpont', '🏆', 'La Coupe aux grandes oreilles', 'Gagner la Coupe de PETIT PONT.'),
+  s('foot-coupe-difficile', 'petitpont', '👑', 'Intouchables', 'Gagner la Coupe en Difficile.'),
+  s('foot-enligne', 'petitpont', '🌐', 'Roi du five', 'Gagner un match en ligne.'),
 ];
 export const PAR_ID = Object.fromEntries(SUCCES.map((x) => [x.id, x]));
 

@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#06121f">
+<meta name="description" content="PETIT PONT — le foot à cinq en 3D. Dix équipes, un mode Solo, une Coupe à élimination directe et des matchs en ligne. Rapide, arcade, au clavier, à la manette ou au doigt.">
+<title>Petit Pont</title>
+<link rel="icon" href="/games/petit-pont/icons/icon-192.png">
+<link rel="manifest" href="/games/petit-pont/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/games/petit-pont/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Petit Pont">
+<link rel="stylesheet" href="/games/petit-pont/css/foot.css">
+<script src="/maj.js" defer></script>
+</head>
+<body>
+
+<div class="fond" aria-hidden="true"><div class="fond-gazon"></div><div class="fond-lumiere"></div></div>
+
+<!-- ============================ MENU ============================ -->
+<section class="ecran is-active" id="s-menu">
+  <div class="menu">
+    <h1 class="logo"><span class="l1">PETIT</span><span class="balle" aria-hidden="true"></span><span class="l2">PONT</span></h1>
+    <p class="slogan">Le foot à cinq · 3D · arcade</p>
+    <div class="boutons-menu">
+      <button class="btn vert grand" id="b-solo"><b>⚽ Match amical</b><small>Contre l’ordinateur</small></button>
+      <button class="btn or grand" id="b-tournoi"><b>🏆 La Coupe</b><small id="tournoi-info">Huit équipes, élimination directe</small></button>
+      <button class="btn bleu grand" id="b-enligne"><b>🌐 En ligne</b><small>Un contre un, avec un code</small></button>
+    </div>
+    <div class="menu-bas">
+      <button class="btn fin" id="b-commandes">🎮 Commandes</button>
+      <button class="btn fin" id="b-son" aria-pressed="false">🔊 Son</button>
+      <label class="btn fin choix-qualite">✨ <select id="b-qualite" aria-label="Qualité graphique">
+        <option value="haute">Haute</option><option value="moyenne">Moyenne</option><option value="basse">Basse</option>
+      </select></label>
+    </div>
+    <a class="lien-discret" href="/">‹ Retour à l’arcade</a>
+  </div>
+</section>
+
+<!-- ============================ CHOIX DES ÉQUIPES ============================ -->
+<section class="ecran" id="s-equipes">
+  <header class="barre-haut">
+    <button class="rond retour" id="equipes-retour" aria-label="Retour">‹</button>
+    <h2 id="equipes-titre">Match amical</h2>
+  </header>
+  <div class="page page-equipes">
+    <div class="duel">
+      <button class="carte-duel moi" id="duel-moi" aria-label="Ton équipe"></button>
+      <span class="vs">VS</span>
+      <button class="carte-duel lui" id="duel-lui" aria-label="L’adversaire"></button>
+    </div>
+    <p class="consigne" id="consigne-equipes">Choisis ton équipe.</p>
+    <div class="grille-equipes" id="grille-equipes"></div>
+    <div class="options" id="options-match">
+      <div class="option"><span>Niveau</span><div class="segments" id="seg-niveau"></div></div>
+      <div class="option"><span>Mi-temps</span><div class="segments" id="seg-duree"></div></div>
+    </div>
+    <h3 class="section">Le stade</h3>
+    <div class="grille-stades" id="grille-stades"></div>
+    <button class="btn vert grand coup-envoi" id="b-jouer"><b>Coup d’envoi</b></button>
+  </div>
+</section>
+
+<!-- ============================ LA COUPE ============================ -->
+<section class="ecran" id="s-coupe">
+  <header class="barre-haut">
+    <button class="rond retour" id="coupe-retour" aria-label="Retour">‹</button>
+    <h2>La Coupe</h2>
+  </header>
+  <div class="page">
+    <p class="consigne" id="coupe-info"></p>
+    <div class="tableau" id="tableau"></div>
+    <div class="coupe-actions" id="coupe-actions"></div>
+  </div>
+</section>
+
+<!-- ============================ EN LIGNE ============================ -->
+<section class="ecran" id="s-enligne">
+  <header class="barre-haut">
+    <button class="rond retour" id="enligne-retour" aria-label="Retour">‹</button>
+    <h2>En ligne</h2>
+  </header>
+  <div class="page page-enligne">
+    <p class="statut" id="enligne-statut">Connexion…</p>
+    <div class="enligne-bloc" id="enligne-accueil">
+      <label class="champ">Ton nom <input id="enligne-nom" maxlength="12" autocomplete="nickname"></label>
+      <p class="consigne">Ton équipe : <b id="enligne-equipe"></b> <button class="btn fin" id="enligne-changer">Changer</button></p>
+      <button class="btn vert grand" id="enligne-creer"><b>Créer une salle</b><small>Tu recevras un code à donner</small></button>
+      <div class="rejoindre">
+        <input id="enligne-code" maxlength="6" placeholder="CODE" autocapitalize="characters" aria-label="Code de la salle">
+        <button class="btn bleu" id="enligne-rejoindre">Rejoindre</button>
+      </div>
+    </div>
+    <div class="enligne-bloc cache" id="enligne-salle">
+      <p class="code-salle">Salle <b id="salle-code"></b></p>
+      <p class="consigne" id="salle-attente">En attente d’un adversaire… Donne-lui ce code.</p>
+      <div class="option" id="salle-stade-bloc"><span>Le stade (c’est toi qui choisis)</span><div class="segments" id="salle-stades"></div></div>
+      <button class="btn fin" id="salle-quitter">Quitter la salle</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ LE MATCH ============================ -->
+<section class="ecran" id="s-match">
+  <div class="scene-hote" id="scene"></div>
+  <div class="hud">
+    <div class="tableau-score" id="tableau-score">
+      <span class="ec" id="hud-ec0"></span><b class="abr" id="hud-abr0"></b>
+      <b class="score" id="hud-score">0 - 0</b>
+      <b class="abr" id="hud-abr1"></b><span class="ec" id="hud-ec1"></span>
+      <span class="chrono"><i id="hud-mi">1re</i> <b id="hud-chrono">3:00</b></span>
+    </div>
+    <div class="tab-score cache" id="tab-score"></div>
+    <button class="rond pause" id="b-pause" aria-label="Pause">❚❚</button>
+    <div class="bandeau" id="bandeau" aria-live="polite"></div>
+    <div class="jauge cache" id="jauge"><i></i></div>
+    <div class="dirige" id="dirige"><b id="dirige-nom"></b><span class="endu"><i id="dirige-endu"></i></span></div>
+    <div class="aide-tab cache" id="aide-tab"></div>
+    <div class="net-diag cache" id="net-diag"></div>
+    <div class="replay cache" id="replay"><b>RALENTI</b><button class="btn fin" id="b-passer">Passer ›</button></div>
+  </div>
+  <div class="tactile" id="tactile">
+    <div class="zone-joy" id="zone-joy"><div class="joy"><div class="joy-bouton"></div></div></div>
+    <div class="boutons-jeu">
+      <button class="bj bj-s" data-t="S"><span>Sprint</span></button>
+      <button class="bj bj-x" data-t="X"><span id="lab-x">Lob</span></button>
+      <button class="bj bj-a" data-t="A"><span id="lab-a">Passe</span></button>
+      <button class="bj bj-b" data-t="B"><span id="lab-b">Tir</span></button>
+    </div>
+  </div>
+  <div class="tourne" id="tourne">↻ Tourne ton téléphone : c’est plus beau en largeur.</div>
+</section>
+
+<!-- ============================ PAUSE ============================ -->
+<div class="voile cache" id="v-pause">
+  <div class="panneau">
+    <h2>Pause</h2>
+    <button class="btn vert" id="p-reprendre">Reprendre</button>
+    <button class="btn" id="p-commandes">Commandes</button>
+    <button class="btn rouge" id="p-quitter">Abandonner le match</button>
+  </div>
+</div>
+
+<!-- ============================ COMMANDES ============================ -->
+<div class="voile cache" id="v-commandes">
+  <div class="panneau large">
+    <h2>Les commandes</h2>
+    <table class="commandes">
+      <thead><tr><th></th><th>Clavier</th><th>Manette</th><th>Avec le ballon</th><th>Sans le ballon</th></tr></thead>
+      <tbody>
+        <tr><td>Bouger</td><td>Flèches · ZQSD</td><td>Stick · croix</td><td colspan="2">Courir dans 8 directions</td></tr>
+        <tr><td>Sprint</td><td>Maj</td><td>Gâchettes</td><td colspan="2">Plus vite, tant qu’il reste du souffle</td></tr>
+        <tr><td>A</td><td>J · Espace</td><td>A</td><td>Passe (vers où l’on pousse)</td><td>Changer de joueur</td></tr>
+        <tr><td>B</td><td>K</td><td>B</td><td>Tir : tiens pour plus de puissance, ↑ ↓ pour viser un coin</td><td>Tacle glissé</td></tr>
+        <tr><td>X</td><td>L</td><td>X · Y</td><td>Passe lobée</td><td>Un coéquipier vient presser</td></tr>
+      </tbody>
+    </table>
+    <p class="astuce">Quand une passe arrive vers toi : <b>B</b> pour une reprise de volée, <b>A</b> pour une remise en une touche.<br>Tirs au but : ↑ ↓ pour viser, tiens <b>B</b> ; dans les cages, ↑ ou ↓ au moment de la frappe pour plonger.</p>
+    <button class="btn vert" id="c-fermer">Compris</button>
+  </div>
+</div>
+
+<!-- ============================ FIN DU MATCH ============================ -->
+<section class="ecran" id="s-fin">
+  <div class="page page-fin">
+    <p class="fin-titre" id="fin-titre">Fin du match</p>
+    <div class="fin-score" id="fin-score"></div>
+    <div class="fin-buteurs" id="fin-buteurs"></div>
+    <div class="fin-stats" id="fin-stats"></div>
+    <div class="fin-actions" id="fin-actions"></div>
+    <p class="consigne" id="fin-attente"></p>
+  </div>
+</section>
+
+<script type="module" src="/games/petit-pont/js/main.js"></script>
+</body>
+</html>

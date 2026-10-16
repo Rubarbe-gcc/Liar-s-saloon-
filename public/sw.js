@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v119';
+const VERSION = 'v120';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -203,6 +203,24 @@ const SHELL = [
   '/shared/street/nuage.js',
   '/shared/street/replay.js',
   '/shared/street/rollback.js',
+  '/shared/rollback.js',
+  '/games/petit-pont/',
+  '/games/petit-pont/manifest.webmanifest',
+  '/games/petit-pont/css/foot.css',
+  '/games/petit-pont/js/main.js',
+  '/games/petit-pont/js/ecusson.js',
+  '/games/petit-pont/js/saisie.js',
+  '/games/petit-pont/js/son.js',
+  '/games/petit-pont/js/enligne.js',
+  '/games/petit-pont/js/trois/rendu3d.js',
+  '/games/petit-pont/js/trois/joueurs3d.js',
+  '/games/petit-pont/js/trois/stade3d.js',
+  '/games/petit-pont/icons/icon-192.png',
+  '/shared/foot/terrain.js',
+  '/shared/foot/equipes.js',
+  '/shared/foot/ia.js',
+  '/shared/foot/match.js',
+  '/shared/foot/coupe.js',
   '/games/street-combat/js/trois/rendu3d.js',
   '/games/street-combat/js/trois/decors3d.js',
   '/vendor/three/three.module.min.js',
