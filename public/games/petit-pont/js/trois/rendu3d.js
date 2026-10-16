@@ -346,6 +346,7 @@ export function creerRendu(hote, o) {
           eclair.position.set(b.x, b.z + 0.3, -b.y); eclair.scale.setScalar(0.6 + ev.puissance); eclair.material.opacity = 0.9;
           excitation = Math.max(excitation, 0.25);
           if (ev.puissance > 0.8) cam.secousse = Math.max(cam.secousse, 0.08);
+          if (ev.geste === 'volee') { cam.secousse = Math.max(cam.secousse, 0.2); excitation = Math.max(excitation, 0.7); }
           break;
         case 'but': {
           excitation = 1.6;

@@ -33,6 +33,9 @@
     <div class="menu-bas">
       <button class="btn fin" id="b-commandes">🎮 Commandes</button>
       <button class="btn fin" id="b-son" aria-pressed="false">🔊 Son</button>
+      <label class="btn fin choix-qualite">🎙️ <select id="b-commentaires" aria-label="Commentaires">
+        <option value="texte">Commentaires</option><option value="voix">Commentaires + voix</option><option value="aucun">Sans commentaires</option>
+      </select></label>
       <label class="btn fin choix-qualite">✨ <select id="b-qualite" aria-label="Qualité graphique">
         <option value="haute">Haute</option><option value="moyenne">Moyenne</option><option value="basse">Basse</option>
       </select></label>
@@ -118,6 +121,8 @@
     <button class="rond pause" id="b-pause" aria-label="Pause">❚❚</button>
     <div class="bandeau" id="bandeau" aria-live="polite"></div>
     <div class="jauge cache" id="jauge"><i></i></div>
+    <div class="aide-volee cache" id="aide-volee"><b>B</b> volée · <b>A</b> remise</div>
+    <div class="commentaire" id="commentaire" aria-live="polite"></div>
     <div class="dirige" id="dirige"><b id="dirige-nom"></b><span class="endu"><i id="dirige-endu"></i></span></div>
     <div class="aide-tab cache" id="aide-tab"></div>
     <div class="net-diag cache" id="net-diag"></div>

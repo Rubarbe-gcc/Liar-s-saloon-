@@ -27,6 +27,8 @@ export const NIVEAUX = [
 ];
 /** Le niveau qui dirige les joueurs d'une équipe (les coéquipiers d'un humain : Normal). */
 export const niveauDe = (eq) => NIVEAUX[eq.ctrl === 'ia' ? eq.niveau : 1];
+/** Le gardien d'une équipe dirigée par un humain est un cran au-dessus (on ne le dirige pas : il doit être sûr). */
+export const bonusGardien = (eq) => (eq.ctrl === 'humain' ? 8 : niveauDe(eq).gardien);
 
 const RIEN = { mx: 0, my: 0, sprint: false, action: null };
 
@@ -201,7 +203,7 @@ function gardien(m, e, cons, N, traj) {
 
   // Un ballon haut file vers son but (un lob, une frappe de loin) et passerait au-dessus de lui :
   // il recule sur sa ligne, sous le ballon, pour le cueillir.
-  const gard = p.n.gardien + N.gardien;
+  const gard = p.n.gardien + bonusGardien(eq);
   const adverse = b.tir ? b.tir.e !== e : b.dernier >= 0 && m.joueurs[b.dernier].e !== e;
   if (b.porteur < 0 && adverse && b.vx * -s > 3) {
     const tl = (gx - b.x) / b.vx, tk = (p.x - b.x) / b.vx;

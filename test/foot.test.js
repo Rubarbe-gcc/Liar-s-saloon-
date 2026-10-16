@@ -171,6 +171,29 @@ test('la passe se charge aussi : tenue longtemps, elle part plus vite', () => {
   assert.ok(douce > 0 && forte > douce * 1.3, `${douce.toFixed(1)} → ${forte.toFixed(1)} m/s`);
 });
 
+test('la reprise de volée : B pendant que la passe arrive, et le receveur frappe du premier coup', () => {
+  const { m } = action(2, 0);
+  Object.assign(m.joueurs[3], { x: 12, y: 2 });
+  // Un lob vers l'avant (X), puis B tout de suite : la reprise attend le ballon.
+  pas(m, [T.d | T.X, 0]);
+  pas(m, [T.d, 0]);
+  assert.equal(m.ballon.cible, 3, 'le lob part vers lui');
+  assert.equal(m.equipes[0].actif, 3, 'on dirige le receveur');
+  pas(m, [T.B, 0]);
+  let tir = null;
+  for (let i = 0; i < 150 && !tir; i++) tir = pas(m, [0, 0]).find((e) => e.type === 'tir');
+  assert.ok(tir, 'il a frappé à l’arrivée du ballon');
+  assert.equal(tir.joueur, 3);
+  assert.ok(tir.geste === 'volee' || tir.geste === 'premiere');
+});
+
+test('le gardien d’un humain est un cran au-dessus', async () => {
+  const { bonusGardien, niveauDe } = await import('../public/shared/foot/ia.js');
+  const humain = { ctrl: 'humain', niveau: 1 }, ordi = { ctrl: 'ia', niveau: 1 };
+  assert.ok(bonusGardien(humain) > bonusGardien(ordi));
+  assert.equal(bonusGardien(ordi), niveauDe(ordi).gardien);
+});
+
 test('en défense : B fait un tacle glissé, A change de joueur', () => {
   const m = creerMatch({ equipes: ['brisevent', 'ferrac'], graine: 5, controles: ['humain', 'ia'] });
   m.phase = 'jeu';

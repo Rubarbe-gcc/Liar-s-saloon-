@@ -190,6 +190,25 @@ button { font: inherit; color: inherit; }
 .jauge { position: absolute; width: 56px; height: 9px; margin-left: -28px; border-radius: 5px; background: rgba(0, 0, 0, .6); box-shadow: 0 0 0 2px rgba(255, 255, 255, .7); pointer-events: none; overflow: hidden; }
 .jauge i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--citron), var(--jaune) 60%, var(--rouge)); }
 .jauge.passe i { background: linear-gradient(90deg, #9fe0ff, var(--bleu) 60%, #2a5cff); }
+/* Le commentateur : un bandeau en bas, façon retransmission. */
+.commentaire {
+  position: absolute; left: max(12px, env(safe-area-inset-left)); bottom: calc(max(12px, env(safe-area-inset-bottom)) + 40px); max-width: min(560px, 70vw);
+  padding: 7px 14px 7px 10px; border-radius: 4px; pointer-events: none; font-weight: 700; font-size: .95em;
+  background: linear-gradient(90deg, rgba(4, 12, 22, .92), rgba(4, 12, 22, .72)); border-left: 4px solid var(--jaune);
+  opacity: 0; transform: translateX(-12px); transition: opacity .25s, transform .25s;
+}
+.commentaire.montre { opacity: 1; transform: none; }
+.commentaire .micro { margin-right: 8px; }
+.commentaire b { color: var(--jaune); }
+body.doigt .commentaire { bottom: auto; top: calc(max(10px, env(safe-area-inset-top)) + 44px); max-width: 52vw; font-size: .82em; }
+/* La passe arrive : le rappel de la reprise de volée, au-dessus du receveur. */
+.aide-volee {
+  position: absolute; transform: translate(-50%, -100%); padding: 3px 9px; border-radius: 999px; pointer-events: none; white-space: nowrap;
+  background: rgba(4, 12, 22, .85); font-size: .78em; font-weight: 800; box-shadow: 0 0 0 2px rgba(255, 210, 63, .6);
+}
+.aide-volee b { color: var(--jaune); }
+.aide-volee.armee { background: var(--jaune); color: #2a1a00; }
+.aide-volee.armee b { color: #2a1a00; }
 .dirige { position: absolute; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none; text-shadow: 0 2px 3px #000; font-weight: 800; }
 .dirige .endu { width: 90px; height: 5px; border-radius: 3px; background: rgba(0, 0, 0, .5); overflow: hidden; }
 .dirige .endu i { display: block; height: 100%; width: 100%; background: var(--citron); transition: width .1s; }

@@ -17,6 +17,7 @@ import * as saisie from './saisie.js';
 import * as son from './son.js';
 import * as succes from '../../../shared/succes.js';
 import * as net from './enligne.js';
+import { creerCommentateur, reglage as reglageCommentaires, regler as reglerCommentaires } from './commentaires.js';
 
 const $ = (id) => document.getElementById(id);
 const PAS = 1 / FPS;
@@ -141,7 +142,7 @@ function instantane(m) {
   const b = m.ballon;
   return {
     phase: m.phase,
-    joueurs: m.joueurs.map((p) => ({ x: p.x, y: p.y, vx: p.vx, vy: p.vy, dx: p.dx, dy: p.dy, etat: p.etat, frappe: p.frappe, charge: p.charge > 0 ? Math.min(1, p.charge / 48) : 0, haut: p.haut, vyPlonge: p.etat === 'plonge' ? p.vy : 0 })),
+    joueurs: m.joueurs.map((p) => ({ x: p.x, y: p.y, vx: p.vx, vy: p.vy, dx: p.dx, dy: p.dy, etat: p.etat, frappe: p.frappe, charge: p.charge > 0 ? Math.min(1, p.charge / 48) : 0, volee: p.volee, haut: p.haut, vyPlonge: p.etat === 'plonge' ? p.vy : 0 })),
     ballon: { x: b.x, y: b.y, z: b.z, vx: b.vx, vy: b.vy, vz: b.vz, porteur: b.porteur },
   };
 }
@@ -196,6 +197,10 @@ function lancerMatch(o) {
   $('replay').classList.add('cache');
   $('aide-tab').classList.add('cache');
   ecranGeant();
+  // Le commentateur.
+  const LIEUX = { chaudron: 'au Chaudron', toit: 'sur le Toit', halle: 'à la Halle', plage: 'à la Plage' };
+  partie.com = creerCommentateur({ nom: (id) => nomDe(id), equipe: (e) => eqs[e], stade: LIEUX[o.stade] || '', el: $('commentaire') });
+  partie.com.debut(m);
   enPause = false;
   saisie.siJeuEnCours(() => ecran === 'match' && !enPause);
   son.public_(0.15);
@@ -205,7 +210,7 @@ function lancerMatch(o) {
 function arreterMatch() {
   cancelAnimationFrame(raf);
   if (partie?.o.mode === 'enligne') net.finirSession();
-  if (partie) { partie.rendu.detruire(); partie = null; }
+  if (partie) { partie.com?.arreter(); partie.rendu.detruire(); partie = null; }
   son.couperPublic();
   $('v-pause').classList.add('cache');
 }
@@ -274,6 +279,7 @@ function reagir(evs) {
   if (!evs.length) return;
   P.rendu.evenements(evs, P.cour);
   for (const ev of evs) {
+    P.com?.evenement(ev, m);
     switch (ev.type) {
       case 'passe': son.frappe(ev.lob ? 0.45 : 0.28); break;
       case 'tir': son.frappe(0.55 + ev.puissance * 0.45); P.excit = Math.max(P.excit, 0.35); break;
@@ -323,12 +329,13 @@ function reagir(evs) {
 
 /* ---------------- L'affichage ---------------- */
 
-const libContexte = { att: ['Passe', 'Tir', 'Lob'], def: ['Changer', 'Tacle', 'Pressing'], tab: ['—', 'Tir', '—'] };
+const libContexte = { att: ['Passe', 'Tir', 'Lob'], def: ['Changer', 'Tacle', 'Pressing'], tab: ['—', 'Tir', '—'], recoit: ['Remise', 'Volée', '—'] };
 let contexte = '';
 
 function afficher(dt) {
   const P = partie, m = P.m;
   P.excit *= Math.pow(0.4, dt);
+  P.com?.avancer(dt, m);
   // Le ralenti d'un but, ou le direct.
   let vue, vitesse = 1;
   const R = P.ralenti;
@@ -381,7 +388,17 @@ function afficher(dt) {
   // Les boutons tactiles disent ce qu'ils font maintenant.
   const b = m.ballon;
   const attaque = (b.porteur >= 0 && m.joueurs[b.porteur].e === P.local) || (b.porteur < 0 && b.cible >= 0 && m.joueurs[b.cible].e === P.local);
-  const ctx = m.phase === 'tab' ? 'tab' : attaque ? 'att' : 'def';
+  // Une passe arrive vers le joueur dirigé : c'est le moment d'une reprise de volée (B) ou d'une remise (A).
+  const recoit = m.phase === 'jeu' && b.porteur < 0 && b.cible >= 0 && b.cible === m.equipes[P.local].actif && m.equipes[P.local].ctrl === 'humain';
+  const aide = $('aide-volee');
+  aide.classList.toggle('cache', !recoit);
+  if (recoit) {
+    const r = m.joueurs[b.cible];
+    const pos = P.rendu.versEcran(r.x, r.y, 2.9);
+    aide.style.left = `${pos.x}px`; aide.style.top = `${pos.y}px`;
+    aide.classList.toggle('armee', r.reprise > 0);
+  }
+  const ctx = m.phase === 'tab' ? 'tab' : recoit ? 'recoit' : attaque ? 'att' : 'def';
   if (ctx !== contexte) {
     contexte = ctx;
     const [a, bb, x] = libContexte[ctx];
@@ -528,6 +545,8 @@ function brancher() {
   const majSon = () => { $('b-son').textContent = son.estMuet() ? '🔇 Son' : '🔊 Son'; $('b-son').setAttribute('aria-pressed', String(son.estMuet())); };
   $('b-son').addEventListener('click', () => { son.basculerSon(); majSon(); });
   majSon();
+  $('b-commentaires').value = reglageCommentaires;
+  $('b-commentaires').addEventListener('change', (e) => reglerCommentaires(e.target.value));
   $('b-qualite').value = qualite();
   $('b-qualite').addEventListener('change', (e) => reglerQualite(e.target.value));
   brancherEquipes();

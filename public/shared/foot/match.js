@@ -27,7 +27,7 @@ import {
   hasard, gauss, clamp, dist, vitesseMax, trajectoire,
 } from './terrain.js';
 import { EQUIPE, POSTES, notesJoueur } from './equipes.js';
-import { decider, niveauDe, interception } from './ia.js';
+import { decider, niveauDe, bonusGardien, interception } from './ia.js';
 
 export { FPS, T, CHARGE_MAX, CHARGE_PASSE, DEMI_L, DEMI_W, DEMI_BUT, BUT_H, BUT_P, SURFACE };
 
@@ -74,7 +74,7 @@ export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['hum
         id: e * 5 + i, e, i, poste: POSTES[i], n: notesJoueur(eq, i),
         x: 0, y: 0, vx: 0, vy: 0, dx: 1, dy: 0, etat: 'normal', t: 0, endu: 1,
         charge: 0, chargeCible: 0, vise: 0, verrou: 0, dec: 0, recu: 0, frappe: 0,
-        reprise: 0, remise: 0, rx: 0, ry: 0, haut: false, chargeP: 0, passeLob: false,
+        reprise: 0, remise: 0, rx: 0, ry: 0, haut: false, chargeP: 0, passeLob: false, volee: 0,
       });
     }
   }
@@ -153,6 +153,7 @@ function jouer(m, k, ap, rel, evs) {
     if (p.verrou > 0) p.verrou -= 1;
     if (p.t > 0) p.t -= 1;
     if (p.frappe > 0) p.frappe -= 1;
+    if (p.volee > 0) p.volee -= 1;
     if (p.reprise > 0) p.reprise -= 1;
     if (p.remise > 0) p.remise -= 1;
     if (b.porteur === p.id) p.recu += 1;
@@ -283,7 +284,8 @@ function humain(m, e, k, ap, rel, cons, evs, traj) {
     p.chargeP = 0;
     if (attaque) {
       // Le ballon vient vers nous : on prépare une reprise (B) ou une remise (A).
-      if (ap & T.B) { p.reprise = 26; p.vise = my; }
+      // Sur une passe pour lui, la reprise reste armée jusqu'à l'arrivée du ballon.
+      if (ap & T.B) { p.reprise = b.cible === p.id ? 240 : 26; p.vise = my; }
       if (ap & T.A) { p.remise = 26; p.rx = mx; p.ry = my; }
       // Sans direction, il va tout seul à la rencontre du ballon.
       if (!mx && !my && b.cible === p.id && traj) {
@@ -383,7 +385,7 @@ function passer(m, p, r, lob, evs, main = false, puissance = null) {
   evs.push({ type: 'passe', joueur: p.id, cible: r.id, lob: !!lob, main });
 }
 
-function tirer(m, p, puissance, vise, evs) {
+function tirer(m, p, puissance, vise, evs, geste = null) {
   const b = m.ballon, s = m.equipes[p.e].sens, gx = DEMI_L * s;
   const N = niveauDe(m.equipes[p.e]);
   puissance = clamp(puissance, 0.15, 1);
@@ -406,7 +408,7 @@ function tirer(m, p, puissance, vise, evs) {
   b.tireur = p.id;
   m.stats.tirs[p.e] += 1;
   if (Math.abs(ty) < DEMI_BUT - 0.05 && tz < BUT_H - 0.05) m.stats.cadres[p.e] += 1;
-  evs.push({ type: 'tir', joueur: p.id, puissance });
+  evs.push({ type: 'tir', joueur: p.id, puissance, geste, distance: d });
 }
 
 /* ------------------------------------------------------------------ */
@@ -685,7 +687,7 @@ function toucher(m, p, mains, evs) {
   if (mains && !passeAmie) {
     if (tirAdverse && !b.tir.teste) {
       b.tir.teste = true;
-      const gard = p.n.gardien + niveauDe(eq).gardien;
+      const gard = p.n.gardien + bonusGardien(eq);
       let pr = 0.9 + (gard - 75) * 0.012 - (speed - 20) * 0.02 + (b.tir.d - 9) * 0.012 - (Math.abs(b.y) > 0.9 ? 0.1 : 0) + (p.etat === 'plonge' ? 0 : 0.1);
       pr = clamp(pr, 0.1, 0.96);
       if (hasard(m) < pr) {
@@ -732,6 +734,7 @@ function toucher(m, p, mains, evs) {
 
 function prendre(m, p, mains, evs) {
   const b = m.ballon, eq = m.equipes[p.e];
+  const pourLui = b.cible === p.id, enLAir = b.z > 0.45;
   const passeur = b.cible === p.id ? b.passeur : -1;
   if (passeur >= 0 && m.joueurs[passeur].e === p.e) m.dernierePasse = { de: passeur, a: p.id, f: m.f };
   const recupere = b.dernier >= 0 && m.joueurs[b.dernier].e !== p.e;
@@ -743,7 +746,12 @@ function prendre(m, p, mains, evs) {
   if (eq.ctrl === 'humain' && p.i > 0) eq.actif = p.id;
   if (mains) return;
   // Le geste préparé par l'humain : une reprise ou une remise en une touche.
-  if (p.reprise > 0) { p.reprise = 0; tirer(m, p, 0.85, p.vise, evs); }
+  if (p.reprise > 0 && (pourLui || p.reprise <= 26)) {
+    // Du premier coup : une reprise de volée si le ballon arrive en l'air (plus forte), sinon une frappe en première intention.
+    p.reprise = 0;
+    if (enLAir) p.volee = 30;
+    tirer(m, p, enLAir ? 0.95 : 0.85, p.vise, evs, enLAir ? 'volee' : 'premiere');
+  }
   else if (p.remise > 0) {
     p.remise = 0;
     const r = choisirReceveur(m, p, p.rx, p.ry);
@@ -864,7 +872,7 @@ function tirsAuBut(m, k, ap, rel, evs) {
     }
     if (!tir) return;
     // Le gardien choisit son côté au moment de la frappe.
-    const gard = gardien.n.gardien + niveauDe(m.equipes[ge]).gardien;
+    const gard = gardien.n.gardien + bonusGardien(m.equipes[ge]);
     let plongeon;
     if (m.equipes[ge].ctrl === 'humain') plongeon = (k[ge] & T.h ? 1 : 0) - (k[ge] & T.b ? 1 : 0);
     else {

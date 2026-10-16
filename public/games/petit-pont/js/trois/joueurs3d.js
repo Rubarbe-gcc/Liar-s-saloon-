@@ -248,6 +248,12 @@ export function poseDe(fig, o, dt) {
     P.hancheA = -0.1; P.genouA = 0.35;
     P.epAz = 0.9; P.epBz = -0.4; P.epBx = -0.6; P.torse = -0.05;
   }
+  if (p.volee > 0) {
+    // La reprise de volée : il s'envole, se couche en arrière, la jambe fouette en l'air.
+    const u = 1 - p.volee / 30;
+    const air = Math.sin(Math.min(1, u * 1.25) * Math.PI);
+    Object.assign(P, { y: air * 0.5, rx: -0.85 * air, torse: -0.15, hancheB: 0.3 - 2.5 * doux(u / 0.4), genouB: 0.15, hancheA: 0.7 * air, genouA: 1.3 * air, epAz: 1.7, epBz: -1.7, epAx: 0, epBx: 0, tete: 0.3 });
+  }
   switch (p.etat) {
     case 'tacle':
       Object.assign(P, { by: 0.32, rx: -1.15, torse: 0.55, hancheA: -0.15, genouA: 0.1, hancheB: 0.2, genouB: 1.3, epAx: 0.9, epAz: 0.4, epBx: -0.3, epBz: -0.9, tete: 0.5, y: 0 });
