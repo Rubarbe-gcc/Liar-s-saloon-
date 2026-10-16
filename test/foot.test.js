@@ -13,6 +13,8 @@ import { EQUIPES, EQUIPE, STYLES, STADES, notesJoueur } from '../public/shared/f
 import { creerCoupe, matchDuJoueur, enregistrer, jouerSansMoi, aJouer, avancer } from '../public/shared/foot/coupe.js';
 import { creerSession, FENETRE } from '../public/shared/rollback.js';
 import * as foot from '../server/foot.js';
+import { creerLissage } from '../public/games/petit-pont/js/lissage.js';
+import { delaiSelonPing } from '../public/games/petit-pont/js/enligne.js';
 
 /** Un petit hasard reproductible (pour les touches des faux joueurs). */
 function rng(graine) {
@@ -339,6 +341,28 @@ for (const [nom, reseau] of [
     assert.ok(A.stats.rejouees / Math.max(1, A.stats.retours) <= FENETRE, 'des corrections courtes');
   });
 }
+
+test('en ligne : une correction ne fait pas sauter l’affichage, elle glisse puis disparaît', () => {
+  const vue = (x, vx = 0) => ({ f: 0, joueurs: Array.from({ length: 10 }, () => ({ x, y: 0, vx, vy: 0 })), ballon: { x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0 } });
+  const L = creerLissage();
+  // Le moteur corrige : le joueur passe de 0 à 1 m d'un coup (il ne courait pas).
+  L.apres(vue(0), vue(1), 1 / 60);
+  const a = L.appliquer(vue(1), 1 / 60);
+  assert.ok(a.joueurs[0].x < 0.25, 'affiché presque là où il était');
+  let x = 0;
+  for (let i = 0; i < 30; i++) x = L.appliquer(vue(1), 1 / 60).joueurs[0].x;
+  assert.ok(x > 0.99, 'puis à sa vraie place en une demi-seconde');
+  // Le mouvement normal (il court) et les remises en place (coup d'envoi) ne sont pas lissés.
+  const L2 = creerLissage();
+  L2.apres(vue(0, 6), vue(0.1, 6), 1 / 60);
+  assert.equal(L2.appliquer(vue(0.1, 6), 1 / 60).joueurs[0].x, 0.1);
+  L2.apres(vue(0), vue(15), 1 / 60);
+  assert.equal(L2.appliquer(vue(15), 1 / 60).joueurs[0].x, 15);
+  // Le délai des touches suit le ping, sans dépasser 5 images.
+  assert.equal(delaiSelonPing(0), 2);
+  assert.ok(delaiSelonPing(120) > delaiSelonPing(30));
+  assert.equal(delaiSelonPing(900), 5);
+});
 
 /* ------------------------------------------------------------------ */
 /* Le serveur                                                          */

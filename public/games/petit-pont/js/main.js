@@ -17,6 +17,7 @@ import * as saisie from './saisie.js';
 import * as son from './son.js';
 import * as succes from '../../../shared/succes.js';
 import * as net from './enligne.js';
+import { creerLissage } from './lissage.js';
 import { creerCommentateur, reglage as reglageCommentaires, regler as reglerCommentaires } from './commentaires.js';
 
 const $ = (id) => document.getElementById(id);
@@ -141,6 +142,7 @@ let raf = 0;
 function instantane(m) {
   const b = m.ballon;
   return {
+    f: m.f,
     phase: m.phase,
     joueurs: m.joueurs.map((p) => ({ x: p.x, y: p.y, vx: p.vx, vy: p.vy, dx: p.dx, dy: p.dy, etat: p.etat, frappe: p.frappe, charge: p.charge > 0 ? Math.min(1, p.charge / 48) : 0, volee: p.volee, haut: p.haut, vyPlonge: p.etat === 'plonge' ? p.vy : 0 })),
     ballon: { x: b.x, y: b.y, z: b.z, vx: b.vx, vy: b.vy, vz: b.vz, porteur: b.porteur },
@@ -187,7 +189,7 @@ function lancerMatch(o) {
   aller('match');
   const rendu = creerRendu($('scene'), { stade: o.stade, equipes: eqs, kits });
   if (!rendu) { alert('La 3D n’est pas disponible sur cet appareil.'); aller('menu'); return; }
-  partie = { o, m, rendu, eqs, kits, local: o.local ?? 0, acc: 0, prec: null, cour: instantane(m), film: [], ralenti: null, finVue: 0, dernier: performance.now(), excit: 0, scoreAffiche: '' };
+  partie = { o, m, rendu, eqs, kits, lisse: o.mode === 'enligne' ? creerLissage() : null, local: o.local ?? 0, acc: 0, prec: null, cour: instantane(m), film: [], ralenti: null, finVue: 0, dernier: performance.now(), excit: 0, scoreAffiche: '' };
   // Le tableau d'affichage.
   for (let e = 0; e < 2; e++) {
     $(`hud-ec${e}`).innerHTML = ecussonSVG(eqs[e], 26);
@@ -246,6 +248,8 @@ function uneImage() {
     if (!r || r.attente) return;
     P.prec = P.cour;
     P.cour = instantane(P.m);
+    // Une correction du rollback a déplacé des joueurs d'un coup : l'affichage, lui, glisse.
+    P.lisse.apres(P.prec, P.cour, Math.max(1, P.cour.f - P.prec.f) * PAS);
     P.film.push(P.cour);
     if (P.film.length > 260) P.film.shift();
     reagir(r.evs);
@@ -349,7 +353,10 @@ function afficher(dt) {
     }
   }
   $('replay').classList.toggle('cache', !(R && R.attente <= 0 && P.ralenti));
-  if (!vue) vue = melanger(P.prec, P.cour, P.acc / PAS);
+  if (!vue) {
+    vue = melanger(P.prec, P.cour, P.acc / PAS);
+    if (P.lisse) vue = P.lisse.appliquer(vue, dt);
+  }
   const { h, heros } = humeurs(m);
   const enRalenti = !!(P.ralenti && P.ralenti.attente <= 0);
   P.rendu.camera(m.phase === 'tab' ? 'tab' : enRalenti ? 'ralenti' : m.phase === 'but' ? 'but' : 'tele', enRalenti && R.t < 0.02);

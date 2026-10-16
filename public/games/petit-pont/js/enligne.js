@@ -35,8 +35,12 @@ function recevoirSonde(id) {
   DIAG.ping = DIAG.mesures ? DIAG.ping * 0.7 + rtt * 0.3 : rtt;
   DIAG.mesures += 1;
 }
-/** Le délai de nos touches selon le ping : assez pour que la plupart arrivent à temps, pas plus. */
-export const delaiSelonPing = (ping) => (!ping ? 2 : Math.max(1, Math.min(3, Math.round(ping / 16.7 / 2))));
+/**
+ * Le délai de nos touches selon le ping : assez pour que la plupart arrivent à temps (moins de
+ * corrections, donc un match plus fluide), sans que le jeu paraisse mou. Le foot pardonne un
+ * peu plus de délai qu'un jeu de combat : de 2 à 5 images (33 à 83 ms).
+ */
+export const delaiSelonPing = (ping) => (!ping ? 2 : Math.max(2, Math.min(5, Math.round(ping / 40) + 1)));
 
 /* ---------------- La session de match ---------------- */
 

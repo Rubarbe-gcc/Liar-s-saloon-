@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v124';
+const VERSION = 'v125';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -213,6 +213,7 @@ const SHELL = [
   '/games/petit-pont/js/son.js',
   '/games/petit-pont/js/enligne.js',
   '/games/petit-pont/js/commentaires.js',
+  '/games/petit-pont/js/lissage.js',
   '/games/petit-pont/js/trois/rendu3d.js',
   '/games/petit-pont/js/trois/joueurs3d.js',
   '/games/petit-pont/js/trois/stade3d.js',
