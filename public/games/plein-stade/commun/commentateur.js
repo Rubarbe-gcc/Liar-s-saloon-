@@ -59,6 +59,11 @@ try { window.speechSynthesis?.addEventListener?.('voiceschanged', () => {}); win
  */
 const familles = new Map();
 let voixChargee = false;
+/** Ce que dit chaque réplique enregistrée (pour l'afficher mot pour mot). */
+const textes = new Map();
+fetch(new URL('./voix/lignes.json', import.meta.url)).then((r) => (r.ok ? r.json() : { lignes: [] })).then((j) => {
+  for (const l of j.lignes) textes.set(new URL('./voix/' + l.id + '.mp3', import.meta.url).href, l.texte);
+}).catch(() => {});
 fetch(new URL('./voix/liste.json', import.meta.url)).then((r) => (r.ok ? r.json() : [])).then((ids) => {
   for (const id of ids) {
     const fam = id.replace(/_\d+$/, '');
@@ -108,10 +113,12 @@ export function creerCommentateur({ el, noms = { comm: 'Commentateur', cons: 'Co
   }
 
   function lire(item) {
-    afficher(item.texte, item.role, item.important);
+    const clipChoisi = reglage === 'voix' && !estMuet() && item.clip ? clipPour(item.clip) : null;
+    // Avec la vraie voix, on affiche exactement ce qu'elle dit.
+    afficher(clipChoisi && textes.get(clipChoisi) ? textes.get(clipChoisi) : item.texte, item.role, item.important);
     const fini = () => { parle = false; son = null; derniereFin = performance.now(); setTimeout(suite, 180); };
     // La vraie voix : la réplique enregistrée de ce moment.
-    const clip = reglage === 'voix' && !estMuet() && item.clip ? clipPour(item.clip) : null;
+    const clip = clipChoisi;
     if (clip) {
       son = new Audio(clip);
       son.volume = 1;
