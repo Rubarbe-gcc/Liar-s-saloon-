@@ -786,7 +786,7 @@ function toucher(m, p, mains, evs) {
       const ecart9 = b.tir.d - 9;
       const loin = ecart9 < 0 ? Math.max(-0.45, ecart9 * (parHumain ? 0.075 : 0.035)) : Math.min(0.35, ecart9 * (parHumain ? 0.045 : 0.035));
       let pr = parHumain
-        ? 0.64 + (gard - 75) * 0.012 - (speed - 20) * 0.03 + loin - (Math.abs(b.y) > 0.9 ? 0.18 : 0) + (p.etat === 'plonge' ? 0 : 0.1)
+        ? 0.69 + (gard - 75) * 0.012 - (speed - 20) * 0.03 + loin - (Math.abs(b.y) > 0.9 ? 0.18 : 0) + (p.etat === 'plonge' ? 0 : 0.1)
         : 0.88 + (gard - 75) * 0.012 - (speed - 20) * 0.02 + loin - (Math.abs(b.y) > 0.9 ? 0.1 : 0) + (p.etat === 'plonge' ? 0 : 0.1);
       pr = clamp(pr, 0.1, 0.96);
       if (hasard(m) < pr) {
