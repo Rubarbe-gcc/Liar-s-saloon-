@@ -1,0 +1,53 @@
+Ils cherchent la faille.
+<break time="2s" />
+C'est très tactique.
+<break time="2s" />
+Il faut plus de mouvement devant.
+<break time="2s" />
+La défense est bien en place.
+<break time="2s" />
+Il manque de la vitesse dans les transmissions.
+<break time="2s" />
+On sent qu'il peut se passer quelque chose.
+<break time="2s" />
+Le milieu de terrain est très disputé.
+<break time="2s" />
+Il faut tenter sa chance, maintenant.
+<break time="2s" />
+Ils jouent juste, c'est propre.
+<break time="2s" />
+Attention aux contres.
+<break time="2s" />
+Ce pressing, c'est épuisant pour l'adversaire.
+<break time="2s" />
+Ils récupèrent haut, c'est leur force.
+<break time="2s" />
+Il faut savoir sortir de ce pressing.
+<break time="2s" />
+Belle lecture du jeu.
+<break time="2s" />
+Défensivement, c'est solide.
+<break time="2s" />
+Il a bien senti le coup.
+<break time="2s" />
+Il fallait cadrer.
+<break time="2s" />
+Il a manqué de précision.
+<break time="2s" />
+Il avait mieux à faire.
+<break time="2s" />
+Ils ont la main sur ce match.
+<break time="2s" />
+Ils dominent, mais il faut concrétiser.
+<break time="2s" />
+L'autre équipe subit.
+<break time="2s" />
+Ils doivent réagir, maintenant.
+<break time="2s" />
+Il va falloir prendre des risques.
+<break time="2s" />
+Le temps joue contre eux.
+<break time="2s" />
+Ça se joue sur un détail.
+<break time="2s" />
+Personne ne veut perdre.

@@ -1,0 +1,415 @@
+{
+  "voix": "BjHDcKBmjwORvTEPOc2A",
+  "lignes": [
+    {
+      "id": "passe_1",
+      "energie": 2,
+      "texte": "Passe."
+    },
+    {
+      "id": "passe_2",
+      "energie": 2,
+      "texte": "Il donne."
+    },
+    {
+      "id": "passe_3",
+      "energie": 2,
+      "texte": "Ça circule."
+    },
+    {
+      "id": "passe_4",
+      "energie": 2,
+      "texte": "Bonne passe."
+    },
+    {
+      "id": "passe_5",
+      "energie": 2,
+      "texte": "Il trouve son coéquipier."
+    },
+    {
+      "id": "passe_6",
+      "energie": 2,
+      "texte": "Il décale."
+    },
+    {
+      "id": "passe_longue_1",
+      "energie": 3,
+      "texte": "Ballon long !"
+    },
+    {
+      "id": "passe_longue_2",
+      "energie": 3,
+      "texte": "Il change le jeu !"
+    },
+    {
+      "id": "passe_longue_3",
+      "energie": 3,
+      "texte": "Il envoie loin devant !"
+    },
+    {
+      "id": "passe_longue_4",
+      "energie": 3,
+      "texte": "Une longue ouverture !"
+    },
+    {
+      "id": "passe_longue_5",
+      "energie": 3,
+      "texte": "Par-dessus la défense !"
+    },
+    {
+      "id": "centre_1",
+      "energie": 3,
+      "texte": "Le centre !"
+    },
+    {
+      "id": "centre_2",
+      "energie": 3,
+      "texte": "Ballon dans la surface !"
+    },
+    {
+      "id": "centre_3",
+      "energie": 3,
+      "texte": "Il centre !"
+    },
+    {
+      "id": "centre_4",
+      "energie": 3,
+      "texte": "Ça arrive dans la surface !"
+    },
+    {
+      "id": "recupere_1",
+      "energie": 3,
+      "texte": "Ballon récupéré !"
+    },
+    {
+      "id": "recupere_2",
+      "energie": 3,
+      "texte": "Interception !"
+    },
+    {
+      "id": "recupere_3",
+      "energie": 3,
+      "texte": "Il coupe la trajectoire !"
+    },
+    {
+      "id": "recupere_4",
+      "energie": 3,
+      "texte": "Ballon perdu, ça repart dans l'autre sens !"
+    },
+    {
+      "id": "recupere_5",
+      "energie": 3,
+      "texte": "Il lit bien le jeu !"
+    },
+    {
+      "id": "recupere_6",
+      "energie": 3,
+      "texte": "Belle anticipation !"
+    },
+    {
+      "id": "vol_1",
+      "energie": 3,
+      "texte": "Il lui chipe le ballon !"
+    },
+    {
+      "id": "vol_2",
+      "energie": 3,
+      "texte": "Duel gagné !"
+    },
+    {
+      "id": "vol_3",
+      "energie": 3,
+      "texte": "Il lui prend le ballon dans les pieds !"
+    },
+    {
+      "id": "vol_4",
+      "energie": 3,
+      "texte": "Bien joué, ballon récupéré !"
+    },
+    {
+      "id": "tacle_rate_1",
+      "energie": 2,
+      "texte": "Trop tard !"
+    },
+    {
+      "id": "tacle_rate_2",
+      "energie": 2,
+      "texte": "Il manque son tacle !"
+    },
+    {
+      "id": "tacle_rate_3",
+      "energie": 2,
+      "texte": "Il est passé !"
+    },
+    {
+      "id": "tacle_rate_4",
+      "energie": 2,
+      "texte": "Il glisse, mais il ne touche rien !"
+    },
+    {
+      "id": "contre_1",
+      "energie": 3,
+      "texte": "Contré !"
+    },
+    {
+      "id": "contre_2",
+      "energie": 3,
+      "texte": "C'est contré !"
+    },
+    {
+      "id": "contre_3",
+      "energie": 3,
+      "texte": "Le défenseur s'interpose !"
+    },
+    {
+      "id": "contre_4",
+      "energie": 3,
+      "texte": "Bloqué par la défense !"
+    },
+    {
+      "id": "construction_1",
+      "energie": 1,
+      "texte": "On repart de derrière."
+    },
+    {
+      "id": "construction_2",
+      "energie": 1,
+      "texte": "Ça joue tranquillement en défense."
+    },
+    {
+      "id": "construction_3",
+      "energie": 1,
+      "texte": "Ils prennent leur temps."
+    },
+    {
+      "id": "construction_4",
+      "energie": 1,
+      "texte": "On construit patiemment."
+    },
+    {
+      "id": "conduite_1",
+      "energie": 2,
+      "texte": "Il avance avec le ballon."
+    },
+    {
+      "id": "conduite_2",
+      "energie": 2,
+      "texte": "Il prend le couloir."
+    },
+    {
+      "id": "conduite_3",
+      "energie": 2,
+      "texte": "Il remonte le terrain."
+    },
+    {
+      "id": "conduite_4",
+      "energie": 2,
+      "texte": "Il accélère !"
+    },
+    {
+      "id": "conduite_5",
+      "energie": 2,
+      "texte": "Il cherche une solution."
+    },
+    {
+      "id": "attaque_1",
+      "energie": 3,
+      "texte": "Attention, ça devient dangereux !"
+    },
+    {
+      "id": "attaque_2",
+      "energie": 3,
+      "texte": "Il arrive aux abords de la surface !"
+    },
+    {
+      "id": "attaque_3",
+      "energie": 3,
+      "texte": "Il est dans la surface !"
+    },
+    {
+      "id": "attaque_4",
+      "energie": 3,
+      "texte": "Il peut frapper !"
+    },
+    {
+      "id": "attaque_5",
+      "energie": 3,
+      "texte": "Gros danger !"
+    },
+    {
+      "id": "gardien_tient_1",
+      "energie": 1,
+      "texte": "Le gardien a le ballon en main."
+    },
+    {
+      "id": "gardien_tient_2",
+      "energie": 1,
+      "texte": "Il temporise, le gardien."
+    },
+    {
+      "id": "gardien_tient_3",
+      "energie": 1,
+      "texte": "Le gardien observe."
+    },
+    {
+      "id": "gardien_relance_1",
+      "energie": 2,
+      "texte": "Le gardien relance."
+    },
+    {
+      "id": "gardien_relance_2",
+      "energie": 2,
+      "texte": "Relance rapide du gardien !"
+    },
+    {
+      "id": "gardien_relance_3",
+      "energie": 2,
+      "texte": "Le gardien joue court."
+    },
+    {
+      "id": "tir_1",
+      "energie": 3,
+      "texte": "Il frappe !"
+    },
+    {
+      "id": "tir_2",
+      "energie": 3,
+      "texte": "Il tente !"
+    },
+    {
+      "id": "tir_3",
+      "energie": 3,
+      "texte": "Frappe !"
+    },
+    {
+      "id": "tir_4",
+      "energie": 3,
+      "texte": "Il déclenche !"
+    },
+    {
+      "id": "premiere_1",
+      "energie": 3,
+      "texte": "Du premier coup !"
+    },
+    {
+      "id": "premiere_2",
+      "energie": 3,
+      "texte": "En une touche !"
+    },
+    {
+      "id": "a_cote_1",
+      "energie": 3,
+      "texte": "À côté !"
+    },
+    {
+      "id": "a_cote_2",
+      "energie": 3,
+      "texte": "C'est à côté !"
+    },
+    {
+      "id": "a_cote_3",
+      "energie": 3,
+      "texte": "Au-dessus !"
+    },
+    {
+      "id": "a_cote_4",
+      "energie": 3,
+      "texte": "Ça passe tout près !"
+    },
+    {
+      "id": "a_cote_5",
+      "energie": 3,
+      "texte": "Pas cadré !"
+    },
+    {
+      "id": "frole_1",
+      "energie": 3,
+      "texte": "Il la touche du bout des doigts !"
+    },
+    {
+      "id": "frole_2",
+      "energie": 3,
+      "texte": "Le gardien l'effleure !"
+    },
+    {
+      "id": "bande_1",
+      "energie": 2,
+      "texte": "Sur la bande !"
+    },
+    {
+      "id": "bande_2",
+      "energie": 2,
+      "texte": "Le ballon rebondit sur la bande."
+    },
+    {
+      "id": "bande_3",
+      "energie": 2,
+      "texte": "Ça claque contre la bande !"
+    },
+    {
+      "id": "pressing_1",
+      "energie": 3,
+      "texte": "Ils pressent haut !"
+    },
+    {
+      "id": "pressing_2",
+      "energie": 3,
+      "texte": "Gros pressing !"
+    },
+    {
+      "id": "pressing_3",
+      "energie": 3,
+      "texte": "Ils montent tous ensemble !"
+    },
+    {
+      "id": "pressing_4",
+      "energie": 3,
+      "texte": "Ils ne laissent pas respirer l'adversaire !"
+    },
+    {
+      "id": "possession_1",
+      "energie": 2,
+      "texte": "Ça fait tourner."
+    },
+    {
+      "id": "possession_2",
+      "energie": 2,
+      "texte": "Ils gardent bien le ballon."
+    },
+    {
+      "id": "possession_3",
+      "energie": 2,
+      "texte": "Belle conservation."
+    },
+    {
+      "id": "possession_4",
+      "energie": 2,
+      "texte": "Ils confisquent le ballon !"
+    },
+    {
+      "id": "engagement_1",
+      "energie": 2,
+      "texte": "Engagement !"
+    },
+    {
+      "id": "engagement_2",
+      "energie": 2,
+      "texte": "On reprend !"
+    },
+    {
+      "id": "engagement_3",
+      "energie": 2,
+      "texte": "Ça repart !"
+    },
+    {
+      "id": "dix_secondes_1",
+      "energie": 4,
+      "texte": "Dix secondes !"
+    },
+    {
+      "id": "dix_secondes_2",
+      "energie": 4,
+      "texte": "C'est la dernière action !"
+    }
+  ]
+}

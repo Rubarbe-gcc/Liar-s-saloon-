@@ -1,0 +1,139 @@
+{
+  "lignes": [
+    {
+      "id": "cons_analyse_1",
+      "energie": 2,
+      "texte": "Ils cherchent la faille."
+    },
+    {
+      "id": "cons_analyse_2",
+      "energie": 2,
+      "texte": "C'est très tactique."
+    },
+    {
+      "id": "cons_analyse_3",
+      "energie": 2,
+      "texte": "Il faut plus de mouvement devant."
+    },
+    {
+      "id": "cons_analyse_4",
+      "energie": 2,
+      "texte": "La défense est bien en place."
+    },
+    {
+      "id": "cons_analyse_5",
+      "energie": 2,
+      "texte": "Il manque de la vitesse dans les transmissions."
+    },
+    {
+      "id": "cons_analyse_6",
+      "energie": 2,
+      "texte": "On sent qu'il peut se passer quelque chose."
+    },
+    {
+      "id": "cons_analyse_7",
+      "energie": 2,
+      "texte": "Le milieu de terrain est très disputé."
+    },
+    {
+      "id": "cons_analyse_8",
+      "energie": 2,
+      "texte": "Il faut tenter sa chance, maintenant."
+    },
+    {
+      "id": "cons_analyse_9",
+      "energie": 2,
+      "texte": "Ils jouent juste, c'est propre."
+    },
+    {
+      "id": "cons_analyse_10",
+      "energie": 2,
+      "texte": "Attention aux contres."
+    },
+    {
+      "id": "cons_pressing_1",
+      "energie": 2,
+      "texte": "Ce pressing, c'est épuisant pour l'adversaire."
+    },
+    {
+      "id": "cons_pressing_2",
+      "energie": 2,
+      "texte": "Ils récupèrent haut, c'est leur force."
+    },
+    {
+      "id": "cons_pressing_3",
+      "energie": 2,
+      "texte": "Il faut savoir sortir de ce pressing."
+    },
+    {
+      "id": "cons_recup_1",
+      "energie": 2,
+      "texte": "Belle lecture du jeu."
+    },
+    {
+      "id": "cons_recup_2",
+      "energie": 2,
+      "texte": "Défensivement, c'est solide."
+    },
+    {
+      "id": "cons_recup_3",
+      "energie": 2,
+      "texte": "Il a bien senti le coup."
+    },
+    {
+      "id": "cons_rate_1",
+      "energie": 2,
+      "texte": "Il fallait cadrer."
+    },
+    {
+      "id": "cons_rate_2",
+      "energie": 2,
+      "texte": "Il a manqué de précision."
+    },
+    {
+      "id": "cons_rate_3",
+      "energie": 2,
+      "texte": "Il avait mieux à faire."
+    },
+    {
+      "id": "cons_domine_1",
+      "energie": 2,
+      "texte": "Ils ont la main sur ce match."
+    },
+    {
+      "id": "cons_domine_2",
+      "energie": 2,
+      "texte": "Ils dominent, mais il faut concrétiser."
+    },
+    {
+      "id": "cons_domine_3",
+      "energie": 2,
+      "texte": "L'autre équipe subit."
+    },
+    {
+      "id": "cons_mene_1",
+      "energie": 2,
+      "texte": "Ils doivent réagir, maintenant."
+    },
+    {
+      "id": "cons_mene_2",
+      "energie": 2,
+      "texte": "Il va falloir prendre des risques."
+    },
+    {
+      "id": "cons_mene_3",
+      "energie": 2,
+      "texte": "Le temps joue contre eux."
+    },
+    {
+      "id": "cons_serre_1",
+      "energie": 2,
+      "texte": "Ça se joue sur un détail."
+    },
+    {
+      "id": "cons_serre_2",
+      "energie": 2,
+      "texte": "Personne ne veut perdre."
+    }
+  ]
+}

@@ -1,0 +1,163 @@
+Passe.
+<break time="2s" />
+Il donne.
+<break time="2s" />
+Ça circule.
+<break time="2s" />
+Bonne passe.
+<break time="2s" />
+Il trouve son coéquipier.
+<break time="2s" />
+Il décale.
+<break time="2s" />
+Ballon long !
+<break time="2s" />
+Il change le jeu !
+<break time="2s" />
+Il envoie loin devant !
+<break time="2s" />
+Une longue ouverture !
+<break time="2s" />
+Par-dessus la défense !
+<break time="2s" />
+Le centre !
+<break time="2s" />
+Ballon dans la surface !
+<break time="2s" />
+Il centre !
+<break time="2s" />
+Ça arrive dans la surface !
+<break time="2s" />
+Ballon récupéré !
+<break time="2s" />
+Interception !
+<break time="2s" />
+Il coupe la trajectoire !
+<break time="2s" />
+Ballon perdu, ça repart dans l'autre sens !
+<break time="2s" />
+Il lit bien le jeu !
+<break time="2s" />
+Belle anticipation !
+<break time="2s" />
+Il lui chipe le ballon !
+<break time="2s" />
+Duel gagné !
+<break time="2s" />
+Il lui prend le ballon dans les pieds !
+<break time="2s" />
+Bien joué, ballon récupéré !
+<break time="2s" />
+Trop tard !
+<break time="2s" />
+Il manque son tacle !
+<break time="2s" />
+Il est passé !
+<break time="2s" />
+Il glisse, mais il ne touche rien !
+<break time="2s" />
+Contré !
+<break time="2s" />
+C'est contré !
+<break time="2s" />
+Le défenseur s'interpose !
+<break time="2s" />
+Bloqué par la défense !
+<break time="2s" />
+On repart de derrière.
+<break time="2s" />
+Ça joue tranquillement en défense.
+<break time="2s" />
+Ils prennent leur temps.
+<break time="2s" />
+On construit patiemment.
+<break time="2s" />
+Il avance avec le ballon.
+<break time="2s" />
+Il prend le couloir.
+<break time="2s" />
+Il remonte le terrain.
+<break time="2s" />
+Il accélère !
+<break time="2s" />
+Il cherche une solution.
+<break time="2s" />
+Attention, ça devient dangereux !
+<break time="2s" />
+Il arrive aux abords de la surface !
+<break time="2s" />
+Il est dans la surface !
+<break time="2s" />
+Il peut frapper !
+<break time="2s" />
+Gros danger !
+<break time="2s" />
+Le gardien a le ballon en main.
+<break time="2s" />
+Il temporise, le gardien.
+<break time="2s" />
+Le gardien observe.
+<break time="2s" />
+Le gardien relance.
+<break time="2s" />
+Relance rapide du gardien !
+<break time="2s" />
+Le gardien joue court.
+<break time="2s" />
+Il frappe !
+<break time="2s" />
+Il tente !
+<break time="2s" />
+Frappe !
+<break time="2s" />
+Il déclenche !
+<break time="2s" />
+Du premier coup !
+<break time="2s" />
+En une touche !
+<break time="2s" />
+À côté !
+<break time="2s" />
+C'est à côté !
+<break time="2s" />
+Au-dessus !
+<break time="2s" />
+Ça passe tout près !
+<break time="2s" />
+Pas cadré !
+<break time="2s" />
+Il la touche du bout des doigts !
+<break time="2s" />
+Le gardien l'effleure !
+<break time="2s" />
+Sur la bande !
+<break time="2s" />
+Le ballon rebondit sur la bande.
+<break time="2s" />
+Ça claque contre la bande !
+<break time="2s" />
+Ils pressent haut !
+<break time="2s" />
+Gros pressing !
+<break time="2s" />
+Ils montent tous ensemble !
+<break time="2s" />
+Ils ne laissent pas respirer l'adversaire !
+<break time="2s" />
+Ça fait tourner.
+<break time="2s" />
+Ils gardent bien le ballon.
+<break time="2s" />
+Belle conservation.
+<break time="2s" />
+Ils confisquent le ballon !
+<break time="2s" />
+Engagement !
+<break time="2s" />
+On reprend !
+<break time="2s" />
+Ça repart !
+<break time="2s" />
+Dix secondes !
+<break time="2s" />
+C'est la dernière action !

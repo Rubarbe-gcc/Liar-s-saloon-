@@ -61,7 +61,7 @@ const familles = new Map();
 let voixChargee = false;
 /** Ce que dit chaque réplique enregistrée (pour l'afficher mot pour mot). */
 const textes = new Map();
-for (const fichier of ['lignes.json', 'consultant.json']) fetch(new URL('./voix/' + fichier, import.meta.url)).then((r) => (r.ok ? r.json() : { lignes: [] })).then((j) => {
+for (const fichier of ['lignes.json', 'consultant.json', 'direct.json', 'analyse.json']) fetch(new URL('./voix/' + fichier, import.meta.url)).then((r) => (r.ok ? r.json() : { lignes: [] })).then((j) => {
   for (const l of j.lignes) textes.set(new URL('./voix/' + l.id + '.mp3', import.meta.url).href, l.texte);
 }).catch(() => {});
 fetch(new URL('./voix/liste.json', import.meta.url)).then((r) => (r.ok ? r.json() : [])).then((ids) => {
@@ -82,7 +82,7 @@ export const vraieVoix = () => voixChargee;
  * @returns {{ dire(texte, { role, important, emotion, apres }), choisir(cle, liste), arreter() }}
  */
 export function creerCommentateur({ el, noms = { comm: 'Commentateur', cons: 'Consultant' } }) {
-  let minuteur = 0, parle = false, file = [], derniereFin = 0, son = null;
+  let minuteur = 0, parle = false, file = [], derniereFin = 0, son = null, enCours = null, lecture = 0;
   const derniersClips = new Map();
   /** Une réplique enregistrée de cette famille (pas la même que la dernière fois). */
   function clipPour(fam) {
@@ -112,11 +112,20 @@ export function creerCommentateur({ el, noms = { comm: 'Commentateur', cons: 'Co
     minuteur = setTimeout(() => el.classList.remove('montre'), important ? 4500 : 3200);
   }
 
+  /** Coupe ce qui se dit (voix, synthèse ou texte qu'on laisse lire). */
+  function couper() {
+    window.speechSynthesis?.cancel();
+    if (son) { son.onended = son.onerror = null; son.pause(); son = null; }
+    clearTimeout(lecture);
+    parle = false; enCours = null;
+  }
+
   function lire(item) {
+    enCours = item;
     const clipChoisi = reglage === 'voix' && !estMuet() && item.clip ? clipPour(item.clip) : null;
     // Avec la vraie voix, on affiche exactement ce qu'elle dit.
     afficher(clipChoisi && textes.get(clipChoisi) ? textes.get(clipChoisi) : item.texte, item.role, item.important);
-    const fini = () => { parle = false; son = null; derniereFin = performance.now(); setTimeout(suite, 180); };
+    const fini = () => { parle = false; son = null; enCours = null; derniereFin = performance.now(); setTimeout(suite, 180); };
     // La vraie voix : la réplique enregistrée de ce moment.
     const clip = clipChoisi;
     if (clip) {
@@ -127,11 +136,15 @@ export function creerCommentateur({ el, noms = { comm: 'Commentateur', cons: 'Co
       son.play().catch(fini);
       return;
     }
-    // Des répliques enregistrées existent, mais pas pour ce moment-là : le texte seulement.
-    if (voixChargee) { parle = false; derniereFin = performance.now(); suite(); return; }
+    // Le texte seulement (pas de réplique enregistrée pour ce moment-là, ou pas de voix) :
+    // on laisse le temps de le lire avant la phrase suivante.
     const s = window.speechSynthesis;
     const v = voixPour(item.role);
-    if (reglage !== 'voix' || estMuet() || !s || !v) { parle = false; derniereFin = performance.now(); suite(); return; }
+    if (voixChargee || reglage !== 'voix' || estMuet() || !s || !v) {
+      parle = true;
+      lecture = setTimeout(fini, Math.min(2600, 800 + item.texte.replace(/<[^>]+>/g, '').length * 30));
+      return;
+    }
     const u = new SpeechSynthesisUtterance(item.texte.replace(/<[^>]+>/g, ''));
     u.voice = v; u.lang = v.lang;
     const e = item.emotion ?? (item.important ? 0.8 : 0.3);
@@ -145,6 +158,8 @@ export function creerCommentateur({ el, noms = { comm: 'Commentateur', cons: 'Co
   }
 
   function suite() {
+    // Une phrase d'action qui a trop attendu ne veut plus rien dire : on passe.
+    while (file.length && file[0].frais && performance.now() - file[0].t > 1500) file.shift();
     if (parle || !file.length) return;
     lire(file.shift());
   }
@@ -152,24 +167,25 @@ export function creerCommentateur({ el, noms = { comm: 'Commentateur', cons: 'Co
   return {
     /**
      * Dit une phrase. role : 'comm' ou 'cons' ; important : coupe la phrase en cours ;
-     * emotion : de 0 à 1 ; apres : une réplique du consultant à enchaîner.
+     * emotion : de 0 à 1 ; apres : une réplique du consultant à enchaîner ;
+     * frais : une phrase du direct (passe, récupération…), elle ne vaut que sur le
+     * moment, la plus récente remplace celle qui attend ; coupe : elle coupe une
+     * phrase du direct en cours (un tir coupe « il avance avec le ballon »).
      */
-    dire(texte, { role = 'comm', important = false, emotion, apres = null, apresClip = null, clip = null } = {}) {
+    dire(texte, { role = 'comm', important = false, emotion, apres = null, apresClip = null, clip = null, frais = false, coupe = false } = {}) {
       if (reglage === 'aucun' || !texte) return;
-      const item = { texte, role, important, emotion, clip };
+      const item = { texte, role, important, emotion, clip, frais, t: performance.now() };
       // La réplique du consultant : sa vraie voix aussi, s'il a une phrase enregistrée pour ce moment.
       const suites = apres ? [{ texte: apres, role: 'cons', important: false, emotion: 0.3, clip: apresClip }] : [];
-      if (important) {
-        window.speechSynthesis?.cancel();
-        if (son) { son.onended = son.onerror = null; son.pause(); son = null; }
-        parle = false;
+      if (important || (coupe && enCours?.frais && enCours.clip !== clip)) {
+        couper();
         file = suites;
         lire(item);
         return;
       }
       // En retard (quelqu'un parle et il y a déjà une phrase qui attend) : on laisse tomber celle-ci.
       if (parle || file.length || performance.now() - derniereFin < 300) {
-        if (file.length < 1) file.push(item, ...suites);
+        if (file.length < 1 || (frais && file.every((x) => x.frais))) file = [item, ...suites];
         return;
       }
       file.push(...suites);
@@ -183,13 +199,13 @@ export function creerCommentateur({ el, noms = { comm: 'Commentateur', cons: 'Co
       dernieres.set(cle, k);
       return liste[k];
     },
+    /** Personne ne parle, rien n'attend, et le silence dure depuis ms millisecondes. */
+    libre: (ms = 0) => !parle && !file.length && performance.now() - derniereFin >= ms,
     arreter() {
       clearTimeout(minuteur);
       file = [];
-      parle = false;
+      couper();
       el.classList.remove('montre');
-      window.speechSynthesis?.cancel();
-      if (son) { son.onended = son.onerror = null; son.pause(); son = null; }
     },
   };
 }
