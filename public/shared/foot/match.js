@@ -66,6 +66,7 @@ export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['hum
     prec: [0, 0],
     stats: { tirs: [0, 0], cadres: [0, 0], passes: [0, 0], possession: [0, 0], tacles: [0, 0] },
     buts: [],
+    arrets: new Array(10).fill(0), // les arrêts du gardien pendant le jeu (pas aux tirs au but), par joueur
     dernierePasse: null,
     tab: null,
     vainqueur: -1,
@@ -790,12 +791,13 @@ function toucher(m, p, mains, evs) {
         : 0.88 + (gard - 75) * 0.012 - (speed - 20) * 0.02 + loin - (Math.abs(b.y) > 0.9 ? 0.1 : 0) + (p.etat === 'plonge' ? 0 : 0.1);
       pr = clamp(pr, 0.1, 0.96);
       if (hasard(m) < pr) {
-        if (speed < 19 && hasard(m) < 0.4 + (gard - 75) * 0.015) { prendre(m, p, true, evs); evs.push({ type: 'arret', joueur: p.id, capte: true }); return; }
+        if (speed < 19 && hasard(m) < 0.4 + (gard - 75) * 0.015) { prendre(m, p, true, evs); m.arrets[p.id] += 1; evs.push({ type: 'arret', joueur: p.id, capte: true }); return; }
         // Il repousse : vers l'extérieur, loin du but.
         const s = m.equipes[p.e].sens;
         b.vx = s * (3 + hasard(m) * 4); b.vy = (hasard(m) - 0.5) * 10 + (b.y >= 0 ? 2 : -2); b.vz = 2 + hasard(m) * 3;
         b.dernier = p.id; b.tir = null; b.cible = -1;
         p.verrou = 20;
+        m.arrets[p.id] += 1;
         evs.push({ type: 'arret', joueur: p.id, capte: false });
         return;
       }

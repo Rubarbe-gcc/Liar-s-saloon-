@@ -11,7 +11,11 @@ import { EQUIPES, EQUIPE, STADES, STYLES, noteGenerale } from '../../../../share
 import { creerMatch, pas, chronoTexte, acteursTab, FPS } from '../../../../shared/foot/match.js';
 import { DUREE_ROULETTE } from '../../../../shared/foot/terrain.js';
 import { NIVEAUX } from '../../../../shared/foot/ia.js';
-import { creerCoupe, matchDuJoueur, stadeDuTour, enregistrer, jouerSansMoi, aJouer, avancer, TOURS } from '../../../../shared/foot/coupe.js';
+import { creerCoupe, matchDuJoueur, stadeDuTour, enregistrer, jouerSansMoi, aJouer, avancer, noterStats, TOURS } from '../../../../shared/foot/coupe.js';
+import { creerEcransLigue } from './ligue-ui.js';
+import { htmlStatistiques } from './stats-ui.js';
+import { resumerMatch } from '../../../../shared/foot/stats.js';
+import { FORMATS } from '../../../../shared/foot/ligue.js';
 import { creerRendu, qualite, reglerQualite } from './trois/rendu3d.js';
 import { ecussonSVG, tenues } from '../../commun/ecusson.js';
 import { creerCinematique } from '../../commun/cinematique.js';
@@ -38,9 +42,10 @@ function aller(nom) {
 /* ------------------------------------------------------------------ */
 
 const CLE = 'petitpont.config';
-const conf = { moi: 'brisevent', lui: 'ferrac', niveau: 1, minutes: 3, stade: 'chaudron' };
+const conf = { moi: 'brisevent', lui: 'ferrac', niveau: 1, minutes: 3, stade: 'chaudron', format: 'simple' };
 try { Object.assign(conf, JSON.parse(localStorage.getItem(CLE) || '{}')); } catch { /* ignore */ }
 if (!EQUIPE[conf.moi]) conf.moi = 'brisevent';
+if (!FORMATS[conf.format]) conf.format = 'simple';
 if (!EQUIPE[conf.lui] || conf.lui === conf.moi) conf.lui = EQUIPES.find((e) => e.id !== conf.moi).id;
 const garder = () => { try { localStorage.setItem(CLE, JSON.stringify(conf)); } catch { /* ignore */ } };
 
@@ -78,7 +83,7 @@ function rendreEquipes() {
   $('duel-moi').classList.toggle('choisit', choix.pour === 'moi');
   $('duel-lui').classList.toggle('choisit', choix.pour === 'lui');
   $('consigne-equipes').textContent = choix.pour === 'moi' ? 'Choisis ton équipe.' : 'Choisis l’adversaire.';
-  $('equipes-titre').textContent = { solo: 'Match amical', coupe: 'La Coupe : ton équipe', enligne: 'En ligne : ton équipe' }[choix.mode];
+  $('equipes-titre').textContent = { solo: 'Match amical', coupe: 'La Coupe : ton équipe', ligue: 'La Ligue des Étoiles : ton équipe', enligne: 'En ligne : ton équipe' }[choix.mode];
   $('grille-equipes').innerHTML = EQUIPES.map((eq) => {
     const moi = eq.id === conf.moi, lui = solo && eq.id === conf.lui;
     return `<button class="equipe${moi ? ' moi' : ''}${lui ? ' lui' : ''}" data-id="${eq.id}" style="--c1:${eq.maillot.fond}">
@@ -89,11 +94,13 @@ function rendreEquipes() {
   $('seg-niveau').parentElement.classList.toggle('cache', choix.mode === 'enligne');
   $('seg-niveau').innerHTML = NIVEAUX.map((n, i) => `<button data-v="${i}" class="${conf.niveau === i ? 'oui' : ''}">${n.nom}</button>`).join('');
   $('seg-duree').innerHTML = [2, 3, 5].map((d) => `<button data-v="${d}" class="${conf.minutes === d ? 'oui' : ''}">${d} min</button>`).join('');
+  $('opt-format').classList.toggle('cache', choix.mode !== 'ligue');
+  $('seg-format').innerHTML = [['simple', 'Aller simple', 3], ['retour', 'Aller-retour', 6]].map(([v, nom, n]) => `<button data-v="${v}" class="${conf.format === v ? 'oui' : ''}">${nom} · ${n} matchs</button>`).join('');
   const stades = choix.mode !== 'enligne';
   $('grille-stades').classList.toggle('cache', !stades);
   $('grille-stades').previousElementSibling.classList.toggle('cache', !stades);
   $('grille-stades').innerHTML = STADES.map((s) => `<button class="stade${conf.stade === s.id ? ' oui' : ''}" data-id="${s.id}" style="--ciel:${COULEURS_STADE[s.id][0]};--sol:${COULEURS_STADE[s.id][1]}"><div class="vignette"></div><b>${s.nom}</b><small>${s.desc}</small></button>`).join('');
-  $('b-jouer').querySelector('b').textContent = { solo: 'Coup d’envoi', coupe: 'Commencer la Coupe', enligne: 'C’est mon équipe' }[choix.mode];
+  $('b-jouer').querySelector('b').textContent = { solo: 'Coup d’envoi', coupe: 'Commencer la Coupe', ligue: 'Commencer la Ligue', enligne: 'C’est mon équipe' }[choix.mode];
 }
 
 function brancherEquipes() {
@@ -116,6 +123,7 @@ function brancherEquipes() {
   $('duel-moi').addEventListener('click', () => { choix.pour = 'moi'; rendreEquipes(); });
   $('duel-lui').addEventListener('click', () => { choix.pour = 'lui'; rendreEquipes(); });
   $('seg-niveau').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.niveau = +b.dataset.v; garder(); rendreEquipes(); } });
+  $('seg-format').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.format = b.dataset.v; garder(); rendreEquipes(); } });
   $('seg-duree').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.minutes = +b.dataset.v; garder(); rendreEquipes(); } });
   $('grille-stades').addEventListener('click', (e) => { const b = e.target.closest('.stade'); if (b) { conf.stade = b.dataset.id; garder(); rendreEquipes(); } });
   $('equipes-retour').addEventListener('click', () => aller(choix.mode === 'enligne' ? 'enligne' : 'menu'));
@@ -506,6 +514,7 @@ function finDuMatch() {
   const res = {
     score: [...m.score], vainqueur: m.vainqueur, tab: m.tab ? m.tab.buts.map((r) => r.filter(Boolean).length) : null,
     buts: m.buts.map((b) => ({ ...b, nom: nomDe(b.j) })), stats: JSON.parse(JSON.stringify(m.stats)), equipes: P.o.equipes,
+    resume: resumerMatch(m),
   };
   verifierSucces(P, res);
   const o = P.o;
@@ -586,6 +595,7 @@ function brancher() {
 
   $('b-solo').addEventListener('click', () => { son.reveiller(); ouvrirEquipes('solo'); });
   $('b-tournoi').addEventListener('click', () => { son.reveiller(); ouvrirCoupe(); });
+  $('b-ligue').addEventListener('click', () => { son.reveiller(); ecransLigue.ouvrir(); });
   $('b-enligne').addEventListener('click', () => { son.reveiller(); ouvrirEnLigne(); });
   $('b-commandes').addEventListener('click', () => $('v-commandes').classList.remove('cache'));
   $('c-fermer').addEventListener('click', () => $('v-commandes').classList.add('cache'));
@@ -639,6 +649,7 @@ const CLE_COUPE = 'petitpont.coupe';
 let coupe = null;
 try { coupe = JSON.parse(localStorage.getItem(CLE_COUPE) || 'null'); } catch { /* ignore */ }
 if (coupe && !coupe.tours) coupe = null;
+if (coupe && !coupe.stats) coupe.stats = { j: {} }; // une Coupe commencée avant les statistiques : elles partent de zéro
 const garderCoupe = () => { try { if (coupe) localStorage.setItem(CLE_COUPE, JSON.stringify(coupe)); else localStorage.removeItem(CLE_COUPE); } catch { /* ignore */ } };
 
 function infoCoupe() {
@@ -702,6 +713,7 @@ function rendreCoupe() {
   const act = $('coupe-actions');
   act.innerHTML = '';
   const bouton = (txt, cls, f) => { const el = document.createElement('button'); el.className = `btn ${cls}`; el.innerHTML = txt; el.addEventListener('click', f); act.appendChild(el); };
+  bouton('<b>Statistiques</b>', 'bleu', () => montrerStats(c.stats, c.moi, () => { rendreCoupe(); aller('coupe'); }));
   if (m) bouton(`<b>Jouer ${c.tour === 2 ? 'la finale' : c.tour === 1 ? 'la demie' : 'le quart'}</b><small>contre ${EQUIPE[adv].nom}</small>`, 'vert grand', jouerCoupe);
   if (c.elimine && !c.fini) bouton('<b>Voir la suite</b>', 'bleu', () => { while (!coupe.fini) finirTour(); rendreCoupe(); });
   if (c.fini || c.elimine) bouton('<b>Nouvelle Coupe</b>', c.fini ? 'vert' : '', () => { coupe = null; garderCoupe(); ouvrirCoupe(); });
@@ -718,6 +730,8 @@ function jouerCoupe() {
     // Le match est joué « moi contre lui » : on le remet dans le sens du tableau.
     const sw = (x) => (x && !moiA ? [x[1], x[0]] : x);
     enregistrer(c, r.i, { score: sw(res.score), tab: sw(res.tab), vainqueur: moiA ? res.vainqueur : 1 - res.vainqueur });
+    // Ses buts, passes et arrêts (les statistiques sont par club et par joueur : le sens du match n'y change rien).
+    noterStats(c, res.resume);
     finirTour();
   };
   lancerMatch({
@@ -733,6 +747,17 @@ function jouerCoupe() {
     abandon: () => { noter({ score: [0, 3], tab: null, vainqueur: 1 }); rendreCoupe(); aller('coupe'); },
   });
 }
+/* ---------------- La Ligue des Étoiles (ligue-ui.js) ---------------- */
+
+const ecransLigue = creerEcransLigue({ $, aller, son, conf, ouvrirEquipes, lancerMatch, montrerStats });
+
+/** L'écran Statistiques d'un tournoi ; `retour` ramène à l'écran d'où l'on vient. */
+function montrerStats(stats, moi, retour) {
+  $('stats-corps').innerHTML = htmlStatistiques(stats || { j: {} }, moi);
+  $('stats-retour').onclick = retour;
+  aller('stats');
+}
+
 /* ---------------- En ligne ---------------- */
 
 const CLE_NOM = 'petitpont.nom';
@@ -920,5 +945,6 @@ window.petitPont = {
 
 brancher();
 infoCoupe();
+ecransLigue.info();
 succes.visiter('petitpont');
 export { lancerMatch, aller, ouvrirEquipes, montrerFin, conf, garder };

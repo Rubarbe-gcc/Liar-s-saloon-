@@ -29,6 +29,7 @@
     <div class="boutons-menu">
       <button class="btn vert grand" id="b-solo"><b>⚽ Match amical</b><small>Contre l’ordinateur</small></button>
       <button class="btn or grand" id="b-tournoi"><b>🏆 La Coupe</b><small id="tournoi-info">Huit équipes, élimination directe</small></button>
+      <button class="btn etoile grand" id="b-ligue"><b>⭐ La Ligue des Étoiles</b><small id="ligue-info">Tous les clubs, des poules, puis la finale</small></button>
       <button class="btn bleu grand" id="b-enligne"><b>🌐 En ligne</b><small>Un contre un, avec un code</small></button>
     </div>
     <div class="menu-bas">
@@ -61,6 +62,7 @@
     <div class="options" id="options-match">
       <div class="option"><span>Niveau</span><div class="segments" id="seg-niveau"></div></div>
       <div class="option"><span>Mi-temps</span><div class="segments" id="seg-duree"></div></div>
+      <div class="option cache" id="opt-format"><span>Phase de poules</span><div class="segments" id="seg-format"></div></div>
     </div>
     <h3 class="section">Le stade</h3>
     <div class="grille-stades" id="grille-stades"></div>
@@ -78,6 +80,44 @@
     <p class="consigne" id="coupe-info"></p>
     <div class="tableau" id="tableau"></div>
     <div class="coupe-actions" id="coupe-actions"></div>
+  </div>
+</section>
+
+<section class="ecran" id="s-stats">
+  <header class="barre-haut">
+    <button class="rond retour" id="stats-retour" aria-label="Retour">‹</button>
+    <h2>Statistiques</h2>
+  </header>
+  <div class="page" id="stats-corps"></div>
+</section>
+
+<!-- ============================ LA LIGUE DES ÉTOILES ============================ -->
+<section class="ecran" id="s-tirage">
+  <header class="barre-haut">
+    <button class="rond retour" id="tirage-retour" aria-label="Retour">‹</button>
+    <h2>Tirage au sort</h2>
+  </header>
+  <div class="page">
+    <p class="consigne" id="tirage-info" aria-live="polite"></p>
+    <div class="tirage-boule" id="tirage-boule"></div>
+    <div class="poules-tirage" id="tirage-poules"></div>
+    <div class="coupe-actions">
+      <button class="btn fin" id="tirage-passer">Passer le tirage ›</button>
+      <button class="btn vert grand cache" id="tirage-suite"><b>Voir les poules</b></button>
+    </div>
+  </div>
+</section>
+
+<section class="ecran" id="s-ligue">
+  <header class="barre-haut">
+    <button class="rond retour" id="ligue-retour" aria-label="Retour">‹</button>
+    <h2>La Ligue des Étoiles</h2>
+  </header>
+  <div class="page">
+    <p class="consigne" id="ligue-info-haut"></p>
+    <div class="segments onglets cache" id="ligue-onglets"></div>
+    <div id="ligue-corps"></div>
+    <div class="coupe-actions" id="ligue-actions"></div>
   </div>
 </section>
 

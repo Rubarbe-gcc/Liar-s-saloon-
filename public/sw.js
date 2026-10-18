@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v138';
+const VERSION = 'v140';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -223,6 +223,8 @@ const SHELL = [
   '/games/plein-stade/foot/js/enligne.js',
   '/games/plein-stade/foot/js/commentaires.js',
   '/games/plein-stade/foot/js/cinematiques.js',
+  '/games/plein-stade/foot/js/ligue-ui.js',
+  '/games/plein-stade/foot/js/stats-ui.js',
   '/games/plein-stade/commun/cinematique.css',
   '/games/plein-stade/foot/js/trois/rendu3d.js',
   '/games/plein-stade/foot/js/trois/stade3d.js',
@@ -231,6 +233,9 @@ const SHELL = [
   '/shared/foot/ia.js',
   '/shared/foot/match.js',
   '/shared/foot/coupe.js',
+  '/shared/foot/ligue.js',
+  '/shared/foot/clubs.js',
+  '/shared/foot/stats.js',
   '/games/street-combat/js/trois/rendu3d.js',
   '/games/street-combat/js/trois/decors3d.js',
   '/vendor/three/three.module.min.js',

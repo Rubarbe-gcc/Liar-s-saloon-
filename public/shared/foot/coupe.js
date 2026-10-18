@@ -11,6 +11,7 @@
 
 import { EQUIPES } from './equipes.js';
 import { simuler } from './match.js';
+import { creerStats, cumuler, resumerMatch } from './stats.js';
 
 export const TOURS = ['Quarts de finale', 'Demi-finales', 'Finale'];
 
@@ -26,7 +27,7 @@ function melanger(liste, graine) {
 export function creerCoupe({ moi, graine = 1, niveau = 1, minutes = 3, stade = 'chaudron' }) {
   const autres = melanger(EQUIPES.map((e) => e.id).filter((id) => id !== moi), graine).slice(0, 7);
   const huit = melanger([moi, ...autres], graine * 31 + 7);
-  const c = { moi, graine, niveau, minutes, stade, tour: 0, tours: [], fini: false, champion: null, elimine: false };
+  const c = { moi, graine, niveau, minutes, stade, tour: 0, tours: [], fini: false, champion: null, elimine: false, stats: creerStats() };
   c.tours.push(apparier(huit));
   return c;
 }
@@ -61,11 +62,19 @@ export function enregistrer(c, i, res) {
   if ((r.a === c.moi || r.b === c.moi) && r.v !== c.moi) c.elimine = true;
 }
 
-/** Une rencontre sans le joueur, jouée par le moteur. */
+/** Une rencontre sans le joueur, jouée par le moteur. Rend le match simulé (pour les statistiques). */
 export function jouerSansMoi(c, i) {
   const r = c.tours[c.tour][i];
   const m = simuler({ equipes: [r.a, r.b], graine: (c.graine + c.tour * 101 + i * 13) >>> 0, minutes: Math.min(c.minutes, 2), tab: true });
   enregistrer(c, i, { score: m.score, tab: m.tab ? m.tab.buts.map((x) => x.filter(Boolean).length) : null, vainqueur: m.vainqueur });
+  if (c.stats) cumuler(c.stats, resumerMatch(m));
+  return m;
+}
+
+/** Le match du joueur est fini : ses buts, passes et arrêts entrent dans les statistiques. resume : resumerMatch(m). */
+export function noterStats(c, resume) {
+  if (!c.stats) c.stats = creerStats();
+  if (resume) cumuler(c.stats, resume);
 }
 
 /** Les rencontres du tour en cours qui restent à jouer (sans le joueur). */
