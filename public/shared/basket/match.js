@@ -8,7 +8,7 @@
  * franc, pas de sortie (le ballon rebondit sur les lignes) : de l'arcade.
  *
  * Les touches de chaque équipe, à chaque image : un nombre (terrain.js, T).
- *   en attaque : A passe, B tir (on saute en appuyant ; on lâche en haut du
+ *   en attaque : A passe, R passe à rebond, B tir (on saute en appuyant ; on lâche en haut du
  *                saut) ou dunk tout près du panier, X crochet (on élimine son défenseur) ;
  *   en défense : A vol de balle, B saut (contre, rebond), G change de joueur ;
  *   S : sprint (l'endurance baisse).
@@ -57,7 +57,7 @@ export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['hum
     poss: { e: -1, f: 0, passes: 0 },
     equipes: [0, 1].map((e) => ({ id: equipes[e], style: EQUIPE[equipes[e]].style, sens: e === 0 ? 1 : -1, ctrl: controles[e], niveau: niveaux[e] ?? 1, actif: e * 3, marque: [0, 1, 2], revoir: 0 })),
     joueurs: [],
-    ballon: { x: 0, y: 0, z: 1.5, vx: 0, vy: 0, vz: 0, porteur: -1, dernier: -1, passeur: -1, cible: -1, essais: 0, tir: null, rebond: null, entre: false, remise: -1, marque: false, touche: 0 },
+    ballon: { x: 0, y: 0, z: 1.5, vx: 0, vy: 0, vz: 0, porteur: -1, dernier: -1, passeur: -1, cible: -1, essais: 0, tir: null, rebond: null, entre: false, remise: -1, marque: false, touche: 0, aTerre: false },
     prec: [0, 0],
     stats: { tirs: [0, 0], reussis: [0, 0], trois: [0, 0], troisReussis: [0, 0], dunks: [0, 0], rebonds: [0, 0], rebondsOff: [0, 0], passes: [0, 0], decisives: [0, 0], vols: [0, 0], contres: [0, 0], possession: [0, 0] },
     paniers: [],
@@ -301,12 +301,12 @@ function humain(m, e, k, ap, rel, cons, evs) {
   if (porteur === p) {
     if (b.remise === p.id) {
       c.mx = 0; c.my = 0;
-      if (ap & (T.A | T.B)) c.action = { type: 'passe', cible: choisirReceveur(m, p, mx, my) };
+      if (ap & (T.A | T.R)) c.action = { type: 'passe', cible: choisirReceveur(m, p, mx, my), aTerre: !!(ap & T.R) };
     } else if (p.etat === 'tir') {
       if (rel & T.B) c.action = { type: 'lacher' };
     } else if (p.etat === 'normal') {
       if (ap & T.B) c.action = peutDunker(m, p) ? { type: 'dunk' } : { type: 'armer' };
-      else if (ap & T.A) c.action = { type: 'passe', cible: choisirReceveur(m, p, mx, my) };
+      else if (ap & (T.A | T.R)) c.action = { type: 'passe', cible: choisirReceveur(m, p, mx, my), aTerre: !!(ap & T.R) };
       else if (ap & T.X) c.action = { type: 'crochet', dx: mx, dy: my };
     }
   } else if (ap & T.A) c.action = { type: 'vol' };
@@ -323,7 +323,7 @@ function agir(m, p, a, evs) {
   const aLaBalle = b.porteur === p.id;
   switch (a.type) {
     case 'passe':
-      if (aLaBalle && a.cible >= 0 && p.etat === 'normal') passer(m, p, m.joueurs[a.cible], evs);
+      if (aLaBalle && a.cible >= 0 && p.etat === 'normal') passer(m, p, m.joueurs[a.cible], evs, !!a.aTerre);
       break;
     case 'armer':
       if (!aLaBalle || p.etat !== 'normal' || b.remise >= 0) break;
@@ -365,9 +365,10 @@ function agir(m, p, a, evs) {
   }
 }
 
-function passer(m, p, r, evs) {
+/** La passe : directe, ou à rebond (aTerre : plus lente, mais elle passe sous les bras des défenseurs). */
+function passer(m, p, r, evs, aTerre = false) {
   const b = m.ballon;
-  const vit = 10 + p.n.passe * 0.045;
+  const vit = (aTerre ? 8 : 10) + p.n.passe * 0.045;
   // On vise là où sera le receveur (deux fois, pour que l'avance tienne compte du temps de vol).
   let tx = r.x, ty = r.y, T = 0.3;
   for (let k = 0; k < 2; k++) {
@@ -377,15 +378,21 @@ function passer(m, p, r, evs) {
   const err = (0.04 + T * 0.18) * (1.5 - p.n.passe / 100) * (p.surpris > 0 ? 1.5 : 1);
   tx += gauss(m) * err; ty += gauss(m) * err;
   tx = clamp(tx, -DEMI_L + 0.3, DEMI_L - 0.3); ty = clamp(ty, -DEMI_W + 0.3, DEMI_W - 0.3);
-  const z0 = 1.35, z1 = 1.25;
+  const z0 = aTerre ? 1 : 1.35, z1 = 1.25;
   Object.assign(b, {
-    x: p.x + p.dx * 0.3, y: p.y + p.dy * 0.3, z: z0, porteur: -1, dernier: p.id, passeur: p.id, cible: r.id, essais: 0, tir: null, rebond: null,
+    x: p.x + p.dx * 0.3, y: p.y + p.dy * 0.3, z: z0, porteur: -1, dernier: p.id, passeur: p.id, cible: r.id, essais: 0, tir: null, rebond: null, aTerre,
     vx: (tx - p.x) / T, vy: (ty - p.y) / T, vz: (z1 - z0 + 0.5 * G * T * T) / T, remise: -1,
   });
+  if (aTerre) {
+    // Le ballon touche le parquet aux trois cinquièmes du chemin (le rebond le ralentit d'un dixième).
+    const T1 = T * 0.6, f = (0.6 + 0.4 / 0.9) / 1;
+    b.vx *= f; b.vy *= f;
+    b.vz = (BALLE_R - z0 + 0.5 * G * T1 * T1) / T1;
+  }
   p.lache = 10;
   m.stats.passes[p.e] += 1;
   m.poss.passes += 1;
-  evs.push({ type: 'passe', joueur: p.id, cible: r.id });
+  evs.push({ type: 'passe', joueur: p.id, cible: r.id, aTerre });
 }
 
 /** Le tir part : la qualité dépend du moment où l'on lâche (en haut du saut, c'est parfait). */
@@ -741,7 +748,7 @@ function attraper(m, evs) {
     if (best) {
       const r = m.joueurs[best.e * 3 + (hasard(m) < 0.5 ? 0 : 1)];
       const T = 0.55;
-      Object.assign(b, { vx: (r.x - b.x) / T, vy: (r.y - b.y) / T, vz: (1.2 - b.z + 0.5 * G * T * T) / T, entre: false, dernier: best.id, cible: r.id, passeur: -1 });
+      Object.assign(b, { vx: (r.x - b.x) / T, vy: (r.y - b.y) / T, vz: (1.2 - b.z + 0.5 * G * T * T) / T, entre: false, dernier: best.id, cible: r.id, passeur: -1, aTerre: false });
       m.tip = best.e;
       evs.push({ type: 'tape', joueur: best.id, equipe: best.e });
     } else if (b.z < 1.8) b.entre = false;
@@ -759,7 +766,7 @@ function attraper(m, evs) {
     if (b.cible >= 0 && p.e !== m.joueurs[b.cible].e) {
       if (b.essais & (1 << p.id)) continue;
       b.essais |= 1 << p.id;
-      const chance = clamp(0.3 + (p.n.defense - 70) / 110 - (b.z > 2 ? 0.15 : 0) + (p.surpris > 0 ? -0.2 : 0), 0.05, 0.75);
+      const chance = clamp(0.3 + (p.n.defense - 70) / 110 - (b.z > 2 ? 0.15 : 0) + (p.surpris > 0 ? -0.2 : 0), 0.05, 0.75) * (b.aTerre ? 0.5 : 1);
       if (hasard(m) >= chance) continue;
     }
     const v = -hd + (p.id === b.cible ? 0.5 : 0) + p.z * 0.4 + hasard(m) * 0.2;
@@ -781,7 +788,7 @@ function attraper(m, evs) {
   p.passeDe = b.passeur >= 0 && b.cible === p.id ? b.passeur : -1;
   p.passeF = m.f;
   p.recu = 0;
-  Object.assign(b, { porteur: p.id, dernier: p.id, cible: -1, passeur: -1, essais: 0, tir: null, rebond: null, remise: -1 });
+  Object.assign(b, { porteur: p.id, dernier: p.id, cible: -1, passeur: -1, essais: 0, tir: null, rebond: null, remise: -1, aTerre: false });
   if (p.e !== m.poss.e || ancien !== p.e) {
     if (p.e !== m.poss.e) m.poss = { e: p.e, f: m.f, passes: 0 };
   }

@@ -93,6 +93,7 @@
       <button class="bj bj-s" data-t="S"><span>Sprint</span></button>
       <button class="bj bj-x" data-t="X"><span id="lab-x">Crochet</span></button>
       <button class="bj bj-a" data-t="A"><span id="lab-a">Passe</span></button>
+      <button class="bj bj-r"><span id="lab-r">Rebond</span></button>
       <button class="bj bj-b" data-t="B"><span id="lab-b">Tir</span></button>
     </div>
   </div>
@@ -116,14 +117,16 @@
     <table class="commandes">
       <thead><tr><th></th><th>Clavier</th><th>Manette</th><th>Avec le ballon</th><th>En défense</th></tr></thead>
       <tbody>
-        <tr><td>Bouger</td><td>Flèches · ZQSD</td><td>Stick · croix</td><td>Dribbler dans 8 directions</td><td>Courir</td></tr>
-        <tr><td>Sprint</td><td>Maj</td><td>Gâchettes</td><td colspan="2">Plus vite, tant qu’il reste du souffle</td></tr>
-        <tr><td>Passe · Vol</td><td>J · O · C</td><td>A</td><td>Passe vers le coéquipier (celui vers qui l’on pousse, sinon le mieux placé)</td><td>Tenter de voler le ballon (tout près du porteur)</td></tr>
-        <tr><td>Tir · Contre</td><td>K · X</td><td>B</td><td>Tiens pour sauter, lâche en haut du saut (la jauge : le trait blanc). Tout près du panier : dunk</td><td>Sauter : contrer un tir, prendre un rebond</td></tr>
-        <tr><td>Crochet</td><td>L · V</td><td>X</td><td>Un changement de direction sec pour éliminer son défenseur</td><td>—</td></tr>
-        <tr><td>Changer</td><td>Espace · I · U</td><td>Y</td><td>—</td><td>Diriger le coéquipier le plus proche du ballon</td></tr>
+        <tr><td>Bouger</td><td class="touches-bouger"><button class="touche" data-action="haut" title="Changer la touche"></button><button class="touche" data-action="gauche" title="Changer la touche"></button><button class="touche" data-action="bas" title="Changer la touche"></button><button class="touche" data-action="droite" title="Changer la touche"></button><small>ou les flèches</small></td><td>Stick · croix</td><td>Dribbler dans 8 directions</td><td>Courir</td></tr>
+        <tr><td>Sprint</td><td><button class="touche" data-action="sprint" title="Changer la touche"></button></td><td>Gâchettes</td><td colspan="2">Plus vite, tant qu’il reste du souffle</td></tr>
+        <tr><td>Passe · Vol</td><td><button class="touche" data-action="passe" title="Changer la touche"></button></td><td>A</td><td>Passe vers le coéquipier (celui vers qui l’on pousse, sinon le mieux placé)</td><td>Tenter de voler le ballon (tout près du porteur)</td></tr>
+        <tr><td>Passe à rebond</td><td><button class="touche" data-action="rebond" title="Changer la touche"></button></td><td>LB</td><td>Une passe qui rebondit sur le parquet : plus lente, mais elle passe sous les bras des défenseurs</td><td>—</td></tr>
+        <tr><td>Tir · Contre</td><td><button class="touche" data-action="tir" title="Changer la touche"></button></td><td>B</td><td>Tiens pour sauter, lâche en haut du saut (la jauge : le trait blanc). Tout près du panier : dunk</td><td>Sauter : contrer un tir, prendre un rebond</td></tr>
+        <tr><td>Crochet</td><td><button class="touche" data-action="crochet" title="Changer la touche"></button></td><td>X</td><td>Un changement de direction sec pour éliminer son défenseur</td><td>—</td></tr>
+        <tr><td>Changer</td><td><button class="touche" data-action="changer" title="Changer la touche"></button></td><td>Y</td><td>—</td><td>Diriger le coéquipier le plus proche du ballon</td></tr>
       </tbody>
     </table>
+    <p class="astuce touches-aide" id="touches-aide">Clique sur une touche pour la changer, puis appuie sur la nouvelle (Échap pour annuler). <button class="btn fin" id="touches-defaut">Touches par défaut</button></p>
     <p class="astuce">Derrière la ligne à 3 points, un panier vaut <b>3</b>. Après un panier, l’équipe qui l’a encaissé remet en jeu depuis sa ligne de fond.<br>Égalité à la fin : <b>panier en or</b>, le premier qui marque gagne.</p>
     <button class="btn vert" id="c-fermer">Compris</button>
   </div>

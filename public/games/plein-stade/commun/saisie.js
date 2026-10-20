@@ -29,13 +29,17 @@ let actif = false;
 let surPause = null;
 /** Les touches en service : celles du foot, sauf si un sport donne les siennes (mêmes bits T). */
 let carte = CLAVIER;
+/** Le bouton LB de la manette : A dans le foot (un sport peut lui donner un autre bit). */
+let bitLB = T.A;
 /**
  * Écoute le clavier. pause : appelée sur Échap ou P ;
- * autres : une autre table { code: bit } (le basket : Espace change de joueur).
+ * autres : une autre table { code: bit } (le basket : Espace change de joueur) ;
+ * lb : le bit du bouton LB de la manette (le basket : la passe à rebond).
  */
-export function ecouterClavier(pause, autres = null) {
+export function ecouterClavier(pause, autres = null, lb = null) {
   surPause = pause;
   if (autres) carte = autres;
+  if (lb) bitLB = lb;
   if (actif) return;
   actif = true;
   addEventListener('keydown', (e) => {
@@ -86,7 +90,8 @@ export function brancherTactile(zone, boutons) {
   zone.addEventListener('pointerup', fin);
   zone.addEventListener('pointercancel', fin);
   for (const b of boutons) {
-    const bit = T[b.dataset.t];
+    // data-t : un nom de T ; data-bit : un bit donné tel quel (une touche propre à un sport).
+    const bit = b.dataset.bit ? +b.dataset.bit : T[b.dataset.t];
     const lacher = () => { tactile.boutons &= ~bit; b.classList.remove('appuye'); };
     b.addEventListener('pointerdown', (e) => { tactile.boutons |= bit; b.classList.add('appuye'); b.setPointerCapture(e.pointerId); e.preventDefault(); navigator.vibrate?.(8); });
     b.addEventListener('pointerup', lacher);
@@ -113,7 +118,7 @@ function manette() {
     if (btn(2)) m |= T.X;
     if (btn(3)) m |= T.G;
     if (btn(5) || btn(6) || btn(7)) m |= T.S;
-    if (btn(4)) m |= T.A;
+    if (btn(4)) m |= bitLB;
     const start = btn(9);
     if (start && !pauseManette) surPause?.();
     pauseManette = start;

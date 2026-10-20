@@ -166,7 +166,20 @@ test('l’humain : passe, changement de joueur, vol, contre', () => {
   Object.assign(m.ballon, { porteur: 0, entre: false, remise: -1 });
   m.equipes[0].actif = 0;
   const evs = pas(m, [T.A, 0]);
-  assert.ok(evs.some((e) => e.type === 'passe' && e.joueur === 0));
+  assert.ok(evs.some((e) => e.type === 'passe' && e.joueur === 0 && !e.aTerre));
+  // La passe à rebond (R) : le ballon touche le parquet avant d'arriver.
+  const r = creerMatch({ equipes: ['mielville', 'neigeval'], graine: 8, minutes: 1, controles: ['humain', 'ia'] });
+  r.phase = 'jeu';
+  Object.assign(r.ballon, { porteur: 0, entre: false, remise: -1 });
+  for (const o of r.joueurs.slice(3)) o.x = -12;
+  r.equipes[0].actif = 0;
+  const ev2 = pas(r, [T.R, 0]);
+  assert.ok(ev2.some((e) => e.type === 'passe' && e.aTerre));
+  const suite = [];
+  for (let i = 0; i < 120 && r.ballon.porteur < 0; i++) suite.push(...pas(r, [0, 0]));
+  const iSol = suite.findIndex((e) => e.type === 'sol'), iRecu = suite.findIndex((e) => e.type === 'reception');
+  assert.ok(iSol >= 0 && iRecu > iSol, 'rebond, puis réception');
+  assert.equal(r.joueurs[r.ballon.porteur].e, 0);
   // En défense : Espace (G) change de joueur, B saute.
   const d = creerMatch({ equipes: ['mielville', 'neigeval'], graine: 8, minutes: 1, controles: ['humain', 'ia'] });
   d.phase = 'jeu';

@@ -16,6 +16,7 @@ import { ecussonSVG, tenues } from '../../commun/ecusson.js';
 import { creerCinematique } from '../../commun/cinematique.js';
 import { intro, miTemps, hommeDuMatch, meilleurJoueur, detailJoueur } from './cinematiques.js';
 import * as saisie from '../../commun/saisie.js';
+import * as touches from './touches.js';
 import * as son from '../../commun/son.js';
 import * as succes from '../../../../shared/succes.js';
 import { creerCommentateur, reglage as reglageCommentaires, regler as reglerCommentaires, REGLAGES as REGLAGES_COMM } from './commentaires.js';
@@ -31,18 +32,7 @@ function aller(nom) {
   document.querySelector('.fond').classList.toggle('cache', nom === 'match');
 }
 
-/** Les touches du basket : les mêmes que le foot, sauf Espace qui change de joueur. */
-const TOUCHES = {
-  ArrowLeft: T.g, KeyA: T.g, KeyQ: T.g,
-  ArrowRight: T.d, KeyD: T.d,
-  ArrowUp: T.h, KeyW: T.h, KeyZ: T.h,
-  ArrowDown: T.b, KeyS: T.b,
-  ShiftLeft: T.S, ShiftRight: T.S,
-  KeyJ: T.A, KeyO: T.A, KeyC: T.A,
-  KeyK: T.B, KeyX: T.B,
-  KeyL: T.X, KeyV: T.X,
-  Space: T.G, KeyI: T.G, KeyU: T.G,
-};
+/** Les touches du clavier : au choix du joueur (touches.js). */
 
 /* ------------------------------------------------------------------ */
 /* Les réglages gardés d'une fois sur l'autre                          */
@@ -333,7 +323,7 @@ function reagir(evs) {
 
 /* ---------------- L'affichage ---------------- */
 
-const LIB = { att: ['Passe', 'Tir', 'Crochet', '—'], pres: ['Passe', 'Dunk', 'Crochet', '—'], def: ['Vol', 'Contre', '—', 'Changer'], libre: ['—', 'Sauter', '—', 'Changer'], remise: ['Remise', 'Remise', '—', '—'] };
+const LIB = { att: ['Passe', 'Tir', 'Crochet', '—', 'Rebond'], pres: ['Passe', 'Dunk', 'Crochet', '—', 'Rebond'], def: ['Vol', 'Contre', '—', 'Changer', '—'], libre: ['—', 'Sauter', '—', 'Changer', '—'], remise: ['Remise', '—', '—', '—', 'Rebond'] };
 let contexte = '';
 
 function afficher(dt) {
@@ -376,8 +366,8 @@ function afficher(dt) {
   const ctx = porteur && porteur.e === P.local ? (b.remise >= 0 ? 'remise' : Math.hypot(porteur.x - m.equipes[P.local].sens * 12.425, porteur.y) < 2.5 ? 'pres' : 'att') : porteur ? 'def' : 'libre';
   if (ctx !== contexte) {
     contexte = ctx;
-    const [a, bb, x, g] = LIB[ctx];
-    $('lab-a').textContent = a; $('lab-b').textContent = bb; $('lab-x').textContent = x; $('lab-g').textContent = g;
+    const [a, bb, x, g, r] = LIB[ctx];
+    $('lab-a').textContent = a; $('lab-b').textContent = bb; $('lab-x').textContent = x; $('lab-g').textContent = g; $('lab-r').textContent = r;
   }
   // La rumeur du public : elle monte quand le ballon approche d'un panier.
   const prox = Math.max(0, 1 - (14 - Math.abs(b.x)) / 8);
@@ -460,8 +450,43 @@ function basculerPause() {
   if (!enPause) $('v-commandes').classList.add('cache');
 }
 
+/* ---------------- Les touches, au choix ---------------- */
+
+let attend = null;
+function rendreTouches() {
+  for (const b of document.querySelectorAll('.touche')) {
+    b.textContent = b.dataset.action === attend ? '…' : touches.nomTouche(touches.toucheDe(b.dataset.action));
+    b.classList.toggle('attend', b.dataset.action === attend);
+  }
+}
+function brancherTouches() {
+  touches.pret.then(rendreTouches);
+  rendreTouches();
+  $('v-commandes').addEventListener('click', (e) => {
+    const b = e.target.closest('.touche');
+    if (!b) return;
+    attend = attend === b.dataset.action ? null : b.dataset.action;
+    rendreTouches();
+  });
+  $('touches-defaut').addEventListener('click', () => { touches.parDefaut(); attend = null; saisie.ecouterClavier(basculerPause, touches.table()); rendreTouches(); });
+  // La nouvelle touche : on l'attrape avant tout le monde (ni pause, ni jeu, ni cinématique).
+  addEventListener('keydown', (e) => {
+    if (!attend) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (e.code === 'Escape') { attend = null; rendreTouches(); return; }
+    if (!touches.changer(attend, e.code, e.key)) { $('touches-aide').firstChild.textContent = 'Échap et P sont réservées à la pause : choisis une autre touche. '; return; }
+    attend = null;
+    saisie.ecouterClavier(basculerPause, touches.table());
+    rendreTouches();
+  }, true);
+  for (const id of ['c-fermer', 'b-commandes', 'p-commandes']) $(id).addEventListener('click', () => { attend = null; rendreTouches(); });
+}
+
 function brancher() {
-  saisie.ecouterClavier(basculerPause, TOUCHES);
+  saisie.ecouterClavier(basculerPause, touches.table(), T.R);
+  brancherTouches();
+  document.querySelector('.bj-r').dataset.bit = T.R;
   saisie.brancherTactile($('zone-joy'), document.querySelectorAll('.bj'));
   const doigt = () => document.body.classList.add('doigt');
   if (saisie.estTactile()) doigt();

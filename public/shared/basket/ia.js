@@ -172,7 +172,7 @@ function porteurIA(m, p, st, niv) {
   const marge = 0.1 / st.passe;
   if (mp && mp.v > Math.max(vTir, vDrive * 0.95) + marge && (mp.v > seuil * 0.75 || tPoss > 3 || st.passe > 1.3)) {
     p.but = null;
-    return { ...RIEN, action: { type: 'passe', cible: mp.r.id } };
+    return { ...RIEN, action: { type: 'passe', cible: mp.r.id, aTerre: risquePasse(m, p, mp.r) > 0.3 } };
   }
   // Un crochet, si le défenseur colle.
   if (g.d < 1.05 && p.verrou <= 0 && hasard(m) < 0.1 * (st.penetre > 1.2 ? 1.5 : 1)) {

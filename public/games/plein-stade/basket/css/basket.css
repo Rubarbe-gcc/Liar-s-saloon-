@@ -46,3 +46,12 @@ body.basket {
 
 .bj-b { background: radial-gradient(circle at 40% 30%, #ffa45a, #d9600f); }
 .bj-g { background: radial-gradient(circle at 40% 30%, #c38aff, #6b2fb3); }
+.bj-r { right: 170px; bottom: 4px; width: 58px; height: 58px; font-size: .72em; background: radial-gradient(circle at 40% 30%, #6be0c8, #12907a); }
+
+/* Les touches, au choix du joueur : un clic, puis la nouvelle touche. */
+.touche { min-width: 34px; padding: 4px 8px; margin: 1px 3px 1px 0; border-radius: 6px; border: 1px solid rgba(255, 255, 255, .35); border-bottom-width: 3px; background: rgba(255, 255, 255, .08); color: var(--texte); font-weight: 800; cursor: pointer; }
+.touche:hover { border-color: var(--jaune); }
+.touche.attend { border-color: var(--jaune); background: rgba(255, 179, 71, .25); animation: clignote .8s infinite; }
+.touches-bouger small { display: block; color: var(--doux); font-size: .8em; margin-top: 2px; }
+.touches-aide .btn { margin-left: 8px; padding: 4px 10px; font-size: .9em; }
+@keyframes clignote { 50% { opacity: .5; } }

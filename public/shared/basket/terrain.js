@@ -40,8 +40,8 @@ export const CHARGE_MAX = 46;
 /** Assez près du panier pour un dunk (ou un double pas). */
 export const PORTEE_DUNK = 2.5;
 
-/** Les touches : les mêmes bits que le foot (commun/saisie.js). */
-export const T = { g: 1, d: 2, h: 4, b: 8, S: 16, A: 32, B: 64, X: 128, G: 256 };
+/** Les touches : les mêmes bits que le foot (commun/saisie.js), plus R : la passe à rebond. */
+export const T = { g: 1, d: 2, h: 4, b: 8, S: 16, A: 32, B: 64, X: 128, G: 256, R: 512 };
 
 /** Le hasard du match : un nombre dans [0, 1), tiré de l'état (le même partout). */
 export function hasard(m) {
