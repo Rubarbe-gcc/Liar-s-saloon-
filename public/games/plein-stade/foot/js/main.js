@@ -61,6 +61,8 @@ const COULEURS_STADE = {
 /* ------------------------------------------------------------------ */
 
 let choix = { pour: 'moi', mode: 'solo', suite: null };
+/** Les modes où l'on choisit les deux équipes. */
+const solo = (mode) => mode === 'solo' || mode === 'entrainement';
 
 function carteDuel(el, id, role) {
   const eq = EQUIPE[id];
@@ -75,7 +77,7 @@ function barres(eq) {
 }
 
 function rendreEquipes() {
-  const solo = choix.mode === 'solo';
+  const solo = choix.mode === 'solo' || choix.mode === 'entrainement';
   carteDuel($('duel-moi'), conf.moi, 'Toi');
   $('duel-lui').classList.toggle('cache', !solo);
   document.querySelector('.duel .vs').classList.toggle('cache', !solo);
@@ -83,7 +85,7 @@ function rendreEquipes() {
   $('duel-moi').classList.toggle('choisit', choix.pour === 'moi');
   $('duel-lui').classList.toggle('choisit', choix.pour === 'lui');
   $('consigne-equipes').textContent = choix.pour === 'moi' ? 'Choisis ton équipe.' : 'Choisis l’adversaire.';
-  $('equipes-titre').textContent = { solo: 'Match amical', coupe: 'La Coupe : ton équipe', ligue: 'La Ligue des Étoiles : ton équipe', enligne: 'En ligne : ton équipe' }[choix.mode];
+  $('equipes-titre').textContent = { solo: 'Match amical', coupe: 'La Coupe : ton équipe', ligue: 'La Ligue des Étoiles : ton équipe', enligne: 'En ligne : ton équipe', entrainement: 'Entraînement : les équipes' }[choix.mode];
   $('grille-equipes').innerHTML = EQUIPES.map((eq) => {
     const moi = eq.id === conf.moi, lui = solo && eq.id === conf.lui;
     return `<button class="equipe${moi ? ' moi' : ''}${lui ? ' lui' : ''}" data-id="${eq.id}" style="--c1:${eq.maillot.fond}">
@@ -100,7 +102,7 @@ function rendreEquipes() {
   $('grille-stades').classList.toggle('cache', !stades);
   $('grille-stades').previousElementSibling.classList.toggle('cache', !stades);
   $('grille-stades').innerHTML = STADES.map((s) => `<button class="stade${conf.stade === s.id ? ' oui' : ''}" data-id="${s.id}" style="--ciel:${COULEURS_STADE[s.id][0]};--sol:${COULEURS_STADE[s.id][1]}"><div class="vignette"></div><b>${s.nom}</b><small>${s.desc}</small></button>`).join('');
-  $('b-jouer').querySelector('b').textContent = { solo: 'Coup d’envoi', coupe: 'Commencer la Coupe', ligue: 'Commencer la Ligue', enligne: 'C’est mon équipe' }[choix.mode];
+  $('b-jouer').querySelector('b').textContent = { solo: 'Coup d’envoi', coupe: 'Commencer la Coupe', ligue: 'Commencer la Ligue', enligne: 'C’est mon équipe', entrainement: 'Valider' }[choix.mode];
 }
 
 function brancherEquipes() {
@@ -112,7 +114,7 @@ function brancherEquipes() {
     if (choix.pour === 'moi') {
       if (id === conf.lui) conf.lui = conf.moi;
       conf.moi = id;
-      if (choix.mode === 'solo') choix.pour = 'lui';
+      if (solo(choix.mode)) choix.pour = 'lui';
     } else {
       if (id === conf.moi) conf.moi = conf.lui;
       conf.lui = id;
@@ -126,7 +128,7 @@ function brancherEquipes() {
   $('seg-format').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.format = b.dataset.v; garder(); rendreEquipes(); } });
   $('seg-duree').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.minutes = +b.dataset.v; garder(); rendreEquipes(); } });
   $('grille-stades').addEventListener('click', (e) => { const b = e.target.closest('.stade'); if (b) { conf.stade = b.dataset.id; garder(); rendreEquipes(); } });
-  $('equipes-retour').addEventListener('click', () => aller(choix.mode === 'enligne' ? 'enligne' : 'menu'));
+  $('equipes-retour').addEventListener('click', () => { if (choix.mode === 'entrainement') ouvrirEntrainement(); else aller(choix.mode === 'enligne' ? 'enligne' : 'menu'); });
   $('coupe-retour').addEventListener('click', () => { infoCoupe(); aller('menu'); });
   $('b-jouer').addEventListener('click', () => {
     son.reveiller();
@@ -163,7 +165,7 @@ function instantane(m) {
   return {
     f: m.f,
     phase: m.phase,
-    joueurs: m.joueurs.map((p) => ({ x: p.x, y: p.y, vx: p.vx, vy: p.vy, dx: p.dx, dy: p.dy, etat: p.etat, frappe: p.frappe, charge: p.charge > 0 ? Math.min(1, p.charge / 48) : 0, volee: p.volee, geste: p.geste, gesteType: p.gesteType, spin: p.gesteType === 1 && p.geste > 0 ? (p.dx * p.gly - p.dy * p.glx >= 0 ? 1 : -1) * tourRoulette(1 - p.geste / DUREE_ROULETTE) : 0, roul: p.gesteType === 1 && p.geste > 0 ? 1 - p.geste / DUREE_ROULETTE : 0, haut: p.haut, vyPlonge: p.etat === 'plonge' ? p.vy : 0 })),
+    joueurs: m.joueurs.map((p) => ({ absent: !!p.absent, x: p.x, y: p.y, vx: p.vx, vy: p.vy, dx: p.dx, dy: p.dy, etat: p.etat, frappe: p.frappe, charge: p.charge > 0 ? Math.min(1, p.charge / 48) : 0, volee: p.volee, geste: p.geste, gesteType: p.gesteType, spin: p.gesteType === 1 && p.geste > 0 ? (p.dx * p.gly - p.dy * p.glx >= 0 ? 1 : -1) * tourRoulette(1 - p.geste / DUREE_ROULETTE) : 0, roul: p.gesteType === 1 && p.geste > 0 ? 1 - p.geste / DUREE_ROULETTE : 0, haut: p.haut, vyPlonge: p.etat === 'plonge' ? p.vy : 0 })),
     ballon: { x: b.x, y: b.y, z: b.z, vx: b.vx, vy: b.vy, vz: b.vz, porteur: b.porteur },
   };
 }
@@ -204,7 +206,7 @@ function lancerMatch(o) {
   arreterMatch();
   const eqs = o.equipes.map((id) => EQUIPE[id]);
   const kits = tenues(eqs[0], eqs[1]);
-  const m = creerMatch({ equipes: o.equipes, graine: o.graine ?? Math.floor(Math.random() * 2 ** 31), minutes: o.minutes, controles: o.controles, niveaux: o.niveaux, tab: !!o.tab });
+  const m = creerMatch({ equipes: o.equipes, graine: o.graine ?? Math.floor(Math.random() * 2 ** 31), minutes: o.minutes, controles: o.controles, niveaux: o.niveaux, tab: !!o.tab, entrainement: o.entrainement || null });
   aller('match');
   const rendu = creerRendu($('scene'), { stade: o.stade, equipes: eqs, kits });
   if (!rendu) { alert('La 3D n’est pas disponible sur cet appareil.'); aller('menu'); return; }
@@ -217,15 +219,19 @@ function lancerMatch(o) {
   $('tab-score').classList.add('cache');
   $('replay').classList.add('cache');
   $('aide-tab').classList.add('cache');
+  $('tableau-score').classList.toggle('libre', !!o.entrainement);
+  $('p-quitter').textContent = o.entrainement ? 'Quitter l’entraînement' : 'Abandonner le match';
+  if (o.entrainement) $('hud-score').textContent = 'ENTRAÎNEMENT';
   ecranGeant();
   // Le commentateur.
-  partie.com = creerCommentateur({ nom: (id) => nomDe(id), equipe: (e) => eqs[e], stade: LIEUX[o.stade] || '', el: $('commentaire') });
-  partie.com.debut(m);
+  if (!o.entrainement) partie.com = creerCommentateur({ nom: (id) => nomDe(id), equipe: (e) => eqs[e], stade: LIEUX[o.stade] || '', el: $('commentaire') });
+  partie.com?.debut(m);
   partie.lieu = LIEUX[o.stade] || '';
   partie.perf = new Array(10).fill(0);
   partie.arrets = new Array(10).fill(0);
   // L'avant-match (on peut le passer, sauf en ligne : il dure autant chez les deux joueurs).
-  cine.lancer(intro(partie), { passable: o.mode !== 'enligne', fin: () => partie?.rendu.camera('tele', true) });
+  if (o.entrainement) rendu.camera('tele', true);
+  else cine.lancer(intro(partie), { passable: o.mode !== 'enligne', fin: () => partie?.rendu.camera('tele', true) });
   enPause = false;
   saisie.siJeuEnCours(() => ecran === 'match' && !enPause);
   son.public_(0.15);
@@ -245,6 +251,7 @@ function arreterMatch() {
 function ecranGeant(texte) {
   if (!partie?.rendu.ecran) return;
   const { m, eqs } = partie;
+  if (m.entrainement) { partie.rendu.ecran(['PETIT PONT', texte || 'ENTRAÎNEMENT']); return; }
   partie.rendu.ecran([`${eqs[0].abr}  ${m.score[0]} - ${m.score[1]}  ${eqs[1].abr}`, texte || 'PETIT PONT']);
 }
 
@@ -408,7 +415,7 @@ function afficher(dt) {
   P.rendu.afficher({ ...vue, actifs: enRalenti ? [-1, -1] : actifs, humeurs: enRalenti ? null : h, heros, tab: m.phase === 'tab' }, dt, vitesse);
 
   // Le tableau d'affichage.
-  const score = `${m.score[0]} - ${m.score[1]}`;
+  const score = m.entrainement ? 'ENTRAÎNEMENT' : `${m.score[0]} - ${m.score[1]}`;
   if (score !== P.scoreAffiche) { $('hud-score').textContent = score; P.scoreAffiche = score; }
   $('hud-chrono').textContent = m.phase === 'tab' ? '' : chronoTexte(m);
   $('hud-mi').textContent = m.phase === 'tab' ? 'TAB' : m.mi === 1 ? '1re' : '2e';
@@ -642,6 +649,52 @@ function passerRalenti() {
 /* ------------------------------------------------------------------ */
 /* La Coupe et le jeu en ligne (plus bas, quand ils seront prêts)      */
 /* ------------------------------------------------------------------ */
+
+/* ---------------- L'entraînement ---------------- */
+
+if (!conf.entr) conf.entr = { nous: 4, eux: 4, gardiens: [true, true], immobiles: false };
+
+function ouvrirEntrainement() {
+  const E = conf.entr;
+  carteDuel($('entr-moi'), conf.moi, 'Toi');
+  carteDuel($('entr-lui'), conf.lui, 'Adversaire');
+  const seg = (id, valeurs, actuelle, libelle) => { $(id).innerHTML = valeurs.map((v) => `<button data-v="${v}" class="${String(actuelle) === String(v) ? 'oui' : ''}">${libelle(v)}</button>`).join(''); };
+  seg('entr-nous', [1, 2, 3, 4], E.nous, (n) => `${n} joueur${n > 1 ? 's' : ''}`);
+  seg('entr-eux', [0, 1, 2, 3, 4], E.eux, (n) => (n ? `${n} joueur${n > 1 ? 's' : ''}` : 'Personne'));
+  seg('entr-g0', ['oui', 'non'], E.gardiens[0] ? 'oui' : 'non', (v) => (v === 'oui' ? 'Oui' : 'Non'));
+  seg('entr-g1', ['oui', 'non'], E.gardiens[1] ? 'oui' : 'non', (v) => (v === 'oui' ? 'Oui' : 'Non'));
+  seg('entr-mode', ['jouent', 'plots'], E.immobiles ? 'plots' : 'jouent', (v) => (v === 'plots' ? 'Immobiles' : 'Jouent'));
+  seg('entr-niveau', [0, 1, 2], conf.niveau, (i) => NIVEAUX[i].nom);
+  const personne = !E.eux && !E.gardiens[1];
+  $('entr-bloc-mode').classList.toggle('cache', personne);
+  $('entr-bloc-niveau').classList.toggle('cache', personne || E.immobiles);
+  $('entr-stades').innerHTML = STADES.map((x) => `<button class="stade${conf.stade === x.id ? ' oui' : ''}" data-id="${x.id}" style="--ciel:${COULEURS_STADE[x.id][0]};--sol:${COULEURS_STADE[x.id][1]}"><div class="vignette"></div><b>${x.nom}</b><small>${x.desc}</small></button>`).join('');
+  aller('entrainement');
+}
+
+function brancherEntrainement() {
+  const choisir = (id, f) => $(id).addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; son.bip(); f(b.dataset.v); garder(); ouvrirEntrainement(); });
+  choisir('entr-nous', (v) => { conf.entr.nous = +v; });
+  choisir('entr-eux', (v) => { conf.entr.eux = +v; });
+  choisir('entr-g0', (v) => { conf.entr.gardiens[0] = v === 'oui'; });
+  choisir('entr-g1', (v) => { conf.entr.gardiens[1] = v === 'oui'; });
+  choisir('entr-mode', (v) => { conf.entr.immobiles = v === 'plots'; });
+  choisir('entr-niveau', (v) => { conf.niveau = +v; });
+  $('entr-stades').addEventListener('click', (e) => { const b = e.target.closest('.stade'); if (b) { conf.stade = b.dataset.id; garder(); ouvrirEntrainement(); } });
+  const equipes = (pour) => () => { ouvrirEquipes('entrainement', ouvrirEntrainement); choix.pour = pour; rendreEquipes(); };
+  $('entr-moi').addEventListener('click', equipes('moi'));
+  $('entr-lui').addEventListener('click', equipes('lui'));
+  $('entr-retour').addEventListener('click', () => aller('menu'));
+  $('b-entrainement').addEventListener('click', () => { son.reveiller(); ouvrirEntrainement(); });
+  $('entr-jouer').addEventListener('click', () => {
+    son.reveiller();
+    lancerMatch({
+      equipes: [conf.moi, conf.lui], controles: ['humain', 'ia'], niveaux: [1, conf.niveau], minutes: 3, stade: conf.stade, mode: 'entrainement',
+      entrainement: { ...conf.entr, gardiens: [...conf.entr.gardiens] },
+      abandon: ouvrirEntrainement,
+    });
+  });
+}
 
 /* ---------------- La Coupe ---------------- */
 
@@ -944,6 +997,7 @@ window.petitPont = {
 };
 
 brancher();
+brancherEntrainement();
 infoCoupe();
 ecransLigue.info();
 succes.visiter('petitpont');

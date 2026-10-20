@@ -13,6 +13,11 @@
  *   en défense : A vol de balle, B saut (contre, rebond), G change de joueur ;
  *   S : sprint (l'endurance baisse).
  *
+ * L'entraînement (o.entrainement) : on joue librement, sans chrono ni fin,
+ * avec moins de joueurs (les absents sont garés hors du terrain), et des
+ * adversaires qui jouent ou qui restent plantés comme des plots (ils ne
+ * touchent jamais le ballon). Après un panier, le ballon revient à l'équipe 0.
+ *
  * Déterministe : même graine, mêmes touches → même match, image par image.
  * L'état est un objet simple (copiable par structuredClone) ; `pas` le fait
  * avancer d'une image et rend ce qui s'est passé (les événements).
@@ -40,6 +45,9 @@ const RIEN = { mx: 0, my: 0, sprint: false, action: null };
 /** Le cycle du dribble (le ballon touche le sol toutes les 24 images). */
 export const CYCLE_DRIBBLE = 24;
 
+/** L'ordre dans lequel les joueurs entrent sur le terrain à l'entraînement : nous (meneur d'abord), eux (le pivot d'abord, pour garder le cercle). */
+const ORDRE_ENTREE = [[0, 1, 2], [2, 0, 1]];
+
 /**
  * Un match.
  * @param {object} o
@@ -48,8 +56,9 @@ export const CYCLE_DRIBBLE = 24;
  * @param {number} [o.minutes]              la durée d'une période
  * @param {[string, string]} [o.controles]  'humain' ou 'ia', pour chaque équipe
  * @param {[number, number]} [o.niveaux]    0 facile, 1 normal, 2 difficile (pour l'ordinateur)
+ * @param {{ nous: number, eux: number, immobiles: boolean }} [o.entrainement]  nous : 1 à 3, eux : 0 à 3
  */
-export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['humain', 'ia'], niveaux = [1, 1] }) {
+export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['humain', 'ia'], niveaux = [1, 1], entrainement = null }) {
   const m = {
     f: 0, alea: (graine >>> 0) || 1,
     phase: 'engagement', t: ENGAGEMENT, periode: 1, chrono: 0, duree: Math.round(minutes * 60 * FPS),
@@ -75,8 +84,35 @@ export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['hum
       });
     }
   }
+  if (entrainement) {
+    m.entrainement = { nous: clamp(entrainement.nous | 0, 1, 3), eux: clamp(entrainement.eux | 0, 0, 3), immobiles: !!entrainement.immobiles };
+    const n = [m.entrainement.nous, m.entrainement.eux];
+    for (let e = 0; e < 2; e++) ORDRE_ENTREE[e].forEach((i, k) => { m.joueurs[e * 3 + i].absent = k >= n[e]; });
+    if (m.entrainement.immobiles) m.equipes[1].immobile = true;
+    placerDepart(m);
+    return m;
+  }
   placerEntreDeux(m);
   return m;
+}
+
+/** L'entraînement : le ballon à notre premier joueur, dans notre moitié ; les adversaires en défense ; les absents garés. */
+function placerDepart(m) {
+  const s = m.equipes[0].sens;
+  for (const p of m.joueurs) {
+    let [X, Y] = p.e === 0 ? [[-1.5, 0], [3, -4.5], [4, 3.5]][p.i] : [[8, 0.5], [8.5, -3.5], [10.5, 1]][p.i];
+    if (p.absent) [X, Y] = [-12 + p.id * 4.5, -(DEMI_W + 50)];
+    Object.assign(p, { x: X * s, y: Y, z: 0, vx: 0, vy: 0, vz: 0, dx: p.e === 0 ? s : -s, dy: 0, etat: 'normal', t: 0, charge: 0, chargeCible: 0, verrou: 0, lache: 0, surpris: 0, crochet: 0, dec: 0 });
+    if (p.absent) p.x = X;
+  }
+  const r = m.joueurs.find((p) => p.e === 0 && !p.absent);
+  Object.assign(m.ballon, { x: r.x, y: r.y, z: 1, vx: 0, vy: 0, vz: 0, porteur: r.id, dernier: r.id, passeur: -1, cible: -1, essais: 0, tir: null, rebond: null, entre: false, remise: -1, marque: false, touche: 0, aTerre: false });
+  m.equipes[0].actif = r.id;
+  const r1 = m.joueurs.find((p) => p.e === 1 && !p.absent);
+  m.equipes[1].actif = r1 ? r1.id : 3;
+  m.poss = { e: 0, f: m.f, passes: 0 };
+  m.phase = 'engagement';
+  m.t = 30;
 }
 
 /** L'entre-deux : les deux pivots au centre, le ballon lancé en l'air. */
@@ -144,10 +180,11 @@ export function pas(m, entrees = [0, 0]) {
       break;
     case 'panier':
       // La joie (ou la déception) : le ballon finit de tomber, les joueurs ralentissent.
-      for (const p of m.joueurs) deplacer(m, p, RIEN);
+      for (const p of m.joueurs) if (!p.absent) deplacer(m, p, RIEN);
       physiqueBallon(m, evs, false);
       if (--m.t <= 0) {
-        if (m.enOr) finir(m, evs);
+        if (m.entrainement) { placerDepart(m); evs.push({ type: 'remise', equipe: 0 }); }
+        else if (m.enOr) finir(m, evs);
         else if (m.chrono >= m.duree) finPeriode(m, evs);
         else { placerRemise(m, m.aRemettre); evs.push({ type: 'remise', equipe: m.aRemettre }); }
       }
@@ -203,7 +240,7 @@ function jouer(m, k, ap, rel, evs) {
     if ((p.chargeCible && p.charge >= p.chargeCible) || p.charge >= CHARGE_MAX) lacherTir(m, p, evs);
   }
   for (const p of m.joueurs) if (p.etat === 'dunk') dunk(m, p, evs);
-  for (const p of m.joueurs) deplacer(m, p, cons[p.id] || RIEN);
+  for (const p of m.joueurs) if (!p.absent) deplacer(m, p, cons[p.id] || RIEN);
   separer(m);
   if (m.ballon.remise >= 0) for (const p of m.joueurs) borner(m, p);
   physiqueBallon(m, evs, true);
@@ -212,6 +249,7 @@ function jouer(m, k, ap, rel, evs) {
 
   if (b.porteur >= 0) m.stats.possession[m.joueurs[b.porteur].e] += 1;
   // Le chrono s'arrête pendant la remise en jeu et l'entre-deux (et il n'y en a plus pendant le panier en or).
+  if (m.entrainement) return;
   if (!m.enOr && b.remise < 0 && !b.entre) m.chrono += 1;
   if (!m.enOr && m.chrono >= m.duree) {
     // Un tir parti avant la sirène a le droit d'arriver.
@@ -252,7 +290,7 @@ function plusProche(m, e, sauf = -1) {
   let best = -1, bd = 1e9;
   for (let i = 0; i < 3; i++) {
     const p = m.joueurs[e * 3 + i];
-    if (p.id === sauf) continue;
+    if (p.id === sauf || p.absent) continue;
     const d = dist(p.x, p.y, b.x, b.y);
     if (d < bd) { bd = d; best = p.id; }
   }
@@ -268,7 +306,7 @@ export function choisirReceveur(m, p, dx, dy) {
   let best = -1, bv = -1e9;
   for (let i = 0; i < 3; i++) {
     const r = m.joueurs[p.e * 3 + i];
-    if (r === p) continue;
+    if (r === p || r.absent) continue;
     const ux = r.x - p.x, uy = r.y - p.y;
     const d = Math.sqrt(ux * ux + uy * uy) || 1;
     const v = ((ux * dx + uy * dy) / d) * 2 - d * 0.03;
@@ -291,7 +329,8 @@ function humain(m, e, k, ap, rel, cons, evs) {
   if (aLaBalle) eq.actif = porteur.id;
   else if (!porteur && b.cible >= 0 && m.joueurs[b.cible].e === e) eq.actif = b.cible;
   if ((ap & T.G) && !aLaBalle) {
-    eq.actif = plusProche(m, e, eq.actif);
+    const autre = plusProche(m, e, eq.actif);
+    if (autre >= 0) eq.actif = autre;
     evs.push({ type: 'change', joueur: eq.actif });
   }
   const p = m.joueurs[eq.actif];
@@ -733,7 +772,7 @@ function marquer(m, cote, evs) {
   b.tir = null;
   b.rebond = null;
   m.phase = 'panier';
-  m.t = APRES_PANIER;
+  m.t = m.entrainement ? 60 : APRES_PANIER;
   m.aRemettre = 1 - e;
   evs.push({ type: 'panier', equipe: e, joueur: j, pts, passeur: tir ? tir.passeur : -1, dunk: !!tir?.dunk, enOr: m.enOr });
 }
@@ -764,7 +803,7 @@ function attraper(m, evs) {
   if (b.marque) return;
   let best = null, bv = -1e9;
   for (const p of m.joueurs) {
-    if (p.lache > 0 || p.etat === 'dunk') continue;
+    if (p.lache > 0 || p.etat === 'dunk' || p.absent || m.equipes[p.e].immobile) continue;
     const hd = dist(p.x, p.y, b.x, b.y);
     if (hd > 0.62 || b.z > allonge(p) + 0.05) continue;
     // Un tir encore au-dessus de l'arceau : personne n'y touche.
@@ -808,6 +847,7 @@ function attraper(m, evs) {
 
 /** Le temps de la période en cours, à afficher : « 2:41 » (il descend). */
 export function chronoTexte(m) {
+  if (m.entrainement) return '∞';
   if (m.enOr) return 'OR';
   const reste = Math.max(0, Math.ceil((m.duree - m.chrono) / FPS));
   return `${Math.floor(reste / 60)}:${String(reste % 60).padStart(2, '0')}`;

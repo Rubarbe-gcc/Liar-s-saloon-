@@ -8,7 +8,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { creerMatch, pas, empreinte, simuler, T, PANIER_X, ANNEAU_Z, CHARGE_IDEALE } from '../public/shared/basket/match.js';
+import { creerMatch, pas, empreinte, simuler, chronoTexte, T, PANIER_X, ANNEAU_Z, CHARGE_IDEALE } from '../public/shared/basket/match.js';
 import { estTrois, TROIS_R, TROIS_COIN } from '../public/shared/basket/terrain.js';
 import { EQUIPES, EQUIPE, STYLES, notesEquipe } from '../public/shared/basket/equipes.js';
 import { ecussonSVG } from '../public/games/plein-stade/commun/ecusson.js';
@@ -264,6 +264,37 @@ test('le tournoi : huit clubs, trois tours, un champion', () => {
   const s = { j: {} };
   noterStats({ stats: s }, resumer(m));
   assert.equal(Object.values(s.j).filter((x) => x.club === 'lumen').reduce((t, x) => t + x.pts, 0), m.score[0]);
+});
+
+test('l’entraînement : moins de joueurs, des plots, pas de fin', () => {
+  // Deux contre trois plots : les absents restent garés, les plots ne bougent ni ne touchent le ballon.
+  const m = creerMatch({ equipes: ['valrose', 'lumen'], graine: 5, controles: ['ia', 'ia'], entrainement: { nous: 2, eux: 3, immobiles: true } });
+  assert.equal(m.joueurs.filter((p) => p.absent).length, 1);
+  assert.equal(chronoTexte(m), '∞');
+  const avant = m.joueurs.map((p) => [p.x, p.y]);
+  for (let i = 0; i < 15000; i++) {
+    pas(m, [0, 0]);
+    assert.ok(m.ballon.porteur < 0 || m.joueurs[m.ballon.porteur].e === 0);
+    assert.notEqual(m.phase, 'fin');
+  }
+  assert.ok(m.score[0] > 10, 'on marque');
+  assert.equal(m.chrono, 0);
+  for (const p of m.joueurs) {
+    if (p.absent) assert.deepEqual([p.x, p.y], avant[p.id]);
+    if (p.e === 1) assert.ok(Math.hypot(p.x - avant[p.id][0], p.y - avant[p.id][1]) < 1.5, 'les plots restent à leur place');
+  }
+  // Un contre zéro : seul sur le terrain, l'humain a le ballon et peut tirer.
+  const s = creerMatch({ equipes: ['valrose', 'lumen'], graine: 5, entrainement: { nous: 1, eux: 0 } });
+  assert.equal(s.joueurs.filter((p) => !p.absent).length, 1);
+  assert.equal(s.ballon.porteur, s.equipes[0].actif);
+  for (let i = 0; i < 200; i++) pas(s, [i % 20 === 0 ? T.G : 0, 0]);
+  assert.ok(!s.joueurs[s.equipes[0].actif].absent);
+  // Les adversaires qui jouent : ils prennent le ballon, et après leur panier, il nous revient.
+  const j = creerMatch({ equipes: ['valrose', 'lumen'], graine: 6, controles: ['ia', 'ia'], entrainement: { nous: 1, eux: 3 } });
+  for (let i = 0; i < 30000 && j.score[1] === 0; i++) pas(j);
+  assert.ok(j.score[1] > 0);
+  while (j.phase === 'panier' || j.phase === 'jeu' && j.ballon.porteur < 0) pas(j);
+  assert.equal(j.joueurs[j.ballon.porteur].e, 0);
 });
 
 test('équilibre : chaque équipe gagne entre 35 et 65 % de ses matchs', () => {

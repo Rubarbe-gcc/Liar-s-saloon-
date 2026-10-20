@@ -354,6 +354,8 @@ function porteurIA(m, p, N, st) {
  */
 export function decider(m, e, cons, traj) {
   const eq = m.equipes[e], st = STYLES[eq.style], N = niveauDe(eq), s = eq.sens, b = m.ballon;
+  // L'entraînement : les absents ne font rien ; les plots non plus.
+  for (let k = 0; k < 5; k++) { const q = m.joueurs[e * 5 + k]; if (!cons[q.id] && (q.absent || eq.immobile)) cons[q.id] = RIEN; }
   gardien(m, e, cons, N, traj);
 
   const porteur = b.porteur >= 0 ? m.joueurs[b.porteur] : null;
@@ -438,7 +440,7 @@ export function decider(m, e, cons, traj) {
   }
   // Les autres : marquer les adversaires les plus dangereux, sinon tenir sa place.
   const adv = [];
-  for (let k = 1; k < 5; k++) { const q = m.joueurs[(1 - e) * 5 + k]; if (q !== porteur) adv.push(q); }
+  for (let k = 1; k < 5; k++) { const q = m.joueurs[(1 - e) * 5 + k]; if (q !== porteur && !q.absent) adv.push(q); }
   adv.sort((a, c) => dist(a.x, a.y, gx, 0) - dist(c.x, c.y, gx, 0) || a.id - c.id);
   for (const q of adv) {
     if (!restants.length) break;

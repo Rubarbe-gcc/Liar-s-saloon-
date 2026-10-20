@@ -55,3 +55,4 @@ body.basket {
 .touches-bouger small { display: block; color: var(--doux); font-size: .8em; margin-top: 2px; }
 .touches-aide .btn { margin-left: 8px; padding: 4px 10px; font-size: .9em; }
 @keyframes clignote { 50% { opacity: .5; } }
+

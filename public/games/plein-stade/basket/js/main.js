@@ -81,13 +81,13 @@ function fiche(id) {
 }
 
 function rendreEquipes() {
-  const solo = choix.mode === 'solo';
+  const solo = choix.mode !== 'tournoi';
   carteDuel($('duel-moi'), conf.moi, 'Toi');
   carteDuel($('duel-lui'), conf.lui, 'Adversaire');
   $('duel-lui').classList.toggle('cache', !solo);
   document.querySelector('.duel .vs').classList.toggle('cache', !solo);
-  $('equipes-titre').textContent = solo ? 'Match amical' : 'Le Tournoi : ton club';
-  $('b-jouer').querySelector('b').textContent = solo ? 'Entre-deux' : 'Commencer le tournoi';
+  $('equipes-titre').textContent = { solo: 'Match amical', tournoi: 'Le Tournoi : ton club', entrainement: 'Entraînement : les équipes' }[choix.mode];
+  $('b-jouer').querySelector('b').textContent = { solo: 'Entre-deux', tournoi: 'Commencer le tournoi', entrainement: 'Valider' }[choix.mode];
   $('duel-moi').classList.toggle('choisit', choix.pour === 'moi');
   $('duel-lui').classList.toggle('choisit', choix.pour === 'lui');
   $('consigne-equipes').textContent = choix.pour === 'moi' ? 'Choisis ton équipe.' : 'Choisis l’adversaire.';
@@ -113,7 +113,7 @@ function brancherEquipes() {
     if (choix.pour === 'moi') {
       if (id === conf.lui) conf.lui = conf.moi;
       conf.moi = id;
-      if (choix.mode === 'solo') choix.pour = 'lui';
+      if (choix.mode !== 'tournoi') choix.pour = 'lui';
     } else {
       if (id === conf.moi) conf.moi = conf.lui;
       conf.lui = id;
@@ -131,7 +131,7 @@ function brancherEquipes() {
   $('seg-niveau').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.niveau = +b.dataset.v; garder(); rendreEquipes(); } });
   $('seg-duree').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.minutes = +b.dataset.v; garder(); rendreEquipes(); } });
   $('grille-stades').addEventListener('click', (e) => { const b = e.target.closest('.stade'); if (b) { conf.salle = b.dataset.id; garder(); rendreEquipes(); } });
-  $('equipes-retour').addEventListener('click', () => aller('menu'));
+  $('equipes-retour').addEventListener('click', () => { if (choix.mode === 'entrainement') ouvrirEntrainement(); else aller('menu'); });
   $('b-jouer').addEventListener('click', () => {
     son.reveiller();
     if (choix.suite) { choix.suite(); return; }
@@ -163,7 +163,7 @@ function instantane(m) {
     f: m.f,
     phase: m.phase,
     joueurs: m.joueurs.map((p) => ({
-      x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, dx: p.dx, dy: p.dy, etat: p.etat,
+      x: p.x, y: p.y, z: p.z, vx: p.vx, vy: p.vy, dx: p.dx, dy: p.dy, etat: p.etat, absent: !!p.absent,
       porte: b.porteur === p.id, remise: b.remise === p.id, balleZ: b.z, main: p.i === 2 ? -1 : 1,
       defend: att >= 0 && p.e !== att && Math.hypot(p.x - porteur.x, p.y - porteur.y) < 4, surpris: p.surpris > 0, crochet: p.crochet > 0,
     })),
@@ -203,7 +203,7 @@ function lancerMatch(o) {
   arreterMatch();
   const eqs = o.equipes.map((id) => EQUIPE[id]);
   const kits = tenues(eqs[0], eqs[1]);
-  const m = creerMatch({ equipes: o.equipes, graine: o.graine ?? Math.floor(Math.random() * 2 ** 31), minutes: o.minutes, controles: o.controles, niveaux: o.niveaux });
+  const m = creerMatch({ equipes: o.equipes, graine: o.graine ?? Math.floor(Math.random() * 2 ** 31), minutes: o.minutes, controles: o.controles, niveaux: o.niveaux, entrainement: o.entrainement || null });
   aller('match');
   const rendu = creerRendu($('scene'), { salle: o.salle, equipes: eqs, kits });
   if (!rendu) { alert('La 3D n’est pas disponible sur cet appareil.'); aller('menu'); return; }
@@ -212,11 +212,16 @@ function lancerMatch(o) {
     $(`hud-ec${e}`).innerHTML = ecussonSVG(eqs[e], 26);
     $(`hud-abr${e}`).textContent = eqs[e].abr;
   }
+  $('tableau-score').classList.toggle('libre', !!o.entrainement);
+  $('p-quitter').textContent = o.entrainement ? 'Quitter l’entraînement' : 'Abandonner le match';
+  if (o.entrainement) $('hud-score').textContent = 'ENTRAÎNEMENT';
   ecranGeant();
   partie.lieu = LIEUX[o.salle] || '';
-  partie.com = creerCommentateur({ nom: (id) => nomDe(id), equipe: (e) => eqs[e], salle: partie.lieu, el: $('commentaire') });
-  partie.com.debut(m);
-  cine.lancer(intro(partie), { passable: true, fin: () => partie?.rendu.camera('tele', true) });
+  if (!o.entrainement) {
+    partie.com = creerCommentateur({ nom: (id) => nomDe(id), equipe: (e) => eqs[e], salle: partie.lieu, el: $('commentaire') });
+    partie.com.debut(m);
+    cine.lancer(intro(partie), { passable: true, fin: () => partie?.rendu.camera('tele', true) });
+  } else rendu.camera('tele', true);
   enPause = false;
   saisie.siJeuEnCours(() => ecran === 'match' && !enPause);
   son.public_(0.15);
@@ -234,6 +239,7 @@ function arreterMatch() {
 function ecranGeant(texte) {
   if (!partie?.rendu.ecran) return;
   const { m, eqs } = partie;
+  if (m.entrainement) { partie.rendu.ecran(['DOUBLE PAS', texte || 'ENTRAÎNEMENT']); return; }
   partie.rendu.ecran([`${eqs[0].abr}  ${m.score[0]} - ${m.score[1]}  ${eqs[1].abr}`, texte || 'DOUBLE PAS']);
 }
 
@@ -348,10 +354,12 @@ function afficher(dt) {
   P.rendu.afficher({ ...vue, actifs, humeurs: h, heros }, dt);
 
   // Le tableau d'affichage.
-  const score = `${m.score[0]} - ${m.score[1]}`;
-  if (score !== P.scoreAffiche) { $('hud-score').textContent = score; P.scoreAffiche = score; }
-  $('hud-chrono').textContent = chronoTexte(m);
-  $('hud-mi').textContent = m.enOr ? 'PANIER' : m.periode === 1 ? '1re' : '2e';
+  if (!m.entrainement) {
+    const score = `${m.score[0]} - ${m.score[1]}`;
+    if (score !== P.scoreAffiche) { $('hud-score').textContent = score; P.scoreAffiche = score; }
+    $('hud-chrono').textContent = chronoTexte(m);
+    $('hud-mi').textContent = m.enOr ? 'PANIER' : m.periode === 1 ? '1re' : '2e';
+  }
   // Le joueur dirigé : son nom, son souffle, la jauge de son tir.
   const pj = eq.ctrl === 'humain' && eq.actif >= 0 ? m.joueurs[eq.actif] : null;
   if (pj) {
@@ -450,6 +458,49 @@ function montrerFin(res, o) {
     bouton('Menu', '', () => aller('menu'));
   }
   aller('fin');
+}
+
+/* ------------------------------------------------------------------ */
+/* L'entraînement                                                      */
+/* ------------------------------------------------------------------ */
+
+if (!conf.entr) conf.entr = { nous: 3, eux: 3, immobiles: false };
+
+function ouvrirEntrainement() {
+  const E = conf.entr;
+  carteDuel($('entr-moi'), conf.moi, 'Toi');
+  carteDuel($('entr-lui'), conf.lui, 'Adversaire');
+  const seg = (id, valeurs, actuelle, libelle) => { $(id).innerHTML = valeurs.map((v) => `<button data-v="${v}" class="${actuelle === v ? 'oui' : ''}">${libelle(v)}</button>`).join(''); };
+  seg('entr-nous', [1, 2, 3], E.nous, (n) => `${n} joueur${n > 1 ? 's' : ''}`);
+  seg('entr-eux', [0, 1, 2, 3], E.eux, (n) => (n ? `${n} joueur${n > 1 ? 's' : ''}` : 'Personne'));
+  seg('entr-mode', ['jouent', 'plots'], E.immobiles ? 'plots' : 'jouent', (v) => (v === 'plots' ? 'Immobiles' : 'Jouent'));
+  seg('entr-niveau', [0, 1, 2], conf.niveau, (i) => NIVEAUX[i].nom);
+  $('entr-bloc-mode').classList.toggle('cache', !E.eux);
+  $('entr-bloc-niveau').classList.toggle('cache', !E.eux || E.immobiles);
+  $('entr-salles').innerHTML = SALLES.map((x) => `<button class="stade${conf.salle === x.id ? ' oui' : ''}" data-id="${x.id}" style="--ciel:${COULEURS_SALLE[x.id][0]};--sol:${COULEURS_SALLE[x.id][1]}"><div class="vignette"></div><b>${x.nom}</b><small>${x.desc}</small></button>`).join('');
+  aller('entrainement');
+}
+
+function brancherEntrainement() {
+  const choisir = (id, f) => $(id).addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; son.bip(); f(b.dataset.v); garder(); ouvrirEntrainement(); });
+  choisir('entr-nous', (v) => { conf.entr.nous = +v; });
+  choisir('entr-eux', (v) => { conf.entr.eux = +v; });
+  choisir('entr-mode', (v) => { conf.entr.immobiles = v === 'plots'; });
+  choisir('entr-niveau', (v) => { conf.niveau = +v; });
+  $('entr-salles').addEventListener('click', (e) => { const b = e.target.closest('.stade'); if (b) { conf.salle = b.dataset.id; garder(); ouvrirEntrainement(); } });
+  const equipes = (pour) => () => { ouvrirEquipes('entrainement', ouvrirEntrainement); choix.pour = pour; choix.survol = conf[pour]; rendreEquipes(); };
+  $('entr-moi').addEventListener('click', equipes('moi'));
+  $('entr-lui').addEventListener('click', equipes('lui'));
+  $('entr-retour').addEventListener('click', () => aller('menu'));
+  $('b-entrainement').addEventListener('click', () => { son.reveiller(); ouvrirEntrainement(); });
+  $('entr-jouer').addEventListener('click', () => {
+    son.reveiller();
+    lancerMatch({
+      equipes: [conf.moi, conf.lui], controles: ['humain', 'ia'], niveaux: [1, conf.niveau], minutes: 3, salle: conf.salle,
+      entrainement: { ...conf.entr },
+      abandon: ouvrirEntrainement,
+    });
+  });
 }
 
 /* ------------------------------------------------------------------ */
@@ -658,6 +709,7 @@ function brancher() {
 }
 
 brancher();
+brancherEntrainement();
 infoTournoi();
 
 // Pour les essais (dans la console) : window.doublePas.partie()

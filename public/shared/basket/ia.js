@@ -78,7 +78,7 @@ function meilleurePasse(m, p, st, niv) {
   let best = null, bv = -1;
   for (let i = 0; i < 3; i++) {
     const r = m.joueurs[p.e * 3 + i];
-    if (r === p || r.z > 0) continue;
+    if (r === p || r.z > 0 || r.absent) continue;
     let v = valeurTir(m, r, r.x, r.y, st, niv) * 0.94;
     if (st.vedette && r.vedette) v *= 1.25;
     v *= 1 - risquePasse(m, p, r) * 0.85;
@@ -110,7 +110,7 @@ function majMarquage(m, e) {
  */
 export function decider(m, e, cons) {
   const eq = m.equipes[e], b = m.ballon;
-  if (eq.ctrl === 'aucun') { for (let i = 0; i < 3; i++) if (!cons[e * 3 + i]) cons[e * 3 + i] = RIEN; return; }
+  if (eq.ctrl === 'aucun' || eq.immobile) { for (let i = 0; i < 3; i++) if (!cons[e * 3 + i]) cons[e * 3 + i] = RIEN; return; }
   const st = STYLES[eq.style], niv = niveauDe(eq);
   const porteur = b.porteur >= 0 ? m.joueurs[b.porteur] : null;
   const etat = porteur ? (porteur.e === e ? 'att' : 'def') : b.cible >= 0 ? (m.joueurs[b.cible].e === e ? 'att' : 'def') : 'libre';
@@ -118,7 +118,7 @@ export function decider(m, e, cons) {
   for (let i = 0; i < 3; i++) {
     const p = m.joueurs[e * 3 + i];
     if (cons[p.id]) continue;
-    if (p.z > 0 || p.vz > 0 || p.etat === 'dunk') { cons[p.id] = RIEN; continue; }
+    if (p.absent || p.z > 0 || p.vz > 0 || p.etat === 'dunk') { cons[p.id] = RIEN; continue; }
     if (porteur === p) cons[p.id] = porteurIA(m, p, st, niv);
     else if (etat === 'att') cons[p.id] = appel(m, p, st, niv);
     else if (etat === 'def') cons[p.id] = defendre(m, p, st, niv);
@@ -259,7 +259,14 @@ function appel(m, p, st, niv) {
 function defendre(m, p, st, niv) {
   const b = m.ballon, eq = m.equipes[p.e];
   const dhx = -panierX(m, p.e);
-  const a = m.joueurs[(1 - p.e) * 3 + eq.marque[p.i]];
+  let a = m.joueurs[(1 - p.e) * 3 + eq.marque[p.i]];
+  // Son joueur n'est pas là (l'entraînement) : on prend le porteur, ou celui qui est libre le plus près.
+  if (a.absent) {
+    let best = null, bd = 1e9;
+    for (let k = 0; k < 3; k++) { const q = m.joueurs[(1 - p.e) * 3 + k]; const d = q.absent ? 1e9 : dist(q.x, q.y, p.x, p.y) - (b.porteur === q.id ? 3 : 0); if (d < bd) { bd = d; best = q; } }
+    if (!best || best.absent) return vers(p, dhx * 0.85, 0);
+    a = best;
+  }
   const porteur = b.porteur >= 0 ? m.joueurs[b.porteur] : null;
   const surBalle = porteur === a;
   const dAH = Math.max(0.5, dist(a.x, a.y, dhx, 0));

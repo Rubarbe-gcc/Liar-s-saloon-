@@ -16,6 +16,11 @@
  *       où l'on pousse) ; en sprintant, l'arc-en-ciel (le ballon passe par-dessus sa tête et celle
  *       du défenseur, on le récupère devant).
  *
+ * L'entraînement (o.entrainement) : on joue librement, sans chrono ni mi-temps,
+ * avec moins de joueurs (les absents sont garés hors du terrain), avec ou
+ * sans gardien, et des adversaires qui jouent ou qui restent plantés comme
+ * des plots (ils ne touchent jamais le ballon). Après un but, l'équipe 0 réengage.
+ *
  * Déterministe : même graine, mêmes touches → même match, image par image,
  * sur tous les appareils (le jeu en ligne en dépend : shared/rollback.js).
  * L'état est un objet simple (copiable par structuredClone) ; `pas` le fait
@@ -54,8 +59,10 @@ const ROT = { lent: [0.98007, 0.19867], vif: [0.93937, 0.34290] };
  * @param {[string, string]} [o.controles]  'humain' ou 'ia', pour chaque équipe
  * @param {[number, number]} [o.niveaux]    0 facile, 1 normal, 2 difficile (pour l'ordinateur)
  * @param {boolean} [o.tab]              des tirs au but en cas d'égalité
+ * @param {{ nous: number, eux: number, gardiens: [boolean, boolean], immobiles: boolean }} [o.entrainement]
+ *   nous : 1 à 4 joueurs de champ, eux : 0 à 4
  */
-export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['humain', 'ia'], niveaux = [1, 1], tab = false }) {
+export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['humain', 'ia'], niveaux = [1, 1], tab = false, entrainement = null }) {
   const m = {
     f: 0, alea: (graine >>> 0) || 1,
     phase: 'engagement', t: ENGAGEMENT, mi: 1, chrono: 0, duree: Math.round(minutes * 60 * FPS),
@@ -84,8 +91,27 @@ export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['hum
       });
     }
   }
+  if (entrainement) {
+    const n = [clamp(entrainement.nous | 0, 1, 4), clamp(entrainement.eux | 0, 0, 4)];
+    const g = entrainement.gardiens || [true, true];
+    m.entrainement = { nous: n[0], eux: n[1], gardiens: [!!g[0], !!g[1]], immobiles: !!entrainement.immobiles };
+    for (let e = 0; e < 2; e++) {
+      m.joueurs[e * 5].absent = !m.entrainement.gardiens[e];
+      ORDRE_ENTREE.forEach((i, k) => { m.joueurs[e * 5 + i].absent = k >= n[e]; });
+    }
+    if (m.entrainement.immobiles) m.equipes[1].immobile = true;
+    m.engage = m.premierEngage = 0;
+  }
   placerEngagement(m);
   return m;
+}
+
+/** À l'entraînement, les joueurs de champ entrent dans cet ordre : l'attaquant, les milieux, le défenseur. */
+const ORDRE_ENTREE = [4, 2, 3, 1];
+
+/** Les absents (l'entraînement) : garés hors du terrain, immobiles, loin de tout. */
+function garer(m) {
+  for (const p of m.joueurs) if (p.absent) Object.assign(p, { x: -20 + p.id * 4.5, y: -(DEMI_W + 50), vx: 0, vy: 0 });
 }
 
 function placerEngagement(m) {
@@ -100,6 +126,14 @@ function placerEngagement(m) {
   for (const eq of m.equipes) { eq.pressing = 0; eq.auto = 0; }
   m.equipes[0].actif = 4;
   m.equipes[1].actif = 9;
+  if (m.entrainement) {
+    garer(m);
+    // Le joueur qui engage : le premier présent (l'attaquant, sinon un milieu…).
+    const s = m.equipes[m.engage].sens;
+    const k = m.joueurs.find((p) => p.e === m.engage && p.i > 0 && !p.absent);
+    if (k && k.i !== 4) { Object.assign(k, { x: -0.42 * s, y: 0 }); Object.assign(m.ballon, { porteur: k.id, dernier: k.id }); }
+    for (let e = 0; e < 2; e++) { const q = m.joueurs.find((p) => p.e === e && p.i > 0 && !p.absent); m.equipes[e].actif = q ? q.id : e * 5 + 4; }
+  }
   m.phase = 'engagement';
   m.t = ENGAGEMENT;
 }
@@ -188,6 +222,7 @@ function jouer(m, k, ap, rel, evs) {
   contacts(m, avant, evs);
 
   if (b.porteur >= 0) m.stats.possession[m.joueurs[b.porteur].e] += 1;
+  if (m.entrainement) return;
   m.chrono += 1;
   if (m.chrono >= m.duree) {
     // Une frappe partie juste avant la fin a le droit d'arriver.
@@ -219,7 +254,7 @@ function plusProche(m, e, sauf = -1) {
   let best = -1, bd = 1e9;
   for (let i = 1; i < 5; i++) {
     const p = m.joueurs[e * 5 + i];
-    if (p.id === sauf) continue;
+    if (p.id === sauf || p.absent) continue;
     const d = dist(p.x, p.y, b.x, b.y) + (p.etat === 'normal' ? 0 : 3);
     if (d < bd) { bd = d; best = p.id; }
   }
@@ -257,7 +292,7 @@ export function choisirReceveur(m, p, dx, dy) {
   let best = -1, bv = -1e9;
   for (let i = 0; i < 5; i++) {
     const r = m.joueurs[p.e * 5 + i];
-    if (r === p) continue;
+    if (r === p || r.absent) continue;
     const ux = r.x - p.x, uy = r.y - p.y;
     const d = Math.sqrt(ux * ux + uy * uy) || 1;
     const v = ((ux * dx + uy * dy) / d) * 2 - d * 0.035 - (r.i === 0 ? 0.9 : 0);
@@ -493,6 +528,7 @@ function dansSurface(m, p) {
 }
 
 function deplacer(m, p, c) {
+  if (p.absent) return;
   const b = m.ballon, eq = m.equipes[p.e];
   if (p.etat === 'tacle') {
     p.vx *= 0.955; p.vy *= 0.955;
@@ -701,8 +737,8 @@ function marquer(m, cote, evs) {
   if (!csc && dp && dp.a === buteur && m.f - dp.f < 420) passeur = dp.de;
   m.buts.push({ e, j: buteur, passeur, csc, mi: m.mi, chrono: m.chrono });
   m.phase = 'but';
-  m.t = APRES_BUT;
-  m.engage = 1 - e;
+  m.t = m.entrainement ? 100 : APRES_BUT;
+  m.engage = m.entrainement ? 0 : 1 - e;
   for (const p of m.joueurs) { p.charge = 0; if (p.etat === 'tient') p.etat = 'normal'; }
   evs.push({ type: 'but', equipe: e, joueur: buteur, passeur, csc });
 }
@@ -747,7 +783,7 @@ function contacts(m, avant, evs) {
   let best = null, bk = 1;
   if (b.arc > 0) b.arc -= 1;
   for (const p of m.joueurs) {
-    if (p.verrou > 0 || p.etat === 'sol' || p.etat === 'tient') continue;
+    if (p.verrou > 0 || p.etat === 'sol' || p.etat === 'tient' || p.absent || m.equipes[p.e].immobile) continue;
     // L'arc-en-ciel passe au-dessus des têtes : tant qu'il est en l'air, seul le gardien peut le capter.
     if (b.arc > 0 && b.z > 0.35 && p.id !== b.cible && p.i > 0) continue;
     const mains = p.i === 0 && dansSurface(m, p);
@@ -1053,6 +1089,7 @@ function tirsAuBut(m, k, ap, rel, evs) {
 
 /** Le temps de la mi-temps en cours, à afficher : « 2:41 » (il descend). */
 export function chronoTexte(m) {
+  if (m.entrainement) return '∞';
   const reste = Math.max(0, Math.ceil((m.duree - m.chrono) / FPS));
   return `${Math.floor(reste / 60)}:${String(reste % 60).padStart(2, '0')}`;
 }

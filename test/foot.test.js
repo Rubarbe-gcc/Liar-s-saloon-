@@ -9,7 +9,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { creerMatch, pas, empreinte, simuler, T, DEMI_L, DEMI_W, DEMI_BUT, BUT_P, CHARGE_MAX } from '../public/shared/foot/match.js';
+import { creerMatch, pas, empreinte, simuler, chronoTexte, T, DEMI_L, DEMI_W, DEMI_BUT, BUT_P, CHARGE_MAX } from '../public/shared/foot/match.js';
 import { EQUIPES, EQUIPE, STYLES, STADES, notesJoueur } from '../public/shared/foot/equipes.js';
 import { creerCoupe, matchDuJoueur, enregistrer, jouerSansMoi, aJouer, avancer, noterStats } from '../public/shared/foot/coupe.js';
 import { PERF, creerStats, cumuler, resumerMatch, hommeDuMatch as hommeDuMatchStats, meilleursButeurs, meilleursPasseurs, meilleursGardiens, meilleursJoueurs, statsDe } from '../public/shared/foot/stats.js';
@@ -921,4 +921,30 @@ test('le serveur : une connexion qui tombe en plein match garde sa place, et l�
   assert.equal(foot.enPartie(seul.conn), false, 'seul dans sa salle : rien à garder');
   a.dit({ t: 'quitter' });
   seul.dit({ t: 'quitter' });
+});
+
+test('l’entraînement : moins de joueurs, sans gardien, des plots, pas de fin', () => {
+  const [a, b] = [EQUIPES[0].id, EQUIPES[1].id];
+  // Deux joueurs de champ sans gardien, contre quatre plots et leur gardien.
+  const m = creerMatch({ equipes: [a, b], graine: 5, controles: ['ia', 'ia'], entrainement: { nous: 2, eux: 4, gardiens: [false, true], immobiles: true } });
+  assert.equal(m.joueurs.filter((p) => p.absent).length, 3);
+  assert.ok(m.joueurs[0].absent && !m.joueurs[5].absent);
+  assert.equal(chronoTexte(m), '∞');
+  assert.equal(m.joueurs[m.ballon.porteur].e, 0);
+  assert.ok(!m.joueurs[m.ballon.porteur].absent);
+  const avant = m.joueurs.map((p) => [p.x, p.y]);
+  for (let i = 0; i < 15000; i++) {
+    pas(m, [0, 0]);
+    assert.ok(m.ballon.porteur < 0 || m.joueurs[m.ballon.porteur].e === 0, 'les plots ne touchent pas le ballon');
+    assert.ok(m.phase !== 'fin' && m.phase !== 'mitemps');
+  }
+  assert.ok(m.score[0] > 3, 'on marque');
+  for (const p of m.joueurs) if (p.absent) assert.deepEqual([p.x, p.y], avant[p.id]);
+  // Seul contre personne : l'humain engage, change de joueur sans planter.
+  const s = creerMatch({ equipes: [a, b], graine: 5, entrainement: { nous: 1, eux: 0, gardiens: [false, false] } });
+  assert.equal(s.joueurs.filter((p) => !p.absent).length, 1);
+  for (let i = 0; i < 400; i++) pas(s, [i % 25 === 0 ? T.A : T.d, 0]);
+  assert.ok(!s.joueurs[s.equipes[0].actif].absent);
+  // Les matchs normaux ne changent pas : personne n'est absent.
+  assert.ok(creerMatch({ equipes: [a, b], graine: 5 }).joueurs.every((p) => !p.absent));
 });

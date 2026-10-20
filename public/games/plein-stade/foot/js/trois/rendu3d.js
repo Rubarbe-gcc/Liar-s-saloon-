@@ -269,6 +269,9 @@ export function creerRendu(hote, o) {
     // Les joueurs.
     v.joueurs.forEach((p, i) => {
       const f = figs[i];
+      // Absent (l'entraînement) : on ne le montre pas.
+      f.racine.visible = f.ombre.visible = !p.absent;
+      if (p.absent) return;
       const vit = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
       f.racine.position.set(p.x, 0, -p.y);
       const ang = Math.atan2(p.dx, -p.dy);

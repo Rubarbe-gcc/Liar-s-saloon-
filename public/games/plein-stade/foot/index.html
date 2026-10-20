@@ -31,6 +31,7 @@
       <button class="btn or grand" id="b-tournoi"><b>🏆 La Coupe</b><small id="tournoi-info">Huit équipes, élimination directe</small></button>
       <button class="btn etoile grand" id="b-ligue"><b>⭐ La Ligue des Étoiles</b><small id="ligue-info">Tous les clubs, des poules, puis la finale</small></button>
       <button class="btn bleu grand" id="b-enligne"><b>🌐 En ligne</b><small>Un contre un, avec un code</small></button>
+      <button class="btn grand" id="b-entrainement"><b>🎯 Entraînement</b><small>Jeu libre : sans chrono, sans score</small></button>
     </div>
     <div class="menu-bas">
       <button class="btn fin" id="b-commandes">🎮 Commandes</button>
@@ -67,6 +68,33 @@
     <h3 class="section">Le stade</h3>
     <div class="grille-stades" id="grille-stades"></div>
     <button class="btn vert grand coup-envoi" id="b-jouer"><b>Coup d’envoi</b></button>
+  </div>
+</section>
+
+<!-- ============================ L'ENTRAÎNEMENT ============================ -->
+<section class="ecran" id="s-entrainement">
+  <header class="barre-haut">
+    <button class="rond retour" id="entr-retour" aria-label="Retour">‹</button>
+    <h2>Entraînement</h2>
+  </header>
+  <div class="page page-equipes">
+    <p class="consigne">Joue librement : pas de chrono, pas de score. Choisis qui est sur le terrain. Touche une équipe pour la changer.</p>
+    <div class="duel">
+      <button class="carte-duel moi" id="entr-moi" aria-label="Ton équipe"></button>
+      <span class="vs">VS</span>
+      <button class="carte-duel lui" id="entr-lui" aria-label="L’adversaire"></button>
+    </div>
+    <div class="options">
+      <div class="option"><span>Tes joueurs de champ</span><div class="segments" id="entr-nous"></div></div>
+      <div class="option"><span>Ton gardien</span><div class="segments" id="entr-g0"></div></div>
+      <div class="option"><span>Adversaires de champ</span><div class="segments" id="entr-eux"></div></div>
+      <div class="option"><span>Leur gardien</span><div class="segments" id="entr-g1"></div></div>
+      <div class="option" id="entr-bloc-mode"><span>Les adversaires</span><div class="segments" id="entr-mode"></div></div>
+      <div class="option" id="entr-bloc-niveau"><span>Niveau</span><div class="segments" id="entr-niveau"></div></div>
+    </div>
+    <h3 class="section">Le stade</h3>
+    <div class="grille-stades" id="entr-stades"></div>
+    <button class="btn vert grand coup-envoi" id="entr-jouer"><b>C’est parti</b></button>
   </div>
 </section>
 

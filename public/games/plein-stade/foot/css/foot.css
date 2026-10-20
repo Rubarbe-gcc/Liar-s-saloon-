@@ -378,3 +378,7 @@ body.doigt .dirige { bottom: max(8px, env(safe-area-inset-bottom)); }
 .ligne-stat .qui b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .92em; }
 .ligne-stat small { color: var(--doux); font-weight: 600; font-size: .78em; }
 .ligne-stat .val { display: grid; text-align: right; font-family: var(--titre); font-size: .95em; }
+
+/* L'entraînement : pas de score ni de chrono au tableau d'affichage. */
+.tableau-score.libre .chrono, .tableau-score.libre .abr, .tableau-score.libre .ec { display: none; }
+.tableau-score.libre .score { font-size: .8em; letter-spacing: .12em; }
