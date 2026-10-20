@@ -12,6 +12,7 @@ import { creerMatch, pas, empreinte, simuler, T, PANIER_X, ANNEAU_Z, CHARGE_IDEA
 import { estTrois, TROIS_R, TROIS_COIN } from '../public/shared/basket/terrain.js';
 import { EQUIPES, EQUIPE, STYLES, notesEquipe } from '../public/shared/basket/equipes.js';
 import { ecussonSVG } from '../public/games/plein-stade/commun/ecusson.js';
+import { creerTournoi, matchDuJoueur, salleDuTour, enregistrer, jouerSansMoi, aJouer, avancer, resumer, noterStats, classement, TOURS } from '../public/shared/basket/tournoi.js';
 
 /** Un petit hasard reproductible (pour les touches des faux joueurs). */
 function rng(graine) {
@@ -139,6 +140,24 @@ test('les points comptent juste : 2, 3, et la bonne équipe', () => {
   }
 });
 
+test('la remise en jeu : l’équipe qui a marqué reste dans sa moitié', () => {
+  const m = creerMatch({ equipes: ['montbrume', 'lumen'], graine: 12, minutes: 1, controles: ['humain', 'ia'] });
+  m.phase = 'jeu';
+  // L'équipe 0 (humaine) marque.
+  Object.assign(m.ballon, { x: m.equipes[0].sens * PANIER_X, y: 0, z: ANNEAU_Z + 0.4, vx: 0, vy: 0, vz: -1, porteur: -1, entre: false, marque: false, tir: { e: 0, j: 0, pts: 2, passeur: -1, dunk: false, d: 3 }, rebond: { e: 0 } });
+  while (m.phase !== 'panier') pas(m);
+  while (m.phase === 'panier') pas(m);
+  const s1 = m.equipes[1].sens;
+  // Tous les joueurs de l'équipe 0 commencent dans leur moitié (celle qu'ils défendent).
+  assert.ok(m.joueurs.slice(0, 3).every((p) => p.x * s1 > 0));
+  // L'humain fonce vers le porteur, en sprintant, et change de joueur : personne ne passe la ligne médiane.
+  const vers = s1 > 0 ? T.g : T.d;
+  for (let i = 0; i < 200 && m.ballon.remise >= 0; i++) {
+    pas(m, [vers | T.S | (i % 30 === 0 ? T.G : 0), 0]);
+    for (const p of m.joueurs.slice(0, 3)) assert.ok(p.x * s1 >= 0.39, `image ${i} : ${p.x.toFixed(2)}`);
+  }
+});
+
 test('le tir de l’humain : on saute en appuyant, on lâche en haut du saut', () => {
   const m = creerMatch({ equipes: ['valrose', 'lumen'], graine: 21, minutes: 1, controles: ['humain', 'ia'] });
   m.phase = 'jeu';
@@ -200,6 +219,51 @@ test('l’ordinateur marque contre une équipe qui ne bouge pas', () => {
     assert.ok(m.score[0] >= 15, `${EQUIPE[id].nom} : ${m.score[0]} points seulement`);
     assert.ok(m.score[0] > m.score[1] * 3);
   }
+});
+
+test('le tournoi : huit clubs, trois tours, un champion', () => {
+  const c = creerTournoi({ moi: 'valrose', graine: 42, minutes: 1 });
+  const ids = c.tours[0].flatMap((r) => [r.a, r.b]);
+  assert.equal(ids.length, 8);
+  assert.equal(new Set(ids).size, 8);
+  assert.ok(ids.includes('valrose'));
+  assert.deepEqual(creerTournoi({ moi: 'valrose', graine: 42 }).tours, creerTournoi({ moi: 'valrose', graine: 42 }).tours);
+  assert.equal(salleDuTour(c), 'palais');
+  // Le joueur gagne tous ses matchs : il finit champion.
+  for (let t = 0; t < 3; t++) {
+    const r = matchDuJoueur(c);
+    assert.ok(r, `${TOURS[t]} : le joueur a un match`);
+    assert.equal(aJouer(c).length, 3 - [0, 2, 3][t]);
+    enregistrer(c, r.i, { score: r.a === c.moi ? [20, 18] : [18, 20], vainqueur: r.a === c.moi ? 0 : 1 });
+    for (const i of aJouer(c)) {
+      const m = jouerSansMoi(c, i);
+      assert.equal(m.phase, 'fin');
+      assert.notEqual(c.tours[t][i].score[0], c.tours[t][i].score[1]);
+    }
+    assert.ok(avancer(c));
+  }
+  assert.equal(c.fini, true);
+  assert.equal(c.champion, 'valrose');
+  assert.equal(salleDuTour({ ...c, tour: 2 }), 'palais');
+  // Les statistiques : les points des joueurs font les scores des matchs simulés.
+  const total = Object.values(c.stats.j).reduce((s, x) => s + x.pts, 0);
+  const marques = c.tours.flat().filter((r) => r.a !== 'valrose' && r.b !== 'valrose').reduce((s, r) => s + r.score[0] + r.score[1], 0);
+  assert.equal(total, marques);
+  const top = classement(c.stats, 'pts');
+  assert.ok(top.length > 0 && top[0].rang === 1 && top.every((x, k) => k === 0 || top[k - 1].pts >= x.pts));
+  // Éliminé : le tournoi continue sans lui.
+  const d = creerTournoi({ moi: 'lumen', graine: 7, minutes: 1 });
+  const r = matchDuJoueur(d);
+  enregistrer(d, r.i, { score: [10, 12], vainqueur: r.a === 'lumen' ? 1 : 0 });
+  assert.equal(d.elimine, true);
+  assert.equal(matchDuJoueur(d), null);
+  while (!d.fini) { for (const i of aJouer(d)) jouerSansMoi(d, i); avancer(d); }
+  assert.ok(d.champion && d.champion !== 'lumen');
+  // Un match du joueur entre aussi dans les statistiques.
+  const m = simuler({ equipes: ['lumen', 'braise'], graine: 3, minutes: 1 });
+  const s = { j: {} };
+  noterStats({ stats: s }, resumer(m));
+  assert.equal(Object.values(s.j).filter((x) => x.club === 'lumen').reduce((t, x) => t + x.pts, 0), m.score[0]);
 });
 
 test('équilibre : chaque équipe gagne entre 35 et 65 % de ses matchs', () => {

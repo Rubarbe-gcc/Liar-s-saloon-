@@ -14,7 +14,8 @@ import { creerRendu, qualite, reglerQualite } from './trois/rendu3d.js';
 import { SALLES, SALLE } from './trois/salle3d.js';
 import { ecussonSVG, tenues } from '../../commun/ecusson.js';
 import { creerCinematique } from '../../commun/cinematique.js';
-import { intro, miTemps, hommeDuMatch, meilleurJoueur, detailJoueur } from './cinematiques.js';
+import { intro, miTemps, hommeDuMatch, trophee, meilleurJoueur, detailJoueur } from './cinematiques.js';
+import { creerTournoi, matchDuJoueur, salleDuTour, enregistrer, jouerSansMoi, aJouer, avancer, resumer, noterStats, classement, TOURS } from '../../../../shared/basket/tournoi.js';
 import * as saisie from '../../commun/saisie.js';
 import * as touches from './touches.js';
 import * as son from '../../commun/son.js';
@@ -58,7 +59,8 @@ const LIEUX = { palais: 'au Palais', gymnase: 'au Gymnase', port: 'au Terrain du
 /* Le choix des équipes                                                */
 /* ------------------------------------------------------------------ */
 
-let choix = { pour: 'moi', survol: null };
+/** Le choix des équipes : pour un match amical (les deux), ou pour un tournoi (la sienne seulement ; suite : ce qui vient après). */
+let choix = { pour: 'moi', survol: null, mode: 'solo', suite: null };
 
 function carteDuel(el, id, role) {
   const eq = EQUIPE[id];
@@ -79,13 +81,18 @@ function fiche(id) {
 }
 
 function rendreEquipes() {
+  const solo = choix.mode === 'solo';
   carteDuel($('duel-moi'), conf.moi, 'Toi');
   carteDuel($('duel-lui'), conf.lui, 'Adversaire');
+  $('duel-lui').classList.toggle('cache', !solo);
+  document.querySelector('.duel .vs').classList.toggle('cache', !solo);
+  $('equipes-titre').textContent = solo ? 'Match amical' : 'Le Tournoi : ton club';
+  $('b-jouer').querySelector('b').textContent = solo ? 'Entre-deux' : 'Commencer le tournoi';
   $('duel-moi').classList.toggle('choisit', choix.pour === 'moi');
   $('duel-lui').classList.toggle('choisit', choix.pour === 'lui');
   $('consigne-equipes').textContent = choix.pour === 'moi' ? 'Choisis ton équipe.' : 'Choisis l’adversaire.';
   $('grille-equipes').innerHTML = EQUIPES.map((eq) => {
-    const moi = eq.id === conf.moi, lui = eq.id === conf.lui;
+    const moi = eq.id === conf.moi, lui = solo && eq.id === conf.lui;
     return `<button class="equipe${moi ? ' moi' : ''}${lui ? ' lui' : ''}" data-id="${eq.id}" style="--c1:${eq.maillot.fond}">
       ${moi ? '<span class="marque">TOI</span>' : lui ? '<span class="marque">ADV</span>' : ''}<span class="note">${noteGenerale(eq)}</span>
       ${ecussonSVG(eq, 60)}<span class="nom">${eq.nom}</span><span class="style">${STYLES[eq.style].nom}</span>${barres(notesEquipe(eq))}</button>`;
@@ -106,7 +113,7 @@ function brancherEquipes() {
     if (choix.pour === 'moi') {
       if (id === conf.lui) conf.lui = conf.moi;
       conf.moi = id;
-      choix.pour = 'lui';
+      if (choix.mode === 'solo') choix.pour = 'lui';
     } else {
       if (id === conf.moi) conf.moi = conf.lui;
       conf.lui = id;
@@ -127,12 +134,13 @@ function brancherEquipes() {
   $('equipes-retour').addEventListener('click', () => aller('menu'));
   $('b-jouer').addEventListener('click', () => {
     son.reveiller();
+    if (choix.suite) { choix.suite(); return; }
     lancerMatch({ equipes: [conf.moi, conf.lui], controles: ['humain', 'ia'], niveaux: [1, conf.niveau], minutes: conf.minutes, salle: conf.salle });
   });
 }
 
-function ouvrirEquipes() {
-  choix = { pour: 'moi', survol: null };
+function ouvrirEquipes(mode = 'solo', suite = null) {
+  choix = { pour: 'moi', survol: null, mode, suite };
   rendreEquipes();
   aller('equipes');
 }
@@ -377,7 +385,8 @@ function afficher(dt) {
     P.finVue -= dt;
     if (P.finVue <= 0) {
       P.finVue = -1;
-      const etapes = hommeDuMatch(P);
+      // La finale gagnée : après le joueur du match, le capitaine soulève le trophée.
+      const etapes = [...hommeDuMatch(P), ...(P.o.finale && m.vainqueur === P.local ? trophee(P, P.local) : [])];
       if (etapes.length) cine.lancer(etapes, { passable: true, fin: finDuMatch });
       else finDuMatch();
     }
@@ -394,6 +403,7 @@ function finDuMatch() {
     stats: JSON.parse(JSON.stringify(m.stats)),
     perso: m.perso.map((s, i) => ({ ...s, nom: nomDe(i), e: m.joueurs[i].e })),
     meilleur: meilleurJoueur(m, m.vainqueur),
+    resume: resumer(m),
   };
   const o = P.o;
   arreterMatch();
@@ -433,10 +443,136 @@ function montrerFin(res, o) {
   const act = $('fin-actions');
   act.innerHTML = '';
   const bouton = (txt, cls, f) => { const el = document.createElement('button'); el.className = `btn ${cls}`; el.innerHTML = `<b>${txt}</b>`; el.addEventListener('click', f); act.appendChild(el); return el; };
-  bouton('Rejouer', 'vert grand', () => lancerMatch({ ...o, graine: undefined }));
-  bouton('Changer d’équipes', '', () => ouvrirEquipes());
-  bouton('Menu', '', () => aller('menu'));
+  if (o.apres) o.apres(res, bouton);
+  else {
+    bouton('Rejouer', 'vert grand', () => lancerMatch({ ...o, graine: undefined }));
+    bouton('Changer d’équipes', '', () => ouvrirEquipes());
+    bouton('Menu', '', () => aller('menu'));
+  }
   aller('fin');
+}
+
+/* ------------------------------------------------------------------ */
+/* Le Tournoi                                                          */
+/* ------------------------------------------------------------------ */
+
+const CLE_TOURNOI = 'doublepas.tournoi';
+let tournoi = null;
+try { tournoi = JSON.parse(localStorage.getItem(CLE_TOURNOI) || 'null'); } catch { /* ignore */ }
+if (tournoi && !tournoi.tours) tournoi = null;
+const garderTournoi = () => { try { if (tournoi) localStorage.setItem(CLE_TOURNOI, JSON.stringify(tournoi)); else localStorage.removeItem(CLE_TOURNOI); } catch { /* ignore */ } };
+
+function infoTournoi() {
+  $('tournoi-info').textContent = tournoi && !tournoi.fini && !tournoi.elimine ? `En cours : ${TOURS[tournoi.tour].toLowerCase()} avec ${EQUIPE[tournoi.moi].court}` : 'Huit clubs, élimination directe';
+}
+
+function ouvrirTournoi() {
+  if (tournoi) { rendreTournoi(); aller('tournoi'); return; }
+  ouvrirEquipes('tournoi', () => {
+    tournoi = creerTournoi({ moi: conf.moi, graine: Math.floor(Math.random() * 2 ** 31), niveau: conf.niveau, minutes: conf.minutes, salle: conf.salle });
+    garderTournoi();
+    rendreTournoi();
+    aller('tournoi');
+  });
+}
+
+/** Les autres matchs du tour se jouent ; puis on passe au tour suivant. */
+function finirTour() {
+  for (const i of aJouer(tournoi)) jouerSansMoi(tournoi, i);
+  avancer(tournoi);
+  garderTournoi();
+}
+
+function ligneTournoi(id, score, perd) {
+  if (!id) return '<div class="ligne"><span></span><span>?</span><b></b></div>';
+  const eq = EQUIPE[id];
+  return `<div class="ligne${perd ? ' perd' : ''}${id === tournoi.moi ? ' toi' : ''}">${ecussonSVG(eq, 20)}<span>${eq.court}</span><b>${score ?? ''}</b></div>`;
+}
+
+function rendreTournoi() {
+  const c = tournoi;
+  let html = '';
+  for (let t = 0; t < 3; t++) {
+    const tour = c.tours[t] || new Array(4 >> t).fill(null).map(() => ({}));
+    html += `<div class="tour"><h4>${TOURS[t]}</h4>${tour.map((r) => {
+      const fini = !!r.v;
+      // ★ : gagné au panier en or.
+      const sa = fini ? `${r.score[0]}${r.enOr && r.v === r.a ? ' ★' : ''}` : '', sb = fini ? `${r.score[1]}${r.enOr && r.v === r.b ? ' ★' : ''}` : '';
+      const joueur = r.a === c.moi || r.b === c.moi;
+      return `<div class="rencontre${joueur ? ' joueur' : ''}">${ligneTournoi(r.a, sa, fini && r.v !== r.a)}${ligneTournoi(r.b, sb, fini && r.v !== r.b)}</div>`;
+    }).join('')}</div>`;
+  }
+  html += `<div class="tour"><h4>Vainqueur</h4><div class="coupe-trophee">🏆</div>${c.champion ? `<div class="rencontre${c.champion === c.moi ? ' joueur' : ''}">${ligneTournoi(c.champion, '')}</div>` : ''}</div>`;
+  $('tableau').innerHTML = html;
+  // Le tirage : la première fois, les clubs arrivent un à un dans le tableau.
+  $('tableau').classList.toggle('tirage', !c.tirageVu);
+  if (!c.tirageVu) {
+    $('tableau').querySelectorAll('.tour:first-child .ligne').forEach((el, i) => el.style.setProperty('--i', i));
+    c.tirageVu = true;
+    garderTournoi();
+  }
+  const m = matchDuJoueur(c);
+  const adv = m && (m.a === c.moi ? m.b : m.a);
+  $('tournoi-texte').textContent = c.fini
+    ? (c.champion === c.moi ? `${EQUIPE[c.moi].nom} remporte le Tournoi !` : `${EQUIPE[c.champion].nom} remporte le Tournoi.`)
+    : c.elimine ? `${EQUIPE[c.moi].court} est éliminé. Le Tournoi continue sans toi.`
+      : `${TOURS[c.tour]} · ${EQUIPE[c.moi].court} contre ${EQUIPE[adv].court} · ${NIVEAUX[c.niveau].nom} · ${SALLE[salleDuTour(c)].nom}`;
+  const act = $('tournoi-actions');
+  act.innerHTML = '';
+  const bouton = (txt, cls, f) => { const el = document.createElement('button'); el.className = `btn ${cls}`; el.innerHTML = txt; el.addEventListener('click', f); act.appendChild(el); };
+  bouton('<b>Statistiques</b>', 'bleu', () => montrerStats(c.stats, c.moi, () => { rendreTournoi(); aller('tournoi'); }));
+  if (m) bouton(`<b>Jouer ${c.tour === 2 ? 'la finale' : c.tour === 1 ? 'la demie' : 'le quart'}</b><small>contre ${EQUIPE[adv].nom}</small>`, 'vert grand', jouerTournoi);
+  if (c.elimine && !c.fini) bouton('<b>Voir la suite</b>', 'bleu', () => { while (!tournoi.fini) finirTour(); rendreTournoi(); });
+  if (c.fini || c.elimine) bouton('<b>Nouveau tournoi</b>', c.fini ? 'vert' : '', () => { tournoi = null; garderTournoi(); ouvrirTournoi(); });
+  else bouton('Abandonner le tournoi', 'fin', () => { if (confirm('Abandonner ce tournoi ?')) { tournoi = null; garderTournoi(); infoTournoi(); aller('menu'); } });
+  infoTournoi();
+}
+
+function jouerTournoi() {
+  const c = tournoi, r = matchDuJoueur(c);
+  if (!r) return;
+  const moiA = r.a === c.moi;
+  const adv = moiA ? r.b : r.a;
+  const noter = (res) => {
+    // Le match est joué « moi contre lui » : on le remet dans le sens du tableau.
+    enregistrer(c, r.i, { score: moiA ? res.score : [res.score[1], res.score[0]], enOr: res.enOr, vainqueur: moiA ? res.vainqueur : 1 - res.vainqueur });
+    noterStats(c, res.resume);
+    finirTour();
+  };
+  lancerMatch({
+    equipes: [c.moi, adv], controles: ['humain', 'ia'], niveaux: [1, c.niveau], minutes: c.minutes, salle: salleDuTour(c), finale: c.tour === 2,
+    apres: (res, bouton) => {
+      noter(res);
+      const gagne = res.vainqueur === 0;
+      $('fin-titre').textContent = gagne ? (tournoi.fini ? 'Champion !' : 'Qualifié !') : 'Éliminé';
+      bouton('Le tableau', 'vert grand', () => { rendreTournoi(); aller('tournoi'); });
+      bouton('Menu', '', () => { infoTournoi(); aller('menu'); });
+    },
+    // Abandonner un match du tournoi : défaite par forfait.
+    abandon: () => { noter({ score: [0, 20], enOr: false, vainqueur: 1, resume: [] }); rendreTournoi(); aller('tournoi'); },
+  });
+}
+
+/* ---------------- Les statistiques du tournoi ---------------- */
+
+const pluriel = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
+function montrerStats(stats, moi, retour) {
+  const ligne = (x, valeur, detail) => {
+    const eq = EQUIPE[x.club];
+    return `<li class="ligne-stat${x.club === moi ? ' toi' : ''}"><span class="rg">${x.rang}</span>${ecussonSVG(eq, 26)}<span class="qui"><b>${eq.joueurs[x.i].nom}</b><small>${eq.court}</small></span><span class="val">${valeur}<small>${detail}</small></span></li>`;
+  };
+  const bloc = (titre, cle, mot, vide) => {
+    const l = classement(stats, cle);
+    return `<section class="classement-stat"><h3>${titre}</h3>${l.length ? `<ol>${l.map((x) => ligne(x, pluriel(x[cle], mot), `${(x[cle] / x.matchs).toFixed(1)} par match`)).join('')}</ol>` : `<p class="vide">${vide}</p>`}</section>`;
+  };
+  $('stats-corps').innerHTML = `<div class="stats-grille">${[
+    bloc('Meilleurs marqueurs', 'pts', 'point', 'Personne n’a encore marqué.'),
+    bloc('Meilleurs rebondeurs', 'rebonds', 'rebond', 'Aucun rebond pour l’instant.'),
+    bloc('Meilleurs passeurs', 'passes', 'passe décisive', 'Aucune passe décisive pour l’instant.'),
+    bloc('Meilleurs intercepteurs', 'vols', 'ballon volé', 'Aucun ballon volé pour l’instant.'),
+  ].join('')}</div>`;
+  $('stats-retour').onclick = retour;
+  aller('stats');
 }
 
 /* ------------------------------------------------------------------ */
@@ -499,7 +635,14 @@ function brancher() {
   $('p-commandes').addEventListener('click', () => $('v-commandes').classList.remove('cache'));
   $('b-pause').addEventListener('click', basculerPause);
   $('p-reprendre').addEventListener('click', basculerPause);
-  $('p-quitter').addEventListener('click', () => { arreterMatch(); enPause = false; aller('menu'); });
+  $('p-quitter').addEventListener('click', () => {
+    const o = partie?.o;
+    arreterMatch();
+    enPause = false;
+    if (o?.abandon) o.abandon(); else aller('menu');
+  });
+  $('b-tournoi').addEventListener('click', () => { son.reveiller(); ouvrirTournoi(); });
+  $('tournoi-retour').addEventListener('click', () => { infoTournoi(); aller('menu'); });
   const majSon = () => { $('b-son').textContent = son.estMuet() ? '🔇 Son' : '🔊 Son'; $('b-son').setAttribute('aria-pressed', String(son.estMuet())); };
   $('b-son').addEventListener('click', () => { son.basculerSon(); majSon(); });
   majSon();
@@ -515,6 +658,7 @@ function brancher() {
 }
 
 brancher();
+infoTournoi();
 
 // Pour les essais (dans la console) : window.doublePas.partie()
 // avancer(s) : fait passer s secondes d'un coup (quand la page est cachée, l'animation s'arrête).

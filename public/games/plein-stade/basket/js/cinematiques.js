@@ -109,6 +109,55 @@ export function detailJoueur(s) {
   return [pl(s.pts, 'point'), pl(s.rebonds, 'rebond'), pl(s.passes, 'passe décisive'), pl(s.vols, 'ballon volé'), pl(s.contres, 'contre')].filter(Boolean).slice(0, 3).join(' · ');
 }
 
+/** Le Tournoi gagné : le capitaine (la vedette) soulève le trophée, ses deux coéquipiers autour, la fête. */
+export function trophee(P, e) {
+  const R = P.rendu, eq = P.eqs[e], kit = P.kits[e];
+  const capitaine = Math.max(0, eq.joueurs.findIndex((j) => j.vedette));
+  const joueurs = [];
+  const humeurs = new Array(6).fill('decu');
+  const places = [[-1.3, 0.9], [1.3, 0.9]];
+  let k = 0;
+  for (let ee = 0; ee < 2; ee++) {
+    for (let i = 0; i < 3; i++) {
+      const id = ee * 3 + i;
+      if (ee !== e) { joueurs.push(joueurVue(-10 + i * 1.4, 6, 1)); continue; }
+      if (i === capitaine) { joueurs.push(joueurVue(0, 0)); humeurs[id] = 'trophee'; continue; }
+      const [x, y] = places[k++];
+      joueurs.push(joueurVue(x, y));
+      humeurs[id] = 'joie';
+    }
+  }
+  const vue = { phase: 'fin', joueurs, ballon: ballonVue(30, 30), actifs: [-1, -1], humeurs, heros: -1 };
+  const couleurs = [kit.fond, kit.motifC, kit.short, '#ffb347', '#ffffff'];
+  let prochainFeu = 0;
+  return [
+    {
+      duree: 1.6,
+      vue: () => vue,
+      debut: (api) => { R.presse(null); R.tropheeMain(null); R.trophee({ x: 0, y: -0.25, h: 1.25, echelle: 1.3 }); api.afficher(''); P.com?.dire(`Le capitaine de ${eq.court} s’avance vers le trophée…`, { important: true, emotion: 0.6 }); },
+      maj: (t) => R.cadrer([2.5 - t, -5.5, 1.8], [0, 0, 1.6], t < 0.03),
+    },
+    {
+      duree: 7.5,
+      vue: () => vue,
+      debut: (api) => {
+        api.afficher(htmlTitre('Champions !', eq.nom));
+        R.confettis(0, e);
+        P.com?.dire(`${eq.nom} remporte le Tournoi ! Quelle finale !`, { important: true, emotion: 1, apres: 'Ils l’ont mérité, ce trophée.' });
+        prochainFeu = 0;
+      },
+      maj: (t, dt) => {
+        const leve = Math.min(1, t / 0.8);
+        R.trophee({ x: 0, y: 0.05, h: 1.3 + leve * 1.3 + Math.abs(Math.sin(t * 3)) * 0.06 * leve, echelle: 1.3 });
+        prochainFeu -= dt;
+        if (prochainFeu <= 0) { R.feuArtifice(couleurs); prochainFeu = 0.45 + Math.random() * 0.4; }
+        const ang = -0.7 + t * 0.22;
+        R.cadrer([Math.sin(ang) * 6.5, -Math.cos(ang) * 6.5, 2.4 + t * 0.12], [0, 0, 2], t < 0.03);
+      },
+    },
+  ];
+}
+
 /** La fin : le meilleur joueur de l'équipe gagnante, son trophée, la presse. */
 export function hommeDuMatch(P) {
   const m = P.m;

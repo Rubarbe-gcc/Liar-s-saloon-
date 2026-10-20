@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v143';
+const VERSION = 'v144';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -248,6 +248,7 @@ const SHELL = [
   '/shared/basket/equipes.js',
   '/shared/basket/ia.js',
   '/shared/basket/match.js',
+  '/shared/basket/tournoi.js',
   '/games/street-combat/js/trois/rendu3d.js',
   '/games/street-combat/js/trois/decors3d.js',
   '/vendor/three/three.module.min.js',

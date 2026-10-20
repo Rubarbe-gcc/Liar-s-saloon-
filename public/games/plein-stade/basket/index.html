@@ -29,7 +29,7 @@
     <p class="slogan">Le basket à trois · 3D · arcade</p>
     <div class="boutons-menu">
       <button class="btn vert grand" id="b-solo"><b>🏀 Match amical</b><small>Contre l’ordinateur</small></button>
-      <button class="btn or grand" disabled><b>🏆 Le Tournoi</b><small>Bientôt</small></button>
+      <button class="btn or grand" id="b-tournoi"><b>🏆 Le Tournoi</b><small id="tournoi-info">Huit clubs, élimination directe</small></button>
       <button class="btn bleu grand" disabled><b>🌐 En ligne</b><small>Bientôt</small></button>
     </div>
     <div class="menu-bas">
@@ -68,6 +68,27 @@
     <div class="grille-stades" id="grille-stades"></div>
     <button class="btn vert grand coup-envoi" id="b-jouer"><b>Entre-deux</b></button>
   </div>
+</section>
+
+<!-- ============================ LE TOURNOI ============================ -->
+<section class="ecran" id="s-tournoi">
+  <header class="barre-haut">
+    <button class="rond retour" id="tournoi-retour" aria-label="Retour">‹</button>
+    <h2>Le Tournoi</h2>
+  </header>
+  <div class="page">
+    <p class="consigne" id="tournoi-texte"></p>
+    <div class="tableau" id="tableau"></div>
+    <div class="coupe-actions" id="tournoi-actions"></div>
+  </div>
+</section>
+
+<section class="ecran" id="s-stats">
+  <header class="barre-haut">
+    <button class="rond retour" id="stats-retour" aria-label="Retour">‹</button>
+    <h2>Statistiques du tournoi</h2>
+  </header>
+  <div class="page" id="stats-corps"></div>
 </section>
 
 <!-- ============================ LE MATCH ============================ -->

@@ -102,7 +102,7 @@ function placerRemise(m, e) {
   for (const p of m.joueurs) {
     let X, Y;
     if (p.e === e) [X, Y] = [[-(DEMI_L + 0.45), 1.6], [-8.8, -3.6], [-7.6, 3.4]][p.i];
-    else[X, Y] = [[-3.5, 1.5], [-5.5, -3], [-6, 2.8]][p.i];
+    else [X, Y] = [[3.5, 1.5], [5.5, -3], [6, 2.8]][p.i]; // dans leur moitié, celle qu'ils défendent
     Object.assign(p, { x: X * s, y: Y, z: 0, vx: 0, vy: 0, vz: 0, dx: p.e === e ? s : -s, dy: 0, etat: 'normal', t: 0, charge: 0, chargeCible: 0, verrou: 0, lache: 0, surpris: 0, crochet: 0, dec: 0 });
   }
   const r = m.joueurs[e * 3];
@@ -205,6 +205,7 @@ function jouer(m, k, ap, rel, evs) {
   for (const p of m.joueurs) if (p.etat === 'dunk') dunk(m, p, evs);
   for (const p of m.joueurs) deplacer(m, p, cons[p.id] || RIEN);
   separer(m);
+  if (m.ballon.remise >= 0) for (const p of m.joueurs) borner(m, p);
   physiqueBallon(m, evs, true);
   if (m.phase !== 'jeu') return;
   attraper(m, evs);
@@ -605,6 +606,12 @@ function borner(m, p) {
   const lx = b.remise === p.id ? DEMI_L + 0.6 : DEMI_L - 0.25;
   p.x = clamp(p.x, -lx, lx);
   p.y = clamp(p.y, -DEMI_W + 0.25, DEMI_W - 0.25);
+  // Pendant la remise en jeu, l'équipe qui vient de marquer reste dans sa moitié (celle qu'elle défend).
+  if (b.remise >= 0) {
+    const e = m.joueurs[b.remise].e;
+    const s = m.equipes[e].sens;
+    if (p.e !== e && s * p.x < 0.4) p.x = s * 0.4;
+  }
 }
 
 /** Deux joueurs ne se traversent pas. */
