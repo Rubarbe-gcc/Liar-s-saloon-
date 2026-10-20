@@ -3,7 +3,7 @@
  *   l'avant-match : le survol du stade, l'affiche, la présentation des joueurs
  *     un par un (gros plan et carte), puis le coup d'envoi ;
  *   la mi-temps : le score, les statistiques et le meilleur joueur ;
- *   la fin : l'homme du match ;
+ *   la fin : l'homme du match, son petit trophée dans les mains, la presse autour (flashs, micros) ;
  *   la Coupe gagnée : le capitaine soulève le trophée, ses coéquipiers autour,
  *     confettis et feux d'artifice.
  * Le moteur des étapes et l'habillage sont communs (commun/cinematique.js) ;
@@ -13,6 +13,7 @@
 import { htmlAffiche, htmlCarte, htmlTitre, htmlPanneau } from '../../commun/cinematique.js';
 import { ecussonSVG } from '../../commun/ecusson.js';
 import { notesJoueur, POSTES } from '../../../../shared/foot/equipes.js';
+import { resumerMatch } from '../../../../shared/foot/stats.js';
 
 const POSTE = { G: 'Gardien', D: 'Défenseur', M: 'Milieu', A: 'Attaquant' };
 const noteDe = (eq, i) => {
@@ -115,22 +116,64 @@ export function miTemps(P) {
   }];
 }
 
-/** La fin : l'homme du match, en gros plan, avec sa carte. */
+/** Ce que l'homme du match a fait, en quelques mots (pour sa carte). */
+function detailHdm(ligne) {
+  const buts = ligne.buts, passes = ligne.passes;
+  return [
+    buts ? `${buts} but${buts > 1 ? 's' : ''}` : '',
+    passes ? `${passes} passe${passes > 1 ? 's' : ''} décisive${passes > 1 ? 's' : ''}` : '',
+    ligne.i === 0 ? `${ligne.arrets} arrêt${ligne.arrets > 1 ? 's' : ''}` : '',
+    ligne.sansEncaisser ? 'sans encaisser' : '',
+  ].filter(Boolean).join(' · ');
+}
+
+/**
+ * La fin du match : l'homme du match (choisi par le score de performance, dans l'équipe gagnante :
+ * shared/foot/stats.js). Il tient dans ses mains un petit trophée « Homme du match », entouré de la
+ * presse : photographes à genoux dont les flashs crépitent, reporters qui lui tendent leur micro.
+ * Deux plans : l'ensemble (le titre), puis le gros plan avec sa carte.
+ * Ce qu'il dit : le commentateur annonce selon ce qu'il a fait (gardien, buteur, passeur), le consultant répond.
+ */
 export function hommeDuMatch(P) {
-  const id = meilleurJoueur(P);
+  const resume = resumerMatch(P.m);
+  const id = resume.hdm;
   if (id < 0) return [];
-  const R = P.rendu, p = P.m.joueurs[id];
-  const buts = P.m.buts.filter((b) => b.j === id && !b.csc).length;
-  const passes = P.m.buts.filter((b) => b.passeur === id).length;
-  const detail = [buts ? `${buts} but${buts > 1 ? 's' : ''}` : '', passes ? `${passes} passe${passes > 1 ? 's' : ''} décisive${passes > 1 ? 's' : ''}` : '', p.i === 0 && P.perf ? `${Math.round(P.arrets?.[id] || 0)} arrêts` : ''].filter(Boolean).join(' · ');
-  return [{
-    duree: 3.6,
-    debut: (api) => {
-      api.afficher(carte(P, id, { titre: 'Homme du match', detail }));
-      P.com?.dire(`L’homme du match : <b>${P.eqs[p.e].joueurs[p.i].nom}</b> !`, { important: true, emotion: 0.6, clip: 'homme_du_match' });
+  const R = P.rendu, pl = P.m.joueurs[id], eq = P.eqs[pl.e];
+  const ligne = resume.joueurs[id];
+  const detail = detailHdm(ligne);
+  // Lui, face à la caméra, au centre ; les autres hors champ.
+  const joueurs = P.m.joueurs.map((q) => (q.id === id ? joueurVue(0, 0, -1) : joueurVue(-30 + q.id * 1.2, 30, 1)));
+  const humeurs = new Array(10).fill('presente');
+  humeurs[id] = 'exhibe';
+  const vue = { phase: 'fin', joueurs, ballon: ballonVue(40, 40), actifs: [-1, -1], humeurs, heros: -1, tab: false };
+  const famille = ligne.i === 0 ? 'hdm_gardien' : ligne.buts ? 'hdm_buteur' : ligne.passes ? 'hdm_passeur' : 'hdm_annonce';
+  const textes = {
+    hdm_gardien: 'Le gardien a été le héros de la soirée : c’est lui, l’homme du match !',
+    hdm_buteur: 'Il a fait trembler les filets : voici l’homme du match !',
+    hdm_passeur: 'Le chef d’orchestre de la soirée : voici l’homme du match !',
+    hdm_annonce: 'Les flashs crépitent : voici l’homme du match !',
+  };
+  return [
+    {
+      // L'ensemble : la presse autour de lui, les flashs.
+      duree: 2.2,
+      vue: () => vue,
+      debut: (api) => {
+        R.presse({ x: 0, y: 0, rayon: 2.3, regard: -Math.PI / 2, reporters: 6 });
+        R.tropheeMain(id);
+        api.afficher(htmlTitre('Homme du match', eq.court));
+        P.com?.dire(textes[famille], { important: true, emotion: 0.6, clip: famille, apresClip: 'cons_hdm', apres: 'Aucune discussion possible : c’est mérité.' });
+      },
+      maj: (t) => R.cadrer([0.5 - t * 0.25, -5.8 + t * 0.5, 1.85], [0, 0, 1.15], t < 0.03),
     },
-    maj: (t) => R.cadrer([p.x + 0.6 - t * 0.2, p.y - 3.4, 1.8], [p.x, p.y, 1.45], t < 0.03),
-  }];
+    {
+      // Le gros plan : sa carte, le trophée dans les mains.
+      duree: 3.6,
+      vue: () => vue,
+      debut: (api) => api.afficher(carte(P, id, { titre: 'Homme du match', detail })),
+      maj: (t) => R.cadrer([0.95 - t * 0.2, -3.7 + t * 0.25, 1.55], [0.1, 0, 1.25], t < 0.03),
+    },
+  ];
 }
 
 /** La Coupe gagnée : le capitaine soulève le trophée, ses coéquipiers autour, la fête. */
@@ -158,7 +201,7 @@ export function trophee(P, e) {
     {
       duree: 1.6,
       vue: () => vue,
-      debut: (api) => { R.trophee({ x: 0, y: -0.25, h: 1.15, echelle: 1.25 }); api.afficher(''); P.com?.dire(`Le capitaine de ${eq.court} s’avance vers le trophée…`, { important: true, emotion: 0.6 }); },
+      debut: (api) => { R.presse(null); R.tropheeMain(null); R.trophee({ x: 0, y: -0.25, h: 1.15, echelle: 1.25 }); api.afficher(''); P.com?.dire(`Le capitaine de ${eq.court} s’avance vers le trophée…`, { important: true, emotion: 0.6 }); },
       maj: (t) => R.cadrer([2.5 - t, -5, 1.6], [0, 0, 1.4], t < 0.03),
     },
     {

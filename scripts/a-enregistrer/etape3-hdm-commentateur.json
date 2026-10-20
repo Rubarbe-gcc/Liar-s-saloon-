@@ -1,0 +1,50 @@
+{
+  "voix": "BjHDcKBmjwORvTEPOc2A",
+  "lignes": [
+    {
+      "id": "hdm_annonce_1",
+      "energie": 3,
+      "texte": "Les flashs crépitent : voici l'homme du match !"
+    },
+    {
+      "id": "hdm_annonce_2",
+      "energie": 3,
+      "texte": "La presse l'attend déjà. Voici l'homme du match !"
+    },
+    {
+      "id": "hdm_annonce_3",
+      "energie": 3,
+      "texte": "Les photographes s'en donnent à cœur joie : c'est lui, l'homme du match !"
+    },
+    {
+      "id": "hdm_gardien_1",
+      "energie": 3,
+      "texte": "Le gardien a été le héros de la soirée : c'est lui, l'homme du match !"
+    },
+    {
+      "id": "hdm_gardien_2",
+      "energie": 3,
+      "texte": "Des arrêts décisifs, des mains de fer : voici l'homme du match !"
+    },
+    {
+      "id": "hdm_buteur_1",
+      "energie": 3,
+      "texte": "Il a fait trembler les filets : voici l'homme du match !"
+    },
+    {
+      "id": "hdm_buteur_2",
+      "energie": 3,
+      "texte": "Celui qui a fait la différence devant le but : l'homme du match !"
+    },
+    {
+      "id": "hdm_passeur_1",
+      "energie": 3,
+      "texte": "Le chef d'orchestre de la soirée : voici l'homme du match !"
+    },
+    {
+      "id": "hdm_passeur_2",
+      "energie": 3,
+      "texte": "Il a offert des caviars à ses partenaires : l'homme du match !"
+    }
+  ]
+}

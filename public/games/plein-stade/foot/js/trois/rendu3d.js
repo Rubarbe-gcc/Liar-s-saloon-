@@ -15,7 +15,7 @@
 import * as THREE from '../../../../../vendor/three/three.module.min.js';
 import { creerJoueur, poseDe, poser } from '../../../commun/trois/joueurs3d.js';
 import { creerStade } from './stade3d.js';
-import { creerTrophee, creerFeux } from '../../../commun/trois/fete3d.js';
+import { creerTrophee, creerFeux, creerTropheeHommeDuMatch, creerPresse } from '../../../commun/trois/fete3d.js';
 
 export { THREE };
 
@@ -178,6 +178,13 @@ export function creerRendu(hote, o) {
   trophee.visible = false;
   scene.add(trophee);
   const feux = creerFeux(scene);
+  // L'homme du match : son petit trophée (dans les mains du joueur) et la presse qui l'entoure.
+  const tropheeHdm = creerTropheeHommeDuMatch();
+  tropheeHdm.visible = false;
+  scene.add(tropheeHdm);
+  const presse = creerPresse(scene);
+  let porteHdm = -1;
+  const main1 = new THREE.Vector3(), main2 = new THREE.Vector3();
 
   /* ---------------- La caméra ---------------- */
   const cam = { mode: 'tele', cx: 0, cz: 0, pos: new THREE.Vector3(0, 14, 26), vise: new THREE.Vector3(0, 0, 0), secousse: 0, zoom: 1 };
@@ -284,6 +291,16 @@ export function creerRendu(hote, o) {
       const allonge = p.etat === 'plonge' || p.etat === 'sol' || p.etat === 'tacle';
       f.ombre.scale.set(allonge ? 1.6 : 1, 1, allonge ? 1.6 : 1);
     });
+    // Le trophée de l'homme du match, posé sur ses deux mains ; la presse s'agite autour.
+    if (porteHdm >= 0) {
+      const f = figs[porteHdm];
+      f.racine.updateMatrixWorld(true);
+      f.A.coude.localToWorld(main1.set(0, -0.34, 0));
+      f.B.coude.localToWorld(main2.set(0, -0.34, 0));
+      tropheeHdm.position.set((main1.x + main2.x) / 2, (main1.y + main2.y) / 2 - 0.02, (main1.z + main2.z) / 2);
+      tropheeHdm.rotation.y = f.racine.rotation.y + Math.sin(temps * 1.2) * 0.12;
+    }
+    presse.maj(dt);
     // Les joueurs dirigés.
     anneaux.forEach((a, n) => {
       const i = v.actifs?.[n] ?? -1;
@@ -428,6 +445,10 @@ export function creerRendu(hote, o) {
       trophee.visible = !!o;
       if (o) { trophee.position.set(o.x, o.h, -o.y); trophee.rotation.y += 0.02; trophee.scale.setScalar(o.echelle || 1.2); }
     },
+    /** Le trophée « Homme du match » dans les mains du joueur i (0 à 9) ; null pour le cacher. */
+    tropheeMain(i) { porteHdm = i ?? -1; tropheeHdm.visible = porteHdm >= 0; },
+    /** Les journalistes (photographes et reporters) autour de (x, y) ; null pour les cacher. Voir creerPresse. */
+    presse(o) { if (o) presse.montrer(o); else presse.cacher(); },
     /** Une gerbe de feu d'artifice au-dessus du stade, aux couleurs données. */
     feuArtifice(couleurs) { feux.lancer((Math.random() - 0.5) * 34, 12 + Math.random() * 6, -12 - Math.random() * 10, couleurs); },
     confettis(cote, e) { lancerConfettis(cote, e); },

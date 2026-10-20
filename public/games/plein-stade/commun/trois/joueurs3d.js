@@ -207,7 +207,7 @@ const doux = (t) => (t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t));
 /**
  * La pose d'un joueur, d'après l'état du moteur.
  * o : { p (le joueur), vitesse (m/s), sprint, t (secondes), gardien, cote (le côté du plongeon,
- *       dans le repère du joueur : 1 vers sa gauche), humeur ('joie' | 'heros' | 'decu' | null),
+ *       dans le repère du joueur : 1 vers sa gauche), humeur ('joie' | 'heros' | 'trophee' | 'exhibe' | 'presente' | 'decu' | null),
  *       tab (attente des tirs au but) }
  */
 export function poseDe(fig, o, dt) {
@@ -294,6 +294,10 @@ export function poseDe(fig, o, dt) {
   } else if (o.humeur === 'trophee') {
     // Il soulève la coupe : les deux bras tendus au-dessus de la tête.
     Object.assign(P, { epAz: 2.95, epBz: -2.95, epAx: -0.1, epBx: -0.1, coudeA: -0.05, coudeB: -0.05, torse: -0.12, tete: -0.35, y: Math.abs(Math.sin(o.t * 3)) * 0.08 });
+  } else if (o.humeur === 'exhibe') {
+    // Il présente son trophée à deux mains devant lui, les coudes pliés, les mains jointes (le trophée est posé dessus) ;
+    // il se redresse, fier, et balance à peine.
+    Object.assign(P, { epAx: -0.9, epBx: -0.9, epAz: -0.5, epBz: 0.5, coudeA: -0.5, coudeB: -0.5, torse: -0.05, tete: -0.08 + Math.sin(o.t * 1.4) * 0.03, y: Math.sin(o.t * 2) * 0.008 });
   } else if (o.humeur === 'presente') {
     // La présentation : droit, les mains derrière le dos, le regard vers la caméra.
     Object.assign(P, { epAx: 0.35, epBx: 0.35, epAz: 0.12, epBz: -0.12, coudeA: -0.9, coudeB: -0.9, torse: 0, tete: -0.05 });

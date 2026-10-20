@@ -1,0 +1,19 @@
+{
+  "lignes": [
+    {
+      "id": "cons_hdm_1",
+      "energie": 2,
+      "texte": "Aucune discussion possible : c'est mérité."
+    },
+    {
+      "id": "cons_hdm_2",
+      "energie": 2,
+      "texte": "Il a été le meilleur sur le terrain, tout simplement."
+    },
+    {
+      "id": "cons_hdm_3",
+      "energie": 2,
+      "texte": "Un match de patron. Il peut être fier de lui."
+    }
+  ]
+}
