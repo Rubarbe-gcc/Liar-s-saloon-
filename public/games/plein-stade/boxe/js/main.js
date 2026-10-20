@@ -776,4 +776,5 @@ infoTournoi();
 window.crochet = {
   partie: () => partie, lancerCombat,
   avancer(s = 1) { let t = partie?.dernier ?? performance.now(); for (let k = 0; k < s * 60 && partie; k++) { t += 1000 / 60; boucle(t); } cancelAnimationFrame(raf); },
+  reprendre() { cancelAnimationFrame(raf); if (partie) { partie.dernier = performance.now(); raf = requestAnimationFrame(boucle); } },
 };
