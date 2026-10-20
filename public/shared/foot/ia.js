@@ -354,8 +354,8 @@ function porteurIA(m, p, N, st) {
  */
 export function decider(m, e, cons, traj) {
   const eq = m.equipes[e], st = STYLES[eq.style], N = niveauDe(eq), s = eq.sens, b = m.ballon;
-  // L'entraînement : les absents ne font rien ; les plots non plus.
-  for (let k = 0; k < 5; k++) { const q = m.joueurs[e * 5 + k]; if (!cons[q.id] && (q.absent || eq.immobile)) cons[q.id] = RIEN; }
+  // L'entraînement : les absents ne font rien ; les plots non plus (sauf le gardien, qui garde ses cages).
+  for (let k = 0; k < 5; k++) { const q = m.joueurs[e * 5 + k]; if (!cons[q.id] && (q.absent || (eq.immobile && k > 0))) cons[q.id] = RIEN; }
   gardien(m, e, cons, N, traj);
 
   const porteur = b.porteur >= 0 ? m.joueurs[b.porteur] : null;

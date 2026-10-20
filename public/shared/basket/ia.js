@@ -21,10 +21,16 @@ import {
 } from './terrain.js';
 import { STYLES } from './equipes.js';
 
+/**
+ * Les niveaux de l'ordinateur. Ses réflexes (reaction : images avant de sauter au contre),
+ * le moment où il lâche ses tirs (precision), ses vols (vol), sa lecture des passes (lecture),
+ * et ce que le moteur lui applique : son adresse (adresse : l'écart de ses tirs, × ; plus petit, plus adroit),
+ * sa vitesse de course (vitesse, ×) et ses contres (contre, ×). Normal : 1 partout (l'équilibre des clubs).
+ */
 export const NIVEAUX = [
-  { nom: 'Facile', reaction: 13, precision: 4.4, vol: 0.45, lecture: 0.55, allure: 0.88 },
-  { nom: 'Normal', reaction: 8, precision: 2.7, vol: 0.8, lecture: 0.85, allure: 1 },
-  { nom: 'Difficile', reaction: 4, precision: 1.8, vol: 1, lecture: 1, allure: 1 },
+  { nom: 'Facile', reaction: 18, precision: 6, vol: 0.3, lecture: 0.4, allure: 0.85, adresse: 1.35, vitesse: 0.9, contre: 0.4 },
+  { nom: 'Normal', reaction: 8, precision: 2.7, vol: 0.8, lecture: 0.85, allure: 1, adresse: 1, vitesse: 1, contre: 1 },
+  { nom: 'Difficile', reaction: 3, precision: 1.2, vol: 1.4, lecture: 1, allure: 1, adresse: 0.82, vitesse: 1.07, contre: 1.5 },
 ];
 export const niveauDe = (eq) => NIVEAUX[eq.ctrl === 'ia' ? eq.niveau : 1];
 

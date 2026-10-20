@@ -933,12 +933,16 @@ test('l’entraînement : moins de joueurs, sans gardien, des plots, pas de fin'
   assert.equal(m.joueurs[m.ballon.porteur].e, 0);
   assert.ok(!m.joueurs[m.ballon.porteur].absent);
   const avant = m.joueurs.map((p) => [p.x, p.y]);
+  let gardienATouche = false;
   for (let i = 0; i < 15000; i++) {
     pas(m, [0, 0]);
-    assert.ok(m.ballon.porteur < 0 || m.joueurs[m.ballon.porteur].e === 0, 'les plots ne touchent pas le ballon');
+    const q = m.ballon.porteur >= 0 ? m.joueurs[m.ballon.porteur] : null;
+    assert.ok(!q || q.e === 0 || q.i === 0, 'les plots ne touchent pas le ballon (leur gardien, si)');
+    if (q && q.e === 1) gardienATouche = true;
     assert.ok(m.phase !== 'fin' && m.phase !== 'mitemps');
   }
   assert.ok(m.score[0] > 3, 'on marque');
+  assert.ok(gardienATouche, 'leur gardien arrête des tirs');
   for (const p of m.joueurs) if (p.absent) assert.deepEqual([p.x, p.y], avant[p.id]);
   // Seul contre personne : l'humain engage, change de joueur sans planter.
   const s = creerMatch({ equipes: [a, b], graine: 5, entrainement: { nous: 1, eux: 0, gardiens: [false, false] } });

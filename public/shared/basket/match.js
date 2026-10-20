@@ -31,7 +31,7 @@ import {
   hasard, gauss, clamp, dist, panierX, estTrois, vitesseMax, allonge, elan, ecartTir,
 } from './terrain.js';
 import { EQUIPE, notesJoueur } from './equipes.js';
-import { decider } from './ia.js';
+import { decider, niveauDe } from './ia.js';
 
 export { FPS, T, CHARGE_IDEALE, CHARGE_MAX, DEMI_L, DEMI_W, PANIER_X, ANNEAU_Z, PORTEE_DUNK };
 
@@ -453,6 +453,7 @@ function lacherTir(m, p, evs) {
   const pts = estTrois(p.x, p.y, hx) ? 3 : 2;
   let s = ecartTir(m, p, p.x, p.y, q);
   if (p.layup) s *= 0.85;
+  if (m.equipes[p.e].ctrl === 'ia') s *= niveauDe(m.equipes[p.e]).adresse;
   const ux = (hx - p.x) / (d || 1), uy = -p.y / (d || 1);
   // Le point visé : le centre de l'arceau, décalé par l'imprécision (dans l'axe et sur le côté).
   const e1 = gauss(m) * s * 1.05, e2 = gauss(m) * s;
@@ -481,8 +482,12 @@ function contrer(m, p, ux, uy, facilite, evs) {
   for (let k = 0; k < 3; k++) {
     const o = m.joueurs[(1 - p.e) * 3 + k];
     const dx = o.x - p.x, dy = o.y - p.y, dd = Math.sqrt(dx * dx + dy * dy);
-    if (dd > 1.35 || o.z < 0.15 || dx * ux + dy * uy < -0.2) continue;
-    const chance = clamp((o.z - 0.1) * 0.45 + (o.n.saut - 65) / 220 + (o.n.defense - 65) / 260 - (dd - 0.5) * 0.35 - (p.n.saut - 65) / 300, 0, 0.4) * facilite;
+    // Le joueur humain contre plus facilement (plus loin, plus souvent) ; l'ordinateur selon son niveau.
+    const eqo = m.equipes[o.e], humain = eqo.ctrl === 'humain' && eqo.actif === o.id;
+    if (dd > (humain ? 1.7 : 1.35) || o.z < 0.1 || dx * ux + dy * uy < -0.3) continue;
+    let chance = clamp((o.z - 0.1) * 0.45 + (o.n.saut - 65) / 220 + (o.n.defense - 65) / 260 - (dd - 0.5) * 0.35 - (p.n.saut - 65) / 300, 0, 0.4) * facilite;
+    if (humain) chance = clamp(0.65 * Math.min(1, o.z / 0.55) * (1 - Math.max(0, dd - 0.6) / 1.2) + (o.n.saut - 65) / 300, 0, 0.75) * (facilite < 1 ? 0.75 : 1);
+    else if (eqo.ctrl === 'ia') chance *= niveauDe(eqo).contre;
     if (hasard(m) < chance) {
       const lat = gauss(m) * 2.5;
       Object.assign(b, { vx: -ux * 2.5 - uy * lat + o.vx * 0.3, vy: -uy * 2.5 + ux * lat + o.vy * 0.3, vz: 0.8 + hasard(m) * 1.5, tir: null, dernier: o.id, z: Math.max(b.z, 2.2) });
@@ -619,6 +624,7 @@ function deplacer(m, p, c) {
   }
   const sprint = c.sprint && p.endu > 0.12 && (c.mx || c.my);
   let vm = vitesseMax(p) * (porte ? 0.9 : 1) * (sprint ? 1.28 : 1) * (0.78 + 0.22 * p.endu);
+  if (m.equipes[p.e].ctrl === 'ia') vm *= niveauDe(m.equipes[p.e]).vitesse;
   if (p.surpris > 0) vm *= 0.4;
   // À reculons (le défenseur face à son joueur), on va moins vite.
   const regard = c.fx || c.fy ? c.mx * p.dx + c.my * p.dy : 1;

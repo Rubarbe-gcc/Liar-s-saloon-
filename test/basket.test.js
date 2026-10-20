@@ -304,6 +304,39 @@ test('l’entraînement : moins de joueurs, des plots, pas de fin', () => {
   assert.notEqual(j.phase, 'fin');
 });
 
+test('les niveaux : le Difficile bat le Facile, le Normal aussi', () => {
+  let d = 0, n = 0;
+  for (let g = 0; g < 10; g++) {
+    const id = EQUIPES[g].id;
+    if (simuler({ equipes: [id, id], graine: g * 97 + 5, minutes: 1, niveaux: [2, 0] }).vainqueur === 0) d += 1;
+    if (simuler({ equipes: [id, id], graine: g * 89 + 3, minutes: 1, niveaux: [1, 0] }).vainqueur === 0) n += 1;
+  }
+  assert.ok(d >= 9, `Difficile contre Facile : ${d} victoires sur 10`);
+  assert.ok(n >= 8, `Normal contre Facile : ${n} victoires sur 10`);
+});
+
+test('le contre de l’humain : sauter devant le tireur, ça marche souvent', () => {
+  let contres = 0, essais = 0;
+  for (let g = 1; g <= 60; g++) {
+    const m = creerMatch({ equipes: ['valrose', 'lumen'], graine: g, minutes: 1, controles: ['humain', 'ia'] });
+    m.phase = 'jeu';
+    const s = m.equipes[1].sens, tireur = m.joueurs[3], moi = m.joueurs[0];
+    // Le tireur, à 6 m de son panier ; nous, à un mètre devant lui ; les autres loin.
+    Object.assign(tireur, { x: s * (PANIER_X - 6), y: 0, etat: 'tir', charge: 0, chargeCible: CHARGE_IDEALE, vz: 3.92, z: 0 });
+    Object.assign(moi, { x: s * (PANIER_X - 5), y: 0.1 });
+    for (const p of m.joueurs) if (p !== tireur && p !== moi) p.x = -s * 10;
+    Object.assign(m.ballon, { porteur: 3, entre: false, remise: -1 });
+    m.equipes[0].actif = 0;
+    const evs = [];
+    for (let i = 0; i < 40 && !evs.some((e) => e.type === 'tir'); i++) evs.push(...pas(m, [i === 6 ? T.B : 0, 0]));
+    if (!evs.some((e) => e.type === 'tir')) continue;
+    essais += 1;
+    if (evs.some((e) => e.type === 'contre' && e.joueur === 0)) contres += 1;
+  }
+  assert.ok(essais >= 50);
+  assert.ok(contres / essais >= 0.3, `${contres} contres sur ${essais}`);
+});
+
 test('équilibre : chaque équipe gagne entre 35 et 65 % de ses matchs', () => {
   // Chaque équipe reçoit chacune des autres, quatre fois (deux périodes d'une minute) :
   // 120 matchs par équipe (moins, le hasard d'un petit échantillon fausse le verdict). Pas de nul : le panier en or départage.

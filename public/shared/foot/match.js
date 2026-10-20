@@ -19,7 +19,7 @@
  * L'entraînement (o.entrainement) : on joue librement, sans chrono ni mi-temps,
  * avec moins de joueurs (les absents sont garés hors du terrain), avec ou
  * sans gardien, et des adversaires qui jouent ou qui restent plantés comme
- * des plots (ils ne touchent jamais le ballon). Après un but, l'équipe 0 réengage.
+ * des plots (ils ne touchent jamais le ballon ; leur gardien, lui, garde ses cages). Après un but, l'équipe 0 réengage.
  *
  * Déterministe : même graine, mêmes touches → même match, image par image,
  * sur tous les appareils (le jeu en ligne en dépend : shared/rollback.js).
@@ -792,7 +792,7 @@ function contacts(m, avant, evs) {
   let best = null, bk = 1;
   if (b.arc > 0) b.arc -= 1;
   for (const p of m.joueurs) {
-    if (p.verrou > 0 || p.etat === 'sol' || p.etat === 'tient' || p.absent || m.equipes[p.e].immobile) continue;
+    if (p.verrou > 0 || p.etat === 'sol' || p.etat === 'tient' || p.absent || (m.equipes[p.e].immobile && p.i > 0)) continue;
     // L'arc-en-ciel passe au-dessus des têtes : tant qu'il est en l'air, seul le gardien peut le capter.
     if (b.arc > 0 && b.z > 0.35 && p.id !== b.cible && p.i > 0) continue;
     const mains = p.i === 0 && dansSurface(m, p);
