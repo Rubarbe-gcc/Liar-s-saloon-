@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v141';
+const VERSION = 'v142';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -236,6 +236,17 @@ const SHELL = [
   '/shared/foot/ligue.js',
   '/shared/foot/clubs.js',
   '/shared/foot/stats.js',
+  '/games/plein-stade/basket/',
+  '/games/plein-stade/basket/css/basket.css',
+  '/games/plein-stade/basket/js/main.js',
+  '/games/plein-stade/basket/js/commentaires.js',
+  '/games/plein-stade/basket/js/cinematiques.js',
+  '/games/plein-stade/basket/js/trois/rendu3d.js',
+  '/games/plein-stade/basket/js/trois/salle3d.js',
+  '/shared/basket/terrain.js',
+  '/shared/basket/equipes.js',
+  '/shared/basket/ia.js',
+  '/shared/basket/match.js',
   '/games/street-combat/js/trois/rendu3d.js',
   '/games/street-combat/js/trois/decors3d.js',
   '/vendor/three/three.module.min.js',

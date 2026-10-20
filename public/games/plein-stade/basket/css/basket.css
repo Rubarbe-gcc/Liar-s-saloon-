@@ -1,0 +1,48 @@
+/* DOUBLE PAS — le basket à trois. On garde l'habillage télé du foot (foot.css),
+   avec une salle : du parquet sous les projecteurs, de l'orange pour ce qui compte. */
+
+body.basket {
+  --nuit: #0f0a08;
+  --nuit2: #24170f;
+  --jaune: #ffb347;
+  --citron: #ffe08a;
+  --doux: #c8b4a2;
+}
+
+/* Le fond des menus : un parquet dans la pénombre. */
+.basket .fond { background: radial-gradient(120% 80% at 50% 0%, #4a2a14 0%, var(--nuit) 62%); }
+.basket .fond-gazon { background: repeating-linear-gradient(90deg, #b9824a 0 6%, #c98f52 6% 12%, #b57c44 12% 18%); opacity: .5; }
+
+/* Le ballon du logo. */
+.basket .logo .balle { background: radial-gradient(circle at 35% 30%, #ffb070 0, #f07a28 45%, #b24a10 100%); overflow: hidden; }
+.basket .logo .balle::before, .basket .logo .balle::after { content: ''; position: absolute; inset: 0; border-radius: 50%; border: 3px solid #2a1408; clip-path: none; background: none; }
+.basket .logo .balle::before { inset: 0 47%; border-radius: 0; border: 0; background: #2a1408; }
+.basket .logo .balle::after { border-color: transparent #2a1408; transform: scaleX(.55); }
+.basket .logo .l1 { text-shadow: 0 4px 0 #3a1c08, 0 0 30px rgba(255, 140, 40, .35); }
+.basket .logo .l2 { color: var(--jaune); text-shadow: 0 4px 0 #6a3400, 0 0 30px rgba(255, 179, 71, .4); }
+
+.basket .btn.vert { background: linear-gradient(180deg, #ff8a2a, #d9600f); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 4px 0 #6a2a00, 0 8px 18px rgba(0, 0, 0, .35); }
+.basket .btn.vert small { color: #ffe6cc; }
+
+/* La fiche du club survolé : sa devise, son style, ses trois joueurs. */
+.fiche-club { margin: 12px 0 4px; padding: 12px 14px; border-radius: 10px; background: linear-gradient(90deg, color-mix(in srgb, var(--c1, #3a2a1a) 35%, transparent), var(--nuit2) 70%); border: 1px solid rgba(255, 255, 255, .08); }
+.fiche-club:empty { display: none; }
+.fiche-club .tete { display: flex; align-items: center; gap: 10px; }
+.fiche-club .tete b { font-family: var(--titre); font-style: italic; text-transform: uppercase; }
+.fiche-club .tete small { display: block; color: var(--doux); }
+.fiche-club .devise { margin: 6px 0 8px; font-style: italic; color: var(--doux); }
+.fiche-club .joueurs { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+.fiche-club .joueur { padding: 8px 10px; border-radius: 8px; background: rgba(0, 0, 0, .25); }
+.fiche-club .joueur b { display: block; }
+.fiche-club .joueur small { color: var(--doux); }
+.fiche-club .joueur .vedette { color: var(--jaune); }
+.fiche-club .barres { font-size: .72em; }
+
+/* La jauge du tir : le trait blanc, c'est le haut du saut (le bon moment pour lâcher). */
+.jauge.tir { width: 70px; margin-left: -35px; height: 10px; overflow: visible; }
+.jauge.tir i { border-radius: 5px; }
+.jauge.tir .ideal { position: absolute; top: -4px; bottom: -4px; width: 3px; margin-left: -1.5px; left: 52%; background: #fff; border-radius: 2px; box-shadow: 0 0 6px #fff; }
+.jauge.tir.parfait { box-shadow: 0 0 0 2px #fff, 0 0 14px #ffe08a; }
+
+.bj-b { background: radial-gradient(circle at 40% 30%, #ffa45a, #d9600f); }
+.bj-g { background: radial-gradient(circle at 40% 30%, #c38aff, #6b2fb3); }

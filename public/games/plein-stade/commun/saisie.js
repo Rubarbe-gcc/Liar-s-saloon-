@@ -27,13 +27,20 @@ const CLAVIER = {
 
 let actif = false;
 let surPause = null;
-export function ecouterClavier(pause) {
+/** Les touches en service : celles du foot, sauf si un sport donne les siennes (mêmes bits T). */
+let carte = CLAVIER;
+/**
+ * Écoute le clavier. pause : appelée sur Échap ou P ;
+ * autres : une autre table { code: bit } (le basket : Espace change de joueur).
+ */
+export function ecouterClavier(pause, autres = null) {
   surPause = pause;
+  if (autres) carte = autres;
   if (actif) return;
   actif = true;
   addEventListener('keydown', (e) => {
     if (e.code === 'Escape' || e.code === 'KeyP') { surPause?.(); return; }
-    if (CLAVIER[e.code] === undefined) return;
+    if (carte[e.code] === undefined) return;
     if (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
     touches.add(e.code);
     if (jeuEnCours()) e.preventDefault();
@@ -117,7 +124,7 @@ function manette() {
 /** Les touches du joueur, maintenant. */
 export function lire() {
   let m = 0;
-  for (const c of touches) m |= CLAVIER[c] || 0;
+  for (const c of touches) m |= carte[c] || 0;
   // Le joystick tactile : huit directions (comme le clavier ; c'est aussi ce qui part en ligne).
   if (tactile.mx || tactile.my) {
     const a = Math.atan2(tactile.my, tactile.mx);

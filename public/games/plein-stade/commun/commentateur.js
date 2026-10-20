@@ -78,10 +78,11 @@ export const vraieVoix = () => voixChargee;
 /* ---------------- Le commentateur ---------------- */
 
 /**
- * @param {{ el: HTMLElement, noms?: { comm: string, cons: string } }} o
+ * @param {{ el: HTMLElement, noms?: { comm: string, cons: string }, texteSeul?: boolean }} o
+ *   texteSeul : jamais de voix (ni enregistrée ni synthèse), pour un sport qui n'a pas encore les siennes.
  * @returns {{ dire(texte, { role, important, emotion, apres }), choisir(cle, liste), arreter() }}
  */
-export function creerCommentateur({ el, noms = { comm: 'Commentateur', cons: 'Consultant' } }) {
+export function creerCommentateur({ el, noms = { comm: 'Commentateur', cons: 'Consultant' }, texteSeul = false }) {
   let minuteur = 0, parle = false, file = [], derniereFin = 0, son = null, enCours = null, lecture = 0;
   const derniersClips = new Map();
   /** Une réplique enregistrée de cette famille (pas la même que la dernière fois). */
@@ -122,7 +123,7 @@ export function creerCommentateur({ el, noms = { comm: 'Commentateur', cons: 'Co
 
   function lire(item) {
     enCours = item;
-    const clipChoisi = reglage === 'voix' && !estMuet() && item.clip ? clipPour(item.clip) : null;
+    const clipChoisi = reglage === 'voix' && !texteSeul && !estMuet() && item.clip ? clipPour(item.clip) : null;
     // Avec la vraie voix, on affiche exactement ce qu'elle dit.
     afficher(clipChoisi && textes.get(clipChoisi) ? textes.get(clipChoisi) : item.texte, item.role, item.important);
     const fini = () => { parle = false; son = null; enCours = null; derniereFin = performance.now(); setTimeout(suite, 180); };
@@ -140,7 +141,7 @@ export function creerCommentateur({ el, noms = { comm: 'Commentateur', cons: 'Co
     // on laisse le temps de le lire avant la phrase suivante.
     const s = window.speechSynthesis;
     const v = voixPour(item.role);
-    if (voixChargee || reglage !== 'voix' || estMuet() || !s || !v) {
+    if (texteSeul || voixChargee || reglage !== 'voix' || estMuet() || !s || !v) {
       parle = true;
       lecture = setTimeout(fini, Math.min(2600, 800 + item.texte.replace(/<[^>]+>/g, '').length * 30));
       return;
