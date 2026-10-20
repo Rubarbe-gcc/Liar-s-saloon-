@@ -1,0 +1,90 @@
+/* CROCHET — la boxe. L'habillage télé du foot (foot.css), dans une salle de
+   boxe : la pénombre, le rouge du tapis, l'or des ceintures. */
+
+body.boxe {
+  --nuit: #0b0708;
+  --nuit2: #22141a;
+  --jaune: #f2c14e;
+  --citron: #ffe08a;
+  --doux: #c8b4b8;
+}
+
+.boxe .fond { background: radial-gradient(120% 80% at 50% 0%, #4a1820 0%, var(--nuit) 62%); }
+.boxe .fond-gazon { background: repeating-linear-gradient(90deg, #e9e4d8 0 12%, #ddd6c6 12% 24%); opacity: .2; }
+.boxe .logo .gant { font-size: .8em; filter: drop-shadow(0 6px 0 rgba(0, 0, 0, .3)); animation: coup 1.4s cubic-bezier(.3, 0, .4, 1) infinite; }
+@keyframes coup { 0%, 70%, 100% { transform: translateX(0) rotate(0); } 80% { transform: translateX(.18em) rotate(-12deg); } }
+.boxe .logo .l1 { text-shadow: 0 4px 0 #3a0a10, 0 0 30px rgba(255, 60, 60, .35); }
+.boxe .logo .l2 { color: var(--jaune); text-shadow: 0 4px 0 #6a4a00, 0 0 30px rgba(242, 193, 78, .4); }
+.boxe .btn.vert { background: linear-gradient(180deg, #e0443c, #a8221d); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 4px 0 #5a0d0a, 0 8px 18px rgba(0, 0, 0, .35); }
+.boxe .btn.vert small { color: #ffe0dc; }
+@media (prefers-reduced-motion: reduce) { .boxe .logo .gant { animation: none; } }
+
+/* Le choix des boxeurs : par catégorie. */
+.categorie { margin: 14px 0 6px; font-family: var(--titre); font-style: italic; text-transform: uppercase; font-size: .9em; color: var(--jaune); letter-spacing: .08em; }
+.boxe .equipe .surnom { color: var(--jaune); font-size: .74em; font-style: italic; }
+
+/* Le tableau du combat : deux coins, la santé (et ce qu'il en reste au mieux), le souffle ; le round au centre. */
+.hud-boxe { position: absolute; top: max(8px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(920px, calc(100% - 90px)); display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: start; pointer-events: none; }
+.hud-boxe .coin { display: flex; gap: 8px; align-items: center; background: rgba(8, 6, 10, .72); border-radius: 8px; padding: 6px 10px; min-width: 0; }
+.hud-boxe .coin.c1 { flex-direction: row-reverse; text-align: right; }
+.hud-boxe .badge svg { display: block; width: 34px; height: 34px; }
+.hud-boxe .infos { flex: 1; min-width: 0; }
+.hud-boxe .infos b { display: block; font-family: var(--titre); font-style: italic; text-transform: uppercase; font-size: .82em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hud-boxe .barre { position: relative; height: 11px; border-radius: 3px; background: rgba(255, 255, 255, .1); margin-top: 4px; overflow: hidden; }
+.hud-boxe .barre.endu { height: 5px; }
+.hud-boxe .barre i { position: absolute; top: 0; bottom: 0; left: 0; width: 100%; transition: width .12s linear; }
+.hud-boxe .c1 .barre i { left: auto; right: 0; }
+.hud-boxe .sante .max { background: rgba(255, 90, 80, .28); }
+.hud-boxe .sante .val { background: linear-gradient(90deg, #ff4d5e, #ffb347 60%, #ffe08a); }
+.hud-boxe .c1 .sante .val { background: linear-gradient(270deg, #ff4d5e, #ffb347 60%, #ffe08a); }
+.hud-boxe .sante.bas .val { animation: clignoteSante .5s infinite; }
+@keyframes clignoteSante { 50% { opacity: .45; } }
+.hud-boxe .endu i { background: #6ad1ff; }
+.hud-boxe .centre { background: rgba(8, 6, 10, .8); border-radius: 8px; padding: 4px 12px; text-align: center; }
+.hud-boxe .centre small { display: block; font-size: .7em; letter-spacing: .14em; color: var(--jaune); }
+.hud-boxe .centre b { font-family: var(--titre); font-size: 1.3em; }
+
+/* Le compte, au tapis. */
+.compte { position: absolute; left: 50%; top: 30%; transform: translateX(-50%); text-align: center; pointer-events: none; }
+.compte b { display: block; font-family: var(--titre); font-size: clamp(70px, 16vw, 150px); line-height: 1; color: #fff; text-shadow: 0 6px 0 #6a0a10, 0 0 40px rgba(255, 60, 60, .6); animation: battement .3s ease-out; }
+.compte small { display: block; margin-top: 6px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+.compte .effort { display: block; width: 220px; height: 10px; margin: 8px auto 0; border-radius: 5px; background: rgba(0, 0, 0, .55); box-shadow: 0 0 0 2px rgba(255, 255, 255, .6); overflow: hidden; }
+.compte .effort i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #ffe08a, #ff4d5e); }
+.compte .effort:empty, .compte.adverse .effort { display: none; }
+@keyframes battement { from { transform: scale(1.35); } to { transform: scale(1); } }
+
+/* La fin : les cartes des juges. */
+.fin-cartes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 10px 0; }
+.fin-cartes .carte-juge { background: rgba(255, 255, 255, .06); border-radius: 8px; padding: 8px; text-align: center; font-size: .9em; }
+.fin-cartes .carte-juge b { display: block; font-family: var(--titre); font-size: 1.2em; }
+.fin-cartes .carte-juge small { color: var(--doux); }
+.fin-cartes:empty { display: none; }
+
+.bj-b { background: radial-gradient(circle at 40% 30%, #ff6a6a, #b8221d); }
+.bj-a { background: radial-gradient(circle at 40% 30%, #ffd27a, #c98a12); }
+.bj-x { background: radial-gradient(circle at 40% 30%, #c38aff, #6b2fb3); }
+.bj-g { background: radial-gradient(circle at 40% 30%, #6ab8ff, #1a6fd0); font-size: .72em; }
+
+/* Les touches, au choix du joueur (comme le basket). */
+.touche { min-width: 34px; padding: 4px 8px; margin: 1px 3px 1px 0; border-radius: 6px; border: 1px solid rgba(255, 255, 255, .35); border-bottom-width: 3px; background: rgba(255, 255, 255, .08); color: var(--texte); font-weight: 800; cursor: pointer; }
+.touche:hover { border-color: var(--jaune); }
+.touche.attend { border-color: var(--jaune); background: rgba(242, 193, 78, .25); animation: clignote .8s infinite; }
+.touches-bouger small { display: block; color: var(--doux); font-size: .8em; margin-top: 2px; }
+.touches-aide .btn { margin-left: 8px; padding: 4px 10px; font-size: .9em; }
+@keyframes clignote { 50% { opacity: .5; } }
+.boxe .tableau-score { display: none; }
+
+/* La fiche du boxeur survolé (comme celle des clubs du basket). */
+.fiche-club { margin: 12px 0 4px; padding: 12px 14px; border-radius: 10px; background: linear-gradient(90deg, color-mix(in srgb, var(--c1, #3a2a1a) 35%, transparent), var(--nuit2) 70%); border: 1px solid rgba(255, 255, 255, .08); }
+.fiche-club:empty { display: none; }
+.fiche-club .tete { display: flex; align-items: center; gap: 10px; }
+.fiche-club .tete b { font-family: var(--titre); font-style: italic; text-transform: uppercase; }
+.fiche-club .tete small { display: block; color: var(--doux); }
+.fiche-club .devise { margin: 6px 0 8px; font-style: italic; color: var(--doux); }
+.fiche-club .joueurs { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 8px; }
+.fiche-club .joueur { padding: 8px 10px; border-radius: 8px; background: rgba(0, 0, 0, .25); }
+.fiche-club .joueur b { display: block; }
+.fiche-club .joueur small { color: var(--doux); }
+.fiche-club .joueur .vedette { color: var(--jaune); }
+.fiche-club .barres { font-size: .72em; }
+

@@ -30,6 +30,7 @@
     <div class="boutons-menu">
       <button class="btn vert grand" id="b-solo"><b>🏀 Match amical</b><small>Contre l’ordinateur</small></button>
       <button class="btn or grand" id="b-tournoi"><b>🏆 Le Tournoi</b><small id="tournoi-info">Huit clubs, élimination directe</small></button>
+      <button class="btn etoile grand" id="b-championnat"><b>⭐ Le Grand Championnat</b><small id="championnat-info">Les seize clubs, chacun contre tous</small></button>
       <button class="btn bleu grand" id="b-entrainement"><b>🎯 Entraînement</b><small>Jeu libre : les réglages sont dans la pause</small></button>
       <button class="btn grand" id="b-enligne"><b>🌐 En ligne</b><small>Un contre un, avec un code</small></button>
     </div>
@@ -64,10 +65,25 @@
     <div class="options" id="options-match">
       <div class="option"><span>Niveau</span><div class="segments" id="seg-niveau"></div></div>
       <div class="option"><span>Périodes</span><div class="segments" id="seg-duree"></div></div>
+      <div class="option cache" id="opt-format"><span>Le championnat</span><div class="segments" id="seg-format"></div></div>
     </div>
     <h3 class="section">La salle</h3>
     <div class="grille-stades" id="grille-stades"></div>
     <button class="btn vert grand coup-envoi" id="b-jouer"><b>Entre-deux</b></button>
+  </div>
+</section>
+
+<!-- ============================ LE GRAND CHAMPIONNAT ============================ -->
+<section class="ecran" id="s-championnat">
+  <header class="barre-haut">
+    <button class="rond retour" id="championnat-retour" aria-label="Retour">‹</button>
+    <h2>Le Grand Championnat</h2>
+  </header>
+  <div class="page">
+    <p class="consigne" id="championnat-texte"></p>
+    <div class="segments onglets" id="championnat-onglets"></div>
+    <div id="championnat-corps"></div>
+    <div class="coupe-actions" id="championnat-actions"></div>
   </div>
 </section>
 

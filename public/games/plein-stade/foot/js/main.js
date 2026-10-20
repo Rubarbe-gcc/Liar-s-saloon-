@@ -31,8 +31,16 @@ import { voixDisponible } from '../../commun/commentateur.js';
 const $ = (id) => document.getElementById(id);
 const PAS = 1 / FPS;
 let ecran = 'menu';
+/** Le bouton des compétitions dit ce qui est en cours (la Coupe, la Ligue), d'après leurs propres boutons. */
+function majCompetitions() {
+  const enCours = [['tournoi-info', 'la Coupe'], ['ligue-info', 'la Ligue des Étoiles']].filter(([id]) => /^En cours/.test(document.getElementById(id)?.textContent || '')).map(([, nom]) => nom);
+  const el = document.getElementById('competitions-info');
+  if (el) el.textContent = enCours.length ? `En cours : ${enCours.join(' et ')}` : 'La Coupe ou la Ligue des Étoiles';
+}
+
 function aller(nom) {
   for (const s of document.querySelectorAll('.ecran')) s.classList.toggle('is-active', s.id === `s-${nom}`);
+  if (nom === 'menu') majCompetitions();
   ecran = nom;
   document.querySelector('.fond').classList.toggle('cache', nom === 'match');
 }
@@ -129,8 +137,8 @@ function brancherEquipes() {
   $('seg-format').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.format = b.dataset.v; garder(); rendreEquipes(); } });
   $('seg-duree').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.minutes = +b.dataset.v; garder(); rendreEquipes(); } });
   $('grille-stades').addEventListener('click', (e) => { const b = e.target.closest('.stade'); if (b) { conf.stade = b.dataset.id; garder(); rendreEquipes(); } });
-  $('equipes-retour').addEventListener('click', () => aller(choix.mode === 'enligne' ? 'enligne' : 'menu'));
-  $('coupe-retour').addEventListener('click', () => { infoCoupe(); aller('menu'); });
+  $('equipes-retour').addEventListener('click', () => aller(choix.mode === 'enligne' ? 'enligne' : choix.mode === 'coupe' || choix.mode === 'ligue' ? 'competitions' : 'menu'));
+  $('coupe-retour').addEventListener('click', () => { infoCoupe(); aller('competitions'); });
   $('b-jouer').addEventListener('click', () => {
     son.reveiller();
     if (choix.suite) { choix.suite(); return; }
@@ -603,6 +611,9 @@ function brancher() {
   addEventListener('keydown', () => document.body.classList.remove('doigt'));
 
   $('b-solo').addEventListener('click', () => { son.reveiller(); ouvrirEquipes('solo'); });
+  // Les compétitions : un seul bouton au menu, puis on choisit la Coupe ou la Ligue des Étoiles.
+  $('b-competitions').addEventListener('click', () => { son.reveiller(); aller('competitions'); });
+  $('competitions-retour').addEventListener('click', () => aller('menu'));
   $('b-tournoi').addEventListener('click', () => { son.reveiller(); ouvrirCoupe(); });
   $('b-ligue').addEventListener('click', () => { son.reveiller(); ecransLigue.ouvrir(); });
   $('b-enligne').addEventListener('click', () => { son.reveiller(); ouvrirEnLigne(); });
@@ -782,7 +793,7 @@ function rendreCoupe() {
   if (m) bouton(`<b>Jouer ${c.tour === 2 ? 'la finale' : c.tour === 1 ? 'la demie' : 'le quart'}</b><small>contre ${EQUIPE[adv].nom}</small>`, 'vert grand', jouerCoupe);
   if (c.elimine && !c.fini) bouton('<b>Voir la suite</b>', 'bleu', () => { while (!coupe.fini) finirTour(); rendreCoupe(); });
   if (c.fini || c.elimine) bouton('<b>Nouvelle Coupe</b>', c.fini ? 'vert' : '', () => { coupe = null; garderCoupe(); ouvrirCoupe(); });
-  else bouton('Abandonner la Coupe', 'fin', () => { if (confirm('Abandonner cette Coupe ?')) { coupe = null; garderCoupe(); infoCoupe(); aller('menu'); } });
+  else bouton('Abandonner la Coupe', 'fin', () => { if (confirm('Abandonner cette Coupe ?')) { coupe = null; garderCoupe(); infoCoupe(); aller('competitions'); } });
   infoCoupe();
 }
 
@@ -1012,5 +1023,6 @@ brancher();
 brancherEntrainement();
 infoCoupe();
 ecransLigue.info();
+majCompetitions();
 succes.visiter('petitpont');
 export { lancerMatch, aller, ouvrirEquipes, montrerFin, conf, garder };

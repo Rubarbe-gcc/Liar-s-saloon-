@@ -13,6 +13,7 @@ import { estTrois, TROIS_R, TROIS_COIN } from '../public/shared/basket/terrain.j
 import { EQUIPES, EQUIPE, STYLES, notesEquipe } from '../public/shared/basket/equipes.js';
 import { ecussonSVG } from '../public/games/plein-stade/commun/ecusson.js';
 import { creerSession, FENETRE } from '../public/shared/rollback.js';
+import { calendrier as calendrierChamp, creerChampionnat, matchDuJoueur as matchChamp, enregistrer as enregistrerChamp, aJouer as aJouerChamp, jouerSansMoi as jouerSansMoiChamp, avancer as avancerChamp, classement as classementChamp, simulerLeReste as simulerLeResteChamp } from '../public/shared/basket/championnat.js';
 import * as serveur from '../server/basket.js';
 import { delaiSelonPing, REGLAGES } from '../public/games/plein-stade/basket/js/enligne.js';
 import { creerTournoi, matchDuJoueur, salleDuTour, enregistrer, jouerSansMoi, aJouer, avancer, resumer, noterStats, classement, TOURS } from '../public/shared/basket/tournoi.js';
@@ -460,6 +461,44 @@ test('le serveur : une salle, les clubs choisis dans la salle (jamais le même),
   assert.equal(a.recu.filter((m) => m.t === 'debut').length, avant + 1);
   b.dit({ t: 'quitter' });
   assert.ok(a.dernier('parti'));
+});
+
+test('le Grand Championnat : chacun contre tous, 2 points la victoire, 1 la défaite', () => {
+  // Le calendrier : chaque club joue une fois par journée, et rencontre chacun des quinze autres.
+  const ids = EQUIPES.map((e) => e.id);
+  const cal = calendrierChamp(ids);
+  assert.equal(cal.length, 15);
+  for (const j of cal) {
+    assert.equal(j.length, 8);
+    assert.equal(new Set(j.flatMap((r) => [r.a, r.b])).size, 16);
+  }
+  const paires = new Set(cal.flat().map((r) => [r.a, r.b].sort().join('|')));
+  assert.equal(paires.size, 120);
+  // Aller-retour : chaque paire deux fois, les terrains inversés.
+  const retour = calendrierChamp(ids, 'retour');
+  assert.equal(retour.length, 30);
+  assert.deepEqual(retour[15].map((r) => [r.b, r.a]), retour[0].map((r) => [r.a, r.b]));
+  // Un championnat entier : le joueur gagne tous ses matchs, il est champion.
+  const c = creerChampionnat({ moi: 'lumen', graine: 9, minutes: 1 });
+  while (!c.fini) {
+    const r = matchChamp(c);
+    assert.ok(r, `journée ${c.journee + 1} : le joueur a un match`);
+    enregistrerChamp(c, r.i, { score: r.a === 'lumen' ? [30, 20] : [20, 30] });
+    for (const i of aJouerChamp(c)) jouerSansMoiChamp(c, i);
+    assert.ok(avancerChamp(c));
+  }
+  const cl = classementChamp(c);
+  assert.equal(c.champion, 'lumen');
+  assert.equal(cl[0].id, 'lumen');
+  assert.deepEqual([cl[0].v, cl[0].d, cl[0].pts], [15, 0, 30]);
+  assert.ok(cl.every((x) => x.j === 15 && x.pts === 2 * x.v + x.d));
+  assert.equal(cl.reduce((t, x) => t + x.v, 0), 120);
+  assert.ok(cl.every((x, k) => k === 0 || cl[k - 1].pts > x.pts || (cl[k - 1].pts === x.pts && cl[k - 1].diff >= x.diff)));
+  // Abandonné en route : tout se joue, il perd ses matchs.
+  const d = creerChampionnat({ moi: 'braise', graine: 3, minutes: 1 });
+  simulerLeResteChamp(d);
+  assert.equal(d.fini, true);
+  assert.equal(classementChamp(d).find((x) => x.id === 'braise').v, 0);
 });
 
 test('équilibre : chaque équipe gagne entre 35 et 65 % de ses matchs', () => {

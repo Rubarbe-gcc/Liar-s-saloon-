@@ -194,7 +194,7 @@ export function creerEcransLigue(ctx) {
     }
     if (l.elimine && !l.fini) bouton('<b>Voir la suite</b>', 'bleu', () => { simulerLeReste(l); garder(); vue = 'finale'; rendre(); });
     if (l.fini || l.elimine) bouton('<b>Nouvelle Ligue</b>', l.fini ? 'vert' : '', () => { ligue = null; garder(); vue = 'poules'; ouvrir(); });
-    else bouton('Abandonner la Ligue', 'fin', () => { if (confirm('Abandonner cette Ligue ?')) { ligue = null; garder(); info(); aller('menu'); } });
+    else bouton('Abandonner la Ligue', 'fin', () => { if (confirm('Abandonner cette Ligue ?')) { ligue = null; garder(); info(); aller('competitions'); } });
     info();
   }
 
@@ -276,8 +276,8 @@ export function creerEcransLigue(ctx) {
 
   /** Les boutons « retour » et « voir les poules » des deux écrans. */
   function brancher() {
-    $('ligue-retour').addEventListener('click', () => { info(); aller('menu'); });
-    $('tirage-retour').addEventListener('click', () => { clearTimeout(minuteur); if (ligue && !ligue.tirageVu) { ligue.tirageVu = true; garder(); } info(); aller('menu'); });
+    $('ligue-retour').addEventListener('click', () => { info(); aller('competitions'); });
+    $('tirage-retour').addEventListener('click', () => { clearTimeout(minuteur); if (ligue && !ligue.tirageVu) { ligue.tirageVu = true; garder(); } info(); aller('competitions'); });
     $('tirage-suite').addEventListener('click', () => { son.bip(); vue = 'poules'; rendre(); aller('ligue'); });
   }
   brancher();
