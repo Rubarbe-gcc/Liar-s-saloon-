@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v147';
+const VERSION = 'v148';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -240,6 +240,7 @@ const SHELL = [
   '/games/plein-stade/basket/css/basket.css',
   '/games/plein-stade/basket/js/main.js',
   '/games/plein-stade/basket/js/touches.js',
+  '/games/plein-stade/basket/js/enligne.js',
   '/games/plein-stade/basket/js/commentaires.js',
   '/games/plein-stade/basket/js/cinematiques.js',
   '/games/plein-stade/basket/js/trois/rendu3d.js',

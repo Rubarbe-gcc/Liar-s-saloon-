@@ -12,6 +12,9 @@ import { creerMatch, pas, empreinte, simuler, chronoTexte, reglerEntrainement, T
 import { estTrois, TROIS_R, TROIS_COIN } from '../public/shared/basket/terrain.js';
 import { EQUIPES, EQUIPE, STYLES, notesEquipe } from '../public/shared/basket/equipes.js';
 import { ecussonSVG } from '../public/games/plein-stade/commun/ecusson.js';
+import { creerSession, FENETRE } from '../public/shared/rollback.js';
+import * as serveur from '../server/basket.js';
+import { delaiSelonPing, REGLAGES } from '../public/games/plein-stade/basket/js/enligne.js';
 import { creerTournoi, matchDuJoueur, salleDuTour, enregistrer, jouerSansMoi, aJouer, avancer, resumer, noterStats, classement, TOURS } from '../public/shared/basket/tournoi.js';
 
 /** Un petit hasard reproductible (pour les touches des faux joueurs). */
@@ -29,7 +32,7 @@ function joueurHumain(graine) {
       m = 0;
       if (R() < 0.8) m |= [T.g, T.d, T.h, T.b, T.g | T.h, T.d | T.b][Math.floor(R() * 6)];
       if (R() < 0.3) m |= T.S;
-      if (R() < 0.3) m |= [T.A, T.B, T.X, T.G][Math.floor(R() * 4)];
+      if (R() < 0.3) m |= [T.A, T.B, T.X, T.G, T.R][Math.floor(R() * 5)];
     }
     return m;
   };
@@ -335,6 +338,128 @@ test('le contre de l’humain : sauter devant le tireur, ça marche souvent', ()
   }
   assert.ok(essais >= 50);
   assert.ok(contres / essais >= 0.3, `${contres} contres sur ${essais}`);
+});
+
+/* ------------------------------------------------------------------ */
+/* En ligne                                                            */
+/* ------------------------------------------------------------------ */
+
+/** Deux joueurs sur un faux réseau (ping, gigue, pertes), chacun avec sa session de rollback. */
+function enLigne({ ping, gigue, perte, duree = 20000, derive = 0.003, reglages = {}, delai = 2 }) {
+  const R = rng(ping * 13 + 1);
+  const conf = [[], []];
+  const joueurs = [0, 1].map((n) => {
+    const m = creerMatch({ equipes: ['mielville', 'braise'], graine: 777, minutes: 3, controles: ['humain', 'humain'] });
+    const s = creerSession({ n, delai, etat: m, pas: (e, x) => pas(e, x), empreinte, confirme: (f, e) => conf[n].push(e[0] * 1024 + e[1]), ...reglages });
+    return { n, m, s, entrees: joueurHumain(500 + n), periode: (1000 / 60) * (n === 1 ? 1 - derive : 1), prochain: n * 23 };
+  });
+  const enRoute = [];
+  let t = 0;
+  const poster = (de, quoi, data) => {
+    if (R() < perte) return;
+    enRoute.push({ a: 1 - de, quand: t + Math.max(5, ping / 2 + (R() - 0.5) * gigue), quoi, data: JSON.parse(JSON.stringify(data)) });
+  };
+  for (; t < duree; t += 1) {
+    for (let i = enRoute.length - 1; i >= 0; i--) {
+      const x = enRoute[i];
+      if (x.quand > t) continue;
+      enRoute.splice(i, 1);
+      const s = joueurs[x.a].s;
+      if (x.quoi === 'entrees') s.recevoir(x.data);
+      else if (x.quoi === 'empreinte') s.recevoirEmpreinte(x.data);
+      else s.recaler(x.data);
+    }
+    for (const j of joueurs) {
+      if (t < j.prochain) continue;
+      j.prochain += j.periode;
+      const r = j.s.avancer(j.entrees());
+      poster(j.n, 'entrees', r.envoi);
+      if (r.empreinte) poster(j.n, 'empreinte', r.empreinte);
+      if (j.s.desynchro && j.n === 0) { const e = j.s.etatConfirme(); if (e) poster(0, 'etat', e); }
+    }
+  }
+  return { A: joueurs[0].s, B: joueurs[1].s, confA: conf[0], confB: conf[1] };
+}
+
+function rejouer(conf, jusqua) {
+  const m = creerMatch({ equipes: ['mielville', 'braise'], graine: 777, minutes: 3, controles: ['humain', 'humain'] });
+  for (let f = 0; f < jusqua; f++) pas(m, [Math.floor(conf[f] / 1024), conf[f] % 1024]);
+  return m;
+}
+
+for (const [nom, reseau] of [
+  ['ping 40 ms', { ping: 40, gigue: 10, perte: 0 }],
+  ['ping 150 ms, ça varie, 5 % de pertes', { ping: 150, gigue: 80, perte: 0.05 }],
+  ['gros ping (300 ms jusqu’à l’autre), réglages du basket', { ping: 600, gigue: 120, perte: 0.03, reglages: REGLAGES, delai: delaiSelonPing(300) }],
+]) {
+  test(`en ligne (${nom}) : le même match des deux côtés, sans se figer`, () => {
+    const { A, B, confA, confB } = enLigne(reseau);
+    const n = Math.min(confA.length, confB.length);
+    assert.ok(n > 900, `assez d'images confirmées (${n})`);
+    assert.deepEqual(confA.slice(0, n), confB.slice(0, n));
+    assert.ok(!A.desynchro && !B.desynchro, 'aucune désynchronisation');
+    assert.equal(A.stats.recalages + B.stats.recalages, 0, 'jamais besoin de se recaler');
+    for (const [s, conf] of [[A, confA], [B, confB]]) {
+      const { f, etat } = s.etatConfirme();
+      assert.equal(empreinte(etat), empreinte(rejouer(conf, f)), `état à l'image ${f}`);
+    }
+    assert.ok((A.stats.attentes + B.stats.attentes) / 2 < 30, 'presque jamais figé');
+    assert.ok(A.stats.rejouees / Math.max(1, A.stats.retours) <= (reseau.reglages?.fenetre ?? FENETRE), 'des corrections courtes');
+  });
+}
+
+let idClient = 0;
+function client() {
+  const recu = [];
+  const conn = { id: `b${++idClient}`, send: (m) => recu.push(m), close() {} };
+  serveur.handleOpen(conn);
+  return { conn, recu, dit: (m) => serveur.handleMessage(conn, m), dernier: (t) => [...recu].reverse().find((m) => m.t === t) };
+}
+
+test('le serveur : une salle, les clubs choisis dans la salle (jamais le même), la même graine, il relaie les touches (10 bits)', () => {
+  const a = client(), b = client();
+  a.dit({ t: 'creer', nom: 'Alice', stade: 'port' });
+  const { code, stade } = a.dernier('salle');
+  assert.match(code, /^[A-Z2-9]{4}$/);
+  assert.equal(stade, 'port');
+  assert.equal(a.dernier('salle').g, 'basket');
+  // Seul l'hôte change la salle ; une salle inconnue devient le Palais.
+  a.dit({ t: 'stade', stade: 'gymnase' });
+  assert.equal(a.dernier('stade').stade, 'gymnase');
+  b.dit({ t: 'rejoindre', code: code.toLowerCase(), nom: '<i>Bob</i>' });
+  assert.equal(a.dernier('debut'), undefined);
+  assert.deepEqual(b.dernier('salon').noms, ['Alice', 'iBob/i']);
+  a.dit({ t: 'equipe', equipe: 'lumen' });
+  b.dit({ t: 'equipe', equipe: 'lumen' });
+  assert.match(b.dernier('erreur').msg, /déjà pris/);
+  b.dit({ t: 'equipe', equipe: 'kerbrume' });
+  b.dit({ t: 'pret' });
+  assert.deepEqual(a.dernier('salon').prets, [false, false], 'pas prêt sans club (un club de foot ne compte pas)');
+  b.dit({ t: 'equipe', equipe: 'braise' });
+  b.dit({ t: 'pret' });
+  a.dit({ t: 'pret' });
+  const da = a.dernier('debut'), db = b.dernier('debut');
+  assert.equal(da.graine, db.graine);
+  assert.deepEqual(da.equipes, ['lumen', 'braise']);
+  assert.equal(da.stade, 'gymnase');
+  a.dit({ t: 'stade', stade: 'chaudron' });
+  assert.equal(b.dernier('stade').stade, 'palais');
+  // Les touches : 10 bits (la passe à rebond comprise), relayées à l'autre seulement.
+  a.dit({ t: 'entrees', f: 4, e: [T.R | T.d, T.G | T.S, 0x7ff], fc: 3, vu: 1, av: 0 });
+  assert.deepEqual(b.dernier('entrees').e, [T.R | T.d, T.G | T.S, 0x3ff]);
+  assert.equal(a.dernier('entrees'), undefined);
+  // La coupure : la place est gardée, l'autre est prévenu.
+  assert.equal(serveur.enPartie(a.conn), true);
+  serveur.handleAway(b.conn);
+  assert.equal(a.dernier('absent').nom, 'iBob/i');
+  serveur.handleResume(b.conn);
+  assert.ok(a.dernier('revenu'));
+  // La revanche, puis le départ.
+  const avant = a.recu.filter((m) => m.t === 'debut').length;
+  a.dit({ t: 'revanche' }); b.dit({ t: 'revanche' });
+  assert.equal(a.recu.filter((m) => m.t === 'debut').length, avant + 1);
+  b.dit({ t: 'quitter' });
+  assert.ok(a.dernier('parti'));
 });
 
 test('équilibre : chaque équipe gagne entre 35 et 65 % de ses matchs', () => {

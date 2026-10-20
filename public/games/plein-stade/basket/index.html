@@ -31,7 +31,7 @@
       <button class="btn vert grand" id="b-solo"><b>🏀 Match amical</b><small>Contre l’ordinateur</small></button>
       <button class="btn or grand" id="b-tournoi"><b>🏆 Le Tournoi</b><small id="tournoi-info">Huit clubs, élimination directe</small></button>
       <button class="btn bleu grand" id="b-entrainement"><b>🎯 Entraînement</b><small>Jeu libre : les réglages sont dans la pause</small></button>
-      <button class="btn grand" disabled><b>🌐 En ligne</b><small>Bientôt</small></button>
+      <button class="btn grand" id="b-enligne"><b>🌐 En ligne</b><small>Un contre un, avec un code</small></button>
     </div>
     <div class="menu-bas">
       <button class="btn fin" id="b-commandes">🎮 Commandes</button>
@@ -92,6 +92,35 @@
   <div class="page" id="stats-corps"></div>
 </section>
 
+<!-- ============================ EN LIGNE ============================ -->
+<section class="ecran" id="s-enligne">
+  <header class="barre-haut">
+    <button class="rond retour" id="enligne-retour" aria-label="Retour">‹</button>
+    <h2>En ligne</h2>
+  </header>
+  <div class="page page-enligne">
+    <p class="statut" id="enligne-statut">Connexion…</p>
+    <div class="enligne-bloc" id="enligne-accueil">
+      <label class="champ">Ton nom <input id="enligne-nom" maxlength="12" autocomplete="nickname"></label>
+      <p class="consigne">Les équipes se choisissent dans la salle, une fois que vous y êtes tous les deux.</p>
+      <button class="btn vert grand" id="enligne-creer"><b>Créer une salle</b><small>Tu recevras un code à donner</small></button>
+      <div class="rejoindre">
+        <input id="enligne-code" maxlength="6" placeholder="CODE" autocapitalize="characters" aria-label="Code de la salle">
+        <button class="btn bleu" id="enligne-rejoindre">Rejoindre</button>
+      </div>
+    </div>
+    <div class="enligne-bloc cache" id="enligne-salle">
+      <p class="code-salle">Salle <b id="salle-code"></b></p>
+      <p class="consigne" id="salle-attente">En attente d’un adversaire… Donne-lui ce code.</p>
+      <div class="salon-joueurs" id="salon-joueurs"></div>
+      <div class="grille-equipes petite" id="salon-equipes"></div>
+      <button class="btn vert grand" id="salon-pret" disabled><b>Prêt !</b></button>
+      <div class="option" id="salle-stade-bloc"><span>La salle (c’est toi qui choisis)</span><div class="segments" id="salle-stades"></div></div>
+      <button class="btn fin" id="salle-quitter">Quitter la salle</button>
+    </div>
+  </div>
+</section>
+
 <!-- ============================ LE MATCH ============================ -->
 <section class="ecran" id="s-match">
   <div class="scene-hote" id="scene"></div>
@@ -106,6 +135,8 @@
     <div class="bandeau" id="bandeau" aria-live="polite"></div>
     <div class="jauge tir cache" id="jauge"><i></i><span class="ideal"></span></div>
     <div class="commentaire" id="commentaire" aria-live="polite"></div>
+    <div class="net-diag cache" id="net-diag"></div>
+    <div class="attente-net cache" id="attente-net" role="status"><b id="attente-titre"></b><span id="attente-texte"></span><button class="btn fin" id="attente-quitter">Quitter le match</button></div>
     <div class="dirige" id="dirige"><b id="dirige-nom"></b><span class="endu"><i id="dirige-endu"></i></span></div>
   </div>
   <div class="tactile" id="tactile">
@@ -168,6 +199,7 @@
     <div class="fin-buteurs" id="fin-buteurs"></div>
     <div class="fin-stats" id="fin-stats"></div>
     <div class="fin-actions" id="fin-actions"></div>
+    <p class="consigne" id="fin-attente"></p>
   </div>
 </section>
 
