@@ -9,7 +9,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { creerMatch, pas, empreinte, simuler, chronoTexte, T, DEMI_L, DEMI_W, DEMI_BUT, BUT_P, CHARGE_MAX } from '../public/shared/foot/match.js';
+import { creerMatch, pas, empreinte, simuler, chronoTexte, reglerEntrainement, T, DEMI_L, DEMI_W, DEMI_BUT, BUT_P, CHARGE_MAX } from '../public/shared/foot/match.js';
 import { EQUIPES, EQUIPE, STYLES, STADES, notesJoueur } from '../public/shared/foot/equipes.js';
 import { creerCoupe, matchDuJoueur, enregistrer, jouerSansMoi, aJouer, avancer, noterStats } from '../public/shared/foot/coupe.js';
 import { PERF, creerStats, cumuler, resumerMatch, hommeDuMatch as hommeDuMatchStats, meilleursButeurs, meilleursPasseurs, meilleursGardiens, meilleursJoueurs, statsDe } from '../public/shared/foot/stats.js';
@@ -945,6 +945,13 @@ test('l’entraînement : moins de joueurs, sans gardien, des plots, pas de fin'
   assert.equal(s.joueurs.filter((p) => !p.absent).length, 1);
   for (let i = 0; i < 400; i++) pas(s, [i % 25 === 0 ? T.A : T.d, 0]);
   assert.ok(!s.joueurs[s.equipes[0].actif].absent);
+  // Les réglages changent en pleine partie (la pause) : on réengage, le ballon pour nous.
+  reglerEntrainement(s, { nous: 4, eux: 2, gardiens: [true, true], immobiles: false, niveau: 0 });
+  assert.equal(s.joueurs.filter((p) => p.absent).length, 2);
+  assert.equal(s.phase, 'engagement');
+  assert.equal(s.joueurs[s.ballon.porteur].e, 0);
+  for (let i = 0; i < 3000; i++) pas(s);
+  assert.ok(s.phase !== 'fin' && s.phase !== 'mitemps');
   // Les matchs normaux ne changent pas : personne n'est absent.
   assert.ok(creerMatch({ equipes: [a, b], graine: 5 }).joueurs.every((p) => !p.absent));
 });

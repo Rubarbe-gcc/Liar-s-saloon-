@@ -8,7 +8,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { creerMatch, pas, empreinte, simuler, chronoTexte, T, PANIER_X, ANNEAU_Z, CHARGE_IDEALE } from '../public/shared/basket/match.js';
+import { creerMatch, pas, empreinte, simuler, chronoTexte, reglerEntrainement, T, PANIER_X, ANNEAU_Z, CHARGE_IDEALE } from '../public/shared/basket/match.js';
 import { estTrois, TROIS_R, TROIS_COIN } from '../public/shared/basket/terrain.js';
 import { EQUIPES, EQUIPE, STYLES, notesEquipe } from '../public/shared/basket/equipes.js';
 import { ecussonSVG } from '../public/games/plein-stade/commun/ecusson.js';
@@ -295,6 +295,13 @@ test('l’entraînement : moins de joueurs, des plots, pas de fin', () => {
   assert.ok(j.score[1] > 0);
   while (j.phase === 'panier' || j.phase === 'jeu' && j.ballon.porteur < 0) pas(j);
   assert.equal(j.joueurs[j.ballon.porteur].e, 0);
+  // Les réglages changent en pleine partie (la pause) : trois contre deux plots, l'action repart chez nous.
+  reglerEntrainement(j, { nous: 3, eux: 2, immobiles: true, niveau: 2 });
+  assert.equal(j.joueurs.filter((p) => p.absent).length, 1);
+  assert.ok(j.equipes[1].immobile && j.equipes[1].niveau === 2);
+  assert.equal(j.joueurs[j.ballon.porteur].e, 0);
+  for (let i = 0; i < 3000; i++) pas(j);
+  assert.notEqual(j.phase, 'fin');
 });
 
 test('équilibre : chaque équipe gagne entre 35 et 65 % de ses matchs', () => {

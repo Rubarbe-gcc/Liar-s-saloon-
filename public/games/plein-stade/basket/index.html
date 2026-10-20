@@ -30,7 +30,7 @@
     <div class="boutons-menu">
       <button class="btn vert grand" id="b-solo"><b>🏀 Match amical</b><small>Contre l’ordinateur</small></button>
       <button class="btn or grand" id="b-tournoi"><b>🏆 Le Tournoi</b><small id="tournoi-info">Huit clubs, élimination directe</small></button>
-      <button class="btn bleu grand" id="b-entrainement"><b>🎯 Entraînement</b><small>Jeu libre : sans chrono, sans score</small></button>
+      <button class="btn bleu grand" id="b-entrainement"><b>🎯 Entraînement</b><small>Jeu libre : les réglages sont dans la pause</small></button>
       <button class="btn grand" disabled><b>🌐 En ligne</b><small>Bientôt</small></button>
     </div>
     <div class="menu-bas">
@@ -68,31 +68,6 @@
     <h3 class="section">La salle</h3>
     <div class="grille-stades" id="grille-stades"></div>
     <button class="btn vert grand coup-envoi" id="b-jouer"><b>Entre-deux</b></button>
-  </div>
-</section>
-
-<!-- ============================ L'ENTRAÎNEMENT ============================ -->
-<section class="ecran" id="s-entrainement">
-  <header class="barre-haut">
-    <button class="rond retour" id="entr-retour" aria-label="Retour">‹</button>
-    <h2>Entraînement</h2>
-  </header>
-  <div class="page page-equipes">
-    <p class="consigne">Joue librement : pas de chrono, pas de score. Choisis qui est sur le terrain. Touche une équipe pour la changer.</p>
-    <div class="duel">
-      <button class="carte-duel moi" id="entr-moi" aria-label="Ton équipe"></button>
-      <span class="vs">VS</span>
-      <button class="carte-duel lui" id="entr-lui" aria-label="L’adversaire"></button>
-    </div>
-    <div class="options">
-      <div class="option"><span>Ton équipe</span><div class="segments" id="entr-nous"></div></div>
-      <div class="option"><span>Adversaires</span><div class="segments" id="entr-eux"></div></div>
-      <div class="option" id="entr-bloc-mode"><span>Les adversaires</span><div class="segments" id="entr-mode"></div></div>
-      <div class="option" id="entr-bloc-niveau"><span>Niveau</span><div class="segments" id="entr-niveau"></div></div>
-    </div>
-    <h3 class="section">La salle</h3>
-    <div class="grille-stades" id="entr-salles"></div>
-    <button class="btn vert grand coup-envoi" id="entr-jouer"><b>C’est parti</b></button>
   </div>
 </section>
 
@@ -149,8 +124,14 @@
 
 <!-- ============================ PAUSE ============================ -->
 <div class="voile cache" id="v-pause">
-  <div class="panneau">
+  <div class="panneau" id="panneau-pause">
     <h2>Pause</h2>
+    <div class="reglages-entr cache" id="p-entr">
+      <div class="option"><span>Ton équipe</span><div class="segments" id="entr-nous"></div></div>
+      <div class="option"><span>Adversaires</span><div class="segments" id="entr-eux"></div></div>
+      <div class="option" id="entr-bloc-mode"><span>Les adversaires</span><div class="segments" id="entr-mode"></div></div>
+      <div class="option" id="entr-bloc-niveau"><span>Niveau</span><div class="segments" id="entr-niveau"></div></div>
+    </div>
     <button class="btn vert" id="p-reprendre">Reprendre</button>
     <button class="btn" id="p-commandes">Commandes</button>
     <button class="btn rouge" id="p-quitter">Abandonner le match</button>

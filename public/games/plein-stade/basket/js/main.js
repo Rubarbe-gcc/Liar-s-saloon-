@@ -8,7 +8,7 @@
  */
 
 import { EQUIPES, EQUIPE, STYLES, POSTES, NOM_POSTE, notesEquipe, noteGenerale, noteJoueur } from '../../../../shared/basket/equipes.js';
-import { creerMatch, pas, chronoTexte, FPS, T, CHARGE_IDEALE, CHARGE_MAX } from '../../../../shared/basket/match.js';
+import { creerMatch, pas, chronoTexte, reglerEntrainement, FPS, T, CHARGE_IDEALE, CHARGE_MAX } from '../../../../shared/basket/match.js';
 import { NIVEAUX } from '../../../../shared/basket/ia.js';
 import { creerRendu, qualite, reglerQualite } from './trois/rendu3d.js';
 import { SALLES, SALLE } from './trois/salle3d.js';
@@ -87,7 +87,7 @@ function rendreEquipes() {
   $('duel-lui').classList.toggle('cache', !solo);
   document.querySelector('.duel .vs').classList.toggle('cache', !solo);
   $('equipes-titre').textContent = { solo: 'Match amical', tournoi: 'Le Tournoi : ton club', entrainement: 'Entraînement : les équipes' }[choix.mode];
-  $('b-jouer').querySelector('b').textContent = { solo: 'Entre-deux', tournoi: 'Commencer le tournoi', entrainement: 'Valider' }[choix.mode];
+  $('b-jouer').querySelector('b').textContent = { solo: 'Entre-deux', tournoi: 'Commencer le tournoi', entrainement: 'C’est parti' }[choix.mode];
   $('duel-moi').classList.toggle('choisit', choix.pour === 'moi');
   $('duel-lui').classList.toggle('choisit', choix.pour === 'lui');
   $('consigne-equipes').textContent = choix.pour === 'moi' ? 'Choisis ton équipe.' : 'Choisis l’adversaire.';
@@ -99,6 +99,7 @@ function rendreEquipes() {
   }).join('');
   fiche(choix.survol || (choix.pour === 'moi' ? conf.moi : conf.lui));
   $('seg-niveau').innerHTML = NIVEAUX.map((n, i) => `<button data-v="${i}" class="${conf.niveau === i ? 'oui' : ''}">${n.nom}</button>`).join('');
+  $('seg-duree').parentElement.classList.toggle('cache', choix.mode === 'entrainement');
   $('seg-duree').innerHTML = [2, 3, 4, 5].map((d) => `<button data-v="${d}" class="${conf.minutes === d ? 'oui' : ''}">2 × ${d} min</button>`).join('');
   $('grille-stades').innerHTML = SALLES.map((s) => `<button class="stade${conf.salle === s.id ? ' oui' : ''}" data-id="${s.id}" style="--ciel:${COULEURS_SALLE[s.id][0]};--sol:${COULEURS_SALLE[s.id][1]}"><div class="vignette"></div><b>${s.nom}</b><small>${s.desc}</small></button>`).join('');
 }
@@ -131,7 +132,7 @@ function brancherEquipes() {
   $('seg-niveau').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.niveau = +b.dataset.v; garder(); rendreEquipes(); } });
   $('seg-duree').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.minutes = +b.dataset.v; garder(); rendreEquipes(); } });
   $('grille-stades').addEventListener('click', (e) => { const b = e.target.closest('.stade'); if (b) { conf.salle = b.dataset.id; garder(); rendreEquipes(); } });
-  $('equipes-retour').addEventListener('click', () => { if (choix.mode === 'entrainement') ouvrirEntrainement(); else aller('menu'); });
+  $('equipes-retour').addEventListener('click', () => aller('menu'));
   $('b-jouer').addEventListener('click', () => {
     son.reveiller();
     if (choix.suite) { choix.suite(); return; }
@@ -466,41 +467,51 @@ function montrerFin(res, o) {
 
 if (!conf.entr) conf.entr = { nous: 3, eux: 3, immobiles: false };
 
-function ouvrirEntrainement() {
+/** L'entraînement : on choisit les équipes, et c'est parti ; les réglages (qui est sur le terrain) sont dans la pause. */
+function lancerEntrainement() {
+  lancerMatch({
+    equipes: [conf.moi, conf.lui], controles: ['humain', 'ia'], niveaux: [1, conf.niveau], minutes: 3, salle: conf.salle,
+    entrainement: { ...conf.entr },
+    abandon: () => aller('menu'),
+  });
+}
+
+/** Les réglages de l'entraînement, dans la pause (cachés pendant un vrai match). */
+function rendreReglages() {
+  const on = !!partie?.m.entrainement;
+  $('p-entr').classList.toggle('cache', !on);
+  $('panneau-pause').classList.toggle('large', on);
+  if (!on) return;
   const E = conf.entr;
-  carteDuel($('entr-moi'), conf.moi, 'Toi');
-  carteDuel($('entr-lui'), conf.lui, 'Adversaire');
-  const seg = (id, valeurs, actuelle, libelle) => { $(id).innerHTML = valeurs.map((v) => `<button data-v="${v}" class="${actuelle === v ? 'oui' : ''}">${libelle(v)}</button>`).join(''); };
-  seg('entr-nous', [1, 2, 3], E.nous, (n) => `${n} joueur${n > 1 ? 's' : ''}`);
-  seg('entr-eux', [0, 1, 2, 3], E.eux, (n) => (n ? `${n} joueur${n > 1 ? 's' : ''}` : 'Personne'));
+  const seg = (id, valeurs, actuelle, libelle) => { $(id).innerHTML = valeurs.map((v) => `<button data-v="${v}" class="${String(actuelle) === String(v) ? 'oui' : ''}">${libelle(v)}</button>`).join(''); };
+  const joueurs = (n) => (n ? `${n} joueur${n > 1 ? 's' : ''}` : 'Personne');
+  seg('entr-nous', [1, 2, 3], E.nous, joueurs);
+  seg('entr-eux', [0, 1, 2, 3], E.eux, joueurs);
   seg('entr-mode', ['jouent', 'plots'], E.immobiles ? 'plots' : 'jouent', (v) => (v === 'plots' ? 'Immobiles' : 'Jouent'));
   seg('entr-niveau', [0, 1, 2], conf.niveau, (i) => NIVEAUX[i].nom);
-  $('entr-bloc-mode').classList.toggle('cache', !E.eux);
-  $('entr-bloc-niveau').classList.toggle('cache', !E.eux || E.immobiles);
-  $('entr-salles').innerHTML = SALLES.map((x) => `<button class="stade${conf.salle === x.id ? ' oui' : ''}" data-id="${x.id}" style="--ciel:${COULEURS_SALLE[x.id][0]};--sol:${COULEURS_SALLE[x.id][1]}"><div class="vignette"></div><b>${x.nom}</b><small>${x.desc}</small></button>`).join('');
-  aller('entrainement');
+  const personne = !E.eux;
+  $('entr-bloc-mode').classList.toggle('cache', personne);
+  $('entr-bloc-niveau').classList.toggle('cache', personne || E.immobiles);
 }
 
 function brancherEntrainement() {
-  const choisir = (id, f) => $(id).addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; son.bip(); f(b.dataset.v); garder(); ouvrirEntrainement(); });
+  // Un réglage change : il s'applique tout de suite (l'action repart, le ballon pour nous).
+  const choisir = (id, f) => $(id).addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b || !partie?.m.entrainement) return;
+    son.bip();
+    f(b.dataset.v);
+    garder();
+    reglerEntrainement(partie.m, { ...conf.entr, niveau: conf.niveau });
+    partie.prec = null;
+    partie.cour = instantane(partie.m);
+    rendreReglages();
+  });
   choisir('entr-nous', (v) => { conf.entr.nous = +v; });
   choisir('entr-eux', (v) => { conf.entr.eux = +v; });
   choisir('entr-mode', (v) => { conf.entr.immobiles = v === 'plots'; });
   choisir('entr-niveau', (v) => { conf.niveau = +v; });
-  $('entr-salles').addEventListener('click', (e) => { const b = e.target.closest('.stade'); if (b) { conf.salle = b.dataset.id; garder(); ouvrirEntrainement(); } });
-  const equipes = (pour) => () => { ouvrirEquipes('entrainement', ouvrirEntrainement); choix.pour = pour; choix.survol = conf[pour]; rendreEquipes(); };
-  $('entr-moi').addEventListener('click', equipes('moi'));
-  $('entr-lui').addEventListener('click', equipes('lui'));
-  $('entr-retour').addEventListener('click', () => aller('menu'));
-  $('b-entrainement').addEventListener('click', () => { son.reveiller(); ouvrirEntrainement(); });
-  $('entr-jouer').addEventListener('click', () => {
-    son.reveiller();
-    lancerMatch({
-      equipes: [conf.moi, conf.lui], controles: ['humain', 'ia'], niveaux: [1, conf.niveau], minutes: 3, salle: conf.salle,
-      entrainement: { ...conf.entr },
-      abandon: ouvrirEntrainement,
-    });
-  });
+  $('b-entrainement').addEventListener('click', () => { son.reveiller(); ouvrirEquipes('entrainement', lancerEntrainement); });
 }
 
 /* ------------------------------------------------------------------ */
@@ -634,6 +645,7 @@ function basculerPause() {
   if (ecran !== 'match' || !partie) return;
   enPause = !enPause;
   $('v-pause').classList.toggle('cache', !enPause);
+  if (enPause) rendreReglages();
   if (!enPause) $('v-commandes').classList.add('cache');
 }
 

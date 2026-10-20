@@ -91,19 +91,28 @@ export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['hum
       });
     }
   }
-  if (entrainement) {
-    const n = [clamp(entrainement.nous | 0, 1, 4), clamp(entrainement.eux | 0, 0, 4)];
-    const g = entrainement.gardiens || [true, true];
-    m.entrainement = { nous: n[0], eux: n[1], gardiens: [!!g[0], !!g[1]], immobiles: !!entrainement.immobiles };
-    for (let e = 0; e < 2; e++) {
-      m.joueurs[e * 5].absent = !m.entrainement.gardiens[e];
-      ORDRE_ENTREE.forEach((i, k) => { m.joueurs[e * 5 + i].absent = k >= n[e]; });
-    }
-    if (m.entrainement.immobiles) m.equipes[1].immobile = true;
-    m.engage = m.premierEngage = 0;
-  }
+  if (entrainement) { reglerEntrainement(m, entrainement); return m; }
   placerEngagement(m);
   return m;
+}
+
+/**
+ * Change les réglages de l'entraînement en pleine partie (le menu pause) :
+ * o : { nous: 1 à 4, eux: 0 à 4, gardiens: [bool, bool], immobiles, niveau (de l'ordinateur) }.
+ * On réengage, le ballon pour nous.
+ */
+export function reglerEntrainement(m, o) {
+  const n = [clamp(o.nous | 0, 1, 4), clamp(o.eux | 0, 0, 4)];
+  const g = o.gardiens || [true, true];
+  m.entrainement = { nous: n[0], eux: n[1], gardiens: [!!g[0], !!g[1]], immobiles: !!o.immobiles };
+  for (let e = 0; e < 2; e++) {
+    m.joueurs[e * 5].absent = !m.entrainement.gardiens[e];
+    ORDRE_ENTREE.forEach((i, k) => { m.joueurs[e * 5 + i].absent = k >= n[e]; });
+  }
+  m.equipes[1].immobile = m.entrainement.immobiles;
+  if (o.niveau >= 0 && o.niveau <= 2) m.equipes[1].niveau = o.niveau;
+  m.engage = m.premierEngage = 0;
+  placerEngagement(m);
 }
 
 /** À l'entraînement, les joueurs de champ entrent dans cet ordre : l'attaquant, les milieux, le défenseur. */

@@ -8,7 +8,7 @@
  */
 
 import { EQUIPES, EQUIPE, STADES, STYLES, noteGenerale } from '../../../../shared/foot/equipes.js';
-import { creerMatch, pas, chronoTexte, acteursTab, FPS } from '../../../../shared/foot/match.js';
+import { creerMatch, pas, chronoTexte, acteursTab, reglerEntrainement, FPS } from '../../../../shared/foot/match.js';
 import { DUREE_ROULETTE } from '../../../../shared/foot/terrain.js';
 import { NIVEAUX } from '../../../../shared/foot/ia.js';
 import { creerCoupe, matchDuJoueur, stadeDuTour, enregistrer, jouerSansMoi, aJouer, avancer, noterStats, TOURS } from '../../../../shared/foot/coupe.js';
@@ -95,6 +95,7 @@ function rendreEquipes() {
   $('options-match').classList.toggle('cache', choix.mode === 'enligne');
   $('seg-niveau').parentElement.classList.toggle('cache', choix.mode === 'enligne');
   $('seg-niveau').innerHTML = NIVEAUX.map((n, i) => `<button data-v="${i}" class="${conf.niveau === i ? 'oui' : ''}">${n.nom}</button>`).join('');
+  $('seg-duree').parentElement.classList.toggle('cache', choix.mode === 'entrainement');
   $('seg-duree').innerHTML = [2, 3, 5].map((d) => `<button data-v="${d}" class="${conf.minutes === d ? 'oui' : ''}">${d} min</button>`).join('');
   $('opt-format').classList.toggle('cache', choix.mode !== 'ligue');
   $('seg-format').innerHTML = [['simple', 'Aller simple', 3], ['retour', 'Aller-retour', 6]].map(([v, nom, n]) => `<button data-v="${v}" class="${conf.format === v ? 'oui' : ''}">${nom} · ${n} matchs</button>`).join('');
@@ -102,7 +103,7 @@ function rendreEquipes() {
   $('grille-stades').classList.toggle('cache', !stades);
   $('grille-stades').previousElementSibling.classList.toggle('cache', !stades);
   $('grille-stades').innerHTML = STADES.map((s) => `<button class="stade${conf.stade === s.id ? ' oui' : ''}" data-id="${s.id}" style="--ciel:${COULEURS_STADE[s.id][0]};--sol:${COULEURS_STADE[s.id][1]}"><div class="vignette"></div><b>${s.nom}</b><small>${s.desc}</small></button>`).join('');
-  $('b-jouer').querySelector('b').textContent = { solo: 'Coup d’envoi', coupe: 'Commencer la Coupe', ligue: 'Commencer la Ligue', enligne: 'C’est mon équipe', entrainement: 'Valider' }[choix.mode];
+  $('b-jouer').querySelector('b').textContent = { solo: 'Coup d’envoi', coupe: 'Commencer la Coupe', ligue: 'Commencer la Ligue', enligne: 'C’est mon équipe', entrainement: 'C’est parti' }[choix.mode];
 }
 
 function brancherEquipes() {
@@ -128,7 +129,7 @@ function brancherEquipes() {
   $('seg-format').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.format = b.dataset.v; garder(); rendreEquipes(); } });
   $('seg-duree').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.minutes = +b.dataset.v; garder(); rendreEquipes(); } });
   $('grille-stades').addEventListener('click', (e) => { const b = e.target.closest('.stade'); if (b) { conf.stade = b.dataset.id; garder(); rendreEquipes(); } });
-  $('equipes-retour').addEventListener('click', () => { if (choix.mode === 'entrainement') ouvrirEntrainement(); else aller(choix.mode === 'enligne' ? 'enligne' : 'menu'); });
+  $('equipes-retour').addEventListener('click', () => aller(choix.mode === 'enligne' ? 'enligne' : 'menu'));
   $('coupe-retour').addEventListener('click', () => { infoCoupe(); aller('menu'); });
   $('b-jouer').addEventListener('click', () => {
     son.reveiller();
@@ -589,6 +590,7 @@ function basculerPause() {
   if (ecran !== 'match' || !partie) return;
   enPause = !enPause;
   $('v-pause').classList.toggle('cache', !enPause);
+  if (enPause) rendreReglages();
   if (!enPause) $('v-commandes').classList.add('cache');
 }
 
@@ -654,13 +656,26 @@ function passerRalenti() {
 
 if (!conf.entr) conf.entr = { nous: 4, eux: 4, gardiens: [true, true], immobiles: false };
 
-function ouvrirEntrainement() {
+/** L'entraînement : on choisit les équipes, et c'est parti ; les réglages (qui est sur le terrain) sont dans la pause. */
+function lancerEntrainement() {
+  lancerMatch({
+    equipes: [conf.moi, conf.lui], controles: ['humain', 'ia'], niveaux: [1, conf.niveau], minutes: 3, stade: conf.stade, mode: 'entrainement',
+    entrainement: { ...conf.entr, gardiens: [...conf.entr.gardiens] },
+    abandon: () => aller('menu'),
+  });
+}
+
+/** Les réglages de l'entraînement, dans la pause (cachés pendant un vrai match). */
+function rendreReglages() {
+  const on = !!partie?.m.entrainement;
+  $('p-entr').classList.toggle('cache', !on);
+  $('panneau-pause').classList.toggle('large', on);
+  if (!on) return;
   const E = conf.entr;
-  carteDuel($('entr-moi'), conf.moi, 'Toi');
-  carteDuel($('entr-lui'), conf.lui, 'Adversaire');
   const seg = (id, valeurs, actuelle, libelle) => { $(id).innerHTML = valeurs.map((v) => `<button data-v="${v}" class="${String(actuelle) === String(v) ? 'oui' : ''}">${libelle(v)}</button>`).join(''); };
-  seg('entr-nous', [1, 2, 3, 4], E.nous, (n) => `${n} joueur${n > 1 ? 's' : ''}`);
-  seg('entr-eux', [0, 1, 2, 3, 4], E.eux, (n) => (n ? `${n} joueur${n > 1 ? 's' : ''}` : 'Personne'));
+  const joueurs = (n) => (n ? `${n} joueur${n > 1 ? 's' : ''}` : 'Personne');
+  seg('entr-nous', [1, 2, 3, 4], E.nous, joueurs);
+  seg('entr-eux', [0, 1, 2, 3, 4], E.eux, joueurs);
   seg('entr-g0', ['oui', 'non'], E.gardiens[0] ? 'oui' : 'non', (v) => (v === 'oui' ? 'Oui' : 'Non'));
   seg('entr-g1', ['oui', 'non'], E.gardiens[1] ? 'oui' : 'non', (v) => (v === 'oui' ? 'Oui' : 'Non'));
   seg('entr-mode', ['jouent', 'plots'], E.immobiles ? 'plots' : 'jouent', (v) => (v === 'plots' ? 'Immobiles' : 'Jouent'));
@@ -668,32 +683,29 @@ function ouvrirEntrainement() {
   const personne = !E.eux && !E.gardiens[1];
   $('entr-bloc-mode').classList.toggle('cache', personne);
   $('entr-bloc-niveau').classList.toggle('cache', personne || E.immobiles);
-  $('entr-stades').innerHTML = STADES.map((x) => `<button class="stade${conf.stade === x.id ? ' oui' : ''}" data-id="${x.id}" style="--ciel:${COULEURS_STADE[x.id][0]};--sol:${COULEURS_STADE[x.id][1]}"><div class="vignette"></div><b>${x.nom}</b><small>${x.desc}</small></button>`).join('');
-  aller('entrainement');
 }
 
 function brancherEntrainement() {
-  const choisir = (id, f) => $(id).addEventListener('click', (e) => { const b = e.target.closest('button'); if (!b) return; son.bip(); f(b.dataset.v); garder(); ouvrirEntrainement(); });
+  // Un réglage change : il s'applique tout de suite (l'action repart, le ballon pour nous).
+  const choisir = (id, f) => $(id).addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b || !partie?.m.entrainement) return;
+    son.bip();
+    f(b.dataset.v);
+    garder();
+    reglerEntrainement(partie.m, { ...conf.entr, niveau: conf.niveau });
+    partie.prec = null;
+    partie.cour = instantane(partie.m);
+    partie.ralenti = null;
+    rendreReglages();
+  });
   choisir('entr-nous', (v) => { conf.entr.nous = +v; });
   choisir('entr-eux', (v) => { conf.entr.eux = +v; });
   choisir('entr-g0', (v) => { conf.entr.gardiens[0] = v === 'oui'; });
   choisir('entr-g1', (v) => { conf.entr.gardiens[1] = v === 'oui'; });
   choisir('entr-mode', (v) => { conf.entr.immobiles = v === 'plots'; });
   choisir('entr-niveau', (v) => { conf.niveau = +v; });
-  $('entr-stades').addEventListener('click', (e) => { const b = e.target.closest('.stade'); if (b) { conf.stade = b.dataset.id; garder(); ouvrirEntrainement(); } });
-  const equipes = (pour) => () => { ouvrirEquipes('entrainement', ouvrirEntrainement); choix.pour = pour; rendreEquipes(); };
-  $('entr-moi').addEventListener('click', equipes('moi'));
-  $('entr-lui').addEventListener('click', equipes('lui'));
-  $('entr-retour').addEventListener('click', () => aller('menu'));
-  $('b-entrainement').addEventListener('click', () => { son.reveiller(); ouvrirEntrainement(); });
-  $('entr-jouer').addEventListener('click', () => {
-    son.reveiller();
-    lancerMatch({
-      equipes: [conf.moi, conf.lui], controles: ['humain', 'ia'], niveaux: [1, conf.niveau], minutes: 3, stade: conf.stade, mode: 'entrainement',
-      entrainement: { ...conf.entr, gardiens: [...conf.entr.gardiens] },
-      abandon: ouvrirEntrainement,
-    });
-  });
+  $('b-entrainement').addEventListener('click', () => { son.reveiller(); ouvrirEquipes('entrainement', lancerEntrainement); });
 }
 
 /* ---------------- La Coupe ---------------- */

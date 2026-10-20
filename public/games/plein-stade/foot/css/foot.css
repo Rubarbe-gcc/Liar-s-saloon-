@@ -382,3 +382,8 @@ body.doigt .dirige { bottom: max(8px, env(safe-area-inset-bottom)); }
 /* L'entraînement : pas de score ni de chrono au tableau d'affichage. */
 .tableau-score.libre .chrono, .tableau-score.libre .abr, .tableau-score.libre .ec { display: none; }
 .tableau-score.libre .score { font-size: .8em; letter-spacing: .12em; }
+
+/* Les réglages de l'entraînement, dans la pause. */
+.reglages-entr { display: grid; gap: 10px; margin: 0 0 14px; text-align: left; }
+.reglages-entr .option { margin: 0; }
+.reglages-entr .segments button { padding: 6px 10px; }
