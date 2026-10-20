@@ -46,8 +46,13 @@ function creerArbitre() {
 function creerBoxeur(b) {
   const kit = { fond: '#000000', motif: 'uni', motifC: '#000000', short: b.couleurs.short, bas: '#f4f4f4', num: '#ffffff' };
   const f = creerJoueur({ kit, numero: '', nom: b.nom });
-  const peau = f.tete.children[0].material;
+  // La peau à lui (le matériau commun est partagé) : le visage et le corps rougissent sous les coups.
+  const base = f.tete.children[0].material;
+  const visage = base.clone(), peau = base.clone();
+  f.tete.children[0].material = visage;
   f.torse.children[0].material = peau;
+  f.torse.children[1].material = peau;
+  f.marques = creerMarques(f, visage, peau);
   const gant = new THREE.MeshLambertMaterial({ color: b.couleurs.gants, flatShading: true });
   for (const bras of [f.A, f.B]) {
     bras.ep.children[0].material = peau;
@@ -64,6 +69,83 @@ function creerBoxeur(b) {
   f.racine.scale.setScalar(1.08 * b.taille);
   return f;
 }
+
+/**
+ * Les marques des coups, qui s'installent au fil du combat : le visage qui rougit, les bleus aux pommettes
+ * et au front, le nez qui saigne, un œil puis l'autre qui gonflent (et se ferment), l'arcade ouverte et le
+ * filet de sang ; au corps, la peau qui rougit et des marques sur les côtes.
+ * Chacune a son seuil (les dégâts reçus à la tête ou au corps) et apparaît peu à peu.
+ */
+const BLEU = '#5e2350', SANG = '#8f0c12';
+function creerMarques(f, visage, peau) {
+  const plaque = (parent, l, h, x, y, z, couleur, ry = 0, origineHaut = false) => {
+    const g = new THREE.BoxGeometry(l, h, 0.01);
+    if (origineHaut) g.translate(0, -h / 2, 0);
+    const m = new THREE.Mesh(g, new THREE.MeshLambertMaterial({ color: couleur, transparent: true, opacity: 0, depthWrite: false }));
+    m.position.set(x, y, z); m.rotation.y = ry; m.visible = false;
+    parent.add(m);
+    return m;
+  };
+  const gonfle = (x) => {
+    const m = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 1), new THREE.MeshLambertMaterial({ color: BLEU, flatShading: true }));
+    m.position.set(x, 0.025, 0.138); m.visible = false;
+    f.tete.add(m);
+    return m;
+  };
+  const yeux = f.tete.children.filter((c) => c.geometry?.type === 'BoxGeometry' && Math.abs(c.position.z - 0.152) < 0.001);
+  return {
+    visage, peau, teint: visage.color.clone(), teintCorps: peau.color.clone(), yeux,
+    // [la marque, seuil, pleine à (dégâts en plus), opacité max] — seuils à la tête (un combat : ~170 en tout).
+    tete: [
+      [plaque(f.tete, 0.095, 0.075, 0.088, -0.03, 0.148, BLEU, 0.55), 20, 40, 0.8],
+      [plaque(f.tete, 0.095, 0.075, -0.088, -0.03, 0.148, BLEU, -0.55), 40, 40, 0.8],
+      [plaque(f.tete, 0.11, 0.05, 0.02, 0.095, 0.152, BLEU, 0), 60, 40, 0.7],
+      [plaque(f.tete, 0.05, 1, 0, -0.04, 0.168, SANG, 0, true), 50, 70, 0.95],
+      [plaque(f.tete, 0.07, 0.02, -0.062, 0.074, 0.162, SANG, -0.2), 100, 20, 1],
+      [plaque(f.tete, 0.022, 1, -0.085, 0.07, 0.158, SANG, -0.35, true), 105, 80, 0.95],
+    ],
+    oeilG: gonfle(0.058), oeilD: gonfle(-0.058),
+    corps: [
+      [plaque(f.torse, 0.11, 0.09, 0.14, 0.22, 0.137, '#a3263a'), 10, 20, 0.6],
+      [plaque(f.torse, 0.11, 0.09, -0.14, 0.2, 0.137, '#a3263a'), 22, 20, 0.6],
+      [plaque(f.torse, 0.08, 0.07, 0.15, 0.36, 0.137, BLEU), 38, 20, 0.6],
+    ],
+    // Le sang qui a coulé sur la poitrine (seuil à la tête).
+    poitrine: plaque(f.torse, 0.05, 1, -0.02, 0.56, 0.138, SANG, 0, true),
+  };
+}
+
+const _ROUGE = new THREE.Color('#a32f3f');
+/** Met les marques à jour d'après les dégâts reçus (gardés tels quels quand la vue ne les donne pas : les cinématiques). */
+function majMarques(f, p) {
+  const M = f.marques;
+  if (p.degTete !== undefined) { M.dt = p.degTete; M.dc = p.degCorps; }
+  const dt = M.dt || 0, dc = M.dc || 0;
+  const montee = (d, seuil, plein) => Math.max(0, Math.min(1, (d - seuil) / plein));
+  for (const [m, seuil, plein, op] of M.tete) {
+    const k = montee(dt, seuil, plein);
+    m.visible = k > 0;
+    m.material.opacity = k * op;
+    // Le sang coule : le filet s'allonge avec les coups.
+    if (m.geometry.parameters.height === 1) m.scale.y = 0.02 + k * (m.position.x === 0 ? 0.12 : 0.17);
+  }
+  const kp = montee(dt, 130, 80);
+  M.poitrine.visible = kp > 0; M.poitrine.material.opacity = kp * 0.85; M.poitrine.scale.y = 0.02 + kp * 0.24;
+  for (const [m, seuil, plein, op] of M.corps) { const k = montee(dc, seuil, plein); m.visible = k > 0; m.material.opacity = k * op; }
+  // Les yeux : le gauche gonfle, puis le droit ; à fond, l'œil n'est plus qu'une fente.
+  [[M.oeilG, 75, 70, 0], [M.oeilD, 140, 60, 1]].forEach(([m, seuil, plein, i]) => {
+    const k = montee(dt, seuil, plein);
+    m.visible = k > 0;
+    m.scale.set(0.6 + 0.9 * k, 0.5 + 0.6 * k, 0.4 + 0.45 * k);
+    const oeil = M.yeux.find((y) => Math.sign(y.position.x) === Math.sign(m.position.x));
+    if (oeil) oeil.scale.y = 1 - 0.8 * k;
+  });
+  M.visage.color.copy(M.teint).lerp(_ROUGE, Math.min(0.6, dt / 330));
+  M.peau.color.copy(M.teintCorps).lerp(_ROUGE, Math.min(0.45, dc / 100 + dt / 900));
+}
+
+/** Combien il est entamé (0 : frais ; 1 : à bout) : la santé et le souffle. */
+const usure = (p) => (p.sante === undefined ? 0 : Math.max(0, Math.min(1, (1 - p.sante / 100) * 0.6 + (1 - p.endu / 100) * 0.4)));
 
 /** La ceinture du champion : une large bande de cuir, la grande plaque d'or au centre, deux petites de chaque côté. */
 function creerCeinture() {
@@ -121,9 +203,11 @@ function poseBoxe(f, p, o, dt) {
     return Object.assign(P, { by: 0.86 - 0.3 * u, y: 0, torse: 0.16 + 0.75 * u, tete: -0.2 * u, hancheA: -0.32 - 0.6 * u, genouA: 0.42 + 0.6 * u, hancheB: 0.2 + 0.3 * u, genouB: 0.5 + 0.3 * u });
   }
   const marche = o.vitesse > 0.3;
-  // Les appuis : jambe gauche devant, droite derrière, genoux fléchis ; un petit sautillement sur place.
-  const rebond = Math.sin(o.t * 7 + f.phase) * 0.012;
-  Object.assign(P, { by: 0.86 + rebond, torse: 0.16, tete: 0.12 });
+  // Les appuis : jambe gauche devant, droite derrière, genoux fléchis ; un petit sautillement sur place
+  // (qui s'éteint quand il est entamé : le dos se voûte, la tête tombe, il souffle fort).
+  const u = usure(p), souffle = p.endu === undefined ? 0 : 1 - p.endu / 100;
+  const rebond = Math.sin(o.t * 7 + f.phase) * 0.012 * (1 - u);
+  Object.assign(P, { by: 0.86 + rebond - 0.04 * u, torse: 0.16 + 0.16 * u + Math.sin(o.t * 4.5 + f.phase) * 0.035 * souffle, tete: 0.12 + 0.14 * u });
   if (!marche) Object.assign(P, { hancheA: -0.32, genouA: 0.42, hancheB: 0.2, genouB: 0.5, y: 0 });
   else { P.hancheA -= 0.15; P.hancheB += 0.1; P.genouA += 0.25; P.genouB += 0.25; }
   if (p.coup) {
@@ -225,6 +309,9 @@ function brasBoxe(f, p, t, garde, cible) {
   if (p.garde === 'haute') { gA = V(0.09, 0.8, 0.22); gB = V(-0.08, 0.8, 0.2); }
   if (p.garde === 'basse') { gA = V(0.14, 0.36, 0.24); gB = V(-0.12, 0.36, 0.22); }
   if (p.etourdi) { gA.y -= 0.2; gB.y -= 0.22; }
+  // Entamé : les gants pèsent, la garde descend.
+  const u = usure(p);
+  gA.y -= 0.14 * u; gB.y -= 0.16 * u;
   // Un léger va-et-vient des gants en garde.
   gA.z += Math.sin(t * 5.5) * 0.02; gB.z += Math.sin(t * 5.5 + 1.7) * 0.015;
   gA = tourner(gA, garde); gB = tourner(gB, garde);
@@ -318,9 +405,20 @@ export function creerRendu(hote, o) {
   // La sueur qui gicle sous un gros coup.
   const gouttes = [];
   const texGoutte = (() => { const c = document.createElement('canvas'); c.width = c.height = 32; const g = c.getContext('2d'); const gr = g.createRadialGradient(16, 16, 0, 16, 16, 16); gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 32, 32); return new THREE.CanvasTexture(c); })();
-  const gicler = (x, y, z, n) => {
+  // Le sang sur le tapis : des taches qui restent (les plus vieilles s'effacent au-delà de quarante).
+  const taches = [];
+  const geoTache = new THREE.CircleGeometry(1, 9);
+  const tacher = (x, z, r = 0.05) => {
+    const t = new THREE.Mesh(geoTache, new THREE.MeshBasicMaterial({ color: '#6e0b12', transparent: true, opacity: 0.55 + Math.random() * 0.3, depthWrite: false }));
+    t.rotation.x = -Math.PI / 2;
+    t.position.set(x + (Math.random() - 0.5) * 0.3, HAUT + 0.004 + taches.length * 0.00002, z + (Math.random() - 0.5) * 0.3);
+    t.scale.set(r * (0.7 + Math.random() * 0.8), r * (0.6 + Math.random() * 0.6), 1);
+    scene.add(t); taches.push(t);
+    if (taches.length > 40) { const v = taches.shift(); scene.remove(v); v.material.dispose(); }
+  };
+  const gicler = (x, y, z, n, couleur = '#dff3ff') => {
     for (let k = 0; k < n; k++) {
-      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texGoutte, color: '#dff3ff', transparent: true, opacity: 0.85, depthWrite: false }));
+      const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texGoutte, color: couleur, transparent: true, opacity: 0.85, depthWrite: false }));
       s.position.set(x, y, z); s.scale.setScalar(0.07);
       s.v = new THREE.Vector3((Math.random() - 0.5) * 2.4, Math.random() * 2, (Math.random() - 0.5) * 2.4);
       s.vie = 0.5 + Math.random() * 0.3;
@@ -452,6 +550,17 @@ export function creerRendu(hote, o) {
       while (da < -Math.PI) da += Math.PI * 2;
       f.racine.rotation.y += da * Math.min(1, dt * (p.coup ? 26 : 14));
       poser(f, P, Math.min(1, dt * (p.coup ? 30 : 16)));
+      majMarques(f, p);
+      // L'arcade ouverte saigne : de temps en temps, une goutte tombe sur le tapis.
+      if (!humeur && (f.marques.dt || 0) > 110) {
+        f.marques.goutte = (f.marques.goutte ?? 1) - dt * (0.4 + (f.marques.dt - 110) / 120);
+        if (f.marques.goutte <= 0) {
+          f.marques.goutte = 1;
+          const t = f.tete.localToWorld(new THREE.Vector3(-0.07, -0.05, 0.15));
+          gicler(t.x, t.y, t.z, 1, '#a0101a');
+          tacher(t.x, t.z, 0.025);
+        }
+      }
       const k = p.aTerre ? (cheville ? -0.6 : 0) : rapproche + (enGarde ? elan(p) : 0);
       f.racine.position.set(p.x + p.dx * k, HAUT, -p.y - p.dy * k);
       if (enGarde) {
@@ -495,6 +604,11 @@ export function creerRendu(hote, o) {
         const d = v.boxeurs[ev.cible];
         const fort = ev.degats > 6 || ev.contre;
         gicler(d.x, HAUT + (ev.corps ? 1.2 : 1.75) * 1.08, -d.y, fort ? 10 : 4);
+        // Un visage déjà ouvert : du sang à l'impact.
+        if (!ev.corps && (figs[ev.cible].marques.dt || 0) > 70) {
+          gicler(d.x, HAUT + 1.75 * 1.08, -d.y, fort ? 6 : 2, '#b3121a');
+          if (fort || Math.random() < 0.3) tacher(d.x, -d.y, fort ? 0.08 : 0.04);
+        }
         excitation = Math.max(excitation, fort ? 0.8 : 0.35);
         if (fort) { cam.secousse = Math.max(cam.secousse, 0.06 + ev.degats * 0.008); for (const s of flashs) if (Math.random() < 0.5) s.material.opacity = 1; }
         if (ev.critique) {

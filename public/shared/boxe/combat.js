@@ -67,7 +67,7 @@ export function creerCombat({ boxeurs, graine = 1, minutes = 2, rounds = 3, cont
       sante: SANTE_MAX, santeMax: SANTE_MAX, endu: ENDU_MAX,
       coup: null, garde: null, esquive: 0, esqX: 0, esqY: 0, esqRepos: 0, sonne: 0, ouvert: 0, etourdi: 0,
       sol: false, kdRound: 0, kdTotal: 0, relever: 0, seRelevera: -1, dec: 0, lu: -1, reponse: null, ouvertN: 0, puni: 0, dernierCoup: 0, gardeT: 0, gardeZ: 'haute', tour: 1,
-      amenee: 0, aTerre: null, luA: -1, tapeT: 0,
+      amenee: 0, aTerre: null, luA: -1, tapeT: 0, degTete: 0, degCorps: 0,
     })),
     prec: [0, 0],
     compte: 0, auTapis: -1,
@@ -92,7 +92,7 @@ export function reglerEntrainement(m, o) {
   coin.ctrl = adversaire === 'sac' ? 'aucun' : 'ia';
   coin.sparring = adversaire === 'sparring';
   if (o.niveau >= 0 && o.niveau <= 2) coin.niveau = o.niveau;
-  for (const p of m.boxeurs) Object.assign(p, { sante: SANTE_MAX, santeMax: SANTE_MAX, endu: ENDU_MAX, kdRound: 0 });
+  for (const p of m.boxeurs) Object.assign(p, { sante: SANTE_MAX, santeMax: SANTE_MAX, endu: ENDU_MAX, kdRound: 0, degTete: 0, degCorps: 0 });
   placer(m);
   m.phase = 'presentation';
   m.t = 30;
@@ -321,6 +321,7 @@ function resoudre(m, a, d, evs) {
   m.rd.pts[a.e] += C.points * (contre ? 1.25 : 1) * (critique ? 1.5 : 1);
   m.rd.n[a.e] += 1;
   m.rd.deg[a.e] += deg;
+  if (c.corps) d.degCorps += deg; else d.degTete += deg;
   evs.push({ type: 'touche', boxeur: a.e, cible: d.e, coup: c.type, corps: c.corps, contre, critique, degats: deg, sante: d.sante });
   if (d.sante <= 0) auTapis(m, d, a, evs);
 }
@@ -418,6 +419,7 @@ function auSol(m, k, ap, evs) {
     m.stats.touches[a.e] += 1;
     m.stats.tete[a.e] += 1;
     m.rd.pts[a.e] += C.points; m.rd.n[a.e] += 1; m.rd.deg[a.e] += deg;
+    d.degTete += deg;
     const fatal = hasard(m) < SOL.fatal + Math.max(0, 50 - d.sante) / 350 + (a.n.puissance - 70) / 1200 - (S.garde ? 0.015 : 0);
     evs.push({ type: 'frappe-sol', boxeur: a.e, cible: d.e, degats: deg, garde: S.garde, fatal, sante: d.sante });
     if (fatal) { m.stats.critiques[a.e] += 1; finir(m, a.e, 'ko', evs); return; }

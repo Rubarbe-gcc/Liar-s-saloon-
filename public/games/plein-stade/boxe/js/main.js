@@ -157,6 +157,7 @@ function instantane(m) {
         esquive: p.esquive > 0 ? p.esquive / 16 : 0, esqCote: p.esquive > 0 ? Math.sign(p.esqX * -p.dy + p.esqY * p.dx) : 0,
         sonne: p.sonne > 0 ? Math.min(1, p.sonne / 12) : 0, etourdi: p.etourdi > 0,
         amenee: p.amenee > 0 ? p.amenee : 0, aTerre: p.aTerre,
+        sante: p.sante, endu: p.endu, degTete: p.degTete, degCorps: p.degCorps,
       };
     }),
     sol: m.sol ? { dessus: m.sol.dessus, prise: m.sol.prise?.type || null, jauge: m.sol.jauge, coupT: m.sol.coupT, garde: m.sol.garde } : null,
