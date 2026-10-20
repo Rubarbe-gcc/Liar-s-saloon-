@@ -15,7 +15,7 @@ import { creerLissage } from '../../commun/lissage.js';
 import { NIVEAUX } from '../../../../shared/boxe/ia.js';
 import { creerRendu, qualite, reglerQualite } from './trois/rendu3d.js';
 import { creerCinematique } from '../../commun/cinematique.js';
-import { intro, victoire, badgeSVG } from './cinematiques.js';
+import { intro, annonce, badgeSVG } from './cinematiques.js';
 import * as saisie from '../../commun/saisie.js';
 import * as son from '../../commun/son.js';
 import * as succes from '../../../../shared/succes.js';
@@ -343,7 +343,7 @@ function afficher(dt) {
   if (m.phase === 'fin' && P.finVue > 0) {
     P.finVue -= dt;
     if (P.finVue <= 0 && P.o.mode === 'enligne' && !net.toutConfirme()) P.finVue = 0.05;
-    else if (P.finVue <= 0) { P.finVue = -1; cine.lancer(victoire(P, m.vainqueur, { ceinture: !!P.o.ceinture }), { passable: true, fin: finDuCombat }); }
+    else if (P.finVue <= 0) { P.finVue = -1; cine.lancer(annonce(P, m.vainqueur, { ceinture: !!P.o.ceinture }), { passable: true, fin: finDuCombat }); }
   }
 }
 

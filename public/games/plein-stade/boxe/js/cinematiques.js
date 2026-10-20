@@ -9,6 +9,7 @@
 
 import { htmlAffiche, htmlCarte, htmlTitre } from '../../commun/cinematique.js';
 import { CATEGORIES, STYLES, noteGenerale } from '../../../../shared/boxe/boxeurs.js';
+import * as son from '../../commun/son.js';
 
 /** Le badge d'un boxeur : ses initiales sur un rond aux couleurs de ses gants. */
 export function badgeSVG(b, taille = 48) {
@@ -47,6 +48,80 @@ export function intro(P) {
     })),
     { duree: 0.9, vue: () => vue, debut: (api) => api.afficher(htmlTitre('Ding !')), maj: (t) => R.cadrer([0, -6.5, 3.2], [0, 0, 1.3], t < 0.03) },
   ];
+}
+
+/** Comment le combat a été gagné, en toutes lettres (et les cartes des juges, à la décision). */
+function verdict(m) {
+  if (m.issue === 'ko') return `par K.-O. au round ${m.round}`;
+  if (m.issue === 'arret') return `par arrêt de l’arbitre au round ${m.round}`;
+  const type = { unanime: 'à l’unanimité', majorite: 'à la majorité', partagee: 'sur décision partagée', arbitre: 'sur décision de l’arbitre' }[m.decision?.type] || 'aux points';
+  const cartes = (m.decision?.totaux || []).map((t) => `${Math.max(...t)}-${Math.min(...t)}`).join(', ');
+  return `aux points, ${type}${cartes ? ` (${cartes})` : ''}`;
+}
+
+/**
+ * L'annonce, comme dans les grandes soirées : l'arbitre au centre du ring, un boxeur de chaque côté, qui leur
+ * tient le poignet. Le public se tait, la caméra passe de l'un à l'autre… puis l'arbitre lève le bras du vainqueur.
+ * En finale du Tournoi, la ceinture suit.
+ */
+export function annonce(P, v, { ceinture = false } = {}) {
+  const R = P.rendu, m = P.m, b = P.boxeurs[v];
+  const boxeurs = [vueBoxeur(-0.78, 0, 0, -1), vueBoxeur(0.78, 0, 0, -1)];
+  const tenus = { phase: 'fin', boxeurs, humeurs: ['annonce', 'annonce'] };
+  const apres = { phase: 'fin', boxeurs, humeurs: [0, 1].map((e) => (e === v ? 'annonce' : 'decu')) };
+  const couleurs = [b.couleurs.gants, b.couleurs.short, b.couleurs.liseré, '#ffd23f', '#ffffff'];
+  let prochain = 0;
+  const etapes = [
+    {
+      // Au centre : l'arbitre entre les deux, il leur prend le poignet.
+      duree: 2.4,
+      vue: () => tenus,
+      debut: (api) => {
+        R.annonce({ x: 0, y: 0, leve: -1 });
+        api.afficher(htmlTitre('Le verdict'));
+        son.public_(0.05);
+        P.com?.dire('Les deux boxeurs rejoignent l’arbitre au centre du ring…', { important: true, emotion: 0.4 });
+      },
+      maj: (t) => R.cadrer([0.2 - t * 0.1, -4.6 + t * 0.3, 1.9], [0, 0, 1.55], t < 0.03),
+    },
+    {
+      // Le suspense : l'arbitre, en gros plan.
+      duree: 1.5,
+      vue: () => tenus,
+      debut: (api) => { api.afficher(htmlTitre('Et le vainqueur…')); son.bip(); },
+      maj: (t) => R.cadrer([0.1, -1.5 + t * 0.15, 1.9], [0, 0, 1.85], t < 0.03),
+    },
+    // Un regard sur chacun.
+    ...[0, 1].map((e) => ({
+      duree: 0.85,
+      vue: () => tenus,
+      debut: (api) => { api.afficher(''); son.bip(); },
+      maj: (t) => R.cadrer([boxeurs[e].x * 1.15, -1.7 + t * 0.1, 1.95], [boxeurs[e].x, 0, 1.85], t < 0.03),
+    })),
+    {
+      // Le bras levé : le public explose.
+      duree: 4.2,
+      vue: () => apres,
+      debut: (api) => {
+        R.annonce({ leve: v });
+        R.flash();
+        son.but();
+        son.acclamation(1);
+        api.afficher(htmlTitre(b.nom, verdict(m)));
+        P.com?.dire(`Le vainqueur… <b>${b.nom}</b>, « ${b.surnom} », ${verdict(m)} !`, { important: true, emotion: 1 });
+        prochain = 0;
+      },
+      maj: (t, dt) => {
+        const ang = -0.35 + t * 0.12;
+        R.cadrer([Math.sin(ang) * 3.6, -Math.cos(ang) * 3.6, 1.8], [boxeurs[v].x * 0.5, 0, 1.9], t < 0.03);
+        prochain -= dt;
+        if (prochain <= 0) { R.flash(); R.feuArtifice(couleurs); prochain = 0.6 + Math.random() * 0.5; }
+      },
+    },
+  ];
+  // La ceinture, en finale du Tournoi : l'arbitre s'écarte, le champion la brandit.
+  if (ceinture) etapes.push(...victoire(P, v, { ceinture: true }).map((e, k) => (k === 0 ? { ...e, debut: (api) => { R.annonce(null); e.debut(api); } } : e)));
+  return etapes;
 }
 
 /** La fin : le vainqueur, le bras levé ; avec ceinture, il la brandit. */

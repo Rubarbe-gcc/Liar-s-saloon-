@@ -27,6 +27,22 @@ export function qualite() {
 export function reglerQualite(q) { try { localStorage.setItem(CLE_QUALITE, q); } catch { /* ignore */ } }
 
 /** Un boxeur : le joueur commun, torse nu, le short et les gants à ses couleurs. */
+/** L'arbitre : chemise blanche, nœud papillon et pantalon noirs (le joueur commun, rhabillé). */
+function creerArbitre() {
+  const kit = { fond: '#f4f4f4', motif: 'uni', motifC: '#f4f4f4', short: '#16161a', bas: '#16161a', num: '#f4f4f4' };
+  const f = creerJoueur({ kit, numero: '', nom: 'Gaston Verdelet' });
+  const noir = new THREE.MeshLambertMaterial({ color: '#16161a', flatShading: true });
+  // Le pantalon : les cuisses en noir aussi.
+  for (const j of [f.JA, f.JB]) j.hanche.children[0].material = noir;
+  // Le nœud papillon, sous le menton.
+  const noeud = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.05, 0.03), noir);
+  noeud.position.set(0, 0.58, 0.145);
+  f.torse.add(noeud);
+  f.racine.scale.setScalar(1.06);
+  f.racine.visible = false;
+  return f;
+}
+
 function creerBoxeur(b) {
   const kit = { fond: '#000000', motif: 'uni', motifC: '#000000', short: b.couleurs.short, bas: '#f4f4f4', num: '#ffffff' };
   const f = creerJoueur({ kit, numero: '', nom: b.nom });
@@ -279,6 +295,39 @@ export function creerRendu(hote, o) {
   scene.add(ceinture);
   const feux = creerFeux(scene);
   const presse = creerPresse(scene);
+  // L'arbitre : il n'entre qu'à la fin, pour annoncer le vainqueur.
+  const arbitre = creerArbitre();
+  scene.add(arbitre.racine);
+  if (q !== 'haute') arbitre.racine.traverse((x) => { x.castShadow = false; });
+  let annonce = null;
+
+  /**
+   * L'annonce : l'arbitre au centre, un boxeur de chaque côté. Il tient leurs poignets ;
+   * quand vient le moment, il lève le bras du vainqueur (leve : 0 ou 1, -1 tant qu'on attend).
+   */
+  function poserAnnonce(v, dt) {
+    if (!annonce) { arbitre.racine.visible = false; return; }
+    arbitre.racine.visible = true;
+    arbitre.racine.position.set(annonce.x, HAUT, -annonce.y);
+    arbitre.racine.rotation.y = 0;
+    const P = poseDe(arbitre, { p: { etat: 'normal', frappe: 0, geste: 0, gesteType: 0, volee: 0 }, vitesse: 0, t: temps, gardien: false, cote: 0, tab: false, charge: 0, humeur: null }, dt);
+    poser(arbitre, P, Math.min(1, dt * 10));
+    arbitre.racine.updateMatrixWorld(true);
+    // De chaque côté : sa main et celle du boxeur se rejoignent (en bas, ou tout en haut pour le vainqueur).
+    annonce.leveK = (annonce.leveK || 0) + ((annonce.leve >= 0 ? 1 : 0) - (annonce.leveK || 0)) * Math.min(1, dt * 7);
+    for (let i = 0; i < 2; i++) {
+      const b = v.boxeurs[i], f = figs[i];
+      const sx = Math.sign(b.x - annonce.x) || (i === 0 ? -1 : 1);
+      const leve = annonce.leve === i ? annonce.leveK : 0;
+      // Le perdant, lâché, baisse la tête : on ne le tient plus.
+      if (annonce.leve >= 0 && annonce.leve !== i) continue;
+      const main = new THREE.Vector3(annonce.x + sx * (0.4 - 0.08 * leve), HAUT + 1.0 + 1.45 * leve, -annonce.y + 0.12);
+      poserBras(sx > 0 ? arbitre.A : arbitre.B, arbitre.torse.worldToLocal(main.clone()), V(0, -1, -0.2));
+      f.racine.updateMatrixWorld(true);
+      // Le bras du boxeur du côté de l'arbitre : le gauche s'il est à gauche de l'arbitre… vu de l'arbitre.
+      poserBras(sx < 0 ? f.A : f.B, f.torse.worldToLocal(main.clone().add(new THREE.Vector3(sx * 0.06, 0.04, 0))), V(0, -1, -0.2));
+    }
+  }
 
   /* ---------------- La caméra ---------------- */
   const cam = { mode: 'tele', pos: new THREE.Vector3(0, 3.6, 7), vise: new THREE.Vector3(0, HAUT + 1.1, 0), secousse: 0, cote: 1 };
@@ -381,6 +430,7 @@ export function creerRendu(hote, o) {
     ring.maj(dt, Math.min(1, excitation), v.boxeurs);
     feux.maj(dt);
     presse.maj(dt);
+    poserAnnonce(v, dt);
     renderer.render(scene, camera);
   }
 
@@ -424,6 +474,10 @@ export function creerRendu(hote, o) {
       cam.mode = 'libre';
     },
     /** La ceinture : en (x, y) du moteur, à la hauteur h au-dessus du tapis ; null pour la cacher. */
+    /** L'annonce du vainqueur : { x, y (le centre), leve : -1 (on attend), 0 ou 1 } ; null : l'arbitre s'en va. */
+    annonce(a) { annonce = a ? { ...annonce, ...a } : null; },
+    /** Les flashs des photographes, tous à la fois. */
+    flash() { for (const s of flashs) s.material.opacity = 1; },
     trophee(t) { ceinture.visible = !!t; if (t) { ceinture.position.set(t.x, HAUT + t.h, -t.y); ceinture.rotation.y = Math.sin(performance.now() / 600) * 0.4; ceinture.scale.setScalar(t.echelle || 1); } },
     presse(p) { if (p) presse.montrer({ ...p }); else presse.cacher(); },
     feuArtifice(couleurs) { feux.lancer((Math.random() - 0.5) * 18, 9 + Math.random() * 4, -6 - Math.random() * 6, couleurs); },
@@ -431,6 +485,8 @@ export function creerRendu(hote, o) {
     secouer(f) { cam.secousse = Math.max(cam.secousse, f); },
     /** Pour les essais : où sont les gants et les têtes (en 3D). */
     etatPoings: () => figs.map((f) => { const w = (o) => o.getWorldPosition(new THREE.Vector3()).toArray().map((v) => +v.toFixed(2)); const g = (o) => o.localToWorld(new THREE.Vector3(0, -0.31, 0)).toArray().map((v) => +v.toFixed(2)); return { gA: g(f.A.coude.children[1]), gB: g(f.B.coude.children[1]), tete: w(f.tete), ventre: w(f.bassin) }; }),
+    /** Pour les essais : l'arbitre (visible ? ses mains). */
+    etatArbitre: () => { const g = (o) => o.localToWorld(new THREE.Vector3(0, -0.31, 0)).toArray().map((v) => +v.toFixed(2)); return { visible: arbitre.racine.visible, mainA: g(arbitre.A.coude.children[1]), mainB: g(arbitre.B.coude.children[1]), tete: arbitre.tete.getWorldPosition(new THREE.Vector3()).toArray().map((v) => +v.toFixed(2)) }; },
     /** Pour les essais : où est la caméra, où elle regarde. */
     etatCamera: () => ({ mode: cam.mode, ang: cam.ang, pos: camera.position.toArray().map((v) => +v.toFixed(2)), vise: cam.vise.toArray().map((v) => +v.toFixed(2)) }),
     qualite: q,
