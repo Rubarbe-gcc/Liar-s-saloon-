@@ -213,7 +213,10 @@ function boucle(t) {
   P.dernier = t;
   if (cine.actif) { cine.maj(dt); P.acc = 0; }
   else if (!enPause || P.o.mode === 'enligne') {
-    P.acc += dt;
+    // Le ralenti d'un coup critique : le temps du combat passe trois fois moins vite, un court instant.
+    let vitesse = 1;
+    if (P.ralenti > 0) { P.ralenti -= dt; vitesse = 0.3; }
+    P.acc += dt * vitesse;
     P.periode = P.o.mode === 'enligne' ? PAS * (1 + Math.min(0.08, Math.max(0, (net.ecart() - 1) * 0.03))) : PAS;
     let n = 0;
     while (P.acc >= P.periode && n < 6) { uneImage(); P.acc -= P.periode; n += 1; }
@@ -269,10 +272,19 @@ function reagir(evs) {
     switch (ev.type) {
       case 'touche':
         son.arret();
+        if (ev.critique) {
+          // Le coup critique : un instant au ralenti (pas en ligne : les deux écrans doivent rester à la même heure).
+          son.occasion(); son.arret();
+          bandeau('Coup critique !', `${partie.boxeurs[ev.boxeur].nom.split(' ').slice(-1)[0]} · ${{ jab: 'jab', crochet: 'crochet', upper: 'uppercut' }[ev.coup]}${ev.corps ? ' au corps' : ''}`);
+          if (P.o.mode !== 'enligne') P.ralenti = 0.55;
+          P.excit = Math.max(P.excit, 1.1);
+        }
         if (ev.degats > 6 || ev.contre) { son.occasion(); P.excit = Math.max(P.excit, 0.7); }
         break;
       case 'bloque': son.controle(); break;
       case 'esquive-reussie': if (ev.boxeur === P.local) bandeau('Esquivé !'); break;
+      // Notre coup ne trouve que le vide : on dit pourquoi (trop loin, ou il a paré).
+      case 'vide': if (ev.boxeur === P.local && P.o.controles[P.local] === 'humain') bandeau(ev.pare ? 'Paré !' : 'Trop loin !', ev.pare ? '' : 'Rapproche-toi pour toucher'); break;
       case 'cloche':
         son.poteau();
         if (ev.debut) { bandeau(`Round ${ev.round}`); ecranGeant(); } else { setTimeout(() => son.poteau(), 250); setTimeout(() => son.poteau(), 500); }
@@ -365,7 +377,7 @@ function montrerFin(res, o) {
   };
   const pc = (e) => (st.lances[e] ? Math.round((st.touches[e] / st.lances[e]) * 100) : 0);
   $('fin-stats').innerHTML = ligne('Coups portés', st.touches[0], st.touches[1]) + ligne('Précision (%)', pc(0), pc(1)) + ligne('À la tête', st.tete[0], st.tete[1])
-    + ligne('Au corps', st.corps[0], st.corps[1]) + ligne('Coups bloqués', st.bloques[0], st.bloques[1]) + ligne('Esquives', st.esquives[0], st.esquives[1]) + ligne('Contres', st.contres[0], st.contres[1]) + ligne('Knock-downs', st.kd[0], st.kd[1]);
+    + ligne('Au corps', st.corps[0], st.corps[1]) + ligne('Coups bloqués', st.bloques[0], st.bloques[1]) + ligne('Esquives', st.esquives[0], st.esquives[1]) + ligne('Contres', st.contres[0], st.contres[1]) + ligne('Coups critiques', st.critiques?.[0] ?? 0, st.critiques?.[1] ?? 0) + ligne('Knock-downs', st.kd[0], st.kd[1]);
   const act = $('fin-actions');
   act.innerHTML = '';
   $('fin-attente').textContent = '';

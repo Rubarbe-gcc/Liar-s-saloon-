@@ -48,7 +48,7 @@ export const BOXEURS = [
   b('rocaillon', 'Bastien Rocaillon', 'La Forge', 'Terre-Rouge', 'moyen', 'cogneur', [79, 70, 74, 66, 76], ['#b5492a', '#f3d6a0', '#5a2412'], 'Un seul crochet suffit.'),
   b('delmas', 'Kofi Delmas', 'Le Mur', 'Neigeval', 'moyen', 'contreur', [74, 72, 80, 90, 78], ['#e8f4ff', '#2a5d8f', '#2a5d8f'], 'Rien ne passe. Tout revient.'),
   b('sarrette', 'Lenny Sarrette', 'Bulldozer', 'L’Anse-Noire', 'moyen', 'bagarreur', [78, 74, 84, 58, 78], ['#151515', '#c23b3b', '#e6e6e6'], 'Je recule pas. Jamais.'),
-  b('vasseur', 'Aurélien Vasseur', 'Le Professeur', 'Haute-Plaine', 'moyen', 'technicien', [74, 76, 80, 82, 74], ['#8a5a2b', '#f0e0c0', '#4a2e12'], 'La boxe, ça se révise.'),
+  b('vasseur', 'Aurélien Vasseur', 'Le Professeur', 'Haute-Plaine', 'moyen', 'technicien', [72, 75, 80, 80, 72], ['#8a5a2b', '#f0e0c0', '#4a2e12'], 'La boxe, ça se révise.'),
   b('malbrouck', 'Gédéon Malbrouck', 'La Montagne', 'Grand-Récif', 'lourd', 'cogneur', [81, 54, 66, 60, 76], ['#0f6e6e', '#9ff0e0', '#083a3a'], 'Quand je tombe, c’est la terre qui tremble.'),
   b('kerlouan', 'Ivan Kerlouan', 'L’Ours', 'Ventenac', 'lourd', 'corps', [88, 60, 80, 70, 86], ['#3c8d3c', '#ffffff', '#1d4a1d'], 'Je serre, tu souffles.'),
   b('brancourt', 'Théo Brancourt', 'Le Gentleman', 'Saint-Aurel', 'lourd', 'contreur', [86, 68, 80, 86, 84], ['#7a1f2b', '#f2c14e', '#f2c14e'], 'Après vous, je vous en prie.'),

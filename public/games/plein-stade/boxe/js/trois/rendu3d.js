@@ -270,6 +270,9 @@ export function creerRendu(hote, o) {
     s.scale.setScalar(0.9);
     scene.add(s); flashs.push(s);
   }
+  // L'éclat d'un coup critique.
+  const eclat = new THREE.Sprite(new THREE.SpriteMaterial({ map: texGoutte, color: '#ffd27a', transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+  scene.add(eclat);
   // La fête : la ceinture (le trophée commun), les feux d'artifice, la presse.
   const ceinture = creerCeinture();
   ceinture.visible = false;
@@ -374,6 +377,7 @@ export function creerRendu(hote, o) {
       if (s.vie <= 0) { scene.remove(s); s.material.dispose(); gouttes.splice(k, 1); }
     }
     for (const s of flashs) s.material.opacity = Math.max(0, s.material.opacity - dt * 6);
+    if (eclat.material.opacity > 0) { eclat.material.opacity = Math.max(0, eclat.material.opacity - dt * 2.2); eclat.scale.multiplyScalar(1 + dt * 5); }
     ring.maj(dt, Math.min(1, excitation), v.boxeurs);
     feux.maj(dt);
     presse.maj(dt);
@@ -389,6 +393,16 @@ export function creerRendu(hote, o) {
         gicler(d.x, HAUT + (ev.corps ? 1.2 : 1.75) * 1.08, -d.y, fort ? 10 : 4);
         excitation = Math.max(excitation, fort ? 0.8 : 0.35);
         if (fort) { cam.secousse = Math.max(cam.secousse, 0.06 + ev.degats * 0.008); for (const s of flashs) if (Math.random() < 0.5) s.material.opacity = 1; }
+        if (ev.critique) {
+          // Le critique : un éclat de lumière à l'impact, la caméra qui tremble, plus de sueur.
+          eclat.position.set(d.x, HAUT + (ev.corps ? 1.2 : 1.75) * 1.08, -d.y);
+          eclat.scale.setScalar(0.5);
+          eclat.material.opacity = 1;
+          gicler(d.x, HAUT + (ev.corps ? 1.2 : 1.75) * 1.08, -d.y, 14);
+          cam.secousse = Math.max(cam.secousse, 0.3);
+          excitation = 1.4;
+          for (const s of flashs) s.material.opacity = 1;
+        }
       } else if (ev.type === 'kd') { excitation = 1.5; cam.secousse = 0.25; for (const s of flashs) s.material.opacity = 1; }
       else if (ev.type === 'fin') excitation = 1.5;
     }

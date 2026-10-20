@@ -51,6 +51,7 @@ export function creerCommentateur(ctx) {
           return null;
         case 'touche': {
           if (ev.boxeur === serie.e) serie.n += 1; else serie = { e: ev.boxeur, n: 1 };
+          if (ev.critique) return C.dire(ch('critique', [`Coup critique de ${n(ev.boxeur)} ! Ça a fait très mal !`, `Oh ! Le coup parfait de ${n(ev.boxeur)} !`, `${n(ev.boxeur)} touche en plein dans le mille !`]), { important: true, emotion: 0.95, apres: parfois(0.5) ? ch('crit-cons', ['Celui-là, il l’a senti passer.', 'Le timing parfait.']) : null });
           if (ev.contre && ev.degats > 5) return C.dire(ch('contre', [`Quel contre de ${n(ev.boxeur)} !`, `${n(ev.boxeur)} le cueille en contre !`]), { coupe: true, emotion: 0.8 });
           if (ev.coup === 'upper' && ev.degats > 6) return C.dire(ch('upper', [`Uppercut de ${n(ev.boxeur)} ! La tête part en arrière !`, `${n(ev.boxeur)} remonte un uppercut terrible !`]), { coupe: true, emotion: 0.85 });
           if (ev.coup === 'crochet' && ev.degats > 6) return C.dire(ch('crochet', [`Le crochet de ${n(ev.boxeur)} fait mouche !`, `Gros crochet de ${n(ev.boxeur)} !`]), { frais: true, coupe: true, emotion: 0.7 });

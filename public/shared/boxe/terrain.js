@@ -26,12 +26,14 @@ export const ENDU_MAX = 100;
 export const COUPS = {
   jab: { nom: 'Jab', armer: 6, frapper: 3, retour: 8, portee: 1.38, degats: 2, endu: 2.2, sonne: 9, points: 1 },
   crochet: { nom: 'Crochet', armer: 12, frapper: 3, retour: 15, portee: 1.16, degats: 5, endu: 5.5, sonne: 16, points: 2 },
-  upper: { nom: 'Uppercut', armer: 14, frapper: 3, retour: 17, portee: 0.98, degats: 6, endu: 6.5, sonne: 20, points: 2 },
+  upper: { nom: 'Uppercut', armer: 12, frapper: 3, retour: 17, portee: 1.12, degats: 7.5, endu: 6.5, sonne: 20, points: 2 },
 };
 export const TYPES = ['jab', 'crochet', 'upper'];
 
 /** L'esquive : un pas de côté ou en arrière, intouchable un instant. */
 export const ESQUIVE = { duree: 16, debut: 2, fin: 12, cout: 7, repos: 22, pas: 0.42 };
+/** Le coup critique : les dégâts (×) et ce qu'il sonne en plus (images). */
+export const CRITIQUE = { degats: 1.7, sonne: 10 };
 /** Le compte, au tapis : une seconde par chiffre. */
 export const COMPTE_PAS = 60;
 

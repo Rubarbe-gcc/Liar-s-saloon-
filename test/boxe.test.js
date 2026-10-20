@@ -149,6 +149,25 @@ test('le tapis : le compte, se relever en tapant, ou le K.-O. à 10', () => {
   assert.equal(m.vainqueur, 0);
 });
 
+test('les coups critiques : plus rares que les autres, plus forts, et bien plus fréquents en contre', () => {
+  const stats = { crit: [0, 0], normal: [0, 0], contre: [0, 0], contreCrit: 0 };
+  for (let g = 1; g <= 16; g++) {
+    const m = creerCombat({ boxeurs: [BOXEURS[g % 16].id, BOXEURS[(g * 3 + 5) % 16].id], graine: g * 17, minutes: 1, controles: ['ia', 'ia'] });
+    while (m.phase !== 'fin' && m.f < 100000) {
+      for (const e of pas(m)) {
+        if (e.type !== 'touche' || e.corps) continue;
+        const k = e.critique ? 'crit' : 'normal';
+        stats[k][0] += 1; stats[k][1] += e.degats / ({ jab: 2, crochet: 5, upper: 6 }[e.coup]);
+        if (e.contre) { stats.contre[0] += 1; if (e.critique) stats.contreCrit += 1; }
+      }
+    }
+  }
+  const part = stats.crit[0] / (stats.crit[0] + stats.normal[0]);
+  assert.ok(part > 0.03 && part < 0.2, `${(part * 100).toFixed(1)} % de critiques`);
+  assert.ok(stats.crit[1] / stats.crit[0] > 1.4 * (stats.normal[1] / stats.normal[0]), 'un critique fait bien plus mal');
+  assert.ok(stats.contreCrit / stats.contre[0] > part, 'plus de critiques en contre');
+});
+
 test('les juges : 10-9 au meilleur, un point de moins par chute', () => {
   const m = face(1);
   m.duree = 600;

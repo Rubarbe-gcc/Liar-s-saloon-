@@ -9,7 +9,8 @@
  *
  * Un coup se prépare (armer), frappe, puis revient. Il touche si l'adversaire
  * est à portée, ne l'esquive pas et ne garde pas la bonne zone (la tête : garde
- * haute ; le corps : garde basse). Frapper un boxeur qui frappe, ou qui vient de
+ * haute ; le corps : garde basse). Certains coups sont critiques (plus de dégâts : surtout en
+ * contre, sur un boxeur sonné, ou un uppercut à la tête). Frapper un boxeur qui frappe, ou qui vient de
  * frapper dans le vide, fait plus mal (le contre). Chaque coup fatigue ; fatigué,
  * on frappe moins fort et on bouge moins vite. La santé à zéro : le tapis, et le
  * compte. Trois fois au tapis dans un round, ou pas relevé à 10 : c'est fini.
@@ -25,7 +26,7 @@
  */
 
 import {
-  FPS, DT, RING, CORPS_R, SANTE_MAX, ENDU_MAX, COUPS, ESQUIVE, COMPTE_PAS, T,
+  FPS, DT, RING, CORPS_R, SANTE_MAX, ENDU_MAX, COUPS, ESQUIVE, COMPTE_PAS, CRITIQUE, T,
   hasard, gauss, clamp, dist, vitesseMax,
 } from './terrain.js';
 import { BOXEUR } from './boxeurs.js';
@@ -63,7 +64,7 @@ export function creerCombat({ boxeurs, graine = 1, minutes = 2, rounds = 3, cont
     compte: 0, auTapis: -1,
     rd: { pts: [0, 0], kd: [0, 0] },
     cartes: [[], [], []],
-    stats: { lances: [0, 0], touches: [0, 0], tete: [0, 0], corps: [0, 0], bloques: [0, 0], esquives: [0, 0], kd: [0, 0], contres: [0, 0] },
+    stats: { lances: [0, 0], touches: [0, 0], tete: [0, 0], corps: [0, 0], bloques: [0, 0], esquives: [0, 0], kd: [0, 0], contres: [0, 0], critiques: [0, 0] },
     vainqueur: -1, issue: null, decision: null, numeroCoup: 0,
   };
   if (entrainement) reglerEntrainement(m, entrainement);
@@ -266,9 +267,14 @@ function resoudre(m, a, d, evs) {
   if (contre) deg *= d.ouvert > 0 ? 1.4 : 1.2;
   if (nivA) deg *= nivA.puissance;
   deg *= 0.9 + hasard(m) * 0.2;
+  // Le coup critique : rare au hasard, bien plus fréquent en contre, sur un boxeur sonné, ou sur un uppercut à la tête.
+  const chanceCrit = 0.05 + (contre ? 0.1 : 0) + (d.etourdi > 0 ? 0.08 : 0) + (c.type === 'upper' && !c.corps ? 0.05 : 0) + (a.n.puissance - 70) / 1000;
+  const critique = hasard(m) < chanceCrit;
+  if (critique) deg *= CRITIQUE.degats;
   d.sante -= deg;
   if (c.corps) d.endu = Math.max(0, d.endu - C.degats * 1.1);
-  d.sonne = C.sonne + (contre ? 4 : 0);
+  d.sonne = C.sonne + (contre ? 4 : 0) + (critique ? CRITIQUE.sonne : 0);
+  if (critique && !c.corps) d.etourdi = Math.max(d.etourdi, 40);
   d.coup = null;
   d.garde = null;
   if (c.type === 'upper' && !c.corps && d.sante < 38) d.etourdi = 55;
@@ -278,8 +284,9 @@ function resoudre(m, a, d, evs) {
   m.stats.touches[a.e] += 1;
   m.stats[c.corps ? 'corps' : 'tete'][a.e] += 1;
   if (contre) m.stats.contres[a.e] += 1;
-  m.rd.pts[a.e] += C.points * (contre ? 1.25 : 1);
-  evs.push({ type: 'touche', boxeur: a.e, cible: d.e, coup: c.type, corps: c.corps, contre, degats: deg, sante: d.sante });
+  if (critique) m.stats.critiques[a.e] += 1;
+  m.rd.pts[a.e] += C.points * (contre ? 1.25 : 1) * (critique ? 1.5 : 1);
+  evs.push({ type: 'touche', boxeur: a.e, cible: d.e, coup: c.type, corps: c.corps, contre, critique, degats: deg, sante: d.sante });
   if (d.sante <= 0) auTapis(m, d, a, evs);
 }
 
