@@ -66,14 +66,34 @@ export function creerCommentateur(ctx) {
           return C.dire(ch('kd', [`${n(ev.boxeur)} est au tapis !`, `Il tombe ! ${n(ev.boxeur)} est au tapis !`, `Knock-down ! ${n(ev.attaquant)} envoie ${n(ev.boxeur)} au sol !`]), { important: true, emotion: 1 });
         case 'debout':
           return C.dire(`${n(ev.boxeur)} se relève à ${ev.compte} ! Le combat continue !`, { important: true, emotion: 0.8 });
+        // Le combat libre : les amenées, le sol, les prises.
+        case 'amenee':
+          return C.dire(ch('amenee', [`${n(ev.boxeur)} plonge dans les jambes… et l’amène au sol !`, `Amenée au sol de ${n(ev.boxeur)} ! ${n(ev.cible)} est sur le dos !`, `${n(ev.boxeur)} le fauche ! Ça se passe au sol !`]), { coupe: true, emotion: 0.85 });
+        case 'amenee-ratee':
+          if (parfois(0.5)) return C.dire(ch('amenee-r', [`${n(ev.cible)} contre le plongeon de ${n(ev.boxeur)} !`, `${n(ev.boxeur)} tente l’amenée… raté, il se retrouve à genoux !`]), { frais: true, emotion: 0.6 });
+          return null;
+        case 'amenee-arretee':
+          return C.dire(`${n(ev.attaquant)} arrête le plongeon de ${n(ev.boxeur)} d’un coup en pleine course !`, { frais: true, coupe: true, emotion: 0.8 });
+        case 'prise': {
+          const nom = { bras: 'une clé de bras', gorge: 'un étranglement', cheville: 'une clé de cheville' }[ev.prise];
+          return C.dire(`${n(ev.boxeur)} tente ${nom} ! ${n(ev.cible)} est en danger !`, { important: true, emotion: 0.9 });
+        }
+        case 'prise-echappe':
+          return C.dire(ch('echappe', [`${n(ev.boxeur)} se dégage ! Quelle résistance !`, `${n(ev.boxeur)} s’échappe de la prise !`]), { coupe: true, emotion: 0.8 });
+        case 'degage':
+          return C.dire(`${n(ev.boxeur)} se dégage et se relève !`, { frais: true, emotion: 0.6 });
+        case 'frappe-sol':
+          if (ev.fatal) return C.dire(`Le coup fatal de ${n(ev.boxeur)} ! ${n(ev.cible)} ne bouge plus !`, { important: true, emotion: 1 });
+          if (parfois(0.25)) return C.dire(ch('sol', [`${n(ev.boxeur)} frappe au sol !`, `${n(ev.cible)} encaisse sous ${n(ev.boxeur)}…`, `Les coups pleuvent au sol !`]), { frais: true, emotion: 0.6 });
+          return null;
         case 'repos':
           return C.dire(`Fin du round ${ev.round}. Chacun retourne dans son coin.`, { important: true, emotion: 0.4, apres: m.stats.touches[0] === m.stats.touches[1] ? 'Très serré pour l’instant.' : `${n(m.stats.touches[0] > m.stats.touches[1] ? 0 : 1)} semble avoir pris l’avantage.` });
         case 'fin': {
-          const v = ev.vainqueur;
-          if (ev.issue === 'ko') return C.dire(`K.-O. ! ${ctx.boxeur(v).nom} gagne par K.-O. au round ${ev.round} !`, { important: true, emotion: 1 });
-          if (ev.issue === 'arret') return C.dire(`L’arbitre arrête le combat ! Victoire de ${ctx.boxeur(v).nom} !`, { important: true, emotion: 1 });
-          const type = { unanime: 'à l’unanimité des juges', majorite: 'à la majorité des juges', partagee: 'sur décision partagée', arbitre: 'sur décision de l’arbitre' }[ev.decision.type];
-          return C.dire(`Les juges ont rendu leur verdict : ${ctx.boxeur(v).nom} l’emporte ${type} !`, { important: true, emotion: 0.9 });
+          // Le nom du vainqueur, c'est l'arbitre qui l'annonce, au centre du ring.
+          if (ev.issue === 'ko') return C.dire(`K.-O. ! Il ne se relèvera pas, c’est terminé au round ${ev.round} !`, { important: true, emotion: 1 });
+          if (ev.issue === 'arret') return C.dire('L’arbitre arrête le combat ! C’est fini !', { important: true, emotion: 1 });
+          if (ev.issue === 'soumission') return C.dire('Il tape ! Il abandonne ! C’est terminé par soumission !', { important: true, emotion: 1 });
+          return C.dire('C’est la fin du combat ! Tout se jouera sur les cartes des juges…', { important: true, emotion: 0.8 });
         }
         default:
       }

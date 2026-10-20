@@ -8,10 +8,14 @@
  * est à portée (le jab de loin, crochet et uppercut de près), et recule pour
  * souffler quand il est à bout.
  *
+ * Au combat libre, il plonge parfois sur les jambes (plus volontiers sur un adversaire qui frappe
+ * ou qui fatigue), contre les plongeons (garde basse, esquive, ou un coup qui l'arrête), et au sol,
+ * il frappe, tente une prise ou tape pour s'en sortir, à la vitesse de son niveau.
+ *
  * Module partagé, sans DOM ; déterministe (le hasard vient du combat).
  */
 
-import { COUPS, RING, ENDU_MAX, hasard, clamp, dist } from './terrain.js';
+import { COUPS, RING, ENDU_MAX, SANTE_MAX, AMENEE, hasard, clamp, dist } from './terrain.js';
 import { STYLES } from './boxeurs.js';
 
 /**
@@ -20,9 +24,9 @@ import { STYLES } from './boxeurs.js';
  * et ce que le moteur lui applique : la force de ses coups (puissance : ×) et sa vitesse (vitesse : ×).
  */
 export const NIVEAUX = [
-  { nom: 'Facile', reaction: 13, lecture: 0.45, garde: 0.45, esquive: 0.35, envie: 0.65, puissance: 0.8, vitesse: 0.9 },
-  { nom: 'Normal', reaction: 7, lecture: 0.8, garde: 1, esquive: 1, envie: 1, puissance: 1, vitesse: 1 },
-  { nom: 'Difficile', reaction: 3, lecture: 0.95, garde: 1.3, esquive: 1.4, envie: 1.15, puissance: 1.12, vitesse: 1.06 },
+  { nom: 'Facile', reaction: 13, lecture: 0.45, garde: 0.45, esquive: 0.35, envie: 0.65, puissance: 0.8, vitesse: 0.9, tape: 13 },
+  { nom: 'Normal', reaction: 7, lecture: 0.8, garde: 1, esquive: 1, envie: 1, puissance: 1, vitesse: 1, tape: 8 },
+  { nom: 'Difficile', reaction: 3, lecture: 0.95, garde: 1.3, esquive: 1.4, envie: 1.15, puissance: 1.12, vitesse: 1.06, tape: 6 },
 ];
 export const niveauDe = (coin) => NIVEAUX[coin.ctrl === 'ia' ? coin.niveau : 1];
 
@@ -38,6 +42,19 @@ export function decider(m, e) {
   const fatigue = p.endu < 25;
   // L'autre ne frappe plus depuis cinq secondes (un sac, un boxeur qui se cache) : on y va.
   const passif = m.f - o.dernierCoup > 300;
+
+  // L'autre plonge sur nos jambes : on le voit (ou pas), et on le contre une fois.
+  if (o.amenee > 0 && o.amenee >= niv.reaction * 0.8 && p.luA !== m.f - o.amenee) {
+    p.luA = m.f - o.amenee;
+    const r = hasard(m);
+    const pEsq = st.esquive * niv.esquive * 0.4, pBas = st.garde * niv.garde * 0.75, pCoup = st.contre * 0.4 * niv.envie;
+    p.reponseA = !p.coup && p.esqRepos <= 0 && r < pEsq ? 'esquive' : r < pEsq + pBas ? 'basse' : !p.coup && !m.coins[e].sparring && r < pEsq + pBas + pCoup ? 'coup' : null;
+  }
+  if (o.amenee > 0 && p.luA === m.f - o.amenee && p.reponseA) {
+    if (p.reponseA === 'esquive') { p.reponseA = null; return { ...c, mx: -p.dx, my: -p.dy, esquive: true }; }
+    if (p.reponseA === 'coup') { p.reponseA = null; return { ...c, coup: d < COUPS.upper.portee ? 'upper' : 'jab' }; }
+    return { ...c, garde: 'basse' };
+  }
 
   // Le coup de l'autre part : on le voit (plus ou moins vite), et on y répond une fois.
   const oc = o.coup;
@@ -72,6 +89,8 @@ export function decider(m, e) {
   else if (!sparring) {
     p.dec = 10 + Math.floor(hasard(m) * 26);
     const envie = st.envie * niv.envie * (fatigue ? 0.35 : 1) * (o.sonne > 0 || o.etourdi > 0 ? 1.6 : 1) * (passif ? 1.7 : 1);
+    // Au combat libre : parfois, on plonge sur les jambes (plus volontiers sur un adversaire à bout ou sonné).
+    if (m.regles === 'libre' && d < AMENEE.portee && p.endu > 25 && hasard(m) < (0.022 + (o.endu < 30 ? 0.04 : 0) + (o.etourdi > 0 ? 0.08 : 0)) * niv.envie) return { ...c, amenee: true };
     if (hasard(m) < envie * 0.4) {
       const types = ['jab', 'crochet', 'upper'].filter((t) => d < COUPS[t].portee - 0.04);
       if (types.length) {
@@ -108,4 +127,27 @@ export function decider(m, e) {
     if (p.gardeT > 0) c.garde = p.gardeZ;
   }
   return c;
+}
+
+/**
+ * Au sol : { tape, coup, prise, releve, garde }. Il tape à la vitesse de son niveau ; au-dessus, il frappe
+ * ou tente une prise (plus volontiers sur un adversaire à bout de souffle) ; en dessous, il se protège et se dégage.
+ */
+export function deciderSol(m, e) {
+  const S = m.sol, p = m.boxeurs[e], o = m.boxeurs[1 - e], niv = niveauDe(m.coins[e]);
+  let tape = false;
+  if (p.tapeT > 0) p.tapeT -= 1;
+  else { tape = true; p.tapeT = niv.tape + Math.floor(hasard(m) * 4); }
+  if (S.prise) return { tape };
+  if (S.dessus !== e) return { tape: tape && hasard(m) < 0.8, garde: S.recharge < 10 || hasard(m) < 0.3 };
+  if (S.dec > 0) { S.dec -= 1; return {}; }
+  S.dec = 20 + Math.floor(hasard(m) * 30 / niv.envie);
+  if (m.coins[e].sparring) return { releve: hasard(m) < 0.2 };
+  const fatigue = 1 - o.endu / ENDU_MAX, blesse = 1 - o.sante / SANTE_MAX;
+  if (hasard(m) < 0.18 + fatigue * 0.3 + blesse * 0.15) {
+    const r = hasard(m);
+    return { prise: r < 0.4 ? 'bras' : r < 0.75 ? 'gorge' : 'cheville' };
+  }
+  if (p.endu < 12 && hasard(m) < 0.3) return { releve: true };
+  return { coup: true };
 }

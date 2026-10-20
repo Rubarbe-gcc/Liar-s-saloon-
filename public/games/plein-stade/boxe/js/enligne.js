@@ -9,7 +9,7 @@
  * (le « rollback » : shared/rollback.js, le même que STREET COMBAT). Ici, on
  * branche ce mécanisme sur le réseau : les messages, la mesure du ping (qui
  * règle le délai de nos touches), le recalage si les deux écrans divergent,
- * le choix des boxeurs (un seul ring : le champ « stade » du protocole ne sert pas). Le serveur ne fait que
+ * le choix des boxeurs et des règles (un seul ring : le champ « stade » du protocole porte les règles, « ring » ou « libre »). Le serveur ne fait que
  * relayer (server/boxe.js).
  */
 

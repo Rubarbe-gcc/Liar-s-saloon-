@@ -34,6 +34,25 @@ export const TYPES = ['jab', 'crochet', 'upper'];
 export const ESQUIVE = { duree: 16, debut: 2, fin: 12, cout: 7, repos: 22, pas: 0.42 };
 /** Le coup critique : les dégâts (×) et ce qu'il sonne en plus (images). */
 export const CRITIQUE = { degats: 1.7, sonne: 10 };
+/**
+ * Le combat libre : l'amenée au sol (on plonge sur les jambes : armer, puis ça passe ou ça casse),
+ * et au sol, les coups (degats ; fatal : la chance du coup qui finit tout) et les prises.
+ * Une prise : depart (où part la jauge, de 0 à 1), serre (ce que gagne chaque tape de celui qui la tient),
+ * fuite (ce que reprend chaque tape de l'autre), penche (ce qu'elle gagne seule, à chaque image, selon
+ * l'état de l'autre : à bout de souffle ou blessé, il finit par abandonner). À 1 : il abandonne ; à 0 ou au bout de duree : il s'échappe.
+ */
+export const AMENEE = { portee: 1.15, armer: 16, endu: 9, rate: 26, points: 3 };
+export const SOL = {
+  coup: { recharge: 26, degats: 4.2, endu: 2.5, points: 1.5 },
+  fatal: 0.02,
+  relever: 11,
+  duree: 20 * 60,
+};
+export const PRISES = {
+  bras: { nom: 'Clé de bras', depart: 0.4, serre: 0.05, fuite: 0.05, penche: 0.004, endu: 9, duree: 270 },
+  gorge: { nom: 'Étranglement', depart: 0.34, serre: 0.055, fuite: 0.05, penche: 0.005, endu: 11, duree: 270 },
+  cheville: { nom: 'Clé de cheville', depart: 0.45, serre: 0.045, fuite: 0.05, penche: 0.0035, endu: 7, duree: 240 },
+};
 /** Le compte, au tapis : une seconde par chiffre. */
 export const COMPTE_PAS = 60;
 

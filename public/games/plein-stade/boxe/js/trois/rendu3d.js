@@ -107,8 +107,19 @@ const doux = (t) => (t < 0 ? 0 : t > 1 ? 1 : t * t * (3 - 2 * t));
  * Les bras, eux, sont posés à part (brasBoxe) : on dit où va le poing, l'épaule et le coude suivent.
  */
 function poseBoxe(f, p, o, dt) {
-  const P = poseDe(f, { ...o, p: { etat: p.sol ? 'sol' : 'normal', frappe: 0, geste: 0, gesteType: 0, volee: 0 }, gardien: false, cote: 0, tab: false, charge: 0 }, dt);
-  if (p.sol || o.humeur) return P;
+  const couche = p.sol || p.aTerre === 'dessous';
+  const P = poseDe(f, { ...o, p: { etat: couche ? 'sol' : 'normal', frappe: 0, geste: 0, gesteType: 0, volee: 0 }, gardien: false, cote: 0, tab: false, charge: 0 }, dt);
+  if (couche || o.humeur) return P;
+  if (p.aTerre === 'dessus') {
+    // À genoux sur l'autre, le buste penché vers lui (un peu plus quand il frappe).
+    const frappe = o.sol?.coupT ? Math.sin(Math.min(1, o.sol.coupT / 10) * Math.PI) : 0;
+    return Object.assign(P, { by: 0.5, y: 0, rx: 0, rz: 0, hancheA: -0.25, hancheB: -0.25, genouA: 1.7, genouB: 1.7, torse: 0.3 + 0.2 * frappe, torseZ: 0, tete: 0.35 });
+  }
+  if (p.amenee > 0) {
+    // Le plongeon : on se baisse d'un coup et on fonce, la tête devant.
+    const u = Math.min(1, p.amenee / 6);
+    return Object.assign(P, { by: 0.86 - 0.3 * u, y: 0, torse: 0.16 + 0.75 * u, tete: -0.2 * u, hancheA: -0.32 - 0.6 * u, genouA: 0.42 + 0.6 * u, hancheB: 0.2 + 0.3 * u, genouB: 0.5 + 0.3 * u });
+  }
   const marche = o.vitesse > 0.3;
   // Les appuis : jambe gauche devant, droite derrière, genoux fléchis ; un petit sautillement sur place.
   const rebond = Math.sin(o.t * 7 + f.phase) * 0.012;
@@ -248,6 +259,44 @@ function brasBoxe(f, p, t, garde, cible) {
 }
 
 /**
+ * Les bras au sol. Celui du dessus : une main qui tient, l'autre qui frappe (coupT), ou les deux sur la prise
+ * (la gorge, le bras, la jambe) ; celui du dessous : les gants devant le visage s'il se protège.
+ */
+function brasSol(f, o, p, sol) {
+  if (p.aTerre === 'dessous') {
+    if (sol.garde && !sol.prise) { poserBras(f.A, V(0.09, 0.82, 0.22), POLE_BAS); poserBras(f.B, V(-0.08, 0.82, 0.2), POLE_BAS); }
+    else if (sol.prise) { poserBras(f.A, V(0.2, 0.75, 0.35), POLE_BAS); poserBras(f.B, V(-0.2, 0.75, 0.35), POLE_BAS); }
+    return;
+  }
+  f.racine.updateMatrixWorld(true);
+  o.racine.updateMatrixWorld(true);
+  const local = (w) => f.torse.worldToLocal(w);
+  const tete = o.tete.getWorldPosition(new THREE.Vector3());
+  const poitrine = o.torse.localToWorld(V(0, 0.2, 0.1));
+  // Un petit tremblement quand il serre (plus fort quand la jauge monte).
+  const tremble = sol.prise ? Math.sin(performance.now() / 30) * 0.015 * (0.5 + sol.jauge) : 0;
+  if (sol.prise === 'gorge') {
+    poserBras(f.A, local(tete.clone().add(V(0.12, -0.12 + tremble, 0))), POLE_G);
+    poserBras(f.B, local(tete.clone().add(V(-0.12, -0.12 - tremble, 0))), POLE_D);
+  } else if (sol.prise === 'bras') {
+    const coude = o.A.coude.getWorldPosition(new THREE.Vector3());
+    poserBras(f.A, local(coude.clone().add(V(0, 0.05 + tremble, 0))), POLE_G);
+    poserBras(f.B, local(coude.clone().lerp(tete, 0.3).add(V(0, 0.05 - tremble, 0))), POLE_D);
+  } else if (sol.prise === 'cheville') {
+    const genou = o.JA.genou.localToWorld(V(0, -0.36, 0));
+    poserBras(f.A, local(genou.clone().add(V(0.06, 0.08 + tremble, 0))), POLE_G);
+    poserBras(f.B, local(genou.clone().add(V(-0.06, 0.08 - tremble, 0))), POLE_D);
+  } else {
+    // Les coups : le poing monte, puis s'abat sur la tête.
+    poserBras(f.A, local(poitrine), POLE_G);
+    const t = sol.coupT || 0;
+    const haut = V(-0.12, 0.85, 0.12);
+    const cible = local(tete.clone().add(V(0, 0.1, 0)));
+    poserBras(f.B, t <= 0 ? haut : t < 6 ? melV(haut, V(-0.15, 1.0, 0.0), t / 6) : melV(V(-0.15, 1.0, 0.0), cible, Math.min(1, (t - 6) / 4)), POLE_D);
+  }
+}
+
+/**
  * Crée la scène dans `hote`.
  * @param {HTMLElement} hote
  * @param {{ boxeurs: [object, object], qualite?: string }} o
@@ -363,8 +412,9 @@ export function creerRendu(hote, o) {
       // Le centre du cadre suit le milieu des boxeurs, sans coller au moindre pas.
       cam.cx = cam.cx === undefined || cam.saut ? mx : cam.cx + (mx - cam.cx) * Math.min(1, dt * 2.5);
       cam.cz = cam.cz === undefined || cam.saut ? mz : cam.cz + (mz - cam.cz) * Math.min(1, dt * 2.5);
-      pos = new THREE.Vector3(cam.cx + Math.sin(cam.ang) * recul, HAUT + 2.45, cam.cz + Math.cos(cam.ang) * recul);
-      vise = new THREE.Vector3(cam.cx, HAUT + 1.15, cam.cz);
+      const bas = v.sol ? 1 : 0;
+      pos = new THREE.Vector3(cam.cx + Math.sin(cam.ang) * recul * (1 - 0.15 * bas), HAUT + 2.45 - 0.6 * bas, cam.cz + Math.cos(cam.ang) * recul * (1 - 0.15 * bas));
+      vise = new THREE.Vector3(cam.cx, HAUT + 1.15 - 0.65 * bas, cam.cz);
     }
     const k = cam.mode === 'libre' ? 1 : Math.min(1, dt * 4);
     if (cam.saut) { cam.pos.copy(pos); cam.vise.copy(vise); cam.saut = false; }
@@ -392,15 +442,17 @@ export function creerRendu(hote, o) {
       const f = figs[i];
       const vit = Math.hypot(p.vx, p.vy);
       const humeur = v.humeurs?.[i] || null;
-      const ang = Math.atan2(p.dx, -p.dy);
-      const P = poseBoxe(f, p, { vitesse: vit * 1.4, sprint: false, t: temps, humeur }, dt);
-      const enGarde = !p.sol && !humeur;
+      // La clé de cheville : celui du dessus se retourne vers les jambes de l'autre.
+      const cheville = p.aTerre === 'dessus' && v.sol?.prise === 'cheville';
+      const ang = Math.atan2(p.dx, -p.dy) + (cheville ? Math.PI : 0);
+      const P = poseBoxe(f, p, { vitesse: vit * 1.4, sprint: false, t: temps, humeur, sol: v.sol }, dt);
+      const enGarde = !p.sol && !humeur && !p.aTerre;
       let da = ang + (enGarde ? GARDE + torsion(p) : 0) - f.racine.rotation.y;
       while (da > Math.PI) da -= Math.PI * 2;
       while (da < -Math.PI) da += Math.PI * 2;
       f.racine.rotation.y += da * Math.min(1, dt * (p.coup ? 26 : 14));
       poser(f, P, Math.min(1, dt * (p.coup ? 30 : 16)));
-      const k = rapproche + (enGarde ? elan(p) : 0);
+      const k = p.aTerre ? (cheville ? -0.6 : 0) : rapproche + (enGarde ? elan(p) : 0);
       f.racine.position.set(p.x + p.dx * k, HAUT, -p.y - p.dy * k);
       if (enGarde) {
         // Les bras : là où doivent aller les poings, dans le repère du buste (qui ne regarde pas tout droit).
@@ -414,9 +466,11 @@ export function creerRendu(hote, o) {
           o.racine.updateMatrixWorld(true);
           cible = p.corps ? o.bassin.localToWorld(new THREE.Vector3(0, 0.32, 0.12)) : o.tete.getWorldPosition(new THREE.Vector3());
         }
-        brasBoxe(f, p, temps, -decale, cible);
+        if (p.amenee > 0) { poserBras(f.A, V(0.2, 0.3, 0.5), POLE_BAS); poserBras(f.B, V(-0.2, 0.3, 0.5), POLE_BAS); }
+        else brasBoxe(f, p, temps, -decale, cible);
       }
     });
+    if (v.sol) v.boxeurs.forEach((p, i) => brasSol(figs[i], figs[1 - i], p, v.sol));
     for (let k = gouttes.length - 1; k >= 0; k--) {
       const s = gouttes[k];
       s.vie -= dt;
@@ -453,7 +507,16 @@ export function creerRendu(hote, o) {
           excitation = 1.4;
           for (const s of flashs) s.material.opacity = 1;
         }
-      } else if (ev.type === 'kd') { excitation = 1.5; cam.secousse = 0.25; for (const s of flashs) s.material.opacity = 1; }
+      } else if (ev.type === 'frappe-sol') {
+        const t = figs[ev.cible].tete.getWorldPosition(new THREE.Vector3());
+        gicler(t.x, t.y, t.z, ev.fatal ? 16 : ev.garde ? 2 : 6);
+        excitation = Math.max(excitation, ev.fatal ? 1.5 : 0.5);
+        cam.secousse = Math.max(cam.secousse, ev.fatal ? 0.3 : 0.05);
+        if (ev.fatal) { eclat.position.copy(t); eclat.scale.setScalar(0.5); eclat.material.opacity = 1; for (const s of flashs) s.material.opacity = 1; }
+      } else if (ev.type === 'amenee') { excitation = Math.max(excitation, 1); cam.secousse = Math.max(cam.secousse, 0.18); for (const s of flashs) if (Math.random() < 0.5) s.material.opacity = 1; }
+      else if (ev.type === 'prise') excitation = Math.max(excitation, 1.1);
+      else if (ev.type === 'soumission') { excitation = 1.5; for (const s of flashs) s.material.opacity = 1; }
+      else if (ev.type === 'kd') { excitation = 1.5; cam.secousse = 0.25; for (const s of flashs) s.material.opacity = 1; }
       else if (ev.type === 'fin') excitation = 1.5;
     }
   }

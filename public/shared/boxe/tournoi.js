@@ -31,10 +31,10 @@ const apparier = (ids) => {
 };
 
 /** Un nouveau tournoi. */
-export function creerTournoi({ moi, graine = 1, niveau = 1, minutes = 2 }) {
+export function creerTournoi({ moi, graine = 1, niveau = 1, minutes = 2, regles = 'boxe' }) {
   const autres = melanger(BOXEURS.map((e) => e.id).filter((id) => id !== moi), graine).slice(0, 7);
   const huit = melanger([moi, ...autres], graine * 31 + 7);
-  return { moi, graine, niveau, minutes, tour: 0, tours: [apparier(huit)], fini: false, champion: null, elimine: false, stats: { j: {} } };
+  return { moi, graine, niveau, minutes, regles: regles === 'libre' ? 'libre' : 'boxe', tour: 0, tours: [apparier(huit)], fini: false, champion: null, elimine: false, stats: { j: {} } };
 }
 
 /** Le match du joueur dans le tour en cours (s'il est encore là). */
@@ -73,7 +73,7 @@ export function noterStats(c, resume) {
 /** Une rencontre sans le joueur, jouée par le moteur. Rend le match simulé. */
 export function jouerSansMoi(c, i) {
   const r = c.tours[c.tour][i];
-  const m = simuler({ boxeurs: [r.a, r.b], graine: (c.graine + c.tour * 101 + i * 13) >>> 0, minutes: Math.min(c.minutes, 2) });
+  const m = simuler({ boxeurs: [r.a, r.b], graine: (c.graine + c.tour * 101 + i * 13) >>> 0, minutes: Math.min(c.minutes, 2), regles: c.regles || 'boxe' });
   enregistrer(c, i, { issue: m.issue, round: m.round, vainqueur: m.vainqueur });
   noterStats(c, resumer(m));
   return m;

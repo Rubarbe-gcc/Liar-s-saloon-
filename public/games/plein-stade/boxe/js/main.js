@@ -8,7 +8,7 @@
  */
 
 import { BOXEURS, BOXEUR, STYLES, CATEGORIES, noteGenerale } from '../../../../shared/boxe/boxeurs.js';
-import { creerCombat, pas, chronoTexte, effortRelever, reglerEntrainement, FPS, T, SANTE_MAX, ENDU_MAX } from '../../../../shared/boxe/combat.js';
+import { creerCombat, pas, chronoTexte, effortRelever, reglerEntrainement, FPS, T, SANTE_MAX, ENDU_MAX, PRISES } from '../../../../shared/boxe/combat.js';
 import { creerTournoi, matchDuJoueur, enregistrer, jouerSansMoi, aJouer, avancer, resumer, noterStats, classement, TOURS } from '../../../../shared/boxe/tournoi.js';
 import * as net from './enligne.js';
 import { creerLissage } from '../../commun/lissage.js';
@@ -38,11 +38,13 @@ function aller(nom) {
 /* ------------------------------------------------------------------ */
 
 const CLE = 'crochet.config';
-const conf = { moi: 'ribeyrolles', lui: 'lantenac', niveau: 1, minutes: 2 };
+const conf = { moi: 'ribeyrolles', lui: 'lantenac', niveau: 1, minutes: 2, regles: 'boxe' };
 try { Object.assign(conf, JSON.parse(localStorage.getItem(CLE) || '{}')); } catch { /* ignore */ }
 if (!BOXEUR[conf.moi]) conf.moi = 'ribeyrolles';
 if (!BOXEUR[conf.lui] || conf.lui === conf.moi) conf.lui = BOXEURS.find((x) => x.id !== conf.moi).id;
 if (![1, 2, 3].includes(conf.minutes)) conf.minutes = 2;
+if (conf.regles !== 'libre') conf.regles = 'boxe';
+const REGLES = { boxe: 'Boxe', libre: 'Combat libre' };
 const garder = () => { try { localStorage.setItem(CLE, JSON.stringify(conf)); } catch { /* ignore */ } };
 
 /* ------------------------------------------------------------------ */
@@ -88,6 +90,7 @@ function rendreEquipes() {
   fiche(choix.survol || (choix.pour === 'moi' ? conf.moi : conf.lui));
   $('seg-niveau').innerHTML = NIVEAUX.map((n, i) => `<button data-v="${i}" class="${conf.niveau === i ? 'oui' : ''}">${n.nom}</button>`).join('');
   $('seg-duree').innerHTML = [1, 2, 3].map((d) => `<button data-v="${d}" class="${conf.minutes === d ? 'oui' : ''}">3 × ${d} min</button>`).join('');
+  $('seg-regles').innerHTML = Object.entries(REGLES).map(([r, nom]) => `<button data-v="${r}" class="${conf.regles === r ? 'oui' : ''}">${nom}</button>`).join('');
 }
 
 function brancherEquipes() {
@@ -117,11 +120,12 @@ function brancherEquipes() {
   $('duel-lui').addEventListener('click', () => { choix.pour = 'lui'; choix.survol = conf.lui; rendreEquipes(); });
   $('seg-niveau').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.niveau = +b.dataset.v; garder(); rendreEquipes(); } });
   $('seg-duree').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.minutes = +b.dataset.v; garder(); rendreEquipes(); } });
+  $('seg-regles').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.regles = b.dataset.v; garder(); rendreEquipes(); } });
   $('equipes-retour').addEventListener('click', () => aller('menu'));
   $('b-jouer').addEventListener('click', () => {
     son.reveiller();
     if (choix.suite) { choix.suite(); return; }
-    lancerCombat({ boxeurs: [conf.moi, conf.lui], controles: ['humain', 'ia'], niveaux: [1, conf.niveau], minutes: conf.minutes });
+    lancerCombat({ boxeurs: [conf.moi, conf.lui], controles: ['humain', 'ia'], niveaux: [1, conf.niveau], minutes: conf.minutes, regles: conf.regles });
   });
 }
 
@@ -152,8 +156,10 @@ function instantane(m) {
         coup: c ? c.type : null, corps: c ? c.corps : false, phase: c ? c.t / 40 : 0, coupT: c ? c.t : 0,
         esquive: p.esquive > 0 ? p.esquive / 16 : 0, esqCote: p.esquive > 0 ? Math.sign(p.esqX * -p.dy + p.esqY * p.dx) : 0,
         sonne: p.sonne > 0 ? Math.min(1, p.sonne / 12) : 0, etourdi: p.etourdi > 0,
+        amenee: p.amenee > 0 ? p.amenee : 0, aTerre: p.aTerre,
       };
     }),
+    sol: m.sol ? { dessus: m.sol.dessus, prise: m.sol.prise?.type || null, jauge: m.sol.jauge, coupT: m.sol.coupT, garde: m.sol.garde } : null,
   };
 }
 function melanger(a, b, t) {
@@ -166,7 +172,7 @@ function melanger(a, b, t) {
 function lancerCombat(o) {
   arreterCombat();
   const boxeurs = o.boxeurs.map((id) => BOXEUR[id]);
-  const m = creerCombat({ boxeurs: o.boxeurs, graine: o.graine ?? Math.floor(Math.random() * 2 ** 31), minutes: o.minutes, controles: o.controles, niveaux: o.niveaux, entrainement: o.entrainement || null });
+  const m = creerCombat({ boxeurs: o.boxeurs, graine: o.graine ?? Math.floor(Math.random() * 2 ** 31), minutes: o.minutes, controles: o.controles, niveaux: o.niveaux, entrainement: o.entrainement || null, regles: o.regles || 'boxe' });
   aller('match');
   const rendu = creerRendu($('scene'), { boxeurs });
   if (!rendu) { alert('La 3D n’est pas disponible sur cet appareil.'); aller('menu'); return; }
@@ -176,6 +182,8 @@ function lancerCombat(o) {
     $(`hud-nom${e}`).textContent = boxeurs[e].nom.split(' ').slice(-1)[0];
   }
   ecranGeant();
+  $('bj-amener').classList.toggle('cache', m.regles !== 'libre');
+  $('sol').classList.add('cache');
   $('p-quitter').textContent = o.entrainement ? 'Quitter l’entraînement' : 'Abandonner le combat';
   if (!o.entrainement) {
     partie.com = creerCommentateur({ boxeur: (e) => boxeurs[e], el: $('commentaire') });
@@ -282,6 +290,18 @@ function reagir(evs) {
         if (ev.degats > 6 || ev.contre) { son.occasion(); P.excit = Math.max(P.excit, 0.7); }
         break;
       case 'bloque': son.controle(); break;
+      // Le combat libre.
+      case 'amenee': son.but(); bandeau('Au sol !', `Amenée de ${nomCourt(ev.boxeur)}`); P.excit = Math.max(P.excit, 1); break;
+      case 'amenee-ratee': son.controle(); if (P.o.controles[ev.boxeur] === 'humain' || P.o.controles[ev.cible] === 'humain') bandeau(ev.boxeur === P.local ? 'Amenée ratée !' : 'Amenée contrée !', ev.loin ? 'Trop loin' : ''); break;
+      case 'amenee-arretee': son.arret(); if (ev.boxeur === P.local) bandeau('Arrêté net !', 'Un coup pendant ton plongeon'); break;
+      case 'prise': son.occasion(); bandeau(PRISES[ev.prise].nom, ev.boxeur === P.local ? 'Serre !' : 'Échappe-toi !'); P.excit = Math.max(P.excit, 1.2); break;
+      case 'prise-echappe': son.acclamation(0.8); bandeau('Il s’échappe !'); break;
+      case 'leve': if (ev.comment === 'arbitre') bandeau('Debout !', 'L’arbitre relève les deux combattants'); break;
+      case 'frappe-sol':
+        son.arret();
+        if (ev.fatal) { son.occasion(); bandeau('Coup fatal !', nomCourt(ev.boxeur)); if (P.o.mode !== 'enligne') P.ralenti = 0.55; P.excit = 1.5; }
+        break;
+      case 'soumission': son.but(); P.excit = 1.5; break;
       case 'esquive-reussie': if (ev.boxeur === P.local) bandeau('Esquivé !'); break;
       // Notre coup ne trouve que le vide : on dit pourquoi (trop loin, ou il a paré).
       case 'vide': if (ev.boxeur === P.local && P.o.controles[P.local] === 'humain') bandeau(ev.pare ? 'Paré !' : 'Trop loin !', ev.pare ? '' : 'Rapproche-toi pour toucher'); break;
@@ -295,10 +315,11 @@ function reagir(evs) {
       case 'repos': son.acclamation(0.6); bandeau(`Fin du round ${ev.round}`, 'Chacun dans son coin', true); break;
       case 'fin': {
         son.but();
-        const titre = { ko: 'K.-O. !', arret: 'Arrêt de l’arbitre !', points: 'Décision des juges' }[ev.issue];
-        bandeau(titre, `Victoire de ${partie.boxeurs[ev.vainqueur].nom}`, true);
-        ecranGeant(`VICTOIRE ${nomCourt(ev.vainqueur).toUpperCase()}`);
-        P.finVue = 3;
+        // Le nom du vainqueur attend l'annonce de l'arbitre : ici, seulement comment le combat s'arrête.
+        const titre = { ko: 'K.-O. !', arret: 'Arrêt de l’arbitre !', points: 'Fin du combat', soumission: 'Il abandonne !' }[ev.issue];
+        bandeau(titre, ev.issue === 'points' ? 'Place aux juges…' : '', true);
+        ecranGeant(ev.issue === 'points' ? 'DÉCISION DES JUGES' : titre.toUpperCase());
+        P.finVue = 1.6;
         break;
       }
       default:
@@ -316,9 +337,8 @@ function afficher(dt) {
   if (vueCine) { P.rendu.afficher(vueCine, dt); return; }
   let vue = melanger(P.prec, P.cour, P.acc / (P.periode || PAS));
   if (P.lisse) { const l = P.lisse.appliquer(lisible(vue), dt); vue = { ...vue, boxeurs: l.joueurs }; }
-  const humeurs = m.phase === 'fin' ? m.boxeurs.map((p) => (p.e === m.vainqueur ? 'joie' : null)) : null;
   P.rendu.camera('tele');
-  P.rendu.afficher({ ...vue, humeurs }, dt);
+  P.rendu.afficher(vue, dt);
   // Le tableau : la santé (et ce qu'il en reste au mieux), le souffle, le round.
   for (const p of m.boxeurs) {
     $(`hud-sante${p.e}`).style.width = `${Math.max(0, p.sante / SANTE_MAX) * 100}%`;
@@ -339,6 +359,7 @@ function afficher(dt) {
     $('compte-aide').textContent = nous ? 'Tape vite (jab, crochet, uppercut) pour te relever !' : `${nomCourt(d.e)} est au tapis…`;
     $('compte-effort').style.width = `${Math.min(100, (d.relever / effortRelever(d)) * 100)}%`;
   }
+  afficherSol(P, m);
   son.public_(Math.min(1, 0.15 + P.excit * 0.5));
   if (m.phase === 'fin' && P.finVue > 0) {
     P.finVue -= dt;
@@ -347,11 +368,38 @@ function afficher(dt) {
   }
 }
 
+/** Le combat au sol : ce qu'on peut faire (au-dessus), la jauge d'une prise, ce qu'il faut taper. */
+function afficherSol(P, m) {
+  const S = m.sol, el = $('sol');
+  el.classList.toggle('cache', !S || m.phase !== 'combat');
+  if (!S || m.phase !== 'combat') return;
+  const humain = P.o.controles[P.local] === 'humain', dessus = S.dessus === P.local;
+  const t = (a) => touches.nomTouche(touches.toucheDe(a));
+  el.classList.toggle('adverse', !humain || !dessus);
+  el.classList.toggle('prise', !!S.prise);
+  $('sol-jauge').style.width = S.prise ? `${Math.max(0, Math.min(1, S.jauge)) * 100}%` : '0%';
+  if (S.prise) {
+    $('sol-titre').textContent = PRISES[S.prise.type].nom;
+    $('sol-options').innerHTML = '';
+    $('sol-aide').textContent = !humain ? '' : dessus ? 'Tape vite pour serrer !' : 'Tape vite pour t’échapper !';
+    return;
+  }
+  $('sol-titre').textContent = 'Au sol';
+  if (humain && dessus) {
+    $('sol-options').innerHTML = [['jab', 'Coups'], ['crochet', 'Clé de bras'], ['upper', 'Étranglement'], ['garde', 'Clé de cheville'], ['esquive', 'Se relever']]
+      .map(([a, nom]) => `<span><kbd>${t(a)}</kbd>${nom}</span>`).join('');
+    $('sol-aide').textContent = 'Fatigué ou blessé, il cède plus vite.';
+  } else {
+    $('sol-options').innerHTML = '';
+    $('sol-aide').textContent = humain ? `Tape pour te dégager · tiens ${t('garde')} pour te protéger` : '';
+  }
+}
+
 /* ---------------- La fin ---------------- */
 
 function finDuCombat() {
   const P = partie, m = P.m;
-  const res = { resume: resumer(m), boxeurs: P.o.boxeurs, vainqueur: m.vainqueur, issue: m.issue, round: m.round, cartes: m.cartes.map((c) => c.map((s) => [...s])), decision: m.decision, stats: JSON.parse(JSON.stringify(m.stats)), chrono: chronoTexte(m) };
+  const res = { resume: resumer(m), boxeurs: P.o.boxeurs, vainqueur: m.vainqueur, issue: m.issue, round: m.round, cartes: m.cartes.map((c) => c.map((s) => [...s])), decision: m.decision, stats: JSON.parse(JSON.stringify(m.stats)), chrono: chronoTexte(m), soumission: m.soumission, libre: m.regles === 'libre' };
   const o = P.o;
   arreterCombat();
   montrerFin(res, o);
@@ -361,9 +409,9 @@ function montrerFin(res, o) {
   const bx = res.boxeurs.map((id) => BOXEUR[id]);
   const v = res.vainqueur, local = o.local ?? 0;
   $('fin-titre').textContent = o.controles[local] === 'humain' ? (v === local ? 'Victoire !' : 'Défaite') : `Victoire de ${bx[v].nom}`;
-  const issue = { ko: `par K.-O. au round ${res.round}`, arret: `par arrêt de l’arbitre au round ${res.round}`, points: { unanime: 'aux points, à l’unanimité', majorite: 'aux points, à la majorité', partagee: 'aux points, décision partagée', arbitre: 'aux points' }[res.decision?.type] }[res.issue];
+  const issue = { ko: `par K.-O. au round ${res.round}`, arret: `par arrêt de l’arbitre au round ${res.round}`, soumission: `par soumission (${(res.soumission || 'prise').toLowerCase()}) au round ${res.round}`, points: { unanime: 'aux points, à l’unanimité', majorite: 'aux points, à la majorité', partagee: 'aux points, décision partagée', arbitre: 'aux points' }[res.decision?.type] }[res.issue];
   $('fin-score').innerHTML = `<div class="eq">${badgeSVG(bx[0], 64)}<span>${bx[0].nom}</span></div>
-    <div class="sc">${{ ko: 'K.-O.', arret: 'Arrêt', points: 'Aux points' }[res.issue]}<span class="tab">${bx[v].nom.split(' ').slice(-1)[0]} ${issue}</span></div>
+    <div class="sc">${{ ko: 'K.-O.', arret: 'Arrêt', points: 'Aux points', soumission: 'Soumission' }[res.issue]}<span class="tab">${bx[v].nom.split(' ').slice(-1)[0]} ${issue}</span></div>
     <div class="eq">${badgeSVG(bx[1], 64)}<span>${bx[1].nom}</span></div>`;
   $('fin-cartes').innerHTML = res.issue === 'points' ? res.cartes.map((c, j) => {
     const t = c.reduce((a, s) => [a[0] + s[0], a[1] + s[1]], [0, 0]);
@@ -377,7 +425,8 @@ function montrerFin(res, o) {
   };
   const pc = (e) => (st.lances[e] ? Math.round((st.touches[e] / st.lances[e]) * 100) : 0);
   $('fin-stats').innerHTML = ligne('Coups portés', st.touches[0], st.touches[1]) + ligne('Précision (%)', pc(0), pc(1)) + ligne('À la tête', st.tete[0], st.tete[1])
-    + ligne('Au corps', st.corps[0], st.corps[1]) + ligne('Coups bloqués', st.bloques[0], st.bloques[1]) + ligne('Esquives', st.esquives[0], st.esquives[1]) + ligne('Contres', st.contres[0], st.contres[1]) + ligne('Coups critiques', st.critiques?.[0] ?? 0, st.critiques?.[1] ?? 0) + ligne('Knock-downs', st.kd[0], st.kd[1]);
+    + ligne('Au corps', st.corps[0], st.corps[1]) + ligne('Coups bloqués', st.bloques[0], st.bloques[1]) + ligne('Esquives', st.esquives[0], st.esquives[1]) + ligne('Contres', st.contres[0], st.contres[1]) + ligne('Coups critiques', st.critiques?.[0] ?? 0, st.critiques?.[1] ?? 0) + ligne('Knock-downs', st.kd[0], st.kd[1])
+    + (res.libre ? ligne('Amenées au sol', st.amenees[0], st.amenees[1]) + ligne('Prises tentées', st.prises[0], st.prises[1]) : '');
   const act = $('fin-actions');
   act.innerHTML = '';
   $('fin-attente').textContent = '';
@@ -399,7 +448,7 @@ if (!conf.entr) conf.entr = { adversaire: 'sac' };
 
 /** L'entraînement : on choisit les boxeurs, et c'est parti ; les réglages sont dans la pause. */
 function lancerEntrainement() {
-  lancerCombat({ boxeurs: [conf.moi, conf.lui], controles: ['humain', 'ia'], niveaux: [1, conf.niveau], minutes: 2, entrainement: { ...conf.entr, niveau: conf.niveau }, abandon: () => aller('menu') });
+  lancerCombat({ boxeurs: [conf.moi, conf.lui], controles: ['humain', 'ia'], niveaux: [1, conf.niveau], minutes: 2, regles: conf.regles, entrainement: { ...conf.entr, niveau: conf.niveau }, abandon: () => aller('menu') });
 }
 
 function rendreReglages() {
@@ -447,7 +496,7 @@ function infoTournoi() {
 function ouvrirTournoi() {
   if (tournoi) { rendreTournoi(); aller('tournoi'); return; }
   ouvrirEquipes('tournoi', () => {
-    tournoi = creerTournoi({ moi: conf.moi, graine: Math.floor(Math.random() * 2 ** 31), niveau: conf.niveau, minutes: conf.minutes });
+    tournoi = creerTournoi({ moi: conf.moi, graine: Math.floor(Math.random() * 2 ** 31), niveau: conf.niveau, minutes: conf.minutes, regles: conf.regles });
     garderTournoi();
     rendreTournoi();
     aller('tournoi');
@@ -461,7 +510,7 @@ function finirTour() {
 }
 
 /** Comment un combat s'est fini, en deux mots : « K.-O. 2 », « Arrêt 3 », « Points ». */
-const issueCourte = (r) => (r.issue === 'ko' ? `K.-O. ${r.round}` : r.issue === 'arret' ? `Arrêt ${r.round}` : 'Points');
+const issueCourte = (r) => (r.issue === 'ko' ? `K.-O. ${r.round}` : r.issue === 'arret' ? `Arrêt ${r.round}` : r.issue === 'soumission' ? `Soum. ${r.round}` : 'Points');
 
 function ligneTournoi(id, texte, perd) {
   if (!id) return '<div class="ligne"><span></span><span>?</span><b></b></div>';
@@ -493,7 +542,7 @@ function rendreTournoi() {
   $('tournoi-texte').textContent = c.fini
     ? (c.champion === c.moi ? `${BOXEUR[c.moi].nom} remporte la ceinture !` : `${BOXEUR[c.champion].nom} remporte la ceinture.`)
     : c.elimine ? `${BOXEUR[c.moi].nom} est éliminé. Le Tournoi continue sans toi.`
-      : `${TOURS[c.tour]} · ${BOXEUR[c.moi].nom} contre ${BOXEUR[adv].nom} · ${NIVEAUX[c.niveau].nom} · 3 × ${c.minutes} min`;
+      : `${TOURS[c.tour]} · ${BOXEUR[c.moi].nom} contre ${BOXEUR[adv].nom} · ${NIVEAUX[c.niveau].nom} · 3 × ${c.minutes} min${c.regles === 'libre' ? ' · combat libre' : ''}`;
   const act = $('tournoi-actions');
   act.innerHTML = '';
   const bouton = (txt, cls, f) => { const el = document.createElement('button'); el.className = `btn ${cls}`; el.innerHTML = txt; el.addEventListener('click', f); act.appendChild(el); };
@@ -516,7 +565,7 @@ function jouerTournoi() {
     finirTour();
   };
   lancerCombat({
-    boxeurs: [c.moi, adv], controles: ['humain', 'ia'], niveaux: [1, c.niveau], minutes: c.minutes, ceinture: c.tour === 2,
+    boxeurs: [c.moi, adv], controles: ['humain', 'ia'], niveaux: [1, c.niveau], minutes: c.minutes, regles: c.regles || 'boxe', ceinture: c.tour === 2,
     apres: (res, bouton) => {
       noter(res);
       const gagne = res.vainqueur === 0;
@@ -595,6 +644,9 @@ function rendreSalon(s) {
       ${a ? '<span class="marque">TOI</span>' : pris ? `<span class="marque">${s.noms[lui]}</span>` : ''}<span class="note">${noteGenerale(b)}</span>
       ${badgeSVG(b, 46)}<span class="nom">${b.nom}</span><span class="style">${CATEGORIES[b.categorie]} · ${STYLES[b.style].nom}</span></button>`;
   }).join('');
+  // Les règles : l'hôte choisit, l'autre voit.
+  const regles = net.salle.stade === 'libre' ? 'libre' : 'boxe';
+  $('salon-regles').innerHTML = Object.entries(REGLES).map(([r, nom]) => `<button data-v="${r}" class="${regles === r ? 'oui' : ''}"${moi === 0 ? '' : ' disabled'}>${nom}</button>`).join('');
   const pret = s.prets[moi];
   $('salon-pret').innerHTML = pret ? '<b>Pas encore prêt</b><small>Changer d’avis</small>' : '<b>Prêt !</b><small>Le combat part quand vous l’êtes tous les deux</small>';
   $('salon-pret').className = `btn grand ${pret ? '' : 'vert'}`;
@@ -642,6 +694,7 @@ function ouvrirEnLigne() {
       rendreSalon(m);
     },
     debut: (m) => lancerEnLigne(m),
+    stade: () => rendreSalon(net.salle.salon || { n: 0, noms: [nomEnLigne(), null], equipes: [null, null], prets: [false, false] }),
     revanche: (m) => { if (ecran === 'fin' && m.n !== net.salle.n) $('fin-attente').textContent = 'Ton adversaire veut sa revanche !'; },
     parti: () => {
       const enMatch = partie?.o.mode === 'enligne';
@@ -656,7 +709,7 @@ function lancerEnLigne(d) {
   son.reveiller();
   $('fin-attente').textContent = '';
   lancerCombat({
-    boxeurs: d.equipes, controles: ['humain', 'humain'], niveaux: [1, 1], minutes: 2, mode: 'enligne',
+    boxeurs: d.equipes, controles: ['humain', 'humain'], niveaux: [1, 1], minutes: 2, mode: 'enligne', regles: d.stade === 'libre' ? 'libre' : 'boxe',
     graine: d.graine, local: d.n, noms: d.noms,
     apres: (res, bouton) => {
       const moi = d.n;
@@ -672,7 +725,14 @@ function lancerEnLigne(d) {
 function brancherEnLigne() {
   $('b-enligne').addEventListener('click', () => { son.reveiller(); ouvrirEnLigne(); });
   $('enligne-retour').addEventListener('click', () => { if (net.salle.code) net.quitter(); aller('menu'); });
-  $('enligne-creer').addEventListener('click', () => { net.creer(nomEnLigne(), 'ring'); $('enligne-statut').textContent = 'Création de la salle…'; });
+  $('salon-regles').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b || b.disabled || net.salle.n !== 0) return;
+    conf.regles = b.dataset.v === 'libre' ? 'libre' : 'boxe';
+    garder();
+    net.choisirStade(conf.regles === 'libre' ? 'libre' : 'ring');
+  });
+  $('enligne-creer').addEventListener('click', () => { net.creer(nomEnLigne(), conf.regles === 'libre' ? 'libre' : 'ring'); $('enligne-statut').textContent = 'Création de la salle…'; });
   $('salon-equipes').addEventListener('click', (e) => {
     const b = e.target.closest('.equipe');
     if (!b || b.disabled) return;
@@ -743,8 +803,8 @@ function basculerPause() {
 }
 
 function brancher() {
-  // LB (manette) : l'esquive aussi.
-  saisie.ecouterClavier(basculerPause, touches.table(), T.S);
+  // LB (manette) : amener au sol (le combat libre).
+  saisie.ecouterClavier(basculerPause, touches.table(), T.R);
   brancherTouches();
   saisie.brancherTactile($('zone-joy'), document.querySelectorAll('.bj'));
   const doigt = () => document.body.classList.add('doigt');

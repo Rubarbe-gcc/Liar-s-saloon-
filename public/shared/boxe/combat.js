@@ -17,6 +17,13 @@
  * Sinon, trois juges notent chaque round (10-9 au meilleur, un point de moins par
  * passage au tapis) et la décision tombe à la fin du dernier.
  *
+ * Le combat libre (o.regles = 'libre') : R amène l'adversaire au sol (il passe si l'autre frappe ou
+ * fatigue ; une garde basse ou une esquive le contre ; un coup qui arrive pendant le plongeon l'arrête).
+ * Au sol, celui du dessus choisit : A des coups (avec un peu de chance, un coup fatal), B une clé de bras,
+ * X un étranglement, G une clé de cheville, S se relever. Une prise est un duel : chacun tape (A, B, X, G ou S)
+ * à toute vitesse, l'un pour serrer, l'autre pour s'échapper ; la jauge pleine, c'est l'abandon.
+ * Celui du dessous tape pour se relever, et tient G pour se protéger des coups.
+ *
  * L'entraînement (o.entrainement) : pas de chrono, pas de fin ; face à un sac de
  * frappe, un sparring (il se défend mais ne frappe jamais) ou un vrai adversaire ;
  * au tapis, on se relève tout seul à 3, la santé intacte.
@@ -26,13 +33,13 @@
  */
 
 import {
-  FPS, DT, RING, CORPS_R, SANTE_MAX, ENDU_MAX, COUPS, ESQUIVE, COMPTE_PAS, CRITIQUE, T,
+  FPS, DT, RING, CORPS_R, SANTE_MAX, ENDU_MAX, COUPS, ESQUIVE, COMPTE_PAS, CRITIQUE, AMENEE, SOL, PRISES, T,
   hasard, gauss, clamp, dist, vitesseMax,
 } from './terrain.js';
 import { BOXEUR } from './boxeurs.js';
-import { decider, niveauDe } from './ia.js';
+import { decider, deciderSol, niveauDe } from './ia.js';
 
-export { FPS, T, COUPS, RING, SANTE_MAX, ENDU_MAX, COMPTE_PAS };
+export { FPS, T, COUPS, RING, SANTE_MAX, ENDU_MAX, COMPTE_PAS, PRISES };
 
 const PRESENTATION = 60;
 const REPOS = 240;
@@ -48,10 +55,11 @@ const RIEN = { mx: 0, my: 0, coup: null, corps: false, garde: null, esquive: fal
  * @param {[string, string]} [o.controles] 'humain', 'ia' ou 'aucun' (un sac de frappe), pour chacun
  * @param {[number, number]} [o.niveaux]   0 facile, 1 normal, 2 difficile (pour l'ordinateur)
  * @param {{ adversaire: 'sac' | 'sparring' | 'combat' }} [o.entrainement]
+ * @param {'boxe' | 'libre'} [o.regles]       la boxe, ou le combat libre (les amenées au sol, les prises)
  */
-export function creerCombat({ boxeurs, graine = 1, minutes = 2, rounds = 3, controles = ['humain', 'ia'], niveaux = [1, 1], entrainement = null }) {
+export function creerCombat({ boxeurs, graine = 1, minutes = 2, rounds = 3, controles = ['humain', 'ia'], niveaux = [1, 1], entrainement = null, regles = 'boxe' }) {
   const m = {
-    f: 0, alea: (graine >>> 0) || 1,
+    f: 0, alea: (graine >>> 0) || 1, regles: regles === 'libre' ? 'libre' : 'boxe', sol: null,
     phase: 'presentation', t: PRESENTATION, round: 1, rounds, chrono: 0, duree: Math.round(minutes * 60 * FPS),
     coins: [0, 1].map((e) => ({ id: boxeurs[e], style: BOXEUR[boxeurs[e]].style, ctrl: controles[e], niveau: niveaux[e] ?? 1 })),
     boxeurs: [0, 1].map((e) => ({
@@ -59,13 +67,14 @@ export function creerCombat({ boxeurs, graine = 1, minutes = 2, rounds = 3, cont
       sante: SANTE_MAX, santeMax: SANTE_MAX, endu: ENDU_MAX,
       coup: null, garde: null, esquive: 0, esqX: 0, esqY: 0, esqRepos: 0, sonne: 0, ouvert: 0, etourdi: 0,
       sol: false, kdRound: 0, kdTotal: 0, relever: 0, seRelevera: -1, dec: 0, lu: -1, reponse: null, ouvertN: 0, puni: 0, dernierCoup: 0, gardeT: 0, gardeZ: 'haute', tour: 1,
+      amenee: 0, aTerre: null, luA: -1, tapeT: 0,
     })),
     prec: [0, 0],
     compte: 0, auTapis: -1,
-    rd: { pts: [0, 0], kd: [0, 0] },
+    rd: { pts: [0, 0], kd: [0, 0], n: [0, 0], deg: [0, 0] },
     cartes: [[], [], []],
-    stats: { lances: [0, 0], touches: [0, 0], tete: [0, 0], corps: [0, 0], bloques: [0, 0], esquives: [0, 0], kd: [0, 0], contres: [0, 0], critiques: [0, 0] },
-    vainqueur: -1, issue: null, decision: null, numeroCoup: 0,
+    stats: { lances: [0, 0], touches: [0, 0], tete: [0, 0], corps: [0, 0], bloques: [0, 0], esquives: [0, 0], kd: [0, 0], contres: [0, 0], critiques: [0, 0], amenees: [0, 0], prises: [0, 0] },
+    vainqueur: -1, issue: null, decision: null, numeroCoup: 0, soumission: null,
   };
   if (entrainement) reglerEntrainement(m, entrainement);
   else placer(m);
@@ -91,7 +100,9 @@ export function reglerEntrainement(m, o) {
 
 /** Chacun dans son coin du ring, face à l'autre. */
 function placer(m) {
+  m.sol = null;
   m.boxeurs.forEach((p, e) => Object.assign(p, {
+    amenee: 0, aTerre: null,
     x: e === 0 ? -1.6 : 1.6, y: 0, vx: 0, vy: 0, dx: e === 0 ? 1 : -1, dy: 0,
     coup: null, garde: null, esquive: 0, esqRepos: 0, sonne: 0, ouvert: 0, etourdi: 0, sol: false, relever: 0, seRelevera: -1, dec: 20,
   }));
@@ -128,7 +139,7 @@ export function pas(m, entrees = [0, 0]) {
       if (--m.t <= 0) {
         m.round += 1;
         m.chrono = 0;
-        m.rd = { pts: [0, 0], kd: [0, 0] };
+        m.rd = { pts: [0, 0], kd: [0, 0], n: [0, 0], deg: [0, 0] };
         for (const p of m.boxeurs) { p.kdRound = 0; p.endu = ENDU_MAX; p.sante = Math.min(p.santeMax, p.sante + 25); }
         placer(m);
         m.phase = 'combat';
@@ -148,6 +159,20 @@ function combattre(m, k, ap, evs) {
     if (p.esquive > 0) p.esquive -= 1;
     if (p.esqRepos > 0) p.esqRepos -= 1;
   }
+  if (m.sol) auSol(m, k, ap, evs);
+  else debout(m, k, ap, evs);
+  if (m.phase !== 'combat') return;
+  for (const p of m.boxeurs) {
+    // Le souffle revient (moins vite sous la garde), un peu de santé aussi.
+    if (!p.coup && p.esquive <= 0) p.endu = Math.min(ENDU_MAX, p.endu + (p.garde ? 0.07 : 0.11) * (0.6 + p.n.endurance / 250));
+    p.sante = Math.min(p.santeMax, p.sante + 0.0038);
+  }
+  if (m.entrainement) return;
+  m.chrono += 1;
+  if (m.chrono >= m.duree) finRound(m, evs);
+}
+
+function debout(m, k, ap, evs) {
   const cons = [null, null];
   for (let e = 0; e < 2; e++) if (m.coins[e].ctrl === 'humain') cons[e] = humain(m, e, k[e], ap[e]);
   for (let e = 0; e < 2; e++) if (!cons[e]) cons[e] = m.coins[e].ctrl === 'ia' ? decider(m, e) : RIEN;
@@ -164,14 +189,13 @@ function combattre(m, k, ap, evs) {
     if (m.phase !== 'combat') return;
     if (c.t >= C.armer + C.frapper + C.retour + c.retard) p.coup = null;
   }
-  for (const p of m.boxeurs) {
-    // Le souffle revient (moins vite sous la garde), un peu de santé aussi.
-    if (!p.coup && p.esquive <= 0) p.endu = Math.min(ENDU_MAX, p.endu + (p.garde ? 0.07 : 0.11) * (0.6 + p.n.endurance / 250));
-    p.sante = Math.min(p.santeMax, p.sante + 0.0038);
+  // Les amenées en cours : au bout du plongeon, ça passe ou ça casse.
+  for (let e = 0; e < 2; e++) {
+    const p = m.boxeurs[e];
+    if (p.amenee <= 0 || m.sol) continue;
+    p.amenee += 1;
+    if (p.amenee > AMENEE.armer) { p.amenee = 0; resoudreAmenee(m, p, m.boxeurs[1 - e], evs); }
   }
-  if (m.entrainement) return;
-  m.chrono += 1;
-  if (m.chrono >= m.duree) finRound(m, evs);
 }
 
 /* ------------------------------------------------------------------ */
@@ -183,7 +207,7 @@ function humain(m, e, k, ap) {
   let my = (k & T.h ? 1 : 0) - (k & T.b ? 1 : 0);
   if (mx && my) { mx *= 0.7071; my *= 0.7071; }
   const corps = !!(k & T.b);
-  const c = { mx, my, coup: null, corps, garde: k & T.G ? (corps ? 'basse' : 'haute') : null, esquive: !!(ap & T.S) };
+  const c = { mx, my, coup: null, corps, garde: k & T.G ? (corps ? 'basse' : 'haute') : null, esquive: !!(ap & T.S), amenee: !!(ap & T.R) };
   if (ap & T.A) c.coup = 'jab';
   else if (ap & T.B) c.coup = 'crochet';
   else if (ap & T.X) c.coup = 'upper';
@@ -195,8 +219,16 @@ function humain(m, e, k, ap) {
 /* ------------------------------------------------------------------ */
 
 function agir(m, p, c, evs) {
-  p.garde = p.sonne > 0 || p.coup || p.esquive > 0 ? null : c.garde;
-  if (p.sonne > 0 || p.coup) return;
+  p.garde = p.sonne > 0 || p.coup || p.esquive > 0 || p.amenee > 0 ? null : c.garde;
+  if (p.sonne > 0 || p.coup || p.amenee > 0) return;
+  if (c.amenee && m.regles === 'libre' && p.esquive <= 0 && p.endu >= 5) {
+    // Le plongeon sur les jambes : on se baisse et on fonce.
+    p.amenee = 1;
+    p.garde = null;
+    p.endu = Math.max(0, p.endu - AMENEE.endu);
+    evs.push({ type: 'amenee-part', boxeur: p.e });
+    return;
+  }
   if (c.esquive && p.esquive <= 0 && p.esqRepos <= 0 && p.endu >= 3) {
     // Du côté où l'on pousse ; sans direction, on recule (on s'éloigne de l'autre).
     let ex = c.mx, ey = c.my;
@@ -242,7 +274,7 @@ function resoudre(m, a, d, evs) {
     return;
   }
   // Sans garde, un bon défenseur évite encore une partie des coups (la tête qui bouge, le bras qui pare).
-  if (!d.garde && !d.coup && d.sonne <= 0 && d.etourdi <= 0 && m.coins[d.e].ctrl !== 'aucun' && hasard(m) < d.n.defense / 100 * (c.type === 'jab' ? 0.36 : 0.48)) {
+  if (!d.garde && !d.coup && d.amenee <= 0 && d.sonne <= 0 && d.etourdi <= 0 && m.coins[d.e].ctrl !== 'aucun' && hasard(m) < d.n.defense / 100 * (c.type === 'jab' ? 0.36 : 0.48)) {
     c.retard = 4;
     a.ouvert = 10; a.ouvertN = ++m.numeroCoup;
     evs.push({ type: 'vide', boxeur: a.e, coup: c.type, pare: true });
@@ -261,7 +293,8 @@ function resoudre(m, a, d, evs) {
     evs.push({ type: 'bloque', boxeur: d.e, attaquant: a.e, coup: c.type });
     return;
   }
-  const contre = !!d.coup || d.ouvert > 0;
+  const contre = !!d.coup || d.ouvert > 0 || d.amenee > 0;
+  if (d.amenee > 0) { d.amenee = 0; evs.push({ type: 'amenee-arretee', boxeur: d.e, attaquant: a.e }); }
   let deg = C.degats * (0.66 + a.n.puissance * 0.005) * (a.endu < 35 ? 0.55 + a.endu / 78 : 1);
   deg *= c.corps ? 0.6 : 1.16 - d.n.menton * 0.0042;
   if (contre) deg *= d.ouvert > 0 ? 1.4 : 1.2;
@@ -286,8 +319,131 @@ function resoudre(m, a, d, evs) {
   if (contre) m.stats.contres[a.e] += 1;
   if (critique) m.stats.critiques[a.e] += 1;
   m.rd.pts[a.e] += C.points * (contre ? 1.25 : 1) * (critique ? 1.5 : 1);
+  m.rd.n[a.e] += 1;
+  m.rd.deg[a.e] += deg;
   evs.push({ type: 'touche', boxeur: a.e, cible: d.e, coup: c.type, corps: c.corps, contre, critique, degats: deg, sante: d.sante });
   if (d.sante <= 0) auTapis(m, d, a, evs);
+}
+
+/* ------------------------------------------------------------------ */
+/* Le combat au sol (le combat libre)                                  */
+/* ------------------------------------------------------------------ */
+
+/** Au bout du plongeon : l'autre tombe, ou l'attaquant se retrouve à genoux, découvert. */
+function resoudreAmenee(m, a, d, evs) {
+  const ecart = dist(a.x, a.y, d.x, d.y);
+  const esq = ESQUIVE.duree - d.esquive;
+  const esquive = d.esquive > 0 && esq >= ESQUIVE.debut && esq <= ESQUIVE.fin;
+  let chance = 0.5 + (a.n.puissance - d.n.defense) / 180 + (d.coup ? 0.3 : 0) + (d.etourdi > 0 ? 0.2 : 0)
+    - (d.garde === 'basse' ? 0.4 : 0) + (1 - d.endu / ENDU_MAX) * 0.2 - (1 - a.endu / ENDU_MAX) * 0.15;
+  if (m.coins[a.e].ctrl === 'ia') chance *= niveauDe(m.coins[a.e]).puissance;
+  chance = clamp(chance, 0.08, 0.92);
+  if (ecart > AMENEE.portee + 0.15 || d.sol || esquive || hasard(m) >= chance) {
+    a.sonne = AMENEE.rate;
+    a.ouvert = 30; a.ouvertN = ++m.numeroCoup;
+    evs.push({ type: 'amenee-ratee', boxeur: a.e, cible: d.e, esquive, loin: ecart > AMENEE.portee + 0.15 });
+    return;
+  }
+  // Au sol : celui du dessous reste où il est tombé ; l'autre à genoux sur lui, tourné vers sa tête.
+  for (const p of [a, d]) Object.assign(p, { coup: null, garde: null, esquive: 0, sonne: 0, amenee: 0, vx: 0, vy: 0 });
+  const ux = d.dx, uy = d.dy;
+  a.x = d.x - ux * 0.3; a.y = d.y - uy * 0.3;
+  a.dx = -ux; a.dy = -uy;
+  a.aTerre = 'dessus'; d.aTerre = 'dessous';
+  m.sol = { dessus: a.e, t: 0, prise: null, jauge: 0, sortie: 0, recharge: 24, coupT: 0, garde: false, dec: 30 };
+  m.stats.amenees[a.e] += 1;
+  m.rd.pts[a.e] += AMENEE.points; m.rd.n[a.e] += 1; m.rd.deg[a.e] += 3;
+  evs.push({ type: 'amenee', boxeur: a.e, cible: d.e });
+}
+
+/** Ce que veut faire chacun, au sol : { tape, coup, prise, releve, garde }. */
+function consSol(m, e, k, ap) {
+  if (m.coins[e].ctrl === 'ia') return deciderSol(m, e);
+  if (m.coins[e].ctrl !== 'humain') return { garde: true };
+  const dessus = m.sol.dessus === e;
+  const tape = !!(ap & (T.A | T.B | T.X | T.G | T.S));
+  if (m.sol.prise || !dessus) return { tape, garde: !dessus && !!(k & T.G) };
+  return { coup: !!(ap & T.A), prise: ap & T.B ? 'bras' : ap & T.X ? 'gorge' : ap & T.G ? 'cheville' : null, releve: !!(ap & T.S) };
+}
+
+function auSol(m, k, ap, evs) {
+  const S = m.sol, a = m.boxeurs[S.dessus], d = m.boxeurs[1 - S.dessus];
+  S.t += 1;
+  if (S.coupT > 0) S.coupT += 1;
+  if (S.coupT > 20) S.coupT = 0;
+  for (const p of [a, d]) { p.vx = 0; p.vy = 0; }
+  const ca = consSol(m, a.e, k[a.e], ap[a.e]), cd = consSol(m, d.e, k[d.e], ap[d.e]);
+  if (S.prise) {
+    // Le duel : l'un serre, l'autre se dégage. Ça fatigue les deux.
+    const P = PRISES[S.prise.type];
+    S.prise.t += 1;
+    a.endu = Math.max(0, a.endu - 0.02);
+    d.endu = Math.max(0, d.endu - 0.03);
+    // La jauge penche d'elle-même : vers l'abandon sur un adversaire à bout ou blessé, sinon vers la sortie.
+    S.jauge += P.penche * ((1 - d.endu / ENDU_MAX) + (1 - d.sante / SANTE_MAX) * 0.7 - 0.25);
+    if (ca.tape) S.jauge += P.serre * (0.6 + a.endu / 250);
+    if (cd.tape) S.jauge -= P.fuite * (0.6 + d.endu / 250) * (0.75 + d.n.defense / 300);
+    if (S.jauge >= 1) {
+      m.soumission = P.nom;
+      evs.push({ type: 'soumission', boxeur: a.e, cible: d.e, prise: S.prise.type });
+      finir(m, a.e, 'soumission', evs);
+      return;
+    }
+    if (S.jauge <= 0 || S.prise.t >= P.duree) { evs.push({ type: 'prise-echappe', boxeur: d.e, prise: S.prise.type }); lever(m, evs, 'echappe'); }
+    return;
+  }
+  S.garde = !!cd.garde;
+  if (S.recharge > 0) S.recharge -= 1;
+  if (ca.releve) { lever(m, evs, 'lache'); return; }
+  if (ca.prise && a.endu >= PRISES[ca.prise].endu * 0.5) {
+    const P = PRISES[ca.prise];
+    S.prise = { type: ca.prise, t: 0 };
+    S.jauge = clamp(P.depart + (1 - d.endu / ENDU_MAX) * 0.15 + (1 - d.sante / SANTE_MAX) * 0.12 - (1 - a.endu / ENDU_MAX) * 0.1, 0.15, 0.7);
+    a.endu = Math.max(0, a.endu - P.endu);
+    m.stats.prises[a.e] += 1;
+    m.rd.pts[a.e] += 1;
+    evs.push({ type: 'prise', boxeur: a.e, cible: d.e, prise: ca.prise });
+    return;
+  }
+  if (ca.coup && S.recharge <= 0 && a.endu >= 3) {
+    // Les coups au sol : la garde en arrête une bonne part ; et parfois, un coup qui finit tout.
+    const C = SOL.coup;
+    S.recharge = C.recharge;
+    S.coupT = 1;
+    a.endu = Math.max(0, a.endu - C.endu);
+    m.stats.lances[a.e] += 1;
+    let deg = C.degats * (0.66 + a.n.puissance * 0.005) * (0.9 + hasard(m) * 0.2) * (S.garde ? 0.4 : 1);
+    if (m.coins[a.e].ctrl === 'ia') deg *= niveauDe(m.coins[a.e]).puissance;
+    d.sante -= deg;
+    m.stats.touches[a.e] += 1;
+    m.stats.tete[a.e] += 1;
+    m.rd.pts[a.e] += C.points; m.rd.n[a.e] += 1; m.rd.deg[a.e] += deg;
+    const fatal = hasard(m) < SOL.fatal + Math.max(0, 50 - d.sante) / 350 + (a.n.puissance - 70) / 1200 - (S.garde ? 0.015 : 0);
+    evs.push({ type: 'frappe-sol', boxeur: a.e, cible: d.e, degats: deg, garde: S.garde, fatal, sante: d.sante });
+    if (fatal) { m.stats.critiques[a.e] += 1; finir(m, a.e, 'ko', evs); return; }
+    if (d.sante <= 0) { d.sante = 0; finir(m, a.e, 'arret', evs); return; }
+  }
+  // Celui du dessous tape pour se dégager ; au bout d'un moment, l'arbitre les relève.
+  if (cd.tape) S.sortie += (0.7 + d.endu / 200) * (0.8 + d.n.defense / 250);
+  if (S.sortie >= SOL.relever + (a.n.puissance - 70) / 8) { evs.push({ type: 'degage', boxeur: d.e }); lever(m, evs, 'degage'); return; }
+  if (S.t >= SOL.duree) lever(m, evs, 'arbitre');
+}
+
+/** Tout le monde debout : chacun recule d'un pas. */
+function lever(m, evs, comment) {
+  const S = m.sol;
+  m.sol = null;
+  if (!S) return;
+  const a = m.boxeurs[S.dessus], d = m.boxeurs[1 - S.dessus];
+  const ux = -a.dx, uy = -a.dy;
+  const lim = RING - CORPS_R - 0.1;
+  d.x = clamp(d.x - ux * 0.45, -lim, lim); d.y = clamp(d.y - uy * 0.45, -lim, lim);
+  a.x = clamp(d.x + ux * 1.3, -lim, lim); a.y = clamp(d.y + uy * 1.3, -lim, lim);
+  for (const p of [a, d]) {
+    const o = p === a ? d : a, fx = o.x - p.x, fy = o.y - p.y, l = Math.sqrt(fx * fx + fy * fy) || 1;
+    Object.assign(p, { aTerre: null, amenee: 0, coup: null, garde: null, sonne: 12, dx: fx / l, dy: fy / l, vx: 0, vy: 0, dec: 30 });
+  }
+  evs.push({ type: 'leve', comment });
 }
 
 /* ------------------------------------------------------------------ */
@@ -359,14 +515,20 @@ function compter(m, ap, evs) {
 /* ------------------------------------------------------------------ */
 
 function finRound(m, evs) {
-  // Chaque juge voit le round à sa façon (un peu), donne 10 au meilleur, 9 à l'autre, un point de moins par tapis.
+  // Chaque juge a son œil : le premier compte les coups qui portent, le deuxième le volume, le troisième la
+  // puissance ; et chacun voit le round à sa façon. 10 au meilleur, 9 à l'autre (10-10 si vraiment rien ne les
+  // sépare, 10-8 sur une vraie domination), un point de moins par tapis.
+  const yeux = [(e) => m.rd.pts[e], (e) => m.rd.n[e] * 1.6 + m.rd.pts[e] * 0.3, (e) => m.rd.deg[e] * 0.45 + m.rd.pts[e] * 0.4];
   for (let j = 0; j < 3; j++) {
-    const vu = m.rd.pts.map((p) => p * (1 + gauss(m) * 0.08));
+    const vu = [0, 1].map((e) => yeux[j](e) * (1 + gauss(m) * 0.16) + gauss(m) * 0.8);
+    const r = (vu[0] - vu[1]) / Math.max(4, vu[0] + vu[1]);
     let s = [10, 10];
-    if (Math.abs(vu[0] - vu[1]) >= 1) s = vu[0] > vu[1] ? [10, 9] : [9, 10];
+    if (Math.abs(r) >= 0.015) s = r > 0 ? [10, 9] : [9, 10];
+    if (Math.abs(r) >= 0.6 && !m.rd.kd[0] && !m.rd.kd[1]) s = r > 0 ? [10, 8] : [8, 10];
     s = [s[0] - m.rd.kd[0], s[1] - m.rd.kd[1]];
     m.cartes[j].push(s);
   }
+  if (m.sol) lever(m, evs, 'cloche');
   evs.push({ type: 'cloche', round: m.round, debut: false });
   if (m.round >= m.rounds) { decision(m, evs); return; }
   m.phase = 'repos';
@@ -399,7 +561,11 @@ function finir(m, v, issue, evs) {
 
 function deplacer(m, p, c) {
   const o = m.boxeurs[1 - p.e];
-  if (p.esquive > 0) {
+  if (p.amenee > 0) {
+    // Le plongeon : droit sur l'autre, vite.
+    const v = vitesseMax(p) * 1.25;
+    p.vx = p.dx * v; p.vy = p.dy * v;
+  } else if (p.esquive > 0) {
     // L'esquive : un pas vif au début, puis on se repose sur ses appuis.
     const v = p.esquive > ESQUIVE.duree - 10 ? ESQUIVE.pas / (10 * DT) : 0;
     p.vx = p.esqX * v; p.vy = p.esqY * v;

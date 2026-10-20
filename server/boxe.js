@@ -14,7 +14,7 @@
  * chacun prend la sienne (pas celle de l'autre), puis se dit prêt ; le match
  * part quand les deux le sont.
  *
- * Messages (le champ `g` vaut 'boxe') ; les « équipes » y sont les boxeurs, et il n'y a qu'un ring (`stade` vaut toujours 'ring') :
+ * Messages (le champ `g` vaut 'boxe') ; les « équipes » y sont les boxeurs, et il n'y a qu'un ring (`stade` dit les règles : 'ring' pour la boxe, 'libre' pour le combat libre) :
  *   → creer { nom, stade }             ← salle { code, n: 0, stade }
  *   → rejoindre { code, nom }          ← salon { n, code, noms, equipes, prets, stade } (aux deux)
  *   → equipe { equipe }                ← salon (aux deux), ou erreur si l'autre l'a déjà prise
@@ -59,8 +59,8 @@ const nettoyerNom = (s) => String(s ?? '').replace(/[\u0000-\u001f\u007f<>]/g, '
 /** Une vraie équipe, sinon rien. */
 const equipeValide = (id) => (typeof id === 'string' && EQUIPE[id] ? id : null);
 const envoyer = (c, m) => { if (c?.conn) c.conn.send({ g: 'boxe', ...m }); };
-/** Un seul ring. */
-const stadeValide = () => 'ring';
+/** Un seul ring ; le « stade » dit les règles : 'ring' (la boxe) ou 'libre' (le combat libre). */
+const stadeValide = (s) => (s === 'libre' ? 'libre' : 'ring');
 const entier = (v, min, max, defaut = min) => { const n = Math.trunc(Number(v)); return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : defaut; };
 /** L'état envoyé par l'hôte pour un recalage : au plus… */
 const ETAT_MAX = 60000;

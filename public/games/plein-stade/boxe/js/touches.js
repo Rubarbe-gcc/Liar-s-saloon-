@@ -27,6 +27,7 @@ export const ACTIONS = [
   ['upper', 'Uppercut', T.X, 'KeyL'],
   ['garde', 'Garde', T.G, 'Space'],
   ['esquive', 'Esquive', T.S, 'ShiftLeft'],
+  ['amener', 'Amener au sol', T.R, 'KeyU'],
 ];
 const DEFAUT = Object.fromEntries(ACTIONS.map(([a, , , c]) => [a, c]));
 const RESERVEES = ['Escape', 'KeyP'];

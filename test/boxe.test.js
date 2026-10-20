@@ -197,6 +197,56 @@ test('l’ordinateur met K.-O. un sac de frappe', () => {
   }
 });
 
+test('le combat libre : l’amenée au sol, une prise gagnée en tapant vite, des coups au sol', () => {
+  // Face à un sac (il ne fait rien) : on s'approche, on plonge, puis une clé de bras qu'on serre en tapant.
+  const m = creerCombat({ boxeurs: ['ribeyrolles', 'lantenac'], graine: 5, controles: ['humain', 'aucun'], regles: 'libre' });
+  const tous = [];
+  const jouer = (k, n = 1) => { for (let i = 0; i < n; i++) tous.push(...pas(m, [k, 0])); };
+  jouer(0, 70);
+  jouer(T.d, 70);
+  assert.equal(m.phase, 'combat');
+  for (let i = 0; i < 400 && !m.sol; i++) { jouer(i % 4 === 0 ? T.R : 0); }
+  assert.ok(m.sol, 'au sol');
+  assert.equal(m.sol.dessus, 0);
+  assert.ok(tous.some((e) => e.type === 'amenee'));
+  // Un coup au sol : la santé baisse.
+  const avant = m.boxeurs[1].sante;
+  jouer(0, 30); jouer(T.A); jouer(0, 30);
+  assert.ok(m.boxeurs[1].sante < avant);
+  // La clé de bras, et on tape à toute vitesse.
+  jouer(T.B); jouer(0);
+  assert.equal(m.sol.prise.type, 'bras');
+  for (let i = 0; i < 400 && m.phase !== 'fin'; i++) jouer(i % 2 ? T.A : 0);
+  assert.equal(m.phase, 'fin');
+  assert.equal(m.issue, 'soumission');
+  assert.equal(m.vainqueur, 0);
+  assert.equal(m.soumission, 'Clé de bras');
+  // En boxe, R ne fait rien.
+  const b = creerCombat({ boxeurs: ['ribeyrolles', 'lantenac'], graine: 5, controles: ['humain', 'aucun'] });
+  for (let i = 0; i < 300; i++) pas(b, [i < 140 ? T.d : i % 4 === 0 ? T.R : 0, 0]);
+  assert.equal(b.sol, null);
+  assert.equal(b.boxeurs[0].amenee, 0);
+});
+
+test('le combat libre entre ordinateurs : des amenées, des prises, parfois une soumission ou un coup fatal', () => {
+  const issues = {}, st = { amenees: 0, prises: 0 };
+  for (let g = 1; g <= 40; g++) {
+    const a = BOXEURS[g % 16].id, b = BOXEURS[(g * 5 + 3) % 16].id === a ? BOXEURS[(g + 1) % 16].id : BOXEURS[(g * 5 + 3) % 16].id;
+    const m = simuler({ boxeurs: [a, b], graine: g * 17, minutes: 2, regles: 'libre' });
+    assert.equal(m.phase, 'fin');
+    issues[m.issue] = (issues[m.issue] || 0) + 1;
+    st.amenees += m.stats.amenees[0] + m.stats.amenees[1];
+    st.prises += m.stats.prises[0] + m.stats.prises[1];
+  }
+  assert.ok(st.amenees > 40, `amenées : ${st.amenees}`);
+  assert.ok(st.prises > 20, `prises : ${st.prises}`);
+  assert.ok((issues.soumission || 0) >= 1, JSON.stringify(issues));
+  assert.ok((issues.points || 0) >= 5, JSON.stringify(issues));
+  // Déterministe aussi au sol.
+  const x = simuler({ boxeurs: ['ribeyrolles', 'lantenac'], graine: 77, regles: 'libre' }), y = simuler({ boxeurs: ['ribeyrolles', 'lantenac'], graine: 77, regles: 'libre' });
+  assert.equal(empreinte(x), empreinte(y));
+});
+
 test('le tournoi : huit boxeurs, trois tours, une ceinture', () => {
   const c = creerTournoi({ moi: 'ardouin', graine: 42, minutes: 1 });
   const ids = c.tours[0].flatMap((r) => [r.a, r.b]);

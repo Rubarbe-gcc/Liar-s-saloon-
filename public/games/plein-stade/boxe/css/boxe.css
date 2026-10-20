@@ -88,3 +88,20 @@ body.boxe {
 .fiche-club .joueur .vedette { color: var(--jaune); }
 .fiche-club .barres { font-size: .72em; }
 
+
+/* Le combat libre : la touche d'amenée (tactile), le panneau au sol, la jauge d'une prise. */
+.bj-r { right: 170px; bottom: 4px; width: 58px; height: 58px; font-size: .68em; background: radial-gradient(circle at 40% 30%, #6be0c8, #12907a); }
+.sol { position: absolute; left: 50%; bottom: 16%; transform: translateX(-50%); min-width: 260px; max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 14px; background: rgba(10, 6, 8, .72); box-shadow: 0 0 0 2px rgba(255, 255, 255, .25); text-align: center; pointer-events: none; }
+.sol b { display: block; font-family: var(--titre); font-size: 1.3em; letter-spacing: .06em; text-transform: uppercase; color: #ffe08a; }
+.sol-options { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 12px; margin-top: 6px; font-weight: 700; font-size: .9em; }
+.sol-options:empty { display: none; }
+.sol kbd { display: inline-block; min-width: 22px; margin-right: 5px; padding: 1px 6px; border-radius: 5px; border: 1px solid rgba(255, 255, 255, .5); border-bottom-width: 3px; font: inherit; font-weight: 800; }
+.sol .effort { display: none; width: 240px; max-width: 100%; height: 14px; margin: 8px auto 0; border-radius: 7px; background: rgba(0, 0, 0, .55); box-shadow: 0 0 0 2px rgba(255, 255, 255, .6); overflow: hidden; }
+.sol.prise .effort { display: block; }
+.sol .effort i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #6be0c8, #ffe08a 60%, #ff4d5e); transition: width .08s linear; }
+.sol small { display: block; margin-top: 6px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; font-size: .8em; }
+.sol small:empty { display: none; }
+.sol.prise b { animation: battement .4s ease-out infinite alternate; }
+.salon-regles { margin: 8px 0; }
+.salon-regles button:disabled { cursor: default; }
+.commandes tr.libre td:first-child { color: #6be0c8; }

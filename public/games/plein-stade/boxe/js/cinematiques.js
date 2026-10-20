@@ -54,6 +54,7 @@ export function intro(P) {
 function verdict(m) {
   if (m.issue === 'ko') return `par K.-O. au round ${m.round}`;
   if (m.issue === 'arret') return `par arrêt de l’arbitre au round ${m.round}`;
+  if (m.issue === 'soumission') return `par soumission (${(m.soumission || 'prise').toLowerCase()}) au round ${m.round}`;
   const type = { unanime: 'à l’unanimité', majorite: 'à la majorité', partagee: 'sur décision partagée', arbitre: 'sur décision de l’arbitre' }[m.decision?.type] || 'aux points';
   const cartes = (m.decision?.totaux || []).map((t) => `${Math.max(...t)}-${Math.min(...t)}`).join(', ');
   return `aux points, ${type}${cartes ? ` (${cartes})` : ''}`;
@@ -130,7 +131,7 @@ export function victoire(P, v, { ceinture = false } = {}) {
   const boxeurs = [0, 1].map((e) => (e === v ? vueBoxeur(0, 0, 0, -1) : vueBoxeur(e === 0 ? -2.4 : 2.4, e === 0 ? 2.2 : -2.2, e === 0 ? 1 : -1)));
   const humeurs = [0, 1].map((e) => (e === v ? (ceinture ? 'trophee' : 'joie') : 'decu'));
   const vue = { phase: 'fin', boxeurs, humeurs };
-  const issue = { ko: 'par K.-O.', arret: 'par arrêt de l’arbitre', points: 'aux points' }[P.m.issue];
+  const issue = { ko: 'par K.-O.', arret: 'par arrêt de l’arbitre', points: 'aux points', soumission: 'par soumission' }[P.m.issue];
   const couleurs = [b.couleurs.gants, b.couleurs.short, b.couleurs.liseré, '#ffd23f', '#ffffff'];
   let prochain = 0;
   return [{

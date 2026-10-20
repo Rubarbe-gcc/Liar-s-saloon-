@@ -64,6 +64,7 @@
     <div class="options" id="options-match">
       <div class="option"><span>Niveau</span><div class="segments" id="seg-niveau"></div></div>
       <div class="option"><span>Rounds</span><div class="segments" id="seg-duree"></div></div>
+      <div class="option"><span>Règles</span><div class="segments" id="seg-regles"></div></div>
     </div>
     <button class="btn vert grand coup-envoi" id="b-jouer"><b>Sur le ring</b></button>
   </div>
@@ -111,6 +112,7 @@
       <p class="code-salle">Salle <b id="salle-code"></b></p>
       <p class="consigne" id="salle-attente">En attente d’un adversaire… Donne-lui ce code.</p>
       <div class="salon-joueurs" id="salon-joueurs"></div>
+      <div class="option salon-regles"><span>Règles</span><div class="segments" id="salon-regles"></div></div>
       <div class="grille-equipes petite" id="salon-equipes"></div>
       <button class="btn vert grand" id="salon-pret" disabled><b>Prêt !</b></button>
             <button class="btn fin" id="salle-quitter">Quitter la salle</button>
@@ -130,6 +132,7 @@
     <button class="rond pause" id="b-pause" aria-label="Pause">❚❚</button>
     <div class="bandeau" id="bandeau" aria-live="polite"></div>
     <div class="compte cache" id="compte" aria-live="assertive"><b id="compte-n"></b><small id="compte-aide"></small><span class="effort"><i id="compte-effort"></i></span></div>
+    <div class="sol cache" id="sol" aria-live="polite"><b id="sol-titre"></b><div class="sol-options" id="sol-options"></div><span class="effort"><i id="sol-jauge"></i></span><small id="sol-aide"></small></div>
     <div class="commentaire" id="commentaire" aria-live="polite"></div>
     <div class="net-diag cache" id="net-diag"></div>
     <div class="attente-net cache" id="attente-net" role="status"><b id="attente-titre"></b><span id="attente-texte"></span><button class="btn fin" id="attente-quitter">Quitter le combat</button></div>
@@ -142,6 +145,7 @@
       <button class="bj bj-x" data-t="X"><span>Upper</span></button>
       <button class="bj bj-a" data-t="A"><span>Jab</span></button>
       <button class="bj bj-b" data-t="B"><span>Crochet</span></button>
+      <button class="bj bj-r cache" data-bit="512" id="bj-amener"><span>Amener</span></button>
     </div>
   </div>
   <div class="tourne" id="tourne">↻ Tourne ton téléphone : c’est plus beau en largeur.</div>
@@ -173,11 +177,13 @@
         <tr><td>Crochet</td><td><button class="touche" data-action="crochet"></button></td><td>B</td><td>Le coup fort, à mi-distance</td></tr>
         <tr><td>Uppercut</td><td><button class="touche" data-action="upper"></button></td><td>X</td><td>De près : il peut sonner l’adversaire</td></tr>
         <tr><td>Garde</td><td><button class="touche" data-action="garde"></button></td><td>Y</td><td>Tiens-la : garde haute (la tête) ; en tenant « descendre », garde basse (le corps)</td></tr>
+        <tr class="libre"><td>Amener au sol</td><td><button class="touche" data-action="amener"></button></td><td>LB</td><td>Combat libre : plonger sur les jambes de l’autre (ça passe s’il frappe ou s’il est fatigué ; une garde basse ou une esquive le contre)</td></tr>
         <tr><td>Esquive</td><td><button class="touche" data-action="esquive"></button></td><td>Gâchettes</td><td>Un pas vif du côté où l’on pousse (sinon en arrière) : un coup esquivé laisse l’autre à découvert</td></tr>
       </tbody>
     </table>
     <p class="astuce touches-aide" id="touches-aide">Clique sur une touche pour la changer, puis appuie sur la nouvelle (Échap pour annuler). <button class="btn fin" id="touches-defaut">Touches par défaut</button></p>
     <p class="astuce">En tenant « descendre », tes coups visent le <b>corps</b> : ils fatiguent l’adversaire. Frapper un boxeur qui frappe, ou qui vient de frapper dans le vide, fait plus mal (le <b>contre</b>).<br>Au tapis : tape à toute vitesse sur un coup pour te relever avant 10.</p>
+    <p class="astuce"><b>Combat libre</b>, au sol, au-dessus : jab = des coups (avec de la chance, un coup fatal), crochet = clé de bras, uppercut = étranglement, garde = clé de cheville, esquive = se relever. Une prise est un duel : tape le plus vite possible pour serrer ; en dessous, tape pour t’échapper (et tiens la garde contre les coups).</p>
     <button class="btn vert" id="c-fermer">Compris</button>
   </div>
 </div>
