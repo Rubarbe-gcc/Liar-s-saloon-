@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v160';
+const VERSION = 'v161';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -176,6 +176,17 @@ const SHELL = [
   '/shared/baltrou/jokers.js',
   '/shared/baltrou/partie.js',
   '/shared/baltrou/arcanes.js',
+  '/games/legendes/',
+  '/games/legendes/css/legendes.css',
+  '/games/legendes/js/main.js',
+  '/games/legendes/js/portrait.js',
+  '/games/legendes/js/animations.js',
+  '/games/legendes/js/sons.js',
+  '/shared/legendes/persos.js',
+  '/shared/legendes/calendrier.js',
+  '/shared/legendes/gacha.js',
+  '/shared/legendes/combat.js',
+  '/shared/legendes/niveaux.js',
   '/games/rempart/',
   '/games/rempart/css/rempart.css',
   '/games/rempart/icons/icon.svg',

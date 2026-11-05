@@ -1,0 +1,187 @@
+/**
+ * LÉGENDES — le gacha et son calendrier : les personnages, les portails selon la date (rotation, fêtes),
+ * les taux, les garanties (multi, bannière, paliers, pitié), les doublons, les jetons du jour et des fêtes.
+ */
+
+import test from 'node:test';
+import assert from 'node:assert/strict';
+
+import { PERSOS, PERSO, ELEMENTS, FAMILLES, RARETES, STYLES_SUPER, avantage, stats } from '../public/shared/legendes/persos.js';
+import { LANCEMENT, ROTATION, NB_SORTIES, portails, fetesDu, permanents, rotationDu } from '../public/shared/legendes/calendrier.js';
+import { nouvelEtat, invoquer, connexion, cadeauFete, PALIERS, PITIE, TAUX } from '../public/shared/legendes/gacha.js';
+
+const jour = (a, m, j) => Date.UTC(a, m - 1, j) / 86400000;
+
+test('les personnages : complets, des éléments, des familles et des styles connus', () => {
+  assert.equal(new Set(PERSOS.map((x) => x.id)).size, PERSOS.length);
+  for (const x of PERSOS) {
+    assert.ok(ELEMENTS[x.element] && RARETES[x.rarete], x.id);
+    assert.ok(x.familles.length && x.familles.every((f) => FAMILLES[f]), x.id);
+    assert.ok(STYLES_SUPER.includes(x.super.style) && x.super.mult > 1, x.id);
+    assert.ok(x.couleurs.peau && x.couleurs.aura && x.coiffure);
+  }
+  assert.equal(avantage('flamme', 'tempete'), 1.5);
+  assert.equal(avantage('tempete', 'flamme'), 0.75);
+  assert.equal(avantage('flamme', 'roc'), 1);
+  assert.ok(stats('kael_lr', 5).atq > stats('kael_lr').atq);
+});
+
+test('le calendrier : un nouveau portail tous les 17 jours, garanti puis à paliers, les vedettes rejoignent le permanent', () => {
+  const p0 = portails(LANCEMENT);
+  const rot0 = p0.find((p) => p.id.startsWith('rotation'));
+  assert.equal(rot0.type, 'garanti');
+  assert.deepEqual(rot0.nouveaux.sort(), ['kael_lr', 'noa_ssr']);
+  assert.ok(!p0[0].pool.includes('kael_lr'), 'pas encore dans le permanent');
+  const rot1 = portails(LANCEMENT + ROTATION).find((p) => p.id.startsWith('rotation'));
+  assert.equal(rot1.type, 'paliers');
+  assert.ok(rot1.nouveaux.includes('vash_lr'));
+  assert.ok(permanents(LANCEMENT + ROTATION).some((x) => x.id === 'kael_lr'), 'kael rejoint le permanent');
+  assert.equal(rotationDu(LANCEMENT + ROTATION - 1).k, 0);
+  // Après la dernière sortie, les portails reviennent (sans nouveau personnage).
+  const tard = portails(LANCEMENT + ROTATION * (NB_SORTIES + 1)).find((p) => p.id.startsWith('rotation'));
+  assert.ok(tard.reprise && tard.nouveaux.length === 0 && tard.vedettes.length > 0);
+});
+
+test('les célébrations : anniversaire, Halloween, Noël, Nouvel An (à cheval sur deux années)', () => {
+  assert.deepEqual(fetesDu(jour(2026, 11, 5)).map((f) => f.id), ['anniversaire']);
+  assert.deepEqual(fetesDu(jour(2027, 10, 31)).map((f) => f.id), ['halloween']);
+  assert.deepEqual(fetesDu(jour(2027, 12, 24)).map((f) => f.id), ['noel']);
+  assert.deepEqual(fetesDu(jour(2028, 1, 3)).map((f) => f.id), ['nouvelan']);
+  assert.deepEqual(fetesDu(jour(2027, 3, 3)), []);
+  const noel = portails(jour(2027, 12, 20)).find((p) => p.fete === 'noel');
+  assert.equal(noel.type, 'paliers');
+  assert.deepEqual(noel.nouveaux, ['givre']);
+  // Un personnage de fête ne se tire jamais ailleurs.
+  for (const p of portails(jour(2027, 3, 3))) assert.ok(!p.pool.includes('givre'));
+});
+
+test('les taux : à peu près ceux annoncés, sur beaucoup de tirages', () => {
+  const e = nouvelEtat(7);
+  e.jetons = 1e9;
+  const portail = portails(jour(2027, 3, 3))[0];
+  const n = { R: 0, SR: 0, SSR: 0, LR: 0 };
+  for (let k = 0; k < 4000; k++) for (const r of invoquer(e, portail, 1).resultats) n[r.rarete] += 1;
+  assert.ok(Math.abs(n.LR / 4000 - TAUX.LR) < 0.008, `LR ${n.LR}`);
+  assert.ok(Math.abs(n.SSR / 4000 - TAUX.SSR) < 0.015, `SSR ${n.SSR}`);
+  assert.ok(Math.abs(n.SR / 4000 - TAUX.SR) < 0.03, `SR ${n.SR}`);
+});
+
+test('un multi garantit un SSR ; le portail garanti, une vedette à chaque multi', () => {
+  const e = nouvelEtat(3);
+  e.jetons = 1e6;
+  const garanti = portails(LANCEMENT).find((p) => p.type === 'garanti');
+  for (let k = 0; k < 40; k++) {
+    const r = invoquer(e, garanti, 10);
+    assert.equal(r.resultats.length, 10);
+    assert.ok(r.resultats.some((x) => x.rarete === 'SSR' || x.rarete === 'LR'));
+    assert.ok(r.resultats.some((x) => x.vedette), 'une vedette par multi');
+  }
+});
+
+test('les paliers : les prix, deux SSR au 3e, le nouveau personnage au 5e', () => {
+  const e = nouvelEtat(11);
+  e.jetons = 25 + 40 + 50 + 50 + 50;
+  const p = portails(LANCEMENT + ROTATION).find((x) => x.type === 'paliers');
+  const res = [];
+  for (let k = 0; k < 5; k++) res.push(invoquer(e, p, 10));
+  assert.deepEqual(res.map((r) => r.prix), PALIERS.map((x) => x.prix));
+  // Il ne reste que les jetons rendus par les doublons déjà éveillés au maximum.
+  assert.equal(e.jetons, res.flatMap((r) => r.resultats).reduce((t, x) => t + (x.rendu || 0), 0));
+  e.jetons = 0;
+  assert.ok(res[2].resultats.filter((x) => ['SSR', 'LR'].includes(x.rarete)).length >= 2);
+  assert.ok(res[4].resultats.some((x) => p.nouveaux.includes(x.id)), 'le nouveau au 5e palier');
+  assert.equal(invoquer(e, p, 10).ok, false, 'plus de jetons');
+});
+
+test('la pitié : une vedette au plus tard au 100e tirage', () => {
+  const e = nouvelEtat(5);
+  e.jetons = 1e6;
+  const p = portails(LANCEMENT + ROTATION).find((x) => x.type === 'paliers');
+  let sans = 0, max = 0;
+  for (let k = 0; k < 3000; k++) {
+    const r = invoquer(e, p, 1).resultats[0];
+    sans = r.vedette ? 0 : sans + 1;
+    max = Math.max(max, sans);
+  }
+  assert.ok(max < PITIE, `${max} tirages sans vedette`);
+});
+
+test('les doublons éveillent le personnage, puis rendent des jetons ; la connexion et les cadeaux de fête', () => {
+  const e = nouvelEtat(9);
+  e.jetons = 1e6;
+  const p = portails(jour(2027, 3, 3))[0];
+  for (let k = 0; k < 200; k++) invoquer(e, p, 10);
+  const r = Object.entries(e.collection).find(([id]) => PERSO[id].rarete === 'R');
+  assert.equal(r[1].eveil, RARETES.R.eveilMax);
+  const f = nouvelEtat(1);
+  const j = jour(2027, 3, 3);
+  assert.ok(connexion(f, j) > 0);
+  assert.equal(connexion(f, j), 0, 'une fois par jour');
+  assert.ok(connexion(f, j + 1) > connexion(nouvelEtat(1), j));
+  const fete = fetesDu(jour(2026, 11, 6))[0];
+  assert.equal(cadeauFete(f, fete), 500);
+  assert.equal(cadeauFete(f, fete), 0);
+});
+
+import { creerCombat, jouerTour, meilleureCouleur, rotation, kiPour, KI_SUPER } from '../public/shared/legendes/combat.js';
+import { CHAPITRES } from '../public/shared/legendes/niveaux.js';
+
+const equipe = (ids) => ids.map((id) => ({ id, eveil: 0 }));
+const jouer = (ids, ennemis, graine) => {
+  const c = creerCombat({ equipe: equipe(ids), ennemis, graine });
+  while (!c.fin && c.tour < 80) jouerTour(c, meilleureCouleur(c));
+  return c;
+};
+
+test('le combat : déterministe, la rotation de trois, le ki de son élément compte triple, la super à 12', () => {
+  const ids = ['kael_ssr', 'ryo_ssr', 'mira_ssr', 'hiro_ssr', 'sel_ssr', 'ivo_ssr'];
+  const a = jouer(ids, CHAPITRES[1].etapes[4].ennemis, 4), b = jouer(ids, CHAPITRES[1].etapes[4].ennemis, 4);
+  assert.deepEqual(a.journal, b.journal);
+  assert.equal(a.pv, b.pv);
+  const c = creerCombat({ equipe: equipe(ids), ennemis: CHAPITRES[0].etapes[0].ennemis, graine: 1 });
+  assert.deepEqual(rotation(c), [0, 1, 2]);
+  c.spheres = new Array(18).fill('flamme').map((x, i) => (i < 5 ? 'flamme' : 'roc'));
+  const g = kiPour(c, 'flamme'), h = kiPour(c, 'roc');
+  assert.equal(g[0] - h[0], 5 * 3 - 13, 'Kael (flamme) : ses sphères comptent triple');
+  assert.equal(g[1] - h[1], 5 - 13);
+  const evs = jouerTour(c, 'flamme');
+  assert.equal(evs.find((e) => e.qui === 0 && !e.add).type, g[0] >= KI_SUPER ? 'super' : 'attaque');
+  assert.deepEqual(rotation(c), [3, 4, 5]);
+});
+
+test('la progression : des R passent le début, des SSR l’essentiel, l’Éclipse demande des LR', () => {
+  const R = ['kael_r', 'mira_r', 'bram_r', 'lio_r', 'nami_r', 'tobi_r'];
+  const SSR = ['kael_ssr', 'ryo_ssr', 'mira_ssr', 'hiro_ssr', 'sel_ssr', 'ivo_ssr'];
+  assert.equal(jouer(R, CHAPITRES[0].etapes[0].ennemis, 1).fin, 'victoire');
+  assert.equal(jouer(R, CHAPITRES[2].etapes[0].ennemis, 1).fin, 'defaite');
+  for (const k of [0, 1, 2, 3, 4]) assert.equal(jouer(SSR, CHAPITRES[1].etapes[k].ennemis, 2).fin, 'victoire', `ch2 étape ${k + 1}`);
+});
+
+import { CATEGORIES, LIENS } from '../public/shared/legendes/persos.js';
+import { ennemisEn, DIFFICULTES, DEFIS, ULTIME, etage } from '../public/shared/legendes/niveaux.js';
+
+test('les passifs : plus longs avec la rareté, des catégories, des liens, un chef, une super (ultime pour un LR)', () => {
+  const lignes = (r) => Math.max(...PERSOS.filter((x) => x.rarete === r).map((x) => x.passif.lignes.length));
+  assert.ok(lignes('R') <= 2 && lignes('SR') <= 4 && lignes('LR') >= 6, `${lignes('R')} ${lignes('SR')} ${lignes('LR')}`);
+  for (const x of PERSOS) {
+    assert.ok(x.categories.length >= 2 && x.categories.every((k) => CATEGORIES[k]), x.id);
+    assert.ok(x.liens.length >= 2 && x.liens.every((l) => LIENS[l]), x.id);
+    assert.ok(x.chef.cats.every((k) => CATEGORIES[k]) && x.chef.taux > 0);
+    assert.equal(!!x.super.ultime, x.rarete === 'LR', x.id);
+  }
+});
+
+test('les boss : une super attaque, une transformation sous un seuil de PV ; l’end game est bien plus dur', () => {
+  const equipeLR = ['ryo_lr', 'vash_lr', 'hiro_lr', 'ryo_ssr', 'ivo_ssr', 'goran_ssr'];
+  const c = creerCombat({ equipe: equipe(equipeLR), ennemis: ULTIME.ennemis, graine: 3, ami: 'ryo_lr' });
+  const evs = [];
+  while (!c.fin && c.tour < 60) evs.push(...jouerTour(c, meilleureCouleur(c)));
+  assert.ok(evs.some((e) => e.type === 'superEnnemi'), 'le boss lance sa super');
+  assert.ok(evs.some((e) => e.type === 'transformation'), 'le boss se transforme');
+  assert.ok(c.tour >= 5, `un long combat (${c.tour} tours)`);
+  const SSR = ['kael_ssr', 'ryo_ssr', 'mira_ssr', 'hiro_ssr', 'sel_ssr', 'ivo_ssr'];
+  assert.equal(jouer(SSR, ULTIME.ennemis, 1).fin, 'defaite', 'des SSR ne passent pas le combat ultime');
+  assert.ok(ennemisEn(CHAPITRES[0].etapes[0].ennemis, DIFFICULTES[2])[0].pv > CHAPITRES[0].etapes[0].ennemis[0].pv * 5);
+  assert.ok(DEFIS.every((d) => CATEGORIES[d.categorie]));
+  assert.ok(etage(20).ennemis[0].pv > etage(1).ennemis[0].pv * 50 && etage(10).ennemis[0].boss);
+});

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0b0a18">
+<meta name="description" content="LÉGENDES — le gacha de l'arcade. Invoque des héros inventés, monte ton équipe de six, combats au tour par tour avec les sphères de ki et les super attaques. Des portails qui changent toutes les deux semaines et demie, des fêtes toute l'année.">
+<title>Légendes · Insert Coin</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%E2%9C%A8%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="/games/legendes/css/legendes.css">
+<script src="/maj.js" defer></script>
+</head>
+<body>
+<div class="ciel" id="ciel" aria-hidden="true"></div>
+
+<!-- La barre du haut : les jetons, le retour -->
+<header class="barre" id="barre">
+  <button class="rond" id="b-retour" aria-label="Retour">‹</button>
+  <h1 class="logo"><span>LÉGENDES</span></h1>
+  <span class="jetons" id="jetons" title="Tes jetons">🪙 <b id="jetons-n">0</b></span>
+</header>
+
+<!-- ============ L'ACCUEIL ============ -->
+<section class="ecran actif" id="s-accueil">
+  <div class="fete-bandeau cache" id="fete-bandeau"></div>
+  <div class="vitrine" id="vitrine"></div>
+  <div class="menu">
+    <button class="gros or" id="b-invoquer"><b>✨ Invoquer</b><small id="info-portails"></small></button>
+    <button class="gros" id="b-histoire"><b>📖 Histoire</b><small id="info-histoire"></small></button>
+    <button class="gros fete cache" id="b-epreuve"><b id="epreuve-titre">🎉 Épreuve</b><small id="epreuve-info"></small></button>
+    <button class="gros" id="b-finjeu"><b>⚔️ Fin de jeu</b><small>Défis suprêmes, combat ultime, tour infinie</small></button>
+    <div class="deux">
+      <button class="gros" id="b-equipe"><b>🛡️ Équipe</b></button>
+      <button class="gros" id="b-collection"><b>📚 Collection</b><small id="info-collection"></small></button>
+    </div>
+  </div>
+  <a class="lien" href="/">‹ L’arcade</a>
+</section>
+
+<!-- ============ LES PORTAILS ============ -->
+<section class="ecran" id="s-portails">
+  <div class="onglets" id="onglets-portails"></div>
+  <div class="portail" id="portail"></div>
+</section>
+
+<!-- ============ LA COLLECTION ============ -->
+<section class="ecran" id="s-collection">
+  <div class="filtres" id="filtres"></div>
+  <div class="grille" id="grille-collection"></div>
+</section>
+
+<!-- ============ L'ÉQUIPE ============ -->
+<section class="ecran" id="s-equipe">
+  <p class="consigne" id="consigne-equipe">Touche une place, puis choisis qui la prend. Le premier est le <b>chef</b>.</p>
+  <div class="equipe" id="places"></div>
+  <div class="chef" id="chef-info"></div>
+  <div class="grille" id="grille-equipe"></div>
+</section>
+
+<!-- ============ L'HISTOIRE ============ -->
+<section class="ecran" id="s-histoire">
+  <div id="chapitres"></div>
+</section>
+
+<!-- ============ LE JEU DE FIN ============ -->
+<section class="ecran fin-jeu" id="s-finjeu">
+  <div id="fin-jeu"></div>
+</section>
+
+<!-- ============ LE CHOIX DE L'ALLIÉ ============ -->
+<section class="ecran" id="s-ami">
+  <p class="consigne">Choisis un allié : <b>son chef s’ajoute au tien</b>. Prends-en un dont la catégorie couvre ton équipe.</p>
+  <div id="liste-amis"></div>
+</section>
+
+<!-- ============ LE COMBAT ============ -->
+<section class="ecran combat" id="s-combat">
+  <div class="arene" id="arene">
+    <div class="adversaire">
+      <div class="nom-ennemi" id="ennemi-nom"></div>
+      <div class="pv ennemi"><i id="ennemi-pv"></i><span id="ennemi-pv-txt"></span></div>
+      <div class="monstre" id="monstre"></div>
+      <div class="vague" id="vague"></div>
+    </div>
+    <div class="nombres" id="nombres"></div>
+  </div>
+  <div class="trio" id="trio"></div>
+  <div class="pv equipe"><i id="equipe-pv"></i><span id="equipe-pv-txt"></span></div>
+  <div class="spheres" id="spheres"></div>
+  <p class="aide" id="aide-combat">Touche une couleur : tu ramasses toutes ses sphères.</p>
+</section>
+
+<!-- ============ LA FICHE D'UN PERSONNAGE ============ -->
+<div class="voile cache" id="v-fiche"><div class="panneau" id="fiche"></div></div>
+
+<!-- ============ LES ANIMATIONS (invocation, super attaques, résultats) ============ -->
+<div class="scene cache" id="scene"></div>
+
+<script type="module" src="/games/legendes/js/main.js"></script>
+</body>
+</html>
