@@ -21,3 +21,5 @@ const coupe = lire('petitpont.coupe');
 if (coupe && coupe.tours && !coupe.fini && !coupe.elimine) document.getElementById('info-foot').textContent = `Une Coupe en cours (${TOURS[coupe.tour] || ''})`;
 const tournoi = lire('doublepas.tournoi');
 if (tournoi && tournoi.tours && !tournoi.fini && !tournoi.elimine) document.getElementById('info-basket').textContent = `Un tournoi en cours (${TOURS[tournoi.tour] || ''})`;
+const tournoiTennis = lire('revers.tournoi');
+if (tournoiTennis && tournoiTennis.tours && !tournoiTennis.fini && !tournoiTennis.elimine) document.getElementById('info-tennis').textContent = `Un tournoi en cours (${TOURS[tournoiTennis.tour] || ''})`;

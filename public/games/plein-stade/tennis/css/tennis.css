@@ -1,0 +1,82 @@
+/* REVERS — le tennis. L'habillage télé du foot (foot.css), sur un court en plein air : le vert des bâches,
+   le jaune de la balle, l'ocre de la terre battue. */
+
+body.tennis {
+  --nuit: #07130d;
+  --nuit2: #12271b;
+  --jaune: #dff34a;
+  --citron: #f1ff9a;
+  --doux: #b8cbbf;
+}
+
+.tennis .fond { background: radial-gradient(120% 80% at 50% 0%, #1f5a3a 0%, var(--nuit) 62%); }
+.tennis .fond-gazon { background: repeating-linear-gradient(90deg, #2f63a8 0 12%, #2a5895 12% 24%); opacity: .25; }
+.tennis .logo .balle { font-size: .8em; display: inline-block; filter: drop-shadow(0 6px 0 rgba(0, 0, 0, .3)); animation: rebond 1.1s cubic-bezier(.3, 0, .4, 1) infinite; }
+@keyframes rebond { 0%, 100% { transform: translateY(-.25em); } 50% { transform: translateY(.1em) scaleY(.85); } }
+.tennis .logo .l1 { text-shadow: 0 4px 0 #0a2a18, 0 0 30px rgba(120, 255, 160, .3); }
+.tennis .logo .l2 { color: var(--jaune); text-shadow: 0 4px 0 #4a5a00, 0 0 30px rgba(223, 243, 74, .4); }
+.tennis .btn.vert { background: linear-gradient(180deg, #3aa864, #1f6e3e); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 4px 0 #0c3a1e, 0 8px 18px rgba(0, 0, 0, .35); }
+.tennis .btn.vert small { color: #d8ffe4; }
+@media (prefers-reduced-motion: reduce) { .tennis .logo .balle { animation: none; } }
+
+.tennis .equipe .surnom { color: var(--jaune); font-size: .74em; font-style: italic; }
+
+/* Le tableau du score, à la façon de la télévision : un joueur par ligne, les sets, les jeux, les points. */
+.hud-tennis { position: absolute; top: max(8px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); display: grid; grid-template-columns: auto; gap: 2px; pointer-events: none; font-variant-numeric: tabular-nums; }
+.hud-tennis .ligne { display: flex; align-items: center; gap: 8px; background: rgba(6, 14, 10, .82); padding: 4px 4px 4px 8px; border-radius: 6px; min-width: 230px; }
+.hud-tennis .ligne .badge svg { display: block; width: 24px; height: 24px; }
+.hud-tennis .ligne b { flex: 1; font-family: var(--titre); font-style: italic; text-transform: uppercase; font-size: .88em; white-space: nowrap; }
+.hud-tennis .ligne .sv { width: 10px; height: 10px; border-radius: 50%; background: var(--jaune); box-shadow: 0 0 6px var(--jaune); visibility: hidden; }
+.hud-tennis .ligne.sert .sv { visibility: visible; }
+.hud-tennis .sets { display: flex; gap: 2px; }
+.hud-tennis .sets span, .hud-tennis .jeux, .hud-tennis .pts { min-width: 24px; text-align: center; font-weight: 800; border-radius: 4px; padding: 1px 4px; }
+.hud-tennis .sets span { color: var(--doux); }
+.hud-tennis .sets span.gagne { color: #fff; }
+.hud-tennis .jeux { background: rgba(255, 255, 255, .12); }
+.hud-tennis .pts { min-width: 36px; background: var(--jaune); color: #10200f; font-family: var(--titre); }
+.hud-tennis .enjeu { margin-top: 3px; align-self: start; justify-self: start; padding: 3px 10px; border-radius: 5px; background: #e0443c; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; font-size: .72em; }
+.hud-tennis .enjeu:empty { display: none; }
+
+/* La jauge de puissance : elle se remplit tant qu'on tient le coup armé. */
+.jauge-coup { position: absolute; left: 50%; bottom: 13%; transform: translateX(-50%); width: 200px; text-align: center; pointer-events: none; transition: opacity .15s; }
+.jauge-coup.cache { display: block; opacity: 0; }
+.jauge-coup small { display: block; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; font-size: .75em; text-shadow: 0 1px 3px #000; }
+.jauge-coup span { display: block; height: 10px; margin-top: 4px; border-radius: 5px; background: rgba(0, 0, 0, .55); box-shadow: 0 0 0 2px rgba(255, 255, 255, .55); overflow: hidden; }
+.jauge-coup i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #dff34a, #ffb347 70%, #ff4d5e); }
+
+/* La vitesse du service, et l'aide du service. */
+.vitesse-service { position: absolute; right: max(12px, env(safe-area-inset-right)); top: max(64px, calc(env(safe-area-inset-top) + 56px)); padding: 4px 10px; border-radius: 6px; background: rgba(6, 14, 10, .82); font-family: var(--titre); font-size: 1.1em; pointer-events: none; }
+.vitesse-service small { font-size: .6em; color: var(--doux); margin-left: 3px; }
+.vitesse-service:empty { display: none; }
+.aide-service { position: absolute; left: 50%; bottom: 22%; transform: translateX(-50%); padding: 6px 14px; border-radius: 10px; background: rgba(6, 14, 10, .7); font-weight: 800; font-size: .9em; pointer-events: none; text-align: center; max-width: calc(100% - 32px); }
+.aide-service:empty { display: none; }
+.aide-service kbd { display: inline-block; min-width: 20px; margin: 0 3px; padding: 0 6px; border-radius: 5px; border: 1px solid rgba(255, 255, 255, .5); border-bottom-width: 3px; font: inherit; }
+
+.bj-a { background: radial-gradient(circle at 40% 30%, #f1ff9a, #9fb31a); color: #1a2200; }
+.bj-b { background: radial-gradient(circle at 40% 30%, #6ab8ff, #1a6fd0); }
+.bj-x { background: radial-gradient(circle at 40% 30%, #c38aff, #6b2fb3); }
+.bj-g { background: radial-gradient(circle at 40% 30%, #ffb38a, #c9581a); font-size: .74em; }
+
+/* Les touches, au choix du joueur (comme la boxe). */
+.touche { min-width: 34px; padding: 4px 8px; margin: 1px 3px 1px 0; border-radius: 6px; border: 1px solid rgba(255, 255, 255, .35); border-bottom-width: 3px; background: rgba(255, 255, 255, .08); color: var(--texte); font-weight: 800; cursor: pointer; }
+.touche:hover { border-color: var(--jaune); }
+.touche.attend { border-color: var(--jaune); background: rgba(223, 243, 74, .25); animation: clignote .8s infinite; }
+.touches-bouger small { display: block; color: var(--doux); font-size: .8em; margin-top: 2px; }
+.touches-aide .btn { margin-left: 8px; padding: 4px 10px; font-size: .9em; }
+@keyframes clignote { 50% { opacity: .5; } }
+.tennis .tableau-score { display: none; }
+
+/* La fiche du joueur survolé. */
+.fiche-club { margin: 12px 0 4px; padding: 12px 14px; border-radius: 10px; background: linear-gradient(90deg, color-mix(in srgb, var(--c1, #1a3a2a) 35%, transparent), var(--nuit2) 70%); border: 1px solid rgba(255, 255, 255, .08); }
+.fiche-club:empty { display: none; }
+.fiche-club .tete { display: flex; align-items: center; gap: 10px; }
+.fiche-club .tete b { font-family: var(--titre); font-style: italic; text-transform: uppercase; }
+.fiche-club .tete small { display: block; color: var(--doux); }
+.fiche-club .barres { font-size: .72em; }
+.salon-regles { margin: 8px 0; }
+.salon-regles button:disabled { cursor: default; }
+
+/* La fin : le score des sets. */
+.fin-sets { display: flex; justify-content: center; gap: 8px; margin: 6px 0 10px; }
+.fin-sets span { padding: 6px 12px; border-radius: 8px; background: rgba(255, 255, 255, .07); font-family: var(--titre); font-size: 1.2em; }
+.fin-sets:empty { display: none; }

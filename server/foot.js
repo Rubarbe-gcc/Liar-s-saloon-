@@ -26,6 +26,7 @@
  *   → etat { f, etat }                 ← etat (à l'autre) : l'hôte envoie son état pour que l'autre s'y recale
  *   → sonde { id }                     ← sonde { id } : pour mesurer le ping
  *   → revanche                         ← revanche { n } puis debut quand les deux sont d'accord
+ *   → retour                           ← salon (aux deux) : après un match, retour au choix des équipes (même salle, même code)
  *   → quitter                          ← parti (à l'autre)
  *
  * Une connexion qui tombe en pleine salle n'est pas un départ : la place attend
@@ -174,6 +175,14 @@ export function handleMessage(conn, m) {
       envoyer(s.joueurs[1 - c.n], { t: 'revanche', n: c.n });
       if (s.revanche[0] && s.revanche[1]) demarrer(s);
       return;
+    }
+    case 'retour': {
+      // Après un match : les deux reviennent au salon pour rechoisir leurs équipes.
+      if (!s || !s.joueurs[1]) return;
+      s.enJeu = false;
+      s.prets = [false, false];
+      s.revanche = [false, false];
+      return salon(s);
     }
     case 'quitter':
       return quitter(c);

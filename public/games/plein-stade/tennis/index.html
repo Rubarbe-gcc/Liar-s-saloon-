@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#07130d">
+<meta name="description" content="REVERS — le tennis en 3D. Seize joueurs inventés, trois surfaces, lift, slice, lob, amortie, volée et smash. Le service, les aces, l'avantage et le tie-break. Au clavier, à la manette ou au doigt.">
+<title>Revers · Plein Stade</title>
+<link rel="icon" href="/games/plein-stade/icons/icon-192.png">
+<link rel="manifest" href="/games/plein-stade/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/games/plein-stade/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Plein Stade">
+<link rel="stylesheet" href="/games/plein-stade/foot/css/foot.css">
+<link rel="stylesheet" href="/games/plein-stade/tennis/css/tennis.css">
+<link rel="stylesheet" href="/games/plein-stade/commun/cinematique.css">
+<script src="/maj.js" defer></script>
+</head>
+<body class="tennis">
+
+<div class="fond" aria-hidden="true"><div class="fond-gazon"></div><div class="fond-lumiere"></div></div>
+
+<!-- ============================ MENU ============================ -->
+<section class="ecran is-active" id="s-menu">
+  <div class="menu">
+    <h1 class="logo"><span class="l1">REV</span><span class="balle" aria-hidden="true">🎾</span><span class="l2">ERS</span></h1>
+    <p class="slogan">Le tennis · 3D · arcade</p>
+    <div class="boutons-menu">
+      <button class="btn vert grand" id="b-solo"><b>🎾 Match</b><small>Contre l’ordinateur</small></button>
+      <button class="btn or grand" id="b-tournoi"><b>🏆 Le Tournoi</b><small id="tournoi-info">Huit joueurs, le trophée au bout</small></button>
+      <button class="btn bleu grand" id="b-entrainement"><b>🎯 Entraînement</b><small>Des points sans compter : les réglages sont dans la pause</small></button>
+      <button class="btn grand" id="b-enligne"><b>🌐 En ligne</b><small>Un contre un, avec un code</small></button>
+    </div>
+    <div class="menu-bas">
+      <button class="btn fin" id="b-commandes">🎮 Commandes</button>
+      <button class="btn fin" id="b-son" aria-pressed="false">🔊 Son</button>
+      <label class="btn fin choix-qualite">🎙️ <select id="b-commentaires" aria-label="Commentaires"></select></label>
+      <label class="btn fin choix-qualite">📣 <select id="b-public" aria-label="Ambiance du public"></select></label>
+      <label class="btn fin choix-qualite">✨ <select id="b-qualite" aria-label="Qualité graphique">
+        <option value="haute">Haute</option><option value="moyenne">Moyenne</option><option value="basse">Basse</option>
+      </select></label>
+    </div>
+    <a class="lien-discret" href="/games/plein-stade/">‹ Tous les sports</a>
+  </div>
+</section>
+
+<!-- ============================ CHOIX DES JOUEURS ============================ -->
+<section class="ecran" id="s-equipes">
+  <header class="barre-haut">
+    <button class="rond retour" id="equipes-retour" aria-label="Retour">‹</button>
+    <h2 id="equipes-titre">Match</h2>
+  </header>
+  <div class="page page-equipes">
+    <div class="duel">
+      <button class="carte-duel moi" id="duel-moi" aria-label="Ton joueur"></button>
+      <span class="vs">VS</span>
+      <button class="carte-duel lui" id="duel-lui" aria-label="L’adversaire"></button>
+    </div>
+    <p class="consigne" id="consigne-equipes">Choisis ton joueur.</p>
+    <div class="grille-equipes" id="grille-equipes"></div>
+    <div class="fiche-club" id="fiche-club"></div>
+    <div class="options" id="options-match">
+      <div class="option"><span>Niveau</span><div class="segments" id="seg-niveau"></div></div>
+      <div class="option"><span>Format</span><div class="segments" id="seg-format"></div></div>
+      <div class="option"><span>Surface</span><div class="segments" id="seg-surface"></div></div>
+    </div>
+    <button class="btn vert grand coup-envoi" id="b-jouer"><b>Sur le court</b></button>
+  </div>
+</section>
+
+<!-- ============================ LE TOURNOI ============================ -->
+<section class="ecran" id="s-tournoi">
+  <header class="barre-haut">
+    <button class="rond retour" id="tournoi-retour" aria-label="Retour">‹</button>
+    <h2>Le Tournoi</h2>
+  </header>
+  <div class="page">
+    <p class="consigne" id="tournoi-texte"></p>
+    <div class="tableau" id="tableau"></div>
+    <div class="coupe-actions" id="tournoi-actions"></div>
+  </div>
+</section>
+
+<section class="ecran" id="s-stats">
+  <header class="barre-haut">
+    <button class="rond retour" id="stats-retour" aria-label="Retour">‹</button>
+    <h2>Statistiques du tournoi</h2>
+  </header>
+  <div class="page" id="stats-corps"></div>
+</section>
+
+<!-- ============================ EN LIGNE ============================ -->
+<section class="ecran" id="s-enligne">
+  <header class="barre-haut">
+    <button class="rond retour" id="enligne-retour" aria-label="Retour">‹</button>
+    <h2>En ligne</h2>
+  </header>
+  <div class="page page-enligne">
+    <p class="statut" id="enligne-statut">Connexion…</p>
+    <div class="enligne-bloc" id="enligne-accueil">
+      <label class="champ">Ton nom <input id="enligne-nom" maxlength="12" autocomplete="nickname"></label>
+      <p class="consigne">Les joueurs se choisissent dans la salle, une fois que vous y êtes tous les deux.</p>
+      <button class="btn vert grand" id="enligne-creer"><b>Créer une salle</b><small>Tu recevras un code à donner</small></button>
+      <div class="rejoindre">
+        <input id="enligne-code" maxlength="6" placeholder="CODE" autocapitalize="characters" aria-label="Code de la salle">
+        <button class="btn bleu" id="enligne-rejoindre">Rejoindre</button>
+      </div>
+    </div>
+    <div class="enligne-bloc cache" id="enligne-salle">
+      <p class="code-salle">Salle <b id="salle-code"></b></p>
+      <p class="consigne" id="salle-attente">En attente d’un adversaire… Donne-lui ce code.</p>
+      <div class="salon-joueurs" id="salon-joueurs"></div>
+      <div class="option salon-regles"><span>Surface</span><div class="segments" id="salon-surface"></div></div>
+      <div class="option salon-regles"><span>Format</span><div class="segments" id="salon-format"></div></div>
+      <div class="grille-equipes petite" id="salon-equipes"></div>
+      <button class="btn vert grand" id="salon-pret" disabled><b>Prêt !</b></button>
+      <button class="btn fin" id="salle-quitter">Quitter la salle</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ LE MATCH ============================ -->
+<section class="ecran" id="s-match">
+  <div class="scene-hote" id="scene"></div>
+  <div class="hud">
+    <div class="hud-tennis">
+      <div class="ligne" id="hud-l0"><span class="badge" id="hud-badge0"></span><b id="hud-nom0"></b><i class="sv"></i><span class="sets" id="hud-sets0"></span><span class="jeux" id="hud-jeux0">0</span><span class="pts" id="hud-pts0">0</span></div>
+      <div class="ligne" id="hud-l1"><span class="badge" id="hud-badge1"></span><b id="hud-nom1"></b><i class="sv"></i><span class="sets" id="hud-sets1"></span><span class="jeux" id="hud-jeux1">0</span><span class="pts" id="hud-pts1">0</span></div>
+      <span class="enjeu" id="hud-enjeu"></span>
+    </div>
+    <button class="rond pause" id="b-pause" aria-label="Pause">❚❚</button>
+    <div class="vitesse-service" id="vitesse"></div>
+    <div class="aide-service" id="aide-service"></div>
+    <div class="jauge-coup cache" id="jauge"><small id="jauge-nom">Lift</small><span><i id="jauge-val"></i></span></div>
+    <div class="bandeau" id="bandeau" aria-live="polite"></div>
+    <div class="commentaire" id="commentaire" aria-live="polite"></div>
+    <div class="net-diag cache" id="net-diag"></div>
+    <div class="attente-net cache" id="attente-net" role="status"><b id="attente-titre"></b><span id="attente-texte"></span><button class="btn fin" id="attente-quitter">Quitter le match</button></div>
+  </div>
+  <div class="tactile" id="tactile">
+    <div class="zone-joy" id="zone-joy"><div class="joy"><div class="joy-bouton"></div></div></div>
+    <div class="boutons-jeu">
+      <button class="bj bj-g" data-t="G"><span>Amortie</span></button>
+      <button class="bj bj-x" data-t="X"><span>Lob</span></button>
+      <button class="bj bj-a" data-t="A"><span>Lift</span></button>
+      <button class="bj bj-b" data-t="B"><span>Slice</span></button>
+    </div>
+  </div>
+  <div class="tourne" id="tourne">↻ Tourne ton téléphone : c’est plus beau en largeur.</div>
+</section>
+
+<!-- ============================ PAUSE ============================ -->
+<div class="voile cache" id="v-pause">
+  <div class="panneau" id="panneau-pause">
+    <h2>Pause</h2>
+    <div class="reglages-entr cache" id="p-entr">
+      <div class="option"><span>Au service</span><div class="segments" id="entr-serveur"></div></div>
+      <div class="option"><span>Niveau d’en face</span><div class="segments" id="entr-niveau"></div></div>
+    </div>
+    <button class="btn vert" id="p-reprendre">Reprendre</button>
+    <button class="btn" id="p-commandes">Commandes</button>
+    <button class="btn rouge" id="p-quitter">Abandonner le match</button>
+  </div>
+</div>
+
+<!-- ============================ COMMANDES ============================ -->
+<div class="voile cache" id="v-commandes">
+  <div class="panneau large">
+    <h2>Les commandes</h2>
+    <table class="commandes">
+      <thead><tr><th></th><th>Clavier</th><th>Manette</th><th>Ce que ça fait</th></tr></thead>
+      <tbody>
+        <tr><td>Bouger</td><td class="touches-bouger"><button class="touche" data-action="haut"></button><button class="touche" data-action="gauche"></button><button class="touche" data-action="bas"></button><button class="touche" data-action="droite"></button><small>ou les flèches</small></td><td>Stick · croix</td><td>Courir ; au moment de frapper, la direction vise : à gauche, à droite, long (haut) ou court (bas)</td></tr>
+        <tr><td>Lift</td><td><button class="touche" data-action="lift"></button></td><td>A</td><td>Le coup de base, qui plonge ; au service : lancer la balle, puis frapper</td></tr>
+        <tr><td>Slice</td><td><button class="touche" data-action="slice"></button></td><td>B</td><td>Coupé : plus lent, il rebondit bas</td></tr>
+        <tr><td>Lob</td><td><button class="touche" data-action="lob"></button></td><td>X</td><td>Par-dessus un joueur monté au filet</td></tr>
+        <tr><td>Amortie</td><td><button class="touche" data-action="amortie"></button></td><td>Y</td><td>Juste derrière le filet, contre un joueur resté au fond</td></tr>
+      </tbody>
+    </table>
+    <p class="astuce touches-aide" id="touches-aide">Clique sur une touche pour la changer, puis appuie sur la nouvelle (Échap pour annuler). <button class="btn fin" id="touches-defaut">Touches par défaut</button></p>
+    <p class="astuce">Appuie sur un coup <b>avant</b> que la balle arrive : ton joueur frappe tout seul quand elle passe à sa portée. Plus tu <b>tiens</b> le bouton, plus le coup part fort (mais moins précis). Une balle haute près du filet devient un <b>smash</b> ; prise avant le rebond, une <b>volée</b>.</p>
+    <p class="astuce">Le <b>service</b> : un appui lance la balle, un deuxième la frappe ; le meilleur moment, c’est tout en haut. La direction choisit où viser dans le carré.</p>
+    <button class="btn vert" id="c-fermer">Compris</button>
+  </div>
+</div>
+
+<!-- ============================ FIN DU MATCH ============================ -->
+<section class="ecran" id="s-fin">
+  <div class="page page-fin">
+    <p class="fin-titre" id="fin-titre">Fin du match</p>
+    <div class="fin-score" id="fin-score"></div>
+    <div class="fin-sets" id="fin-sets"></div>
+    <div class="fin-stats" id="fin-stats"></div>
+    <div class="fin-actions" id="fin-actions"></div>
+    <p class="consigne" id="fin-attente"></p>
+  </div>
+</section>
+
+<script type="module" src="/games/plein-stade/tennis/js/main.js"></script>
+</body>
+</html>

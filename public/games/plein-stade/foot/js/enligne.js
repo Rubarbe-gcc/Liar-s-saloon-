@@ -145,6 +145,8 @@ export const choisirEquipe = (equipe) => envoyer({ t: 'equipe', equipe });
 export const pret = (oui = true) => envoyer({ t: 'pret', pret: oui });
 export const choisirStade = (stade) => envoyer({ t: 'stade', stade });
 export const revanche = () => envoyer({ t: 'revanche' });
+/** Après un match : retour au salon de la même salle, pour rechoisir les équipes (l'adversaire y revient aussi). */
+export const retourSalon = () => envoyer({ t: 'retour' });
 export function quitter() {
   enAttente = null;
   envoyer({ t: 'quitter' });

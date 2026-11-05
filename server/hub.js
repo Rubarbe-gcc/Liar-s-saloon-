@@ -39,8 +39,9 @@ import * as velours from './velours.js';
 import * as foot from './foot.js';
 import * as basket from './basket.js';
 import * as boxe from './boxe.js';
+import * as tennis from './tennis.js';
 
-const GAMES = { saloon, zenith, echo, brasier, skullking, fiesta, street, velours, foot, basket, boxe };
+const GAMES = { saloon, zenith, echo, brasier, skullking, fiesta, street, velours, foot, basket, boxe, tennis };
 const DEFAULT_GAME = 'saloon';
 
 /** Temps pendant lequel une place attend son joueur après une coupure. */

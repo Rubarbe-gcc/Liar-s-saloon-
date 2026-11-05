@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v156';
+const VERSION = 'v158';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -265,6 +265,20 @@ const SHELL = [
   '/shared/boxe/combat.js',
   '/shared/boxe/tournoi.js',
   '/games/plein-stade/boxe/js/enligne.js',
+  '/games/plein-stade/tennis/',
+  '/games/plein-stade/tennis/css/tennis.css',
+  '/games/plein-stade/tennis/js/main.js',
+  '/games/plein-stade/tennis/js/commentaires.js',
+  '/games/plein-stade/tennis/js/cinematiques.js',
+  '/games/plein-stade/tennis/js/touches.js',
+  '/games/plein-stade/tennis/js/enligne.js',
+  '/games/plein-stade/tennis/js/trois/rendu3d.js',
+  '/games/plein-stade/tennis/js/trois/court3d.js',
+  '/shared/tennis/terrain.js',
+  '/shared/tennis/joueurs.js',
+  '/shared/tennis/ia.js',
+  '/shared/tennis/match.js',
+  '/shared/tennis/tournoi.js',
   '/games/street-combat/js/trois/rendu3d.js',
   '/games/street-combat/js/trois/decors3d.js',
   '/vendor/three/three.module.min.js',

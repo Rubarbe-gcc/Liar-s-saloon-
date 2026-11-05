@@ -477,7 +477,8 @@ function afficher(dt) {
   if (m.phase === 'fin' && P.finVue > 0) {
     P.finVue -= dt;
     // En ligne, on attend que tout soit confirmé : le résultat ne peut plus changer.
-    if (P.finVue <= 0 && (P.o.mode !== 'enligne' || net.toutConfirme())) {
+    if (P.finVue <= 0 && P.o.mode === 'enligne') P.attenteFin ??= performance.now();
+    if (P.finVue <= 0 && (P.o.mode !== 'enligne' || net.toutConfirme() || performance.now() - P.attenteFin > 3000)) {
       P.finVue = -1;
       const gagneFinale = P.o.finale && P.m.vainqueur === P.local;
       const etapes = [...hommeDuMatch(P), ...(gagneFinale ? trophee(P, P.local) : [])];
@@ -937,7 +938,9 @@ function ouvrirEnLigne() {
       $('enligne-accueil').classList.add('cache');
       $('enligne-salle').classList.remove('cache');
       if (net.salle.code) $('salle-code').textContent = net.salle.code;
-      if (ecran !== 'enligne' && ecran !== 'match') aller('enligne');
+      // Retour au salon (après un match) : on quitte la fin du match, même si elle n'est pas finie ici.
+      if (partie?.o.mode === 'enligne') arreterMatch();
+      if (ecran !== 'enligne') aller('enligne');
       $('enligne-statut').textContent = '';
       rendreSalon(m);
       rendreStadesSalle();
@@ -968,6 +971,7 @@ function lancerEnLigne(d) {
       const moi = d.n;
       $('fin-titre').textContent = res.vainqueur === moi ? `Victoire contre ${d.noms[1 - moi]} !` : `Défaite contre ${d.noms[1 - moi]}`;
       const b = bouton('Revanche', 'vert grand', () => { net.revanche(); b.disabled = true; $('fin-attente').textContent = 'En attente de ton adversaire…'; });
+      bouton('Changer d’équipes', '', () => net.retourSalon());
       bouton('Quitter', '', () => { net.quitter(); aller('menu'); });
     },
     abandon: () => { net.quitter(); aller('menu'); },

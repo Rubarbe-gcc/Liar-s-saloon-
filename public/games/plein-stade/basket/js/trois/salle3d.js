@@ -462,4 +462,4 @@ export function creerSalle(scene, id, { qualite, equipes, kits }) {
 }
 
 /** Pour les autres sports (la boxe) : la foule, les gradins, leurs couleurs, une toile en texture, l'écran suspendu. */
-export { foule, gradins, couleursPublic, texCanvas, cubeSuspendu, lambert, basique, boite };
+export { foule, gradins, couleursPublic, texCanvas, cubeSuspendu, ecranTexture, lambert, basique, boite };
