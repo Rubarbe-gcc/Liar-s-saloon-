@@ -119,3 +119,23 @@ export function etage(n) {
 }
 
 export const ETAPE = (ch, k) => CHAPITRES.find((c) => c.id === ch)?.etapes[k];
+
+/**
+ * Le butin d'une victoire : des médailles de l'élément de chaque ennemi vaincu (plus en difficulté), des
+ * médailles légendaires pour un boss, de l'EXP, et parfois un personnage N ou R trouvé en chemin.
+ * R : le hasard (une fonction qui rend un nombre dans [0, 1)).
+ */
+export const DROPS = ['garde_n', 'eclaireuse_n', 'forgeron_n', 'mousse_n', 'coursier_n', 'moine_n', 'kael_r', 'mira_r', 'bram_r', 'lio_r', 'nami_r', 'tobi_r', 'suzu_r', 'fen_r'];
+export function butin(ennemis, d = 0, R = Math.random, { fin = false } = {}) {
+  const medailles = {};
+  let exp = 12;
+  for (const x of ennemis) {
+    medailles[x.element] = (medailles[x.element] || 0) + (x.boss ? 3 : 1) + d + Math.floor(R() * 2);
+    if (x.boss) medailles.legende = (medailles.legende || 0) + 1 + d + (fin ? 3 : 0);
+    exp += (x.boss ? 40 : 15) * (1 + d);
+  }
+  const perso = !fin && R() < 0.3 ? DROPS[Math.floor(R() * (d ? DROPS.length : 6))] : null;
+  return { medailles, exp, perso };
+}
+/** Ce que coûte un combat en endurance. */
+export const coutAct = (boss, d = 0, fin = false) => (fin ? 25 : (boss ? 10 : 5) * (1 + d));

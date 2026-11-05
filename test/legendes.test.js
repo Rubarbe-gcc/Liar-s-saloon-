@@ -123,7 +123,7 @@ test('les doublons éveillent le personnage, puis rendent des jetons ; la connex
   assert.equal(cadeauFete(f, fete), 0);
 });
 
-import { creerCombat, jouerTour, meilleureCouleur, rotation, kiPour, KI_SUPER } from '../public/shared/legendes/combat.js';
+import { creerCombat, jouerTour, meilleureCouleur, rotation, kiPour, cheminValide, KI_SUPER } from '../public/shared/legendes/combat.js';
 import { CHAPITRES } from '../public/shared/legendes/niveaux.js';
 
 const equipe = (ids) => ids.map((id) => ({ id, eveil: 0 }));
@@ -140,11 +140,16 @@ test('le combat : déterministe, la rotation de trois, le ki de son élément co
   assert.equal(a.pv, b.pv);
   const c = creerCombat({ equipe: equipe(ids), ennemis: CHAPITRES[0].etapes[0].ennemis, graine: 1 });
   assert.deepEqual(rotation(c), [0, 1, 2]);
-  c.spheres = new Array(18).fill('flamme').map((x, i) => (i < 5 ? 'flamme' : 'roc'));
-  const g = kiPour(c, 'flamme'), h = kiPour(c, 'roc');
-  assert.equal(g[0] - h[0], 5 * 3 - 13, 'Kael (flamme) : ses sphères comptent triple');
-  assert.equal(g[1] - h[1], 5 - 13);
-  const evs = jouerTour(c, 'flamme');
+  // Un chemin de cinq sphères de flamme : Kael (flamme) prend 2 ki par sphère, Ryo (marée) 1.
+  c.spheres = new Array(25).fill('roc');
+  for (const p of [0, 1, 2, 3, 4]) c.spheres[p] = 'flamme';
+  const g = kiPour(c, [0, 1, 2, 3, 4]), h = kiPour(c, [0]);
+  assert.equal(g[0] - h[0], 8, 'Kael : 2 ki par sphère de son élément');
+  assert.equal(g[1] - h[1], 4, 'Ryo : 1 ki par sphère');
+  assert.equal(cheminValide([0, 1, 2]), true);
+  assert.equal(cheminValide([0, 2]), false, 'pas voisines');
+  assert.equal(cheminValide([0, 1, 0]), false, 'sans repasser');
+  const evs = jouerTour(c, [0, 1, 2, 3, 4]);
   assert.equal(evs.find((e) => e.qui === 0 && !e.add).type, g[0] >= KI_SUPER ? 'super' : 'attaque');
   assert.deepEqual(rotation(c), [3, 4, 5]);
 });
@@ -184,4 +189,42 @@ test('les boss : une super attaque, une transformation sous un seuil de PV ; l�
   assert.ok(ennemisEn(CHAPITRES[0].etapes[0].ennemis, DIFFICULTES[2])[0].pv > CHAPITRES[0].etapes[0].ennemis[0].pv * 5);
   assert.ok(DEFIS.every((d) => CATEGORIES[d.categorie]));
   assert.ok(etage(20).ennemis[0].pv > etage(1).ennemis[0].pv * 50 && etage(10).ennemis[0].boss);
+});
+
+import { EVEILS, CHAINES, peutEveiller, eveiller, ajouterMedailles, nouveauJoueur, endurance, depenser, gagnerExp, actMax, RECHARGE } from '../public/shared/legendes/eveils.js';
+import { butin } from '../public/shared/legendes/niveaux.js';
+import { recupererCadeaux } from '../public/shared/legendes/gacha.js';
+
+test('les éveils : Kael R → SR → SSR → UR → LR avec des médailles ; un UR ne se tire jamais', () => {
+  const kael = CHAINES.find((c) => c[0] === 'kael_r');
+  assert.deepEqual(kael, ['kael_r', 'kael_sr', 'kael_ssr', 'kael_ssr_ur', 'kael_lr']);
+  assert.equal(PERSO.kael_ssr_ur.rarete, 'UR');
+  assert.ok(PERSO.kael_ssr_ur.passif.lignes.length > PERSO.kael_ssr.passif.lignes.length);
+  for (const p of portails(LANCEMENT)) assert.ok(p.pool.every((id) => !PERSO[id].dokkan && PERSO[id].rarete !== 'N'));
+  const e = nouvelEtat(1);
+  e.collection.kael_ssr = { eveil: 3, n: 1 };
+  assert.equal(peutEveiller(e, 'kael_ssr'), false);
+  ajouterMedailles(e, { flamme: 25, legende: 2 });
+  assert.equal(eveiller(e, 'kael_ssr'), 'kael_ssr_ur');
+  assert.ok(!e.collection.kael_ssr && e.collection.kael_ssr_ur);
+  assert.equal(e.medailles.flamme, 0);
+  assert.ok(EVEILS.length > 10);
+});
+
+test('le rang, l’endurance qui remonte avec le temps, le butin, la boîte à cadeaux', () => {
+  const j = nouveauJoueur(0);
+  assert.equal(endurance(j, 0), actMax(1));
+  assert.ok(depenser(j, 10, 0));
+  assert.equal(endurance(j, RECHARGE * 3), actMax(1) - 7);
+  assert.equal(depenser(j, 999, RECHARGE * 3), false);
+  assert.ok(gagnerExp(j, 500) >= 1 && j.act === actMax(j.rang));
+  let k = 0;
+  const R = () => ((k = (k * 9301 + 49297) % 233280) / 233280);
+  const b = butin(CHAPITRES[0].etapes[4].ennemis, 1, R);
+  assert.ok(b.medailles.legende >= 2 && b.medailles.roc > 0 && b.exp > 50);
+  const e = nouvelEtat(2);
+  connexion(e, 100, { boite: true });
+  assert.equal(e.jetons, 300, 'pas encore récupéré');
+  const t = recupererCadeaux(e);
+  assert.ok(t.jetons > 0 && e.jetons === 300 + t.jetons && e.boite.length === 0);
 });

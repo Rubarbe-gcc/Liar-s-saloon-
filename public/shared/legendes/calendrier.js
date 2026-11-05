@@ -11,7 +11,7 @@
  * Tout dépend de la date (en jours UTC) : le même jour, tout le monde voit les mêmes portails.
  */
 
-import { PERSOS } from './persos.js';
+import { PERSOS, TIRABLE } from './persos.js';
 
 /** Le jour de lancement (l'anniversaire du jeu) et la durée d'un portail en rotation. */
 export const LANCEMENT = Date.UTC(2026, 10, 5) / 86400000;
@@ -34,7 +34,7 @@ export const FETES = [
 export const FETE = Object.fromEntries(FETES.map((f) => [f.id, f]));
 
 /** Les vedettes des portails en rotation, dans l'ordre de leur sortie. */
-const VEDETTES = PERSOS.filter((x) => x.sortie !== undefined);
+const VEDETTES = PERSOS.filter((x) => x.sortie !== undefined && TIRABLE(x));
 export const NB_SORTIES = Math.max(...VEDETTES.map((x) => x.sortie)) + 1;
 
 /** L'indice du portail en rotation ouvert ce jour-là, et ses dates. */
@@ -61,7 +61,7 @@ export const fetesDu = (jour) => FETES.map((f) => ({ ...f, ...dansFete(f, jour) 
 /** Les personnages qui sont dans le portail permanent ce jour-là. */
 export function permanents(jour) {
   const { k } = rotationDu(jour);
-  return PERSOS.filter((x) => !x.fete && (x.sortie === undefined || x.sortie < Math.min(k, NB_SORTIES)));
+  return PERSOS.filter((x) => TIRABLE(x) && !x.fete && (x.sortie === undefined || x.sortie < Math.min(k, NB_SORTIES)));
 }
 
 /**

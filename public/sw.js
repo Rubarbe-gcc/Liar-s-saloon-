@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v161';
+const VERSION = 'v162';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -187,6 +187,10 @@ const SHELL = [
   '/shared/legendes/gacha.js',
   '/shared/legendes/combat.js',
   '/shared/legendes/niveaux.js',
+  '/shared/legendes/passifs.js',
+  '/shared/legendes/eveils.js',
+  '/games/legendes/js/effets.js',
+  '/games/legendes/js/art.js',
   '/games/rempart/',
   '/games/rempart/css/rempart.css',
   '/games/rempart/icons/icon.svg',

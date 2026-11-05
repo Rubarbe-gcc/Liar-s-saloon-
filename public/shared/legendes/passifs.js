@@ -9,7 +9,7 @@
  * alliés de la rotation), soin, boss (ATQ contre un boss), pvBas (ATQ quand les PV de l'équipe sont bas).
  */
 
-const NIV = { R: 0, SR: 1, SSR: 2, LR: 3 };
+const NIV = { N: 0, R: 1, SR: 2, SSR: 3, UR: 4, LR: 5 };
 const pc = (x) => `${Math.round(x * 100)} %`;
 
 const PHRASES = {
@@ -36,42 +36,45 @@ const PHRASES = {
 export function creerPassif(x) {
   const n = NIV[x.rarete];
   const E = [];
-  E.push({ t: 'stat', atq: [0.2, 0.4, 0.7, 1.0][n], def: [0.1, 0.3, 0.6, 0.9][n] });
-  if (n >= 1) E.push({ t: 'ki', n: [0, 1, 2, 3][n] });
+  // n : N 0, R 1, SR 2, SSR 3, UR 4, LR 5 (un UR est un SSR éveillé : presque un LR).
+  E.push({ t: 'stat', atq: [0.1, 0.2, 0.4, 0.7, 0.85, 1.0][n], def: [0.05, 0.1, 0.3, 0.6, 0.75, 0.9][n] });
+  if (n >= 2) E.push({ t: 'ki', n: [0, 0, 1, 2, 2, 3][n] });
   const r = x.role;
   if (r === 'frappeur') {
-    if (n >= 1) E.push({ t: 'sphere', atq: [0, 0.04, 0.06, 0.08][n] });
-    if (n >= 2) E.push({ t: 'surSuper', atq: n >= 3 ? 0.4 : 0.25 });
-    if (n >= 3) { E.push({ t: 'cumul', atq: 0.1, max: 0.6, quand: 'attaque' }); E.push({ t: 'attAdd', chance: 0.3 }); }
-    if (n === 0) E.push({ t: 'surSuper', atq: 0.15 });
+    if (n >= 2) E.push({ t: 'sphere', atq: [0, 0, 0.04, 0.06, 0.07, 0.08][n] });
+    if (n >= 3) E.push({ t: 'surSuper', atq: [0, 0, 0, 0.25, 0.35, 0.4][n] });
+    if (n >= 4) E.push({ t: 'cumul', atq: 0.1, max: n >= 5 ? 0.6 : 0.4, quand: 'attaque' });
+    if (n >= 5) E.push({ t: 'attAdd', chance: 0.3 });
+    if (n === 1) E.push({ t: 'surSuper', atq: 0.15 });
   } else if (r === 'mur') {
-    E.push({ t: 'reduction', taux: [0.08, 0.15, 0.22, 0.3][n] });
-    if (n >= 2) E.push({ t: 'cumul', def: 0.15, max: 0.9, quand: 'coup' });
-    if (n >= 3) { E.push({ t: 'garde' }); E.push({ t: 'contre', mult: 3 }); }
+    if (n >= 1) E.push({ t: 'reduction', taux: [0, 0.08, 0.15, 0.22, 0.26, 0.3][n] });
+    if (n >= 3) E.push({ t: 'cumul', def: 0.15, max: 0.9, quand: 'coup' });
+    if (n >= 4) E.push({ t: 'garde' });
+    if (n >= 5) E.push({ t: 'contre', mult: 3 });
   } else if (r === 'esquiveur') {
-    E.push({ t: 'esquive', chance: [0.1, 0.18, 0.26, 0.36][n] });
-    if (n >= 2) E.push({ t: 'apresEsquive', atq: n >= 3 ? 0.8 : 0.4 });
-    if (n >= 3) E.push({ t: 'contre', mult: 2.4 });
+    if (n >= 1) E.push({ t: 'esquive', chance: [0, 0.1, 0.18, 0.26, 0.31, 0.36][n] });
+    if (n >= 3) E.push({ t: 'apresEsquive', atq: [0, 0, 0, 0.4, 0.6, 0.8][n] });
+    if (n >= 5) E.push({ t: 'contre', mult: 2.4 });
   } else if (r === 'critique') {
-    E.push({ t: 'critique', chance: [0.1, 0.2, 0.3, 0.45][n] });
-    if (n >= 2) E.push({ t: 'sphere', atq: 0.05 });
-    if (n >= 3) E.push({ t: 'pvBas', atq: 0.6, def: true });
+    if (n >= 1) E.push({ t: 'critique', chance: [0, 0.1, 0.2, 0.3, 0.38, 0.45][n] });
+    if (n >= 3) E.push({ t: 'sphere', atq: 0.05 });
+    if (n >= 4) E.push({ t: 'pvBas', atq: n >= 5 ? 0.6 : 0.4, def: true });
   } else if (r === 'pivot') {
-    E.push({ t: 'attAdd', chance: [0.15, 0.25, 0.35, 0.5][n] });
-    if (n >= 2) E.push({ t: 'superAdd', chance: n >= 3 ? 0.35 : 0.2 });
-    if (n >= 3) E.push({ t: 'cumul', atq: 0.08, max: 0.4, quand: 'attaque' });
+    if (n >= 1) E.push({ t: 'attAdd', chance: [0, 0.15, 0.25, 0.35, 0.42, 0.5][n] });
+    if (n >= 3) E.push({ t: 'superAdd', chance: [0, 0, 0, 0.2, 0.28, 0.35][n] });
+    if (n >= 5) E.push({ t: 'cumul', atq: 0.08, max: 0.4, quand: 'attaque' });
   } else if (r === 'soutien') {
-    E.push({ t: 'soutien', ki: [1, 1, 2, 3][n], atq: [0.1, 0.15, 0.25, 0.4][n] });
-    if (n >= 2) E.push({ t: 'soin', taux: n >= 3 ? 0.07 : 0.04 });
-    if (n >= 3) E.push({ t: 'reduction', taux: 0.15 });
+    if (n >= 1) E.push({ t: 'soutien', ki: [0, 1, 1, 2, 2, 3][n], atq: [0, 0.1, 0.15, 0.25, 0.32, 0.4][n] });
+    if (n >= 3) E.push({ t: 'soin', taux: [0, 0, 0, 0.04, 0.055, 0.07][n] });
+    if (n >= 5) E.push({ t: 'reduction', taux: 0.15 });
   }
-  if (n >= 2) E.push({ t: 'boss', atq: n >= 3 ? 0.5 : 0.3 });
-  if (n >= 3 && r !== 'critique') E.push({ t: 'pvBas', atq: 0.4 });
+  if (n >= 3) E.push({ t: 'boss', atq: [0, 0, 0, 0.3, 0.4, 0.5][n] });
+  if (n >= 4 && r !== 'critique') E.push({ t: 'pvBas', atq: 0.4 });
   const NOMS = { frappeur: 'Puissance', mur: 'Rempart', esquiveur: 'Pas de l’ombre', critique: 'Œil du chasseur', pivot: 'Enchaînement', soutien: 'Âme protectrice' };
   const lignes = E.map((e) => PHRASES[e.t](e));
   const s = E.find((e) => e.t === 'stat');
   return {
-    nom: `${NOMS[r] || 'Passif'}${n >= 3 ? ' suprême' : n >= 2 ? ' éveillée' : ''}`,
+    nom: `${NOMS[r] || 'Passif'}${n >= 5 ? ' suprême' : n >= 4 ? ' transcendée' : n >= 3 ? ' éveillée' : ''}`,
     effets: E, lignes, texte: lignes.join(' ; '),
     atq: s.atq, def: s.def, ki: E.find((e) => e.t === 'ki')?.n || 0,
   };
@@ -81,7 +84,7 @@ export function creerPassif(x) {
 export function creerChef(x, cats) {
   const n = NIV[x.rarete];
   const c = cats && cats.length ? cats : [x.categories[0]];
-  const taux = [0.2, 0.4, 0.7, 1.0][n], ki = [0, 1, 2, 3][n];
+  const taux = [0.1, 0.2, 0.4, 0.7, 0.85, 1.0][n], ki = [0, 0, 1, 2, 2, 3][n];
   return { cats: c, taux, ki, autres: taux * 0.3 };
 }
 export const texteChef = (chef, CATEGORIES) => `Catégorie${chef.cats.length > 1 ? 's' : ''} « ${chef.cats.map((k) => CATEGORIES[k]).join(' » ou « ')} » : ${chef.ki ? `Ki +${chef.ki}, ` : ''}PV, ATQ et DÉF +${pc(chef.taux)} (les autres +${pc(chef.autres)})`;

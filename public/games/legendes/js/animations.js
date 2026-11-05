@@ -13,6 +13,7 @@
 import { PERSO, RARETES, ELEMENTS } from '../../../shared/legendes/persos.js';
 import { portrait } from './portrait.js';
 import * as son from './sons.js';
+import { illustration, rendreReactif } from './art.js';
 import { ennemi as dessinEnnemi } from './portrait.js';
 import { creerParticules, secouer, arret } from './effets.js';
 
@@ -104,12 +105,16 @@ export async function invocation(scene, resultats, garanties = []) {
       rv.className = 'revele';
       rv.style.setProperty('--c', c);
       const tag = res.vedette && res.nouveau ? 'NOUVEAU !' : res.rarete === 'LR' ? 'LR !' : res.rarete === 'SSR' ? 'SSR !' : 'NOUVEAU';
-      rv.innerHTML = `<div class="rayons" style="--c:${c}"></div>${portrait(x, { cadre: true, taille: 300, nom: false, anime: true })}<div class="tag">${tag}</div>
+      const grandArt = res.rarete === 'LR' || res.rarete === 'UR';
+      rv.innerHTML = `<div class="rayons" style="--c:${c}"></div>${grandArt ? `<div class="art-revele">${illustration(x, { taille: 300 })}</div>` : portrait(x, { cadre: true, taille: 300, nom: false, anime: true })}<div class="tag">${tag}</div>
         <div class="sous"><b>${x.nom}</b>${x.titre}<br>${res.nouveau ? '✨ Nouveau dans ta collection' : `Éveil ★${res.eveil}${res.rendu ? ` · +${res.rendu} jetons` : ''}`}</div><span class="passer">Passer ›</span>`;
       inv.innerHTML = '';
       inv.appendChild(rv);
       son.revele(res.rarete);
+      const finArt = grandArt ? rendreReactif(rv) : () => {};
+      if (res.rarete === 'LR') { const P = creerParticules(rv); P.gerbe(P.largeur / 2, P.hauteur / 2, '#ffd23f', 90, 900); P.gerbe(P.largeur / 2, P.hauteur / 2, '#ff4dd8', 90, 800); }
       r = await appui(scene, 0);
+      finArt();
       if (r === 'passer') break;
     }
   }

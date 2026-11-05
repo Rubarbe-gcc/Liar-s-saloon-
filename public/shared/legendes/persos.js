@@ -60,9 +60,11 @@ export const LIENS = {
 };
 
 export const RARETES = {
+  N: { nom: 'N', couleur: '#6a7a6a', pv: 2100, atq: 1700, def: 600, eveilMax: 1 },
   R: { nom: 'R', couleur: '#8aa0b4', pv: 3200, atq: 2600, def: 900, eveilMax: 2 },
   SR: { nom: 'SR', couleur: '#d7a23a', pv: 5200, atq: 4300, def: 1500, eveilMax: 3 },
   SSR: { nom: 'SSR', couleur: '#ffd23f', pv: 8400, atq: 7200, def: 2600, eveilMax: 4 },
+  UR: { nom: 'UR', couleur: '#ff7a3a', pv: 10400, atq: 9000, def: 3200, eveilMax: 5 },
   LR: { nom: 'LR', couleur: '#ff4dd8', pv: 12500, atq: 10800, def: 3900, eveilMax: 5 },
 };
 
@@ -85,7 +87,15 @@ const p = (id, nom, titre, rarete, element, categories, role, liens, sup, c, coi
   return x;
 };
 
-export const PERSOS = [
+const BASE = [
+  /* ---------------- N : on les trouve en combattant (le butin des étapes) ---------------- */
+  p('garde_n', 'Toma', 'Garde du village', 'N', 'roc', ['arcade', 'heritiers'], 'mur', ['equipe', 'amis'], ['Coup de Hampe', 'combo', 1], ['#e0ac69', '#5a3a1a', '#6b6b4a', '#c8913a'], 'court'),
+  p('eclaireuse_n', 'Lys', 'Éclaireuse', 'N', 'tempete', ['ninjas', 'combattantes'], 'esquiveur', ['amis', 'ombres'], ['Flèche Rapide', 'tir', 1], ['#ffe0bd', '#8a5a2a', '#3a5a3a', '#36d39a'], 'queue'),
+  p('forgeron_n', 'Bolt', 'Apprenti forgeron', 'N', 'flamme', ['arcade', 'sangchaud'], 'frappeur', ['feu', 'equipe'], ['Marteau Brûlant', 'explosion', 1], ['#c68642', '#1b1b1f', '#7a4a2a', '#ff7a1a'], 'chauve'),
+  p('mousse_n', 'Pip', 'Mousse du port', 'N', 'maree', ['lune', 'sportifs'], 'soutien', ['amis', 'froid'], ['Seau d’Eau', 'rayon', 1], ['#f1c27d', '#3a2a1a', '#3a8dff', '#7ac8ff'], 'meches'),
+  p('coursier_n', 'Zap', 'Coursier de l’orage', 'N', 'eclair', ['sportifs', 'solitaire'], 'pivot', ['instinct', 'equipe'], ['Sprint Électrique', 'combo', 1], ['#e0ac69', '#ffd23f', '#4a3a8a', '#ffd23f'], 'meches'),
+  p('moine_n', 'Oden', 'Jeune moine', 'N', 'roc', ['maitres', 'heritiers'], 'critique', ['maitre', 'equipe'], ['Paume Simple', 'explosion', 1], ['#ffe0bd', '#1b1b1f', '#d8a03a', '#c8913a'], 'chauve'),
+
   /* ---------------- R : les premiers compagnons ---------------- */
   p('kael_r', 'Kael', 'Apprenti de l’Aube', 'R', 'flamme', ['aube', 'sangchaud', 'heritiers'], 'frappeur', ['rivalite', 'feu', 'amis'], ['Poing Braise', 'combo', 1], ['#f1c27d', '#1b1b1f', '#ff7a1a', '#ffb347'], 'pics'),
   p('mira_r', 'Mira', 'Kunoichi novice', 'R', 'tempete', ['ombre', 'ninjas', 'combattantes'], 'esquiveur', ['ombres', 'amis'], ['Shuriken du Vent', 'tir', 1], ['#ffe0bd', '#2b2b6b', '#3a3a4a', '#36d39a'], 'queue'),
@@ -140,7 +150,23 @@ export const PERSOS = [
   p('cupi', 'Cupi', 'Flèche du Cœur', 'SSR', 'tempete', ['fete', 'duo'], 'esquiveur', ['fete', 'amis'], ['Pluie de Cœurs', 'tir', 4], ['#ffe0bd', '#ff8ad8', '#ff4d6d', '#ff8ad8'], 'meches', { fete: 'valentin' }),
   p('soleil_ete', 'Sol', 'Roi de la Plage', 'SSR', 'maree', ['fete', 'neant', 'sportifs'], 'frappeur', ['fete', 'equipe'], ['Volée de l’Été', 'tir', 4], ['#c68642', '#ffd23f', '#3a8dff', '#ffd23f'], 'court', { fete: 'ete' }),
 ];
+/**
+ * Les UR : chaque SSR (hors fêtes) peut s'éveiller en UR (l'éveil par médailles, eveils.js) : la même
+ * personne, plus forte (son passif s'allonge, sa super gagne en puissance). Ils ne se tirent jamais.
+ */
+const UR = BASE.filter((x) => x.rarete === 'SSR' && !x.fete).map((x) => {
+  const u = { ...x, id: `${x.id}_ur`, rarete: 'UR', base: x.id, forme: 'eveil', dokkan: true, titre: `${x.titre} · Éveillé` };
+  u.super = creerSuper(u, x.super.nom, x.super.style, Math.min(5, x.super.puissance + 1));
+  u.passif = creerPassif(u);
+  u.chef = creerChef(u, x.chef.cats);
+  return u;
+});
+export const PERSOS = [...BASE, ...UR];
 export const PERSO = Object.fromEntries(PERSOS.map((x) => [x.id, x]));
+/** Les personnages qu'on peut tirer (ni les UR, qui viennent d'un éveil, ni les N, qui viennent du butin). */
+export const TIRABLE = (x) => !x.dokkan && x.rarete !== 'N';
+/** L'ordre des raretés. */
+export const ORDRE = ['N', 'R', 'SR', 'SSR', 'UR', 'LR'];
 
 /** Les statistiques d'un personnage à son niveau d'éveil (0 à eveilMax) : chaque éveil ajoute 8 %. */
 export function stats(id, eveil = 0) {

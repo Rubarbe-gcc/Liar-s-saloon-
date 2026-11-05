@@ -20,7 +20,20 @@
 
 import { PERSO, CYCLE, LIENS, avantage, stats } from './persos.js';
 
-export const KI_SUPER = 12, KI_ULTIME = 18, KI_MAX = 24, NB_SPHERES = 18;
+export const KI_SUPER = 12, KI_ULTIME = 18, KI_MAX = 24;
+/**
+ * Le plateau de sphères : une grille de COLS × LIGNES places (décalées une ligne sur deux, à l'écran). On trace
+ * un CHEMIN d'une sphère à une voisine (les huit autour), sans repasser : chaque combattant de la rotation gagne
+ * 2 ki par sphère de son élément, 1 par autre sphère ; l'arc-en-ciel donne 1 ki à tous et soigne un peu.
+ */
+export const COLS = 5, LIGNES = 5, NB_SPHERES = COLS * LIGNES;
+export const voisines = (a, b) => a !== b && Math.abs((a % COLS) - (b % COLS)) <= 1 && Math.abs(Math.floor(a / COLS) - Math.floor(b / COLS)) <= 1;
+/** Un chemin valable : des places existantes, voisines deux à deux, sans doublon. */
+export function cheminValide(chemin) {
+  if (!Array.isArray(chemin) || !chemin.length) return false;
+  if (new Set(chemin).size !== chemin.length) return false;
+  return chemin.every((p, k) => Number.isInteger(p) && p >= 0 && p < NB_SPHERES && (k === 0 || voisines(chemin[k - 1], p)));
+}
 
 function hasard(c) {
   let t = (c.alea = (c.alea + 0x6d2b79f5) >>> 0);
@@ -59,11 +72,15 @@ export function creerCombat({ equipe, ennemis, graine = 1, ami = null }) {
   return c;
 }
 
-function tirerSpheres(c) {
-  // Un peu plus de sphères des éléments de la rotation : on a toujours un vrai choix.
+/** Une sphère au hasard : parfois un arc-en-ciel, un peu plus souvent l'élément d'un combattant de la rotation. */
+function uneSphere(c) {
+  if (hasard(c) < 0.07) return 'arc';
   const rot = rotation(c).map((i) => PERSO[c.membres[i].id].element);
+  return hasard(c) < 0.25 && rot.length ? rot[Math.floor(hasard(c) * rot.length)] : CYCLE[Math.floor(hasard(c) * 5)];
+}
+function tirerSpheres(c) {
   const s = [];
-  for (let k = 0; k < NB_SPHERES; k++) s.push(hasard(c) < 0.3 && rot.length ? rot[Math.floor(hasard(c) * rot.length)] : CYCLE[Math.floor(hasard(c) * 5)]);
+  for (let k = 0; k < NB_SPHERES; k++) s.push(uneSphere(c));
   return s;
 }
 
@@ -95,15 +112,16 @@ function soutienPour(c, k) {
   return { ki, atq };
 }
 
-/** Combien de ki chaque combattant gagnerait avec la couleur choisie (passif, chef, liens et soutien compris). */
-export function kiPour(c, couleur) {
-  const n = c.spheres.filter((s) => s === couleur).length;
+/** Combien de ki chaque combattant gagnerait avec ce chemin (passif, chef, liens et soutien compris). */
+export function kiPour(c, chemin) {
+  const sph = (cheminValide(chemin) ? chemin : []).map((p) => c.spheres[p]);
   const li = liensActifs(c);
   return rotation(c).map((i, k) => {
     const id = c.membres[i].id, x = PERSO[id];
     const passif = effets(id, 'ki').reduce((t, e) => t + e.n, 0);
     const liensKi = li[k].reduce((t, l) => t + (LIENS[l].ki || 0), 0);
-    return n * (x.element === couleur ? 3 : 1) + passif + kiChef(c.chef, id) + kiChef(c.ami, id) + liensKi + soutienPour(c, k).ki;
+    const doux = sph.reduce((t, s) => t + (s === x.element ? 2 : 1), 0);
+    return doux + passif + kiChef(c.chef, id) + kiChef(c.ami, id) + liensKi + soutienPour(c, k).ki;
   });
 }
 
@@ -189,13 +207,15 @@ function verifierEnnemi(c, evs) {
  * { qui, degats, crit, avantage, add }, esquiveEnnemi, transformation { nom }, ko, superEnnemi { nom },
  * riposte { cible, degats, super, garde, avantage }, esquive { cible }, contre { qui, degats }, victoire, defaite.
  */
-export function jouerTour(c, couleur) {
+export function jouerTour(c, chemin) {
   if (c.fin) return [];
   const evs = [];
-  const rot = rotation(c), gains = kiPour(c, couleur);
-  const nSph = c.spheres.filter((s) => s === couleur).length;
+  if (!cheminValide(chemin)) chemin = meilleurChemin(c);
+  const rot = rotation(c), gains = kiPour(c, chemin);
+  const nSph = chemin.length;
+  const arcs = chemin.filter((p) => c.spheres[p] === 'arc').length;
   // Le début du tour : les soins.
-  let soin = 0;
+  let soin = Math.round(c.pvMax * 0.03 * arcs);
   for (const i of rot) for (const e of effets(c.membres[i].id, 'soin')) soin += Math.round(c.pvMax * e.taux);
   if (soin) { c.pv = Math.min(c.pvMax, c.pv + soin); evs.push({ type: 'debut', soin }); }
   const formes = rot.map((i, k) => forme(c, i, k, rot.length ? nSph : 0));
@@ -214,8 +234,9 @@ export function jouerTour(c, couleur) {
   if (!c.fin) riposte(c, rot, formes, evs);
   for (const i of rot) c.membres[i].esquiveTour = 0;
   c.tour += 1;
-  c.spheres = tirerSpheres(c);
-  c.journal.push(couleur);
+  // Les sphères ramassées sont remplacées.
+  for (const p of chemin) c.spheres[p] = uneSphere(c);
+  c.journal.push(chemin.join('-'));
   return evs;
 }
 
@@ -265,16 +286,36 @@ function contre(c, i, k, formes, evs) {
   }
 }
 
-/** La meilleure couleur pour cette rotation (le plus de ki au total, en visant les supers) : l'aide, et l'ordinateur des tests. */
-export function meilleureCouleur(c) {
-  let best = CYCLE[0], score = -1;
-  for (const col of CYCLE) {
-    const g = kiPour(c, col);
-    const s = rotation(c).reduce((t, i, k) => {
+/**
+ * Le meilleur chemin (l'aide, et l'ordinateur des tests) : depuis chaque sphère, on avance vers la voisine qui
+ * rapporte le plus (en visant les supers), jusqu'à douze sphères.
+ */
+export function meilleurChemin(c) {
+  const rot = rotation(c);
+  const valeur = (ch) => {
+    const g = kiPour(c, ch);
+    return rot.reduce((t, i, k) => {
       const ki = Math.min(KI_MAX, c.membres[i].ki + g[k]);
       return t + (PERSO[c.membres[i].id].rarete === 'LR' && ki >= KI_ULTIME ? 45 : ki >= KI_SUPER ? 30 : 0) + g[k];
     }, 0);
-    if (s > score) { score = s; best = col; }
+  };
+  let best = [0], score = -1;
+  for (let d = 0; d < NB_SPHERES; d++) {
+    const ch = [d];
+    for (let l = 1; l < 12; l++) {
+      let suiv = -1, sv = valeur(ch);
+      for (let p = 0; p < NB_SPHERES; p++) {
+        if (ch.includes(p) || !voisines(ch[ch.length - 1], p)) continue;
+        const v = valeur([...ch, p]);
+        if (v > sv) { sv = v; suiv = p; }
+      }
+      if (suiv < 0) break;
+      ch.push(suiv);
+    }
+    const v = valeur(ch);
+    if (v > score) { score = v; best = ch; }
   }
   return best;
 }
+/** Ancien nom. */
+export const meilleureCouleur = meilleurChemin;

@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<meta name="theme-color" content="#0b0a18">
-<meta name="description" content="LÉGENDES — le gacha de l'arcade. Invoque des héros inventés, monte ton équipe de six, combats au tour par tour avec les sphères de ki et les super attaques. Des portails qui changent toutes les deux semaines et demie, des fêtes toute l'année.">
+<meta name="theme-color" content="#06121c">
+<meta name="description" content="LÉGENDES — le gacha de l'arcade. Invoque des héros inventés, éveille-les de N à LR, monte ton équipe de six et combats en traçant des chemins de sphères de ki. Des portails qui changent toutes les deux semaines et demie, des fêtes toute l'année.">
 <title>Légendes · Insert Coin</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E%E2%9C%A8%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/games/legendes/css/legendes.css">
@@ -13,34 +13,52 @@
 <body>
 <div class="ciel" id="ciel" aria-hidden="true"></div>
 
-<!-- La barre du haut : les jetons, le retour -->
+<div class="app" id="app">
+
+<!-- La barre du haut : rang, EXP, endurance, jetons -->
 <header class="barre" id="barre">
   <button class="rond" id="b-retour" aria-label="Retour">‹</button>
-  <h1 class="logo"><span>LÉGENDES</span></h1>
-  <span class="jetons" id="jetons" title="Tes jetons">🪙 <b id="jetons-n">0</b></span>
+  <div class="rang"><small>RANG</small><b id="rang-n">1</b></div>
+  <div class="jauges">
+    <div class="jauge exp"><span>EXP</span><i id="exp-barre"></i><em id="exp-txt"></em></div>
+    <div class="jauge act"><span>END</span><i id="act-barre"></i><em id="act-txt"></em></div>
+  </div>
+  <div class="monnaies"><span class="jetons" title="Tes jetons">🪙 <b id="jetons-n">0</b></span><small id="act-prochain"></small></div>
 </header>
 
+<main class="ecrans">
+
 <!-- ============ L'ACCUEIL ============ -->
-<section class="ecran actif" id="s-accueil">
-  <div class="fete-bandeau cache" id="fete-bandeau"></div>
-  <div class="vitrine" id="vitrine"></div>
-  <div class="menu">
-    <button class="gros or" id="b-invoquer"><b>✨ Invoquer</b><small id="info-portails"></small></button>
-    <button class="gros" id="b-histoire"><b>📖 Histoire</b><small id="info-histoire"></small></button>
-    <button class="gros fete cache" id="b-epreuve"><b id="epreuve-titre">🎉 Épreuve</b><small id="epreuve-info"></small></button>
-    <button class="gros" id="b-finjeu"><b>⚔️ Fin de jeu</b><small>Défis suprêmes, combat ultime, tour infinie</small></button>
-    <div class="deux">
-      <button class="gros" id="b-equipe"><b>🛡️ Équipe</b></button>
-      <button class="gros" id="b-collection"><b>📚 Collection</b><small id="info-collection"></small></button>
-    </div>
+<section class="ecran actif accueil" id="s-accueil">
+  <div class="decor-accueil"><div class="radar"></div></div>
+  <div class="vedette-accueil" id="vedette-accueil"></div>
+  <div class="cote gauche">
+    <button class="pastille fete cache" id="b-fete"><span>🎉</span><small>Fête</small></button>
+    <button class="pastille" id="b-eveils2"><span>🏅</span><small>Éveils</small><i class="pastille-badge cache" id="badge-eveils"></i></button>
+    <button class="pastille" id="b-finjeu"><span>⚔️</span><small>Défis</small></button>
   </div>
-  <a class="lien" href="/">‹ L’arcade</a>
+  <div class="cote droite">
+    <button class="pastille" id="b-infos"><span>📅</span><small>Infos</small></button>
+    <button class="pastille" id="b-cadeaux"><span>🎁</span><small>Cadeaux</small><i class="pastille-badge cache" id="badge-cadeaux"></i></button>
+    <button class="pastille" id="b-collection"><span>📚</span><small>Collection</small></button>
+  </div>
+  <button class="quete" id="b-quete"><b>QUÊTE</b></button>
+  <div class="carrousel" id="carrousel"></div>
+  <div class="points" id="points-carrousel"></div>
+</section>
+
+<!-- ============ LES QUÊTES ============ -->
+<section class="ecran" id="s-quetes">
+  <h2 class="titre-ecran">Quêtes</h2>
+  <button class="tuile histoire" id="b-histoire"><b>📖 Histoire</b><small id="info-histoire"></small></button>
+  <button class="tuile fete cache" id="b-epreuve"><b id="epreuve-titre">🎉 Épreuve</b><small id="epreuve-info"></small></button>
+  <button class="tuile defis" id="b-finjeu2"><b>⚔️ Fin de jeu</b><small>Défis suprêmes, combat ultime, tour infinie</small></button>
 </section>
 
 <!-- ============ LES PORTAILS ============ -->
 <section class="ecran" id="s-portails">
-  <div class="onglets" id="onglets-portails"></div>
   <div class="portail" id="portail"></div>
+  <div class="onglets" id="onglets-portails"></div>
 </section>
 
 <!-- ============ LA COLLECTION ============ -->
@@ -49,9 +67,15 @@
   <div class="grille" id="grille-collection"></div>
 </section>
 
+<!-- ============ LES ÉVEILS ============ -->
+<section class="ecran" id="s-eveils">
+  <div class="medailles" id="medailles"></div>
+  <div class="liste-eveils" id="liste-eveils"></div>
+</section>
+
 <!-- ============ L'ÉQUIPE ============ -->
 <section class="ecran" id="s-equipe">
-  <p class="consigne" id="consigne-equipe">Touche une place, puis choisis qui la prend. Le premier est le <b>chef</b>.</p>
+  <p class="consigne">Touche une place, puis choisis qui la prend. Le premier est le <b>chef</b>.</p>
   <div class="equipe" id="places"></div>
   <div class="chef" id="chef-info"></div>
   <div class="grille" id="grille-equipe"></div>
@@ -76,21 +100,37 @@
 <!-- ============ LE COMBAT ============ -->
 <section class="ecran combat" id="s-combat">
   <div class="arene" id="arene">
-    <div class="adversaire">
-      <div class="nom-ennemi" id="ennemi-nom"></div>
-      <div class="pv ennemi"><i id="ennemi-pv"></i><span id="ennemi-pv-txt"></span></div>
-      <div class="monstre" id="monstre"></div>
-      <div class="vague" id="vague"></div>
+    <div class="rayons-combat"></div>
+    <div class="hud-ennemi">
+      <div class="ennemi-mini" id="ennemi-mini"></div>
+      <div class="hud-ennemi-txt"><b id="ennemi-nom"></b><div class="pv ennemi"><i id="ennemi-pv"></i><span id="ennemi-pv-txt"></span></div><small id="ennemi-info"></small></div>
     </div>
+    <div class="monstre" id="monstre"></div>
+    <div class="heros" id="heros"></div>
+    <div class="plateau" id="plateau"><svg class="trace" id="trace"><polyline id="trace-ligne" points=""/></svg></div>
     <div class="nombres" id="nombres"></div>
   </div>
-  <div class="trio" id="trio"></div>
-  <div class="pv equipe"><i id="equipe-pv"></i><span id="equipe-pv-txt"></span></div>
-  <div class="spheres" id="spheres"></div>
-  <p class="aide" id="aide-combat">Touche une couleur : tu ramasses toutes ses sphères.</p>
+  <div class="bas-combat">
+    <div class="trio" id="trio"></div>
+    <div class="ligne-pv"><span class="tour-n" id="tour-n">TOUR 1</span><div class="pv equipe"><i id="equipe-pv"></i><span id="equipe-pv-txt"></span></div></div>
+    <p class="aide" id="aide-combat">Trace un chemin de sphères voisines (glisse le doigt), puis relâche.</p>
+  </div>
 </section>
 
-<!-- ============ LA FICHE D'UN PERSONNAGE ============ -->
+</main>
+
+<!-- La barre du bas -->
+<nav class="nav" id="nav">
+  <button data-aller="accueil" class="oui"><span>🏠</span>Accueil</button>
+  <button data-aller="equipe"><span>🛡️</span>Équipe</button>
+  <button data-aller="portails" class="gros-nav"><span>✨</span>Invocation</button>
+  <button data-aller="eveils"><span>🏅</span>Éveils</button>
+  <button data-aller="menu"><span>☰</span>Menu</button>
+</nav>
+
+</div>
+
+<!-- ============ LES PANNEAUX ============ -->
 <div class="voile cache" id="v-fiche"><div class="panneau" id="fiche"></div></div>
 
 <!-- ============ LES ANIMATIONS (invocation, super attaques, résultats) ============ -->

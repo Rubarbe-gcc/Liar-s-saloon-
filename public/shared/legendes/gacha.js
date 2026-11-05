@@ -28,7 +28,7 @@ export const PITIE = 100;
 const RENDU = { R: 1, SR: 2, SSR: 5, LR: 10 };
 
 export function nouvelEtat(graine = 1) {
-  return { jetons: 300, collection: {}, pitie: {}, paliers: {}, alea: (graine >>> 0) || 1, dernierJour: -1, serie: 0, cadeaux: {}, tirages: 0 };
+  return { jetons: 300, collection: {}, pitie: {}, paliers: {}, alea: (graine >>> 0) || 1, dernierJour: -1, serie: 0, cadeaux: {}, tirages: 0, medailles: {}, boite: [] };
 }
 
 function hasard(etat) {
@@ -131,21 +131,37 @@ export function invoquer(etat, portail, n = 10) {
   return { ok: true, prix, resultats, garanties };
 }
 
-/** La connexion du jour : 20 jetons, plus 5 par jour d'affilée (jusqu'à 50). Rend les jetons gagnés (0 si déjà fait). */
-export function connexion(etat, jour) {
+/** La connexion du jour : 20 jetons, plus 5 par jour d'affilée (jusqu'à 50). Rend les jetons gagnés (0 si déjà fait). boite : dans la boîte à cadeaux (à récupérer) plutôt que tout de suite. */
+export function connexion(etat, jour, { boite = false } = {}) {
   if (etat.dernierJour === jour) return 0;
   etat.serie = etat.dernierJour === jour - 1 ? etat.serie + 1 : 1;
   etat.dernierJour = jour;
   const gain = Math.min(50, 15 + 5 * etat.serie);
-  etat.jetons += gain;
+  if (boite) (etat.boite ||= []).push({ texte: `Connexion du jour (${etat.serie} jour${etat.serie > 1 ? 's' : ''} d’affilée)`, jetons: gain });
+  else etat.jetons += gain;
   return gain;
 }
 
 /** Le cadeau d'une fête (une fois par année de fête). */
-export function cadeauFete(etat, fete) {
+export function cadeauFete(etat, fete, { boite = false } = {}) {
   const cle = `${fete.id}-${fete.annee}`;
   if (etat.cadeaux[cle]) return 0;
   etat.cadeaux[cle] = true;
-  etat.jetons += fete.cadeau;
+  if (boite) (etat.boite ||= []).push({ texte: `${fete.glyphe} ${fete.nom}`, jetons: fete.cadeau, medailles: { legende: 3 } });
+  else etat.jetons += fete.cadeau;
   return fete.cadeau;
+}
+
+/** Récupère tout ce qu'il y a dans la boîte à cadeaux. Rend { jetons, medailles }. */
+export function recupererCadeaux(etat) {
+  const tot = { jetons: 0, medailles: {} };
+  for (const c of etat.boite || []) {
+    tot.jetons += c.jetons || 0;
+    for (const [k, n] of Object.entries(c.medailles || {})) tot.medailles[k] = (tot.medailles[k] || 0) + n;
+  }
+  etat.jetons += tot.jetons;
+  etat.medailles ||= {};
+  for (const [k, n] of Object.entries(tot.medailles)) etat.medailles[k] = (etat.medailles[k] || 0) + n;
+  etat.boite = [];
+  return tot;
 }
