@@ -3,11 +3,14 @@
     <linearGradient id="ciel" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2b2a5c"/><stop offset="1" stop-color="#ff9a6a"/></linearGradient>
     <linearGradient id="ambre" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff2c0"/><stop offset=".45" stop-color="#ffb347"/><stop offset="1" stop-color="#c25a10"/></linearGradient>
     <linearGradient id="pierre" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#d8d0bf"/><stop offset="1" stop-color="#8a8270"/></linearGradient>
+    <clipPath id="coins"><rect width="512" height="512" rx="96"/></clipPath>
   </defs>
+  <g clip-path="url(#coins)">
   <rect width="512" height="512" rx="96" fill="url(#ciel)"/>
   <path d="M0 400 Q128 340 256 380 T512 360 V512 H0Z" fill="#3d6b3a"/>
   <path d="M120 420 V250 h30 v-30 h30 v30 h30 v-30 h30 v30 h30 V420Z" fill="url(#pierre)" stroke="#4a403a" stroke-width="8" stroke-linejoin="round"/>
   <path d="M300 420 V280 h26 v-26 h26 v26 h26 v-26 h26 v26 h0 V420Z" fill="url(#pierre)" stroke="#4a403a" stroke-width="8" stroke-linejoin="round"/>
   <path d="M256 70 L320 170 L256 270 L192 170Z" fill="url(#ambre)" stroke="#7a3a08" stroke-width="8" stroke-linejoin="round"/>
   <path d="M256 70 L256 270 M192 170 L320 170" stroke="#fff6d8" stroke-width="4" opacity=".6"/>
+  </g>
 </svg>

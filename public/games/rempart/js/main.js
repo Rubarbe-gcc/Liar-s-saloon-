@@ -34,7 +34,6 @@ let vitesse = 1, pause = false, accu = 0, dernier = performance.now();
 let selection = null;         // { emp } ou { tour }
 let bossEnVie = null;
 let ecran = 'menu';
-let auto = false, vitesseDebug = 0; // pour les essais (window.rempart)
 
 const progression = (() => {
   try { return { etoiles: {}, ...JSON.parse(localStorage.getItem('rempart.progression') || '{}') }; } catch { return { etoiles: {} }; }
@@ -133,7 +132,6 @@ function lancerNiveau(id) {
   fermerModales();
   fermerPanneau();
   demo = false;
-  auto = false;
   son.rendreMuet(false);
   partie = P.creerPartie(id, { graine: (Date.now() % 1e9) | 0 });
   ia = null;
@@ -458,20 +456,16 @@ function lancerVague() {
 /* ------------------------------------------------------------ boucle */
 function boucle(maintenant) {
   requestAnimationFrame(boucle);
-  etape(maintenant);
-}
-
-function etape(maintenant) {
   const dt = Math.max(0, Math.min(0.1, (maintenant - dernier) / 1000)) || 0;
   dernier = maintenant;
   if (!partie) return;
   const fini = partie.phase === 'victoire' || partie.phase === 'defaite';
   if (!pause && !fini) {
-    accu += dt * (vitesseDebug || vitesse);
+    accu += dt * vitesse;
     let n = 0;
-    const max = vitesseDebug ? 400 : 10;
+    const max = 10;
     while (accu >= P.DT && n < max) {
-      if (demo || auto) jouerIA(partie, ia);
+      if (demo) jouerIA(partie, ia);
       P.pas(partie);
       accu -= P.DT;
       n++;
@@ -538,19 +532,6 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && ecr
 addEventListener('pointerdown', () => son.debloquer(), { once: true });
 
 son.installer(() => (ecran === 'jeu' && !demo && bossEnVie ? 'rempart-boss' : 'rempart'));
-
-/* ------------------------------------------------------------ essais */
-// Petit accès pour les essais depuis la console : rempart.auto(true) fait jouer l'ordinateur.
-window.rempart = {
-  get partie() { return partie; },
-  auto(v = true) { auto = v && !demo; if (auto) ia = creerIA(partie); return auto; },
-  vitesse(v) { vitesseDebug = v; },
-  lancer: lancerNiveau,
-  /** Fait avancer n images de dt secondes (quand l'onglet est caché, rien ne s'anime). */
-  images(n = 1, dt = 1 / 30) { for (let i = 0; i < n; i++) etape(dernier + dt * 1000); return partie && { t: partie.t, phase: partie.phase, vague: partie.vague, vies: partie.vies, or: partie.or }; },
-  tap: (x, y) => monde.choisir(x, y),
-  monde,
-};
 
 demarrerDemo();
 allerMenu();

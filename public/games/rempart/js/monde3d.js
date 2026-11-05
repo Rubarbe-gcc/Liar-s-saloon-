@@ -40,7 +40,7 @@ export const AMBIANCES = {
   fosse: {
     ciel: '#2a1612', horizon: '#ff7a3a', herbe: '#5a4a3a', herbe2: '#6e5440', chemin: '#7a5a40', colline: '#4a3a32', roche: '#3a3230',
     eau: '#ff6a1a', fond: '#401a0a', feuillage: ['#4a3a28', '#5a4030'], fleurs: ['#ff8a3a'],
-    soleil: '#ffa070', intens: 1.8, hemi: 0.6, pins: 0, particules: 'braises', mort: true,
+    soleil: '#ffa070', intens: 2.4, hemi: 0.85, pins: 0, particules: 'braises', mort: true,
   },
 };
 
@@ -774,7 +774,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
   return {
     charger, rendre, evenements, choisir, projeter, selectionner, montrerPortee,
     cacherPortee: () => { portee.visible = false; },
-    camera: cam, redimensionner, _three: { renderer, scene, camera },
+    camera: cam, redimensionner,
     set surTap(f) { surTap = f; },
     hauteurSocle: id => socles[id]?.y ?? 0.3,
     baseFrappee: () => { if (base) base.userData.rouge = 1; },

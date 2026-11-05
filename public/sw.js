@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v159';
+const VERSION = 'v160';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -179,6 +179,8 @@ const SHELL = [
   '/games/rempart/',
   '/games/rempart/css/rempart.css',
   '/games/rempart/icons/icon.svg',
+  '/games/rempart/icons/icon-192.png',
+  '/games/rempart/icons/apple-touch-icon.png',
   '/games/rempart/manifest.webmanifest',
   '/games/rempart/js/camera.js',
   '/games/rempart/js/effets3d.js',
