@@ -178,10 +178,17 @@ function ouvrirMenu() {
     <button class="tuile" data-m="collection"><b>📚 Collection</b><small>Tous tes personnages, leurs fiches</small></button>
     <button class="tuile" data-m="infos"><b>📅 Infos</b><small>Les portails, les fêtes à venir</small></button>
     <button class="tuile" data-m="son"><b>${son.estMuet() ? '🔇 Son coupé' : '🔊 Son'}</b><small>Toucher pour changer</small></button>
+    <button class="tuile defis" data-m="zero"><b>🗑️ Recommencer à zéro</b><small>Efface ta partie : boîte vide, nouvelle invocation offerte</small></button>
     <a class="tuile" href="/" style="text-decoration:none;color:inherit"><b>🕹️ Retour à l’arcade</b></a>`);
   $('fiche').querySelectorAll('[data-m]').forEach((b) => b.addEventListener('click', () => {
     const m = b.dataset.m;
     if (m === 'son') { son.basculer(); ouvrirMenu(); return; }
+    if (m === 'zero') {
+      if (!confirm('Effacer toute ta partie (personnages, jetons, progression) ? C’est définitif.')) return;
+      try { localStorage.removeItem(CLE); } catch { /* ignore */ }
+      location.reload();
+      return;
+    }
     $('v-fiche').classList.add('cache');
     if (m === 'collection') { rendreCollection(); aller('collection'); }
     if (m === 'infos') ouvrirInfos();
