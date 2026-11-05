@@ -10,7 +10,7 @@
  * Tout se passe d'un appui (sauf la fin d'un combat, qui attend un bouton).
  */
 
-import { PERSO, RARETES, ELEMENTS } from '../../../shared/legendes/persos.js';
+import { PERSO, RARETES, ELEMENTS, peutDevenirLR, formeLR } from '../../../shared/legendes/persos.js';
 import { portrait } from './portrait.js';
 import * as son from './sons.js';
 import { illustration, rendreReactif } from './art.js';
@@ -62,7 +62,9 @@ function appui(scene, ms = 0) {
 export async function invocation(scene, resultats, garanties = []) {
   scene.classList.remove('cache');
   scene.innerHTML = '';
-  const meilleure = resultats.reduce((m, r) => (ORDRE.indexOf(r.rarete) > ORDRE.indexOf(m) ? r.rarete : m), 'R');
+  // Un personnage qui peut devenir LR (tiré en SSR) : tout le portail devient arc-en-ciel.
+  const lrPossible = resultats.some((r) => peutDevenirLR(r.id) && r.rarete !== 'LR');
+  const meilleure = lrPossible ? 'LR' : resultats.reduce((m, r) => (ORDRE.indexOf(r.rarete) > ORDRE.indexOf(m) ? r.rarete : m), 'R');
   const couleur = meilleure === 'LR' ? '#ff4dd8' : meilleure === 'SSR' ? '#ffd23f' : meilleure === 'SR' ? '#d7a23a' : '#8aa0b4';
   const inv = document.createElement('div');
   inv.className = 'inv';
@@ -73,7 +75,7 @@ export async function invocation(scene, resultats, garanties = []) {
   const n = resultats.length;
   resultats.forEach((r, i) => {
     const o = document.createElement('div');
-    o.className = `orbe ${r.rarete}`;
+    o.className = `orbe ${peutDevenirLR(r.id) ? 'LR' : r.rarete}`;
     const a = n === 1 ? Math.PI / 2 : Math.PI * (0.15 + 0.7 * (i / (n - 1)));
     o.style.left = `calc(50% + ${Math.cos(a) * 28}vmin - 4.5vmin)`;
     o.style.top = `calc(46% + ${Math.sin(a) * 18}vmin - 4.5vmin)`;
@@ -86,8 +88,8 @@ export async function invocation(scene, resultats, garanties = []) {
     const t = document.createElement('div');
     t.className = 'texte-inv';
     t.style.setProperty('--c', couleur);
-    t.textContent = meilleure === 'LR' ? 'Une légende s’éveille…' : 'Quelque chose brille…';
-    setTimeout(() => inv.appendChild(t), 1300);
+    t.textContent = lrPossible ? 'Un arc-en-ciel… une future légende !' : meilleure === 'LR' ? 'Une légende s’éveille…' : 'Quelque chose brille…';
+    setTimeout(() => { if (inv.querySelector('.anneau:not(.ouvre)')) inv.appendChild(t); }, 1300);
   }
   let r = await appui(scene, 2600);
   if (r !== 'passer') {
@@ -104,15 +106,16 @@ export async function invocation(scene, resultats, garanties = []) {
       const rv = document.createElement('div');
       rv.className = 'revele';
       rv.style.setProperty('--c', c);
-      const tag = res.vedette && res.nouveau ? 'NOUVEAU !' : res.rarete === 'LR' ? 'LR !' : res.rarete === 'SSR' ? 'SSR !' : 'NOUVEAU';
-      const grandArt = res.rarete === 'LR' || res.rarete === 'UR';
-      rv.innerHTML = `<div class="rayons" style="--c:${c}"></div>${grandArt ? `<div class="art-revele">${illustration(x, { taille: 300 })}</div>` : portrait(x, { cadre: true, taille: 300, nom: false, anime: true })}<div class="tag">${tag}</div>
+      const versLR = peutDevenirLR(res.id) && res.rarete !== 'LR';
+      const tag = versLR ? 'PEUT DEVENIR LR !' : res.vedette && res.nouveau ? 'NOUVEAU !' : res.rarete === 'LR' ? 'LR !' : res.rarete === 'SSR' ? 'SSR !' : 'NOUVEAU';
+      const grandArt = res.rarete === 'LR' || res.rarete === 'UR' || versLR;
+      rv.innerHTML = `<div class="rayons" style="--c:${c}"></div>${grandArt ? `<div class="art-revele${versLR ? ' arc' : ''}">${illustration(x, { taille: 300 })}</div>` : portrait(x, { cadre: true, taille: 300, nom: false, anime: true })}<div class="tag${versLR ? ' arc' : ''}">${tag}</div>${versLR ? `<div class="futur-lr">${portrait(PERSO[formeLR(res.id)], { cadre: true, taille: 90, nom: false })}<small>Sa forme LR, par l’éveil</small></div>` : ''}
         <div class="sous"><b>${x.nom}</b>${x.titre}<br>${res.nouveau ? '✨ Nouveau dans ta collection' : `Éveil ★${res.eveil}${res.rendu ? ` · +${res.rendu} jetons` : ''}`}</div><span class="passer">Passer ›</span>`;
       inv.innerHTML = '';
       inv.appendChild(rv);
       son.revele(res.rarete);
       const finArt = grandArt ? rendreReactif(rv) : () => {};
-      if (res.rarete === 'LR') { const P = creerParticules(rv); P.gerbe(P.largeur / 2, P.hauteur / 2, '#ffd23f', 90, 900); P.gerbe(P.largeur / 2, P.hauteur / 2, '#ff4dd8', 90, 800); }
+      if (res.rarete === 'LR' || versLR) { const P = creerParticules(rv); P.gerbe(P.largeur / 2, P.hauteur / 2, '#36d39a', 70, 850); P.gerbe(P.largeur / 2, P.hauteur / 2, '#3ae0ff', 70, 800); P.gerbe(P.largeur / 2, P.hauteur / 2, '#ffd23f', 90, 900); P.gerbe(P.largeur / 2, P.hauteur / 2, '#ff4dd8', 90, 800); }
       r = await appui(scene, 0);
       finArt();
       if (r === 'passer') break;
@@ -122,7 +125,7 @@ export async function invocation(scene, resultats, garanties = []) {
   scene.innerHTML = '';
   const re = document.createElement('div');
   re.className = 'resume';
-  re.innerHTML = `<h2>Invocation</h2><div class="grille">${resultats.map((x, i) => portrait(PERSO[x.id], { cadre: true, taille: 100, classe: x.nouveau ? 'nouveau' : '' }).replace('class="carte', `style="animation-delay:${i * 0.06}s" class="carte`)).join('')}</div>
+  re.innerHTML = `<h2>Invocation</h2><div class="grille">${resultats.map((x, i) => portrait(PERSO[x.id], { cadre: true, taille: 100 }).replace('class="carte', `style="animation-delay:${i * 0.06}s" class="carte`).replace(/<\/div>$/, x.nouveau ? '<span class="neuf">NEW</span></div>' : '</div>')).join('')}</div>
     ${garanties.length ? `<p class="garanties">${garanties.join(' · ')}</p>` : ''}<button class="btn">OK</button>`;
   scene.appendChild(re);
   await new Promise((ok) => re.querySelector('.btn').addEventListener('click', ok, { once: true }));

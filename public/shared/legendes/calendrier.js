@@ -77,11 +77,49 @@ export function dansFete(f, jour) {
 /** Les célébrations en cours. */
 export const fetesDu = (jour) => FETES.map((f) => { const d = dansFete(f, jour); return d ? { ...f, ...d } : null; }).filter(Boolean);
 
+/**
+ * Le portail permanent est mis à jour tous les trois mois (MAJ_PERMANENT jours) : il prend alors tous les
+ * personnages qu'il n'avait pas (les vedettes dont le portail est fini, et les personnages des fêtes passées).
+ */
+export const MAJ_PERMANENT = 91;
+export const derniereMaj = (jour) => LANCEMENT + Math.floor(Math.max(0, jour - LANCEMENT) / MAJ_PERMANENT) * MAJ_PERMANENT;
+export const prochaineMaj = (jour) => derniereMaj(jour) + MAJ_PERMANENT;
+/** Le jour où un personnage de fête a fini sa première fête (sa partie, pour une grande fête). */
+const finPremiereFete = (() => {
+  const cache = {};
+  return (x) => {
+    if (cache[x.id] !== undefined) return cache[x.id];
+    let best = Infinity;
+    for (const id of fetesDe(x)) {
+      const f = FETE[id];
+      for (let a = 2026; a < 2040; a++) {
+        if ((f.depuis && a < f.depuis) || (f.seulement && a !== f.seulement)) continue;
+        const de = f.parties ? f.parties[(x.partie || 1) - 1] : f;
+        const { debut, fin } = intervalle(a, de);
+        if (debut < LANCEMENT) continue;
+        best = Math.min(best, fin);
+        break;
+      }
+    }
+    return (cache[x.id] = best);
+  };
+})();
 /** Les personnages qui sont dans le portail permanent ce jour-là. */
 export function permanents(jour) {
-  const { k } = rotationDu(jour);
-  return PERSOS.filter((x) => TIRABLE(x) && !x.fete && (x.sortie === undefined || x.sortie < Math.min(k, NB_SORTIES)));
+  const maj = derniereMaj(jour);
+  return PERSOS.filter((x) => {
+    if (!TIRABLE(x)) return false;
+    if (x.fete) return finPremiereFete(x) < maj;
+    if (x.sortie === undefined) return true;
+    return LANCEMENT + (x.sortie + 1) * ROTATION - 1 < maj;
+  });
 }
+/** Ceux qui peuvent revenir sur le portail du retour : les vedettes déjà passées, les SSR du permanent. */
+function revenants(k) {
+  return PERSOS.filter((x) => TIRABLE(x) && !x.fete && ((x.sortie !== undefined && x.sortie < Math.min(k, NB_SORTIES)) || (x.sortie === undefined && x.rarete === 'SSR')));
+}
+/** Le nombre d'invocations du portail du retour. */
+export const MAX_RETOUR = 50;
 
 /**
  * Les portails ouverts ce jour-là : [{ id, nom, type ('permanent' | 'garanti' | 'paliers'), vedettes: [id],
@@ -97,11 +135,20 @@ export function portails(jour) {
     id: `rotation-${r.k}`, nom: reprise ? 'Le Retour des Légendes' : 'Nouvelles Légendes', type: r.k % 2 === 0 ? 'garanti' : 'paliers',
     vedettes, nouveaux: reprise ? [] : vedettes, pool: [...new Set([...perm, ...vedettes])], debut: r.debut, fin: r.fin, reprise,
   });
+  // Le portail du retour : des personnages déjà sortis reviennent, pour un nombre limité d'invocations.
+  const rev = revenants(r.k).filter((x) => !vedettes.includes(x.id));
+  if (rev.length) {
+    const lr = rev.filter((x) => x.versLR), autres = rev.filter((x) => !x.versLR);
+    const choix = [];
+    if (lr.length) choix.push(lr[(r.k * 3) % lr.length].id);
+    for (let i = 0; choix.length < 3 && i < autres.length; i++) { const id = autres[(r.k * 5 + i * 7) % autres.length].id; if (!choix.includes(id)) choix.push(id); }
+    out.push({ id: `retour-${r.k}`, nom: 'Le Retour', type: 'garanti', vedettes: choix, nouveaux: [], pool: [...new Set([...perm, ...choix])], debut: r.debut, fin: r.fin, max: MAX_RETOUR, retour: true });
+  }
   for (const f of fetesDu(jour)) {
     // Les personnages de la fête : pour une grande, ceux des parties déjà ouvertes (les nouveaux : ceux de la partie en cours).
-    const siens = PERSOS.filter((x) => fetesDe(x).includes(f.id) && (!f.partie || (x.partie || 1) <= f.partie));
+    const siens = PERSOS.filter((x) => TIRABLE(x) && fetesDe(x).includes(f.id) && (!f.partie || (x.partie || 1) <= f.partie));
     const nouveaux = siens.filter((x) => !f.partie || (x.partie || 1) === f.partie).map((x) => x.id);
-    const invites = PERSOS.filter((x) => x.rarete === 'LR' && TIRABLE(x) && !x.fete && (x.sortie ?? 99) < Math.min(r.k, NB_SORTIES)).slice(-2).map((x) => x.id);
+    const invites = PERSOS.filter((x) => x.versLR && TIRABLE(x) && !x.fete && (x.sortie ?? 99) < Math.min(r.k, NB_SORTIES)).slice(-2).map((x) => x.id);
     const ids = siens.map((x) => x.id);
     out.push({
       id: `fete-${f.id}-${f.annee}${f.partie ? `-${f.partie}` : ''}`, nom: `${f.glyphe} ${f.nom}${f.partie ? ` · ${f.partieNom}` : ''}`,

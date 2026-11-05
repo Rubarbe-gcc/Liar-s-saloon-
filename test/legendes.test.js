@@ -7,7 +7,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { PERSOS, PERSO, ELEMENTS, FAMILLES, RARETES, STYLES_SUPER, avantage, stats } from '../public/shared/legendes/persos.js';
-import { LANCEMENT, ROTATION, NB_SORTIES, portails, fetesDu, permanents, rotationDu } from '../public/shared/legendes/calendrier.js';
+import { LANCEMENT, ROTATION, NB_SORTIES, MAJ_PERMANENT, MAX_RETOUR, portails, fetesDu, permanents, rotationDu } from '../public/shared/legendes/calendrier.js';
 import { nouvelEtat, invoquer, connexion, cadeauFete, PALIERS, PITIE, TAUX } from '../public/shared/legendes/gacha.js';
 
 const jour = (a, m, j) => Date.UTC(a, m - 1, j) / 86400000;
@@ -26,16 +26,17 @@ test('les personnages : complets, des éléments, des familles et des styles con
   assert.ok(stats('kael_lr', 5).atq > stats('kael_lr').atq);
 });
 
-test('le calendrier : un nouveau portail tous les 17 jours, garanti puis à paliers, les vedettes rejoignent le permanent', () => {
+test('le calendrier : un nouveau portail toutes les deux semaines, garanti puis à paliers ; le permanent mis à jour tous les trois mois', () => {
   const p0 = portails(LANCEMENT);
   const rot0 = p0.find((p) => p.id.startsWith('rotation'));
   assert.equal(rot0.type, 'garanti');
-  assert.deepEqual(rot0.nouveaux.sort(), ['kael_lr', 'noa_ssr']);
-  assert.ok(!p0[0].pool.includes('kael_lr'), 'pas encore dans le permanent');
+  assert.deepEqual(rot0.nouveaux.sort(), ['kael_lr_ssr', 'noa_ssr'], 'un LR sort en SSR');
+  assert.ok(!p0[0].pool.includes('kael_lr_ssr'), 'pas encore dans le permanent');
   const rot1 = portails(LANCEMENT + ROTATION).find((p) => p.id.startsWith('rotation'));
   assert.equal(rot1.type, 'paliers');
-  assert.ok(rot1.nouveaux.includes('vash_lr'));
-  assert.ok(permanents(LANCEMENT + ROTATION).some((x) => x.id === 'kael_lr'), 'kael rejoint le permanent');
+  assert.ok(rot1.nouveaux.includes('vash_lr_ssr'));
+  assert.ok(!permanents(LANCEMENT + ROTATION).some((x) => x.id === 'kael_lr_ssr'), 'pas avant la mise à jour du permanent');
+  assert.ok(permanents(LANCEMENT + MAJ_PERMANENT).some((x) => x.id === 'kael_lr_ssr'), 'kael rejoint le permanent à la mise à jour');
   assert.equal(rotationDu(LANCEMENT + ROTATION - 1).k, 0);
   // Après la dernière sortie, les portails reviennent (sans nouveau personnage).
   const tard = portails(LANCEMENT + ROTATION * (NB_SORTIES + 1)).find((p) => p.id.startsWith('rotation'));
@@ -51,9 +52,10 @@ test('les célébrations : anniversaire, Halloween, Noël, Nouvel An (à cheval 
   assert.deepEqual(fetesDu(jour(2027, 3, 3)), []);
   const noel = portails(jour(2027, 12, 20)).find((p) => p.fete === 'noel');
   assert.equal(noel.type, 'paliers');
-  assert.deepEqual(noel.nouveaux, ['givre']);
+  assert.deepEqual(noel.nouveaux, ['givre_ssr']);
   // Un personnage de fête ne se tire jamais ailleurs.
-  for (const p of portails(jour(2027, 3, 3))) assert.ok(!p.pool.includes('givre'));
+  for (const p of portails(jour(2026, 12, 1))) assert.ok(!p.pool.includes('givre_ssr'), 'pas avant sa fête');
+  assert.ok(portails(jour(2027, 3, 3))[0].pool.includes('givre_ssr'), 'au permanent après la mise à jour qui suit sa fête');
 });
 
 test('les taux : à peu près ceux annoncés, sur beaucoup de tirages', () => {
@@ -67,7 +69,7 @@ test('les taux : à peu près ceux annoncés, sur beaucoup de tirages', () => {
   assert.ok(Math.abs(n.SR / 4000 - TAUX.SR) < 0.03, `SR ${n.SR}`);
 });
 
-test('un multi garantit un SSR ; le portail garanti, une vedette à chaque multi', () => {
+test('un multi garantit un SSR ; le portail garanti, une vedette toutes les trois multi', () => {
   const e = nouvelEtat(3);
   e.jetons = 1e6;
   const garanti = portails(LANCEMENT).find((p) => p.type === 'garanti');
@@ -75,7 +77,7 @@ test('un multi garantit un SSR ; le portail garanti, une vedette à chaque multi
     const r = invoquer(e, garanti, 10);
     assert.equal(r.resultats.length, 10);
     assert.ok(r.resultats.some((x) => x.rarete === 'SSR' || x.rarete === 'LR'));
-    assert.ok(r.resultats.some((x) => x.vedette), 'une vedette par multi');
+    if ((k + 1) % 3 === 0) assert.ok(r.resultats.some((x) => x.vedette), 'une vedette à chaque 3e multi');
   }
 });
 
@@ -198,7 +200,8 @@ import { recupererCadeaux } from '../public/shared/legendes/gacha.js';
 
 test('les éveils : Kael R → SR → SSR → UR → LR avec des médailles ; un UR ne se tire jamais', () => {
   const kael = CHAINES.find((c) => c[0] === 'kael_r');
-  assert.deepEqual(kael, ['kael_r', 'kael_sr', 'kael_ssr', 'kael_ssr_ur', 'kael_lr']);
+  assert.deepEqual(kael, ['kael_r', 'kael_sr', 'kael_ssr', 'kael_ssr_ur']);
+  assert.deepEqual(CHAINES.find((c) => c.includes('kael_lr')), ['kael_lr_ssr', 'kael_lr_ssr_ur', 'kael_lr'], 'un LR a sa propre lignée, qui commence en SSR');
   assert.equal(PERSO.kael_ssr_ur.rarete, 'UR');
   assert.ok(PERSO.kael_ssr_ur.passif.lignes.length > PERSO.kael_ssr.passif.lignes.length);
   for (const p of portails(LANCEMENT)) assert.ok(p.pool.every((id) => !PERSO[id].dokkan && PERSO[id].rarete !== 'N'));
@@ -232,16 +235,16 @@ test('le rang, l’endurance qui remonte avec le temps, le butin, la boîte à c
 
 import { evenementDu } from '../public/shared/legendes/niveaux.js';
 
-test('les grandes fêtes : un mois, trois parties (chacune son nouveau LR) ; un événement court tous les 3 ou 4 jours', () => {
+test('les grandes fêtes : un mois, trois parties (chacune son nouveau LR) ; un événement court tous les deux jours', () => {
   const nouveaux = [5, 15, 25].map((d) => portails(jour(2027, 11, d)).find((p) => p.fete === 'anniversaire'));
   assert.deepEqual(nouveaux.map((p) => p.partie), [1, 2, 3]);
-  assert.deepEqual(nouveaux.map((p) => p.nouveaux), [['kael_anniv'], ['jumelles_lr'], ['neant_duo_lr']]);
-  assert.ok(nouveaux[2].pool.includes('kael_anniv') && nouveaux[2].type === 'garanti', 'le final reprend toute la fête');
-  assert.equal(portails(jour(2027, 7, 25)).find((p) => p.fete === 'ete').nouveaux[0], 'drax_ete_lr');
+  assert.deepEqual(nouveaux.map((p) => p.nouveaux), [['kael_anniv_ssr'], ['jumelles_lr_ssr'], ['neant_duo_lr_ssr']]);
+  assert.ok(nouveaux[2].pool.includes('kael_anniv_ssr') && nouveaux[2].type === 'garanti', 'le final reprend toute la fête');
+  assert.equal(portails(jour(2027, 7, 25)).find((p) => p.fete === 'ete').nouveaux[0], 'drax_ete_lr_ssr');
   const ids = [];
   for (let d = 0; d < 21; d++) ids.push(evenementDu(LANCEMENT + d).n);
   const durees = Object.values(ids.reduce((t, n) => ({ ...t, [n]: (t[n] || 0) + 1 }), {}));
-  assert.ok(durees.every((n) => n === 3 || n === 4), JSON.stringify(durees));
+  assert.ok(durees.slice(0, -1).every((n) => n === 2), JSON.stringify(durees));
   assert.equal(ROTATION, 14);
 });
 
@@ -278,4 +281,16 @@ test('les événements d’éveil : on bat le personnage pour ses médailles ; l
     assert.equal(Math.floor(ch[ch.length - 1] / 5) >= Math.floor(p / 5), true);
   }
   assert.equal(Math.floor(cheminAuto(c, 2).slice(-1)[0] / 5), 4, 'il descend jusqu’à la dernière rangée');
+});
+
+test('le portail du retour : d’anciens personnages reviennent, pour 50 invocations au plus', () => {
+  const p = portails(LANCEMENT + ROTATION * 3).find((x) => x.retour);
+  assert.ok(p && p.vedettes.length >= 2 && p.max === MAX_RETOUR);
+  assert.ok(p.vedettes.every((id) => PERSO[id].sortie === undefined || PERSO[id].sortie < 3), 'des personnages déjà sortis');
+  const e = nouvelEtat(4);
+  e.jetons = 1e5;
+  for (let k = 0; k < 5; k++) assert.ok(invoquer(e, p, 10).ok);
+  const r = invoquer(e, p, 1);
+  assert.equal(r.ok, false);
+  assert.equal(r.limite, true);
 });

@@ -8,10 +8,10 @@
  * Pour essayer une autre date : ?jour=2027-12-24
  */
 
-import { PERSOS, PERSO, ELEMENTS, CATEGORIES, LIENS, ROLES, RARETES, ORDRE, stats } from '../../../shared/legendes/persos.js';
+import { PERSOS, PERSO, ELEMENTS, CATEGORIES, LIENS, ROLES, RARETES, ORDRE, stats, peutDevenirLR, formeLR } from '../../../shared/legendes/persos.js';
 import { texteChef } from '../../../shared/legendes/passifs.js';
-import { jourDe, dateDe, portails, fetesDu, FETE, FETES, dansFete, fetesDe } from '../../../shared/legendes/calendrier.js';
-import { nouvelEtat, invoquer, prixMulti, palierDe, connexion, cadeauFete, recupererCadeaux, PALIERS, PRIX, PITIE, TAUX } from '../../../shared/legendes/gacha.js';
+import { jourDe, dateDe, portails, fetesDu, FETE, FETES, dansFete, fetesDe, prochaineMaj } from '../../../shared/legendes/calendrier.js';
+import { nouvelEtat, invoquer, prixMulti, palierDe, connexion, cadeauFete, recupererCadeaux, PALIERS, PRIX, PITIE, TAUX, PART_VEDETTE } from '../../../shared/legendes/gacha.js';
 import { creerCombat, jouerTour, rotation, kiPour, liens, voisines, cheminAuto, meilleurChemin, KI_SUPER, KI_ULTIME, KI_MAX, COLS, NB_SPHERES } from '../../../shared/legendes/combat.js';
 import { CHAPITRES, EPREUVES, DIFFICULTES, ennemisEn, DEFIS, ULTIME, etage, butin, coutAct, evenementDu, bonusEvenement, EVENEMENTS_EVEIL, medaillesEveil } from '../../../shared/legendes/niveaux.js';
 import { CHAINES, MEDAILLES, eveilDe, peutEveiller, eveiller, ajouterMedailles, nouveauJoueur, endurance, depenser, gagnerExp, actMax, expPour, prochainPoint, cleMedaille } from '../../../shared/legendes/eveils.js';
@@ -113,7 +113,7 @@ function rendreAccueil() {
     const fete = p.fete && FETE[p.fete];
     const v = PERSO[p.vedettes[0] || 'kael_ssr'];
     return `<button class="diapo" data-portail="${p.id}" style="--a:${fete ? fete.couleurs[0] : '#ffd23f'};--b:${fete ? fete.couleurs[1] : v.couleurs.aura}">${portrait(v, { taille: 66, fond: false })}
-      <span><b>${p.nom}</b><small>${p.nouveaux.length ? `Nouveau : ${PERSO[p.nouveaux[0]].nom} (${PERSO[p.nouveaux[0]].rarete})` : 'Le retour des légendes'} · jusqu’au ${dateFin(p.fin).slice(0, 5)}</small></span></button>`;
+      <span><b>${p.nom}</b><small>${p.nouveaux.length ? `Nouveau : ${PERSO[p.nouveaux[0]].nom} (${PERSO[p.nouveaux[0]].rarete})` : p.retour ? `Retour : ${PERSO[p.vedettes[0]].nom} (${PERSO[p.vedettes[0]].rarete})` : 'Le retour des légendes'} · jusqu’au ${dateFin(p.fin).slice(0, 5)}</small></span></button>`;
   });
   const ev = evenementDu(JOUR);
   diapos.push(`<button class="diapo" data-quetes="1" style="--a:#3ae0ff;--b:${ELEMENTS[ev.element].couleur}"><span style="font-size:44px">${ev.glyphe}</span><span><b>${ev.nom}</b><small>Événement court · fin ${jours(ev.fin - JOUR)} · orbes ${ELEMENTS[ev.element].glyphe}</small></span></button>`);
@@ -170,7 +170,7 @@ function ouvrirInfos() {
   panneau(`<h2 class="titre-ecran">📅 Infos</h2>
     <div class="bloc"><b>Portails ouverts</b>${ps.map((p) => `<div class="cadeau"><span>${p.nom}</span><b>${p.fin !== undefined ? `fin ${jours(p.fin - JOUR)}` : 'toujours'}</b></div>`).join('')}</div>
     <div class="bloc"><b>Les fêtes</b>${aVenir.map(({ f, dans }) => `<div class="cadeau"><span>${f.glyphe} ${f.nom}</span><b>${dans === 0 ? 'en ce moment !' : jours(dans)}</b></div>`).join('')}</div>
-    <div class="bloc">Un nouveau portail toutes les deux semaines (les vedettes rejoignent ensuite le portail permanent), un événement court tous les trois ou quatre jours, et deux grandes fêtes d’un mois en trois parties : l’anniversaire (novembre, dès 2027) et l’été (juillet).</div>`);
+    <div class="bloc">Toutes les deux semaines, un portail de nouveaux personnages et un portail « Le Retour » (d’anciens personnages, 50 invocations au plus) ; le portail permanent est mis à jour tous les trois mois avec tous les personnages qu’il n’a pas ; un événement court tous les deux jours ; et deux grandes fêtes d’un mois en trois parties : l’anniversaire (novembre, dès 2027) et l’été (juillet).</div>`);
 }
 
 function ouvrirMenu() {
@@ -192,7 +192,7 @@ function ouvrirMenu() {
 let portailChoisi = null;
 const TYPES = {
   permanent: 'Portail permanent : tous les personnages de base, et les vedettes des portails passés.',
-  garanti: 'À chaque multi-invocation, <b>un personnage de la bannière garanti</b> !',
+  garanti: 'Après deux multi-invocations, la <b>troisième garantit une vedette</b> !',
   paliers: 'Portail à paliers : au <b>5e palier, le nouveau personnage garanti</b> !',
 };
 function rendrePortails() {
@@ -206,15 +206,15 @@ function rendrePortails() {
   const prix = prixMulti(S.gacha, p);
   // La disposition des vedettes : la première au centre, en grand, les autres de part et d'autre.
   const places = [[50, 300], [18, 190], [82, 190], [6, 150], [94, 150]];
-  const affiche = vedettes.map((id, k) => { const [x, t] = places[k]; return `<div class="v" style="left:${x}%;transform:translateX(-50%);z-index:${10 - k}">${portrait(PERSO[id], { taille: t, fond: false, anime: true })}</div>`; }).reverse().join('');
+  const affiche = vedettes.map((id, k) => { const [x, t] = places[k]; return `<div class="v" style="left:${x}%;transform:translateX(-50%);z-index:${10 - k}">${portrait(PERSO[id], { taille: t, fond: false, anime: true })}${peutDevenirLR(id) && k < 3 ? '<span class="lr-tag">SSR → LR</span>' : ''}</div>`; }).reverse().join('');
   $('portail').style.setProperty('--pc', fete ? fete.couleurs[1] : p.type === 'permanent' ? '#2b5a8a' : PERSO[vedettes[0]].couleurs.aura);
   $('portail').innerHTML = `<div class="eclair-fond"></div>
     <button class="detecteur-btn" id="b-detecteur">🔍 Détecteur</button>
     ${p.fin !== undefined ? `<div class="fin">Jusqu’au ${dateFin(p.fin)}</div>` : ''}
-    <div class="badge-type ${p.type}">${p.type === 'permanent' ? 'Permanent' : p.type === 'garanti' ? 'Garanti' : 'Paliers'}</div>
+    <div class="badge-type ${p.retour ? 'retour' : p.type}">${p.type === 'permanent' ? 'Permanent' : p.retour ? 'Retour' : p.type === 'garanti' ? 'Garanti' : 'Paliers'}</div>
     <div class="affiche">${affiche}</div>
     <div class="titre-portail">${(p.fete ? FETE[p.fete].nom : p.nom).toUpperCase()}${p.partie ? `<small>${p.nom.split(' · ').slice(1).join(' · ')}</small>` : ''}</div>
-    <div class="garantie">${TYPES[p.type]}${p.vedettes.length ? `<br><small>Une vedette garantie au plus tard dans <b>${PITIE - (S.gacha.pitie[p.id] || 0)}</b> invocations.</small>` : ''}</div>
+    <div class="garantie">${p.retour ? 'Ils sont de retour ! Après deux multi-invocations, la troisième garantit une vedette.' : TYPES[p.type]}${p.max ? `<br><small>Limité à <b>${p.max}</b> invocations : il en reste <b>${p.max - (S.gacha.invocs?.[p.id] || 0)}</b>.</small>` : ''}${p.type === 'permanent' ? `<br><small>Prochaine mise à jour (tous les personnages qu’il n’a pas encore) ${jours(prochaineMaj(JOUR) - JOUR)}.</small>` : p.vedettes.length ? `<br><small>Une vedette garantie au plus tard dans <b>${PITIE - (S.gacha.pitie[p.id] || 0)}</b> invocations.</small>` : ''}</div>
     ${p.type === 'paliers' ? `<div class="paliers-ligne">${PALIERS.map((x, k) => `<span class="${k < pal ? 'fait' : k === pal ? 'ici' : ''}">${k + 1}<br>${x.prix} 🪙</span>`).join('')}</div>` : ''}
     <div class="boutons"><button id="b-simple" ${S.gacha.jetons < PRIX.simple ? 'disabled' : ''}>Invocation ×1<small>🪙 × ${PRIX.simple}</small></button><button id="b-multi" ${S.gacha.jetons < prix ? 'disabled' : ''}>Invocation ×10<small>🪙 × ${prix}</small></button></div>`;
   $('b-simple').onclick = () => tirer(p, 1);
@@ -226,20 +226,21 @@ function rendrePortails() {
 function detecteur(p) {
   const pool = p.pool;
   const nb = (r) => pool.filter((id) => PERSO[id].rarete === r && !p.vedettes.includes(id)).length;
-  const taux = { LR: TAUX.LR, SSR: TAUX.SSR, SR: TAUX.SR, R: 1 - TAUX.LR - TAUX.SSR - TAUX.SR };
-  const partVedette = p.vedettes.length ? (TAUX.LR + TAUX.SSR) * 0.5 : 0;
+  const taux = { SSR: TAUX.SSR, SR: TAUX.SR, R: 1 - TAUX.SSR - TAUX.SR };
+  const partVedette = p.vedettes.length ? TAUX.SSR * PART_VEDETTE : 0;
   panneau(`<div class="detecteur"><h2>🔍 Détecteur · ${p.nom}</h2>
     <table>${Object.entries(taux).map(([r, t]) => `<tr><td>${r}</td><td>${(t * 100).toFixed(1)} %</td></tr>`).join('')}</table>
-    ${p.vedettes.length ? `<div class="bloc"><b>Les vedettes</b> (la moitié des SSR et LR) : ${(partVedette * 100).toFixed(1)} % en tout
-      ${p.vedettes.map((id) => `<div class="ligne-v">${portrait(PERSO[id], { cadre: true, taille: 44, nom: false })}<span>${PERSO[id].nom} · ${PERSO[id].titre}<br><small>${((partVedette / p.vedettes.length) * 100).toFixed(2)} %${p.nouveaux.includes(id) ? ' · nouveau' : ''}</small></span></div>`).join('')}</div>` : ''}
-    <div class="bloc"><b>Garanties</b><br>Un SSR ou mieux à chaque multi-invocation.<br>${TYPES[p.type]}${p.vedettes.length ? `<br>Pitié : une vedette garantie au bout de ${PITIE} invocations sans vedette (déjà ${S.gacha.pitie[p.id] || 0}).` : ''}</div>
+    <div class="bloc">On ne tire jamais un UR ni un LR : on tire la forme la plus basse d’un personnage (la SSR s’il peut devenir LR), et on l’éveille avec ses médailles.</div>
+    ${p.vedettes.length ? `<div class="bloc"><b>Les vedettes</b> (30 % des SSR) : ${(partVedette * 100).toFixed(1)} % en tout
+      ${p.vedettes.map((id) => `<div class="ligne-v">${portrait(PERSO[id], { cadre: true, taille: 44, nom: false })}<span>${PERSO[id].nom} · ${PERSO[id].titre}<br><small>${((partVedette / p.vedettes.length) * 100).toFixed(2)} %${p.nouveaux.includes(id) ? ' · nouveau' : ''}${peutDevenirLR(id) ? ' · peut devenir LR' : ''}</small></span></div>`).join('')}</div>` : ''}
+    <div class="bloc"><b>Garanties</b><br>Un SSR à chaque multi-invocation.<br>${TYPES[p.type]}${p.vedettes.length ? `<br>Pitié : une vedette garantie au bout de ${PITIE} invocations sans vedette (déjà ${S.gacha.pitie[p.id] || 0}).` : ''}</div>
     <div class="bloc"><b>Dans ce portail</b> : ${nb('SSR')} SSR, ${nb('SR')} SR, ${nb('R')} R, ${nb('LR')} LR de base, et ${p.vedettes.length} vedette${p.vedettes.length > 1 ? 's' : ''}.</div></div>`);
 }
 
 async function tirer(p, n) {
   son.reveiller();
   const r = invoquer(S.gacha, p, n);
-  if (!r.ok) { bulle('Pas assez de jetons : fais les quêtes et récupère tes cadeaux.'); return; }
+  if (!r.ok) { bulle(r.limite ? 'Ce portail a atteint son nombre maximum d’invocations.' : 'Pas assez de jetons : fais les quêtes et récupère tes cadeaux.'); return; }
   garder();
   majBarre();
   await invocation($('scene'), r.resultats, r.garanties);
@@ -424,7 +425,7 @@ const PSEUDOS = ['Kaito_92', 'LunaÉclair', 'Ryoku', 'ZéphyrX', 'MaîtreDuKi', 
 function amisDuJour() {
   let g = (JOUR * 2654435761) >>> 0;
   const R = () => { g = (Math.imul(g ^ (g >>> 15), 2246822507) + 0x9e3779b9) >>> 0; return g / 4294967296; };
-  const sortis = [...new Set(portails(JOUR).flatMap((p) => p.pool))].filter((id) => ['SSR', 'LR'].includes(PERSO[id].rarete));
+  const sortis = [...new Set(portails(JOUR).flatMap((p) => p.pool).map((id) => formeLR(id) || id))].filter((id) => ['SSR', 'LR'].includes(PERSO[id].rarete));
   const lr = sortis.filter((id) => PERSO[id].rarete === 'LR');
   const pris = new Set();
   return PSEUDOS.slice(0, 6).map((nom, k) => {

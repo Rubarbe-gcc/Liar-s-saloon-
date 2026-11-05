@@ -13,7 +13,7 @@
 
 import { LANCEMENT } from './calendrier.js';
 import { PERSO } from './persos.js';
-import { CHAINES, cleMedaille } from './eveils.js';
+import { CHAINES, medailleDe } from './eveils.js';
 
 /** Les réglages d'ensemble : les combats doivent durer quelques tours (une dizaine contre un boss). */
 const PV = 6, ATQ = 0.8;
@@ -163,8 +163,8 @@ export const coutAct = (boss, d = 0, fin = false) => (fin ? 25 : (boss ? 10 : 5)
 /* ------------------------------------------------------------------ */
 
 /**
- * Les événements courts (des ennemis d'un élément, des médailles de cet élément à gagner) : ils tournent tout
- * seuls, trois jours puis quatre jours (deux par semaine), dans cet ordre, et recommencent.
+ * Les événements courts (des ennemis d'un élément, des orbes de cet élément à gagner) : ils tournent tout
+ * seuls, un nouveau tous les deux jours, dans cet ordre, et recommencent.
  */
 export const EVENEMENTS = [
   { id: 'braises', nom: 'L’Assaut des Braises', glyphe: '🔥', element: 'flamme', ennemis: [e('Salamandre', 'flamme', 50000, 4200, 1300), e('Reine Salamandre', 'flamme', 110000, 5200, 1700, { boss: true, super: sup('Souffle Brûlant', 2.2, 0.35) })] },
@@ -172,15 +172,20 @@ export const EVENEMENTS = [
   { id: 'carriere', nom: 'La Carrière Hantée', glyphe: '⛰️', element: 'roc', ennemis: [e('Golem de carrière', 'roc', 60000, 4000, 1800, { reduction: 0.15 }), e('Le Contremaître', 'roc', 120000, 5000, 2200, { boss: true, super: sup('Éboulement', 2.2, 0.35, true) })] },
   { id: 'orage', nom: 'La Nuit de l’Orage', glyphe: '⚡', element: 'eclair', ennemis: [e('Esprit de foudre', 'eclair', 50000, 4500, 1200), e('Le Roi Tonnerre', 'eclair', 110000, 5500, 1600, { boss: true, super: sup('Foudre Royale', 2.4, 0.35) })] },
   { id: 'abysses', nom: 'Les Abysses', glyphe: '🌊', element: 'maree', ennemis: [e('Anguille géante', 'maree', 50000, 4200, 1300), e('Le Léviathan', 'maree', 120000, 5200, 1800, { boss: true, coups: [3, 4], super: sup('Raz-de-Marée', 2.2, 0.35, true) })] },
+  { id: 'volcan', nom: 'Le Cœur du Volcan', glyphe: '🌋', element: 'flamme', ennemis: [e('Golem de lave', 'flamme', 70000, 4400, 1900, { reduction: 0.1 }), e('Le Seigneur du Magma', 'flamme', 130000, 5600, 2000, { boss: true, super: sup('Éruption', 2.4, 0.35, true) })] },
+  { id: 'foret', nom: 'La Forêt Murmurante', glyphe: '🌲', element: 'tempete', ennemis: [e('Esprit sylvestre', 'tempete', 55000, 4200, 1300, { esquive: 0.2 }), e('Le Grand Chêne', 'roc', 140000, 5000, 2400, { boss: true, reduction: 0.15, super: sup('Racines', 2, 0.4, true) })] },
+  { id: 'mine', nom: 'La Mine de Cristal', glyphe: '💎', element: 'roc', ennemis: [e('Mineur rouillé', 'roc', 55000, 4300, 1700), e('La Reine Cristal', 'eclair', 125000, 5500, 1900, { boss: true, super: sup('Prisme', 2.4, 0.35) })] },
+  { id: 'tour', nom: 'La Tour aux Éclairs', glyphe: '🗼', element: 'eclair', ennemis: [e('Sentinelle électrique', 'eclair', 55000, 4600, 1400), e('L’Architecte de la Foudre', 'eclair', 130000, 5800, 1800, { boss: true, coups: [3, 4], super: sup('Surtension', 2.4, 0.35) })] },
+  { id: 'recif', nom: 'Le Récif Perdu', glyphe: '🐚', element: 'maree', ennemis: [e('Pirate des abysses', 'maree', 55000, 4400, 1400), e('La Capitaine Écume', 'maree', 125000, 5400, 1800, { boss: true, super: sup('Abordage', 2.2, 0.4, true) })] },
+  { id: 'temple', nom: 'Le Temple des Maîtres', glyphe: '⛩️', element: 'roc', ennemis: [e('Moine de pierre', 'roc', 60000, 4200, 1900), e('Moine de vent', 'tempete', 60000, 4600, 1500), e('Le Grand Maître de Pierre', 'roc', 130000, 5400, 2300, { boss: true, super: sup('Paume Millénaire', 2.4, 0.35) })] },
   { id: 'arene', nom: 'L’Arène des Champions', glyphe: '🏆', element: 'flamme', ennemis: [e('Champion de bronze', 'roc', 60000, 4600, 1500), e('Champion d’argent', 'eclair', 70000, 5000, 1600), e('Champion d’or', 'flamme', 120000, 5800, 1900, { boss: true, super: sup('Coup du Champion', 2.4, 0.4) })] },
 ];
-/** L'événement court ouvert ce jour-là (n : son numéro depuis le lancement), avec ses dates. */
+/** L'événement court ouvert ce jour-là : un nouveau tous les deux jours (n : son numéro depuis le lancement). */
+export const DUREE_EVENEMENT = 2;
 export function evenementDu(jour) {
-  const j = Math.max(0, jour - LANCEMENT);
-  const semaine = Math.floor(j / 7), r = j % 7;
-  const n = semaine * 2 + (r >= 3 ? 1 : 0);
-  const debut = LANCEMENT + semaine * 7 + (r >= 3 ? 3 : 0);
-  return { ...EVENEMENTS[n % EVENEMENTS.length], n, debut, fin: debut + (r >= 3 ? 3 : 2) };
+  const n = Math.floor(Math.max(0, jour - LANCEMENT) / DUREE_EVENEMENT);
+  const debut = LANCEMENT + n * DUREE_EVENEMENT;
+  return { ...EVENEMENTS[n % EVENEMENTS.length], n, debut, fin: debut + DUREE_EVENEMENT - 1 };
 }
 /** Les médailles d'un événement (en plus du butin) : beaucoup de médailles de son élément. */
 export const bonusEvenement = (ev) => ({ [ev.element]: 30, arc: 6 });
@@ -202,7 +207,7 @@ export const EVENEMENTS_EVEIL = CHAINES.map((ch) => {
   const haut = PERSO[ch[ch.length - 1]];
   const force = { N: 0.5, R: 0.6, SR: 0.75, SSR: 0.9, UR: 1, LR: 1.1 }[haut.rarete];
   return {
-    id: ch[0], nom: `Éveil · ${haut.nom}`, chaine: ch, perso: haut.id, medaille: cleMedaille(haut.nom),
+    id: ch[0], nom: `Éveil · ${haut.nom}${haut.rarete === 'LR' ? ` · ${haut.titre}` : ''}`, chaine: ch, perso: haut.id, medaille: medailleDe(ch[0]),
     niveaux: NIVEAUX_EVEIL.map((n, k) => ({
       ...n, ennemis: [e(`${haut.nom} · ${haut.titre}`, haut.element, Math.round(n.pv * force), Math.round(n.atq * force), Math.round(n.def * force), { boss: true, perso: haut.id, super: sup(haut.super.nom, 2 + k * 0.3, 0.35) })],
     })),

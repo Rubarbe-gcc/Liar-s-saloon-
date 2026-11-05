@@ -107,7 +107,6 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .carte.rar-UR { box-shadow: 0 0 0 3px #ff7a3a, 0 0 14px #ff5a1a, 0 5px 12px rgba(0, 0, 0, .55); }
 .carte.rar-UR .rar { background: linear-gradient(90deg, #ffd23f, #ff5a1a); }
 .carte.rar-LR { box-shadow: 0 0 0 3px transparent, 0 0 16px #ff4dd8, 0 5px 12px rgba(0, 0, 0, .55); }
-.carte.rar-LR::before { content: ''; position: absolute; inset: -3px; z-index: -1; border-radius: 12px; background: conic-gradient(#ff4d6d, #ffd23f, #36d39a, #3ae0ff, #b06bff, #ff4d6d); animation: tourne 3s linear infinite; }
 .carte.rar-LR { padding: 3px; background: conic-gradient(from var(--a, 0deg), #ff4d6d, #ffd23f, #36d39a, #3ae0ff, #b06bff, #ff4d6d); }
 .carte.rar-LR svg { border-radius: 8px; }
 .carte.rar-LR .rar { background: linear-gradient(90deg, #ff4d6d, #ffd23f, #36d39a, #3ae0ff, #b06bff); }
@@ -321,7 +320,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .resume { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 16px; background: radial-gradient(60% 60% at 50% 45%, #2a1d5a, #05040c); }
 .resume .grille { width: min(560px, 100%); grid-template-columns: repeat(5, 1fr); }
 .resume .carte { animation: pop .3s backwards; }
-.resume .carte.nouveau::before { content: 'NEW'; position: absolute; z-index: 2; right: -2px; bottom: 16px; padding: 1px 4px; background: #ff2a5a; font: 900 9px/1.3 var(--titre); color: #fff; transform: rotate(-8deg); }
+.carte .neuf { position: absolute; z-index: 3; right: 2px; bottom: 18px; padding: 1px 4px; border-radius: 3px; background: #ff2a5a; font: 900 9px/1.3 var(--titre); color: #fff; transform: rotate(-8deg); box-shadow: 0 1px 3px #000; line-height: 1.3; }
 .resume h2 { margin: 0; font-family: var(--titre); }
 .resume .btn { padding: 12px 22px; border: 0; border-radius: 12px; font-weight: 900; background: linear-gradient(180deg, #ffe27a, #f2a91a); color: #2a1600; }
 .resume .garanties { color: var(--doux); font-size: .85em; text-align: center; }
@@ -512,3 +511,17 @@ canvas.particules { position: absolute; inset: 0; width: 100%; height: 100%; z-i
 /* L'invocation offerte. */
 .offerte { position: absolute; z-index: 4; left: 50%; top: 40%; transform: translate(-50%, -50%); width: min(86%, 360px); padding: 18px; border: 0; border-radius: 18px; background: linear-gradient(110deg, #ffe27a, #ff4dd8); color: #2a0a2a; box-shadow: 0 0 0 4px #fff, 0 0 40px #ff4dd8, 0 10px 30px rgba(0, 0, 0, .6); animation: respire 1.4s ease-in-out infinite; }
 .offerte b { display: block; font: 900 1.4em var(--titre); }
+.portail .badge-type.retour { background: linear-gradient(180deg, #ffb38a, #c9581a); color: #fff; }
+
+/* L'invocation d'un personnage qui peut devenir LR : l'arc-en-ciel. */
+.revele .tag.arc { background: linear-gradient(90deg, #ff4d6d, #ffd23f, #36d39a, #3ae0ff, #b06bff); -webkit-background-clip: text; background-clip: text; color: transparent; text-shadow: none; filter: drop-shadow(0 3px 0 #000) drop-shadow(0 0 14px #fff); font-size: clamp(22px, 7vw, 46px); }
+.art-revele.arc .illus { box-shadow: 0 0 0 3px #fff, 0 0 30px #ff4dd8, 0 0 60px #3ae0ff; }
+.art-revele.arc .badge-rar { background: linear-gradient(180deg, #fff6c8, #ffd23f 50%, #c98a12); }
+.futur-lr { position: absolute; z-index: 3; right: 6%; bottom: 20vh; display: grid; justify-items: center; gap: 4px; animation: pop .6s .4s backwards; }
+.futur-lr .carte { width: 80px; }
+.futur-lr small { font-weight: 800; text-shadow: 0 2px 3px #000; }
+.portail .v .lr-tag { position: absolute; left: 50%; bottom: 6px; transform: translateX(-50%); padding: 2px 8px; border-radius: 8px; background: linear-gradient(90deg, #ff4d6d, #ffd23f, #36d39a, #3ae0ff, #b06bff); color: #1a0f2a; font: 900 10px var(--titre); white-space: nowrap; box-shadow: 0 2px 6px #000; }
+.rangee .suite { scrollbar-width: thin; scrollbar-color: #2aa83a transparent; }
+.rangee .suite::-webkit-scrollbar { height: 6px; }
+.rangee .suite::-webkit-scrollbar-thumb { background: #2aa83a; border-radius: 3px; }
+.rangee .suite::-webkit-scrollbar-track { background: transparent; }

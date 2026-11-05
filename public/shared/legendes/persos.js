@@ -142,6 +142,38 @@ const BASE = [
   p('mira_lr', 'Mira', 'L’Ombre Absolue', 'LR', 'tempete', ['ombre', 'ninjas', 'combattantes', 'divin'], 'esquiveur', ['ombres', 'amis', 'legende'], ['Éclipse des Mille Ombres', 'ombre', 5], ['#ffe0bd', '#2a1a6a', '#0a0a1a', '#b06bff'], 'queue', { sortie: 5, forme: 'divin', chef: ['ombre', 'combattantes'] }),
   p('taro_ssr', 'Taro', 'Gardien de But Titan', 'SSR', 'roc', ['neant', 'sportifs', 'allies'], 'mur', ['equipe', 'froid'], ['Main du Colosse', 'explosion', 4], ['#8d5524', '#1b1b1f', '#ff7a1a', '#c8913a'], 'court', { sortie: 5 }),
 
+  /* ---------------- D'autres héros du portail permanent ---------------- */
+  p('riku_r', 'Riku', 'Ailier pressé', 'R', 'eclair', ['neant', 'sportifs'], 'pivot', ['equipe', 'instinct'], ['Course Folle', 'combo', 1], ['#f1c27d', '#3a6aff', '#1b3a8a', '#ffd23f'], 'meches'),
+  p('riku_sr', 'Riku', 'Le Sprinteur', 'SR', 'eclair', ['neant', 'sportifs', 'rivaux'], 'pivot', ['equipe', 'instinct', 'rivalite'], ['Éclair du Couloir', 'tir', 2], ['#f1c27d', '#3a6aff', '#1b3a8a', '#ffd23f'], 'meches'),
+  p('riku_ssr', 'Riku', 'Foudre du Néant', 'SSR', 'eclair', ['neant', 'sportifs', 'rivaux', 'genies'], 'pivot', ['equipe', 'instinct', 'rivalite'], ['Tir Fulgurant', 'tir', 3], ['#f1c27d', '#6a9aff', '#14142a', '#ffd23f'], 'meches'),
+  p('yume_r', 'Yume', 'Rêveuse', 'R', 'maree', ['lune', 'combattantes'], 'soutien', ['amis', 'froid'], ['Bulle de Rêve', 'rayon', 1], ['#ffe0bd', '#b06bff', '#3a2a6a', '#b06bff'], 'long'),
+  p('yume_sr', 'Yume', 'Tisseuse de Songes', 'SR', 'maree', ['lune', 'combattantes', 'genies'], 'soutien', ['amis', 'froid', 'maitre'], ['Songe Bleu', 'rayon', 2], ['#ffe0bd', '#b06bff', '#3a2a6a', '#b06bff'], 'long'),
+  p('yume_ssr', 'Yume', 'Gardienne des Rêves', 'SSR', 'maree', ['lune', 'combattantes', 'genies', 'divin'], 'soutien', ['amis', 'froid', 'maitre'], ['Océan des Songes', 'glace', 3], ['#ffe0bd', '#d8b0ff', '#2a1a5a', '#b06bff'], 'long'),
+  p('gaku_r', 'Gaku', 'Novice du dojo', 'R', 'roc', ['maitres', 'heritiers'], 'mur', ['maitre', 'equipe'], ['Coup de Bâton', 'combo', 1], ['#e0ac69', '#1b1b1f', '#7a4a2a', '#c8913a'], 'court'),
+  p('sora_r', 'Sora', 'Garçon du ciel', 'R', 'tempete', ['aube', 'heritiers'], 'frappeur', ['amis', 'feu'], ['Rafale', 'rayon', 1], ['#f1c27d', '#8ad8ff', '#3a8a5a', '#36d39a'], 'pics'),
+  p('sora_sr', 'Sora', 'Aile du Matin', 'SR', 'tempete', ['aube', 'heritiers', 'sangchaud'], 'frappeur', ['amis', 'feu', 'rivalite'], ['Vent Ascendant', 'rayon', 2], ['#f1c27d', '#8ad8ff', '#3a8a5a', '#36d39a'], 'pics'),
+  p('sora_ssr', 'Sora', 'Tempête de l’Aube', 'SSR', 'tempete', ['aube', 'heritiers', 'sangchaud', 'transfo'], 'frappeur', ['amis', 'feu', 'rivalite'], ['Cyclone Solaire', 'rayon', 3], ['#f1c27d', '#c8f0ff', '#2a6a4a', '#36d39a'], 'pics', { forme: 'eveil' }),
+  p('tetsu_sr', 'Tetsu', 'Mâchoire d’Acier', 'SR', 'roc', ['rivaux', 'allies', 'arcade'], 'mur', ['rivalite', 'equipe'], ['Coup de Tête', 'combo', 2], ['#c68642', '#6b6b6b', '#3a3a4a', '#c8913a'], 'chauve'),
+  p('tetsu_ssr', 'Tetsu', 'Poing d’Acier', 'SSR', 'roc', ['rivaux', 'allies', 'arcade', 'sangchaud'], 'mur', ['rivalite', 'equipe', 'froid'], ['Poing de la Forge', 'explosion', 3], ['#c68642', '#9a9a9a', '#2a2a3a', '#ff9a3a'], 'chauve'),
+  p('hana_sr', 'Hana', 'Pétale Brûlant', 'SR', 'flamme', ['combattantes', 'lune'], 'critique', ['feu', 'amis'], ['Lame de Pétales', 'lame', 2], ['#ffe0bd', '#ff4d6d', '#5a0a1a', '#ff8a8a'], 'queue'),
+  p('hana_ssr', 'Hana', 'Pétale de Feu', 'SSR', 'flamme', ['combattantes', 'lune', 'sangchaud'], 'critique', ['feu', 'amis', 'ombres'], ['Tempête de Pétales', 'lame', 3], ['#ffe0bd', '#ff2a4a', '#4a0a14', '#ff8a8a'], 'queue'),
+  p('zan_ssr', 'Zan', 'Le Rônin', 'SSR', 'tempete', ['ombre', 'solitaire', 'rivaux'], 'critique', ['ombres', 'rivalite'], ['Coupe du Vent Gris', 'lame', 3], ['#e0ac69', '#2a2a2a', '#3a3a3a', '#36d39a'], 'long'),
+  p('oboro_ssr', 'Oboro', 'Ninja des Brumes', 'SSR', 'maree', ['ninjas', 'ombre', 'solitaire'], 'esquiveur', ['ombres', 'froid'], ['Voile de Brume', 'ombre', 3], ['#ffe0bd', '#6a6a8a', '#1a2a3a', '#9ad8ff'], 'meches'),
+
+  /* ---------------- Les vedettes des six mois suivants (un portail toutes les deux semaines) ---------------- */
+  p('sora_lr', 'Sora', 'L’Héritier du Ciel', 'LR', 'tempete', ['aube', 'heritiers', 'divin', 'transfo'], 'frappeur', ['amis', 'feu', 'legende'], ['Ciel Infini', 'meteore', 5], ['#f1c27d', '#ffffff', '#2a6a4a', '#36d39a'], 'pics', { sortie: 6, forme: 'divin', chef: ['aube', 'heritiers'] }),
+  p('nyx_ssr', 'Nyx', 'La Nuit Vivante', 'SSR', 'eclair', ['ombre', 'combattantes', 'solitaire'], 'esquiveur', ['ombres', 'froid'], ['Minuit Électrique', 'ombre', 4], ['#d8c8f0', '#1b1b3a', '#0a0a1a', '#b06bff'], 'long', { sortie: 6 }),
+  p('zan_lr', 'Zan', 'Mille Coupes', 'LR', 'tempete', ['ombre', 'solitaire', 'rivaux', 'divin'], 'critique', ['ombres', 'rivalite', 'legende'], ['Mille Coupes du Vent', 'lame', 5], ['#e0ac69', '#e8e8e8', '#1a1a1a', '#36d39a'], 'long', { sortie: 7, forme: 'divin', chef: ['ombre', 'solitaire'] }),
+  p('pyro_ssr', 'Pyro', 'Le Lanceur de Feu', 'SSR', 'flamme', ['sportifs', 'sangchaud', 'arcade'], 'frappeur', ['feu', 'equipe'], ['Balle de Feu', 'tir', 4], ['#c68642', '#ff7a1a', '#4a1a0a', '#ff5a36'], 'crete', { sortie: 7 }),
+  p('yume_lr', 'Yume', 'Reine des Songes', 'LR', 'maree', ['lune', 'combattantes', 'genies', 'divin'], 'soutien', ['amis', 'froid', 'legende'], ['Éveil des Rêves', 'glace', 5], ['#ffe0bd', '#f0d8ff', '#1a0a4a', '#d8b0ff'], 'long', { sortie: 8, forme: 'divin', chef: ['lune', 'combattantes'] }),
+  p('brak_ssr', 'Brak', 'Le Golem Vivant', 'SSR', 'roc', ['allies', 'solitaire'], 'mur', ['equipe', 'froid'], ['Poing de Montagne', 'explosion', 4], ['#8a7a6a', '#3a3a3a', '#5a4a3a', '#c8913a'], 'chauve', { sortie: 8 }),
+  p('tetsu_lr', 'Tetsu', 'Titan d’Acier', 'LR', 'roc', ['rivaux', 'allies', 'arcade', 'divin'], 'mur', ['rivalite', 'equipe', 'legende'], ['Forge Titanesque', 'explosion', 5], ['#c68642', '#e8e8e8', '#1a1a2a', '#ff9a3a'], 'chauve', { sortie: 9, forme: 'divin', chef: ['rivaux', 'arcade'] }),
+  p('lyra_ssr', 'Lyra', 'Chant du Vent', 'SSR', 'tempete', ['lune', 'combattantes', 'genies'], 'soutien', ['amis', 'maitre'], ['Mélodie des Cimes', 'rayon', 4], ['#ffe0bd', '#8affd8', '#1a4a3a', '#36d39a'], 'long', { sortie: 9 }),
+  p('riku_lr', 'Riku', 'L’Éclair Absolu', 'LR', 'eclair', ['neant', 'sportifs', 'rivaux', 'divin'], 'pivot', ['equipe', 'instinct', 'legende'], ['Frappe de l’Orage Divin', 'tir', 5], ['#f1c27d', '#e8f0ff', '#0a0a2a', '#ffd23f'], 'meches', { sortie: 10, forme: 'divin', chef: ['neant', 'rivaux'] }),
+  p('kage_ssr', 'Kage', 'L’Ombre du Lac', 'SSR', 'maree', ['ninjas', 'ombre'], 'critique', ['ombres', 'froid'], ['Lame du Lac', 'lame', 4], ['#e0ac69', '#1b1b1f', '#0a1a2a', '#3a8dff'], 'meches', { sortie: 10 }),
+  p('hana_lr', 'Hana', 'Floraison Écarlate', 'LR', 'flamme', ['combattantes', 'lune', 'divin', 'transfo'], 'critique', ['feu', 'amis', 'legende'], ['Mille Pétales Ardents', 'meteore', 5], ['#ffe0bd', '#ffd8e8', '#3a0a14', '#ff4d6d'], 'queue', { sortie: 11, forme: 'divin', chef: ['combattantes', 'lune'] }),
+  p('ren_ssr', 'Ren', 'Le Stratège', 'SSR', 'eclair', ['genies', 'maitres', 'allies'], 'soutien', ['maitre', 'instinct'], ['Plan Parfait', 'rayon', 4], ['#f1c27d', '#3a3a6a', '#1a1a3a', '#ffd23f'], 'court', { sortie: 11 }),
+
   /* ---------------- Les célébrations (ils ne se tirent que pendant leur fête) ---------------- */
   p('kael_anniv', 'Kael & Ryo', 'Le Duo de l’Aube Glacée', 'LR', 'flamme', ['aube', 'rivaux', 'fete', 'duo', 'divin'], 'pivot', ['rivalite', 'legende', 'fete', 'feu'], ['Double Aube Glacée', 'meteore', 5], ['#f1c27d', '#ffd23f', '#ffffff', '#ffd23f'], 'pics', { fete: ['lancement', 'anniversaire'], partie: 1, forme: 'divin', chef: ['aube', 'rivaux'] }),
   p('citrouille', 'Morvane', 'La Reine Citrouille', 'LR', 'flamme', ['fete', 'ombre', 'combattantes'], 'critique', ['fete', 'ombres'], ['Nuit des Mille Lanternes', 'ombre', 5], ['#e8d8f0', '#ff7a1a', '#2a0a3a', '#ff7a1a'], 'long', { fete: 'halloween', forme: 'divin', chef: ['fete', 'ombre'] }),
@@ -154,23 +186,49 @@ const BASE = [
   p('noa_ete_lr', 'Noa', 'Reine des Vagues', 'LR', 'maree', ['lune', 'combattantes', 'fete', 'transfo'], 'soutien', ['amis', 'froid', 'fete'], ['Vague Céleste', 'rayon', 5], ['#ffe0bd', '#e8f8ff', '#1a5aff', '#7ac8ff'], 'long', { fete: 'ete', partie: 2, forme: 'divin', chef: ['lune', 'fete'] }),
   p('drax_ete_lr', 'Drax', 'Soleil Noir', 'LR', 'flamme', ['rivaux', 'allies', 'sangchaud', 'fete'], 'critique', ['feu', 'rivalite', 'fete'], ['Éclipse Solaire', 'explosion', 5], ['#c86a5a', '#1b1b1f', '#ff7a1a', '#ff2a2a'], 'crete', { fete: 'ete', partie: 3, forme: 'divin', chef: ['rivaux', 'fete'] }),
 ];
+/** L'ordre des raretés. */
+export const ORDRE = ['N', 'R', 'SR', 'SSR', 'UR', 'LR'];
+
 /**
- * Les UR : chaque SSR (hors fêtes) peut s'éveiller en UR (l'éveil par médailles, eveils.js) : la même
- * personne, plus forte (son passif s'allonge, sa super gagne en puissance). Ils ne se tirent jamais.
+ * Les LIGNÉES (comme dans les grands gachas) : les versions d'un même personnage, de la plus faible à la plus
+ * forte, qu'on parcourt par les éveils. Les personnages de base d'un même nom forment une lignée (Kael R → SR →
+ * SSR → UR) ; une vedette ou un personnage de fête a la sienne ; chaque LR a la sienne : sa forme SSR (celle qu'on
+ * tire), puis UR, puis LR. On ne tire jamais un UR ni un LR : on tire la forme la plus basse de la lignée.
  */
-const UR = BASE.filter((x) => x.rarete === 'SSR' && !x.fete).map((x) => {
-  const u = { ...x, id: `${x.id}_ur`, rarete: 'UR', base: x.id, forme: 'eveil', dokkan: true, titre: `${x.titre} · Éveillé` };
+export const ligneeDe = (x) => x.lignee || (x.sortie !== undefined || x.fete ? x.id : x.nom);
+const BASES_LR = BASE.filter((x) => x.rarete === 'LR').map((x) => {
+  x.lignee = x.id;
+  const b = { ...x, id: `${x.id}_ssr`, rarete: 'SSR', lignee: x.id, forme: 'eveil', versLR: x.id };
+  b.super = creerSuper(b, x.super.nom, x.super.style, Math.max(1, x.super.puissance - 1));
+  b.passif = creerPassif(b);
+  b.chef = creerChef(b, x.chef.cats);
+  return b;
+});
+/**
+ * Les UR : chaque SSR peut s'éveiller en UR (l'éveil par médailles, eveils.js) : la même personne, plus forte
+ * (son passif s'allonge, sa super gagne en puissance). Ils ne se tirent jamais.
+ */
+const UR = [...BASE.filter((x) => x.rarete === 'SSR'), ...BASES_LR].map((x) => {
+  const u = { ...x, id: `${x.id}_ur`, rarete: 'UR', base: x.id, lignee: ligneeDe(x), forme: 'eveil', dokkan: true, titre: `${x.titre} · Éveillé` };
   u.super = creerSuper(u, x.super.nom, x.super.style, Math.min(5, x.super.puissance + 1));
   u.passif = creerPassif(u);
   u.chef = creerChef(u, x.chef.cats);
   return u;
 });
-export const PERSOS = [...BASE, ...UR];
+export const PERSOS = [...BASE, ...BASES_LR, ...UR];
 export const PERSO = Object.fromEntries(PERSOS.map((x) => [x.id, x]));
-/** Les personnages qu'on peut tirer (ni les UR, qui viennent d'un éveil, ni les N, qui viennent du butin). */
-export const TIRABLE = (x) => !x.dokkan && x.rarete !== 'N';
-/** L'ordre des raretés. */
-export const ORDRE = ['N', 'R', 'SR', 'SSR', 'UR', 'LR'];
+/** Les lignées : { clé: [ids, de la plus faible à la plus forte] }. */
+export const LIGNEES = {};
+for (const x of PERSOS) (LIGNEES[ligneeDe(x)] ||= []).push(x.id);
+for (const l of Object.values(LIGNEES)) l.sort((a, b) => ORDRE.indexOf(PERSO[a].rarete) - ORDRE.indexOf(PERSO[b].rarete));
+/** La lignée peut-elle aller jusqu'au LR ? (on la tire alors en SSR, avec une animation spéciale) */
+export const peutDevenirLR = (id) => LIGNEES[ligneeDe(PERSO[id])].some((y) => PERSO[y].rarete === 'LR');
+/** Le LR d'une lignée (ou null). */
+export const formeLR = (id) => LIGNEES[ligneeDe(PERSO[id])].find((y) => PERSO[y].rarete === 'LR') || null;
+/** La forme qu'on tire d'une lignée : sa SSR si elle va jusqu'au LR, sinon sa plus basse (hors N). */
+const entree = (l) => (l.some((y) => PERSO[y].rarete === 'LR') ? l.find((y) => PERSO[y].rarete === 'SSR') : l.find((y) => PERSO[y].rarete !== 'N'));
+/** Les personnages qu'on peut tirer : la forme d'entrée de chaque lignée (jamais un N, un UR ni un LR). */
+export const TIRABLE = (x) => !x.dokkan && x.rarete !== 'N' && x.rarete !== 'LR' && entree(LIGNEES[ligneeDe(x)]) === x.id;
 
 /** Le niveau maximum de chaque rareté. */
 export const NIV_MAX = { N: 20, R: 40, SR: 60, SSR: 80, UR: 100, LR: 120 };

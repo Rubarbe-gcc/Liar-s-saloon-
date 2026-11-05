@@ -6,14 +6,19 @@
  * compteurs par portail, son hasard (une graine qui avance à chaque tirage : rien ne se « relance » en
  * rechargeant la page).
  *
- * Les taux : LR 1 %, SSR 6 %, SR 28 %, R le reste. Sur un portail à vedettes, la moitié des SSR et LR tirés
- * sont des vedettes. Un multi (10) garantit au moins un SSR. Au bout de PITIE tirages sans vedette, la
+ * Les taux : SSR 5 %, SR 25 %, R le reste (on ne tire jamais un UR ni un LR : on tire la forme la plus basse
+ * d'une lignée, puis on l'éveille). Sur un portail à vedettes, 30 % des SSR tirés sont des vedettes. Un multi (10) garantit au moins un SSR. Au bout de PITIE tirages sans vedette, la
  * suivante est garantie.
  */
 
 import { PERSO, RARETES } from './persos.js';
 
-export const TAUX = { LR: 0.01, SSR: 0.06, SR: 0.28 };
+/** Les taux (un LR ne se tire jamais : on tire sa forme SSR, et on l'éveille). */
+export const TAUX = { LR: 0, SSR: 0.05, SR: 0.25 };
+/** La part des vedettes parmi les SSR tirés sur leur portail. */
+export const PART_VEDETTE = 0.3;
+/** Le portail « garanti » : la vedette garantie à la multi-invocation n° GARANTIE_TOUS, puis toutes les GARANTIE_TOUS. */
+export const GARANTIE_TOUS = 3;
 export const PRIX = { simple: 5, multi: 50 };
 /** Les paliers : le prix de chaque multi, et ce qu'il garantit. */
 export const PALIERS = [
@@ -23,7 +28,7 @@ export const PALIERS = [
   { prix: 50, texte: 'Un SSR garanti' },
   { prix: 50, texte: 'Le nouveau personnage garanti !', nouveau: true },
 ];
-export const PITIE = 100;
+export const PITIE = 150;
 /** Ce que rend un doublon quand le personnage est déjà éveillé au maximum. */
 const RENDU = { R: 1, SR: 2, SSR: 5, LR: 10 };
 
@@ -67,7 +72,7 @@ function unTirage(etat, portail, force = null) {
   else if ((force === 'vedette' || (portail.vedettes.length && pitie >= PITIE)) && portail.vedettes.length) id = choisir(etat, portail.vedettes);
   else {
     const rar = rarete(etat, force === 'SSR' ? 'SSR' : 'R');
-    if ((rar === 'SSR' || rar === 'LR') && portail.vedettes.length && hasard(etat) < 0.5) id = choisir(etat, portail.vedettes);
+    if ((rar === 'SSR' || rar === 'LR') && portail.vedettes.length && hasard(etat) < PART_VEDETTE) id = choisir(etat, portail.vedettes);
     else id = piocher(etat, portail, rar);
   }
   const vedette = portail.vedettes.includes(id);
@@ -102,6 +107,10 @@ export function invoquer(etat, portail, n = 10) {
   const multi = n >= 10;
   const prix = multi ? prixMulti(etat, portail) : PRIX.simple;
   if (etat.jetons < prix) return { ok: false, prix, resultats: [], garanties: [] };
+  // Un portail limité : pas plus de portail.max invocations.
+  etat.invocs ||= {};
+  if (portail.max && (etat.invocs[portail.id] || 0) + (multi ? 10 : 1) > portail.max) return { ok: false, limite: true, prix, resultats: [], garanties: [] };
+  etat.invocs[portail.id] = (etat.invocs[portail.id] || 0) + (multi ? 10 : 1);
   etat.jetons -= prix;
   const garanties = [];
   const ids = [];
@@ -114,11 +123,15 @@ export function invoquer(etat, portail, n = 10) {
     let k = 9;
     while (ids.filter(haut).length < voulus && k >= 0) { if (!haut(ids[k])) ids[k] = unTirage(etat, portail, 'SSR'); k -= 1; }
     garanties.push(voulus > 1 ? `${voulus} SSR garantis` : 'Un SSR garanti');
-    // Le portail « garanti » : une vedette à chaque multi.
-    if (portail.type === 'garanti' && portail.vedettes.length && !ids.some((id) => portail.vedettes.includes(id))) {
-      ids[9] = unTirage(etat, portail, 'vedette');
-      garanties.push('Un personnage de la bannière garanti');
-    } else if (portail.type === 'garanti') garanties.push('Un personnage de la bannière garanti');
+    // Le portail « garanti » : après deux multi-invocations, la troisième garantit une vedette (et ainsi de suite).
+    if (portail.type === 'garanti' && portail.vedettes.length) {
+      etat.multis ||= {};
+      etat.multis[portail.id] = (etat.multis[portail.id] || 0) + 1;
+      if (etat.multis[portail.id] % GARANTIE_TOUS === 0) {
+        if (!ids.some((id) => portail.vedettes.includes(id))) ids[9] = unTirage(etat, portail, 'vedette');
+        garanties.push('Une vedette garantie (3e multi-invocation)');
+      }
+    }
     // Le 5e palier : le nouveau personnage.
     if (palier?.nouveau && portail.nouveaux.length) {
       if (!ids.some((id) => portail.nouveaux.includes(id))) ids[9] = unTirage(etat, portail, 'nouveau');

@@ -8,28 +8,31 @@
  * temps, et d'un coup à chaque rang gagné).
  */
 
-import { PERSOS, PERSO, ORDRE } from './persos.js';
+import { PERSOS, PERSO, ORDRE, LIGNEES, ligneeDe } from './persos.js';
 
-/** La clé des médailles d'un personnage (toutes ses versions partagent les mêmes). */
+/** La clé des médailles d'une lignée (toutes ses versions partagent les mêmes). */
 export const cleMedaille = (nom) => `m_${nom.normalize('NFD').replace(/[^A-Za-z0-9]/g, '').toLowerCase()}`;
-/** Les médailles : une par personnage (gagnée dans son événement d'éveil), et les légendaires (les boss du jeu de fin). */
+/** La clé des médailles d'un personnage (celles de sa lignée). */
+export const medailleDe = (id) => cleMedaille(ligneeDe(PERSO[id]));
+/** Les médailles : une par lignée (gagnée dans son événement d'éveil), et les légendaires (les boss du jeu de fin). */
 export const MEDAILLES = { legende: { nom: 'Médaille légendaire', glyphe: '🏅', couleur: '#ffd23f' } };
-for (const x of PERSOS) if (!x.fete) MEDAILLES[cleMedaille(x.nom)] ||= { nom: `Médaille de ${x.nom}`, glyphe: '🎖️', couleur: x.couleurs.aura, perso: x.nom };
+for (const l of Object.values(LIGNEES)) {
+  if (l.length < 2) continue;
+  const haut = PERSO[l[l.length - 1]];
+  MEDAILLES[medailleDe(l[0])] = { nom: `Médaille de ${haut.nom}${haut.rarete === 'LR' ? ` · ${haut.titre}` : ''}`, glyphe: '🎖️', couleur: haut.couleurs.aura, perso: haut.nom };
+}
 /** Le prix d'un éveil, selon la rareté visée : [ses médailles, médailles légendaires]. */
 const PRIX = { R: [5, 0], SR: [10, 0], SSR: [20, 0], UR: [35, 2], LR: [50, 5] };
 
-/** Les chaînes d'éveil : [{ de, vers, cout: { element: n, legende: n } }]. */
+/** Les éveils : chaque version d'une lignée devient la suivante. [{ de, vers, cout: { medaille: n, legende: n } }] */
 export const EVEILS = (() => {
-  const groupes = {};
-  for (const x of PERSOS) if (!x.fete) (groupes[x.nom] ||= []).push(x);
   const out = [];
-  for (const g of Object.values(groupes)) {
-    g.sort((a, b) => ORDRE.indexOf(a.rarete) - ORDRE.indexOf(b.rarete));
-    for (let k = 0; k + 1 < g.length; k++) {
-      const de = g[k], vers = g[k + 1];
+  for (const l of Object.values(LIGNEES)) {
+    for (let k = 0; k + 1 < l.length; k++) {
+      const de = PERSO[l[k]], vers = PERSO[l[k + 1]];
       if (de.rarete === vers.rarete) continue;
-      const [m, l] = PRIX[vers.rarete];
-      out.push({ de: de.id, vers: vers.id, cout: { [cleMedaille(de.nom)]: m, ...(l ? { legende: l } : {}) } });
+      const [m, n] = PRIX[vers.rarete];
+      out.push({ de: de.id, vers: vers.id, cout: { [medailleDe(de.id)]: m, ...(n ? { legende: n } : {}) } });
     }
   }
   return out;
