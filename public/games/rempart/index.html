@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#0f1420">
+<meta name="description" content="REMPART — tower defense en 3D. Bâtissez et améliorez vos tours, repoussez les Rouilleux et protégez le Cœur d’Ambre à travers six lieux de la vallée d’Ambrelune. Souris, clavier ou doigts.">
+<title>Rempart · Les gardiens d’Ambrelune</title>
+<link rel="icon" href="/games/rempart/icons/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="/games/rempart/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/games/rempart/icons/icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Rempart">
+<link rel="stylesheet" href="/games/rempart/css/rempart.css">
+<script src="/maj.js" defer></script>
+</head>
+<body>
+
+<canvas id="scene" aria-label="Le champ de bataille en 3D"></canvas>
+<div class="voile" aria-hidden="true"></div>
+
+<!-- ============================ MENU ============================ -->
+<section class="ecran fond-leger is-active" id="s-menu">
+  <div class="menu">
+    <p class="surtitre">Les gardiens d’Ambrelune</p>
+    <h1 class="logo"><span>REM</span><i class="gemme" aria-hidden="true"></i><span>PART</span></h1>
+    <p class="slogan">Tower defense en 3D · six lieux à défendre</p>
+    <div class="boutons">
+      <button class="btn or grand" id="b-campagne"><b>🏰 Campagne</b><small id="campagne-info">Six lieux, dix-huit étoiles</small></button>
+      <button class="btn grand" id="b-codex"><b>📖 Le Codex</b><small>Les tours et les Rouilleux</small></button>
+      <button class="btn grand" id="b-aide"><b>❔ Comment jouer</b><small>Souris, clavier ou doigts</small></button>
+    </div>
+    <div class="menu-bas">
+      <button class="btn fin" id="b-son" aria-pressed="true">🔊 Sons</button>
+      <button class="btn fin" id="b-musique" aria-pressed="true">🎵 Musique</button>
+      <a class="btn fin" href="/">← L’arcade</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ CAMPAGNE ============================ -->
+<section class="ecran fond" id="s-carte">
+  <header class="entete">
+    <button class="btn fin" data-retour aria-label="Retour">←</button>
+    <h2>La vallée d’Ambrelune</h2>
+    <span class="compteur" id="total-etoiles">⭐ 0 / 18</span>
+  </header>
+  <div class="niveaux" id="liste-niveaux"></div>
+</section>
+
+<!-- ============================ CODEX ============================ -->
+<section class="ecran fond" id="s-codex">
+  <header class="entete">
+    <button class="btn fin" data-retour aria-label="Retour">←</button>
+    <h2>Le Codex</h2>
+    <div class="onglets" role="tablist">
+      <button class="onglet is-active" data-onglet="tours" role="tab">Les tours</button>
+      <button class="onglet" data-onglet="ennemis" role="tab">Les Rouilleux</button>
+    </div>
+  </header>
+  <div class="codex" id="codex"></div>
+</section>
+
+<!-- ============================ AIDE ============================ -->
+<section class="ecran fond" id="s-aide">
+  <header class="entete">
+    <button class="btn fin" data-retour aria-label="Retour">←</button>
+    <h2>Comment jouer</h2>
+  </header>
+  <div class="aide">
+    <article>
+      <h3>🛡️ Le but</h3>
+      <p>Les Rouilleux, bêtes de ferraille sorties de la Fosse, veulent éteindre le <b>Cœur d’Ambre</b>. Chaque Rouilleux qui l’atteint coûte des vies (un boss en coûte huit). Tenez toutes les vagues pour gagner.</p>
+    </article>
+    <article>
+      <h3>🏗️ Bâtir</h3>
+      <p>Touchez un emplacement <b>✦</b> qui luit, puis choisissez une tour. Touchez une tour pour l’<b>améliorer</b> (trois niveaux, son allure change), la <b>vendre</b> (70 % rendus) ou choisir sa <b>cible</b>.</p>
+      <p>Mélangez les tours : le Mortier et le Perce-Acier ne visent pas les volants, la Rafale peine contre les blindés.</p>
+    </article>
+    <article>
+      <h3>🌊 Les vagues</h3>
+      <p>Rien ne bouge avant la première vague : prenez le temps de bâtir, puis touchez <b>▶</b>. Ensuite, les vagues s’enchaînent. Appeler la suivante en avance rapporte de l’or : une pièce par seconde gagnée.</p>
+      <p>Étoiles : trois en perdant au plus deux vies, deux en gardant la moitié.</p>
+    </article>
+    <article>
+      <h3>🎥 La caméra</h3>
+      <p><b>Souris</b> : glisser pour tourner, clic droit (ou Maj) pour déplacer, molette pour zoomer.</p>
+      <p><b>Doigts</b> : un doigt pour tourner, deux doigts pour zoomer, déplacer et tourner.</p>
+      <p><b>Clavier</b> : Q et E pour tourner, les flèches pour déplacer, + et − pour zoomer.</p>
+    </article>
+    <article>
+      <h3>⌨️ Raccourcis</h3>
+      <p><kbd>Espace</kbd> pause · <kbd>F</kbd> vitesse ×1/×2 · <kbd>N</kbd> vague suivante · <kbd>1</kbd>–<kbd>5</kbd> bâtir · <kbd>U</kbd> améliorer · <kbd>X</kbd> vendre · <kbd>T</kbd> cible · <kbd>Échap</kbd> fermer</p>
+    </article>
+  </div>
+</section>
+
+<!-- ============================ PARTIE ============================ -->
+<section class="ecran hud" id="s-jeu">
+  <div class="hud-haut">
+    <div class="jauges">
+      <span class="jauge vies" id="j-vies" title="Vies du Cœur d’Ambre">❤️ <b id="h-vies">20</b></span>
+      <span class="jauge or" id="j-or" title="Or">🪙 <b id="h-or">0</b></span>
+      <span class="jauge vague" title="Vague">🌊 <b id="h-vague">0/0</b></span>
+    </div>
+    <div class="hud-boutons">
+      <button class="rond" id="b-vitesse" title="Vitesse (F)">×1</button>
+      <button class="rond" id="b-pause" title="Pause (Espace)" aria-label="Pause">⏸</button>
+    </div>
+  </div>
+  <div class="boss" id="boss" hidden><span id="boss-nom"></span><div class="boss-jauge"><i id="boss-pv"></i></div></div>
+  <div class="annonce" id="annonce" aria-live="polite"></div>
+  <div class="nouveau" id="nouveau" hidden></div>
+  <div class="bas-droite">
+    <div class="apercu" id="apercu" aria-label="Prochaine vague"></div>
+    <button class="lancer" id="b-vague"><b id="vague-titre">▶ Vague 1</b><small id="vague-bonus"></small></button>
+  </div>
+  <div class="panneau" id="panneau" hidden></div>
+  <div class="bulles" id="bulles" aria-hidden="true"></div>
+  <p class="astuce" id="astuce">Touchez un emplacement ✦ pour bâtir une tour</p>
+</section>
+
+<!-- ============================ FENÊTRES ============================ -->
+<div class="modale" id="m-intro" hidden>
+  <div class="carte-modale">
+    <p class="surtitre" id="intro-num">Lieu 1</p>
+    <h2 id="intro-nom"></h2>
+    <p id="intro-texte"></p>
+    <div class="intro-infos" id="intro-infos"></div>
+    <button class="btn or grand" id="b-postes"><b>À vos postes !</b></button>
+  </div>
+</div>
+
+<div class="modale" id="m-pause" hidden>
+  <div class="carte-modale">
+    <h2>Pause</h2>
+    <div class="boutons">
+      <button class="btn or" id="b-reprendre"><b>▶ Reprendre</b></button>
+      <button class="btn" id="b-recommencer"><b>↻ Recommencer</b></button>
+      <button class="btn" id="b-quitter"><b>🏰 La carte</b></button>
+    </div>
+    <div class="menu-bas">
+      <button class="btn fin" id="b-son2">🔊 Sons</button>
+      <button class="btn fin" id="b-musique2">🎵 Musique</button>
+    </div>
+  </div>
+</div>
+
+<div class="modale" id="m-fin" hidden>
+  <div class="carte-modale">
+    <h2 id="fin-titre"></h2>
+    <div class="etoiles" id="fin-etoiles"><i>★</i><i>★</i><i>★</i></div>
+    <p id="fin-texte"></p>
+    <div class="boutons">
+      <button class="btn or" id="b-suivant"><b>Lieu suivant ▶</b></button>
+      <button class="btn" id="b-rejouer"><b>↻ Rejouer</b></button>
+      <button class="btn" id="b-carte"><b>🏰 La carte</b></button>
+    </div>
+  </div>
+</div>
+
+<noscript><p class="sans-js">REMPART a besoin de JavaScript et de WebGL.</p></noscript>
+<script type="module" src="/games/rempart/js/main.js"></script>
+</body>
+</html>

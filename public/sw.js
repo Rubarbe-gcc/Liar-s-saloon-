@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v158';
+const VERSION = 'v159';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -176,6 +176,20 @@ const SHELL = [
   '/shared/baltrou/jokers.js',
   '/shared/baltrou/partie.js',
   '/shared/baltrou/arcanes.js',
+  '/games/rempart/',
+  '/games/rempart/css/rempart.css',
+  '/games/rempart/icons/icon.svg',
+  '/games/rempart/manifest.webmanifest',
+  '/games/rempart/js/camera.js',
+  '/games/rempart/js/effets3d.js',
+  '/games/rempart/js/main.js',
+  '/games/rempart/js/modeles3d.js',
+  '/games/rempart/js/monde3d.js',
+  '/games/rempart/js/sons.js',
+  '/shared/rempart/donnees.js',
+  '/shared/rempart/ia.js',
+  '/shared/rempart/niveaux.js',
+  '/shared/rempart/partie.js',
   '/games/street-combat/',
   '/games/street-combat/manifest.webmanifest',
   '/games/street-combat/css/street.css',
