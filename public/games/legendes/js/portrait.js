@@ -51,6 +51,21 @@ export function portrait(x, o = {}) {
       <radialGradient id="${id}f" cx="50%" cy="45%" r="70%"><stop offset="0" stop-color="${el.couleur}" stop-opacity=".55"/><stop offset="1" stop-color="#0a0a14"/></radialGradient>
       <radialGradient id="${id}a" cx="50%" cy="55%" r="55%"><stop offset="0" stop-color="#fff" stop-opacity=".95"/><stop offset=".35" stop-color="${c.aura}" stop-opacity=".9"/><stop offset="1" stop-color="${c.aura}" stop-opacity="0"/></radialGradient>
     </defs>${o.fond === false ? '' : `<rect width="200" height="200" fill="url(#${id}f)"/>`}`;
+  if (o.enPied) {
+    // En pied, en garde : les jambes écartées, les poings levés, la ceinture, les bottes ; l'aura flambe autour.
+    const fonce = 'rgba(0,0,0,.28)';
+    const pied = `<defs><radialGradient id="${id}a" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset=".3" stop-color="${c.aura}" stop-opacity=".85"/><stop offset="1" stop-color="${c.aura}" stop-opacity="0"/></radialGradient></defs>
+      <g class="${o.anime ? 'aura-anime' : ''}" opacity="${divin ? 1 : eveil ? 0.85 : 0.55}"><path d="M100 0 L122 70 L170 30 L150 120 L198 150 L150 200 L190 290 L140 270 L150 380 L100 330 L50 380 L60 270 L10 290 L50 200 L2 150 L50 120 L30 30 L78 70 Z" fill="url(#${id}a)"/></g>
+      <path d="M78 228 L60 352 L84 356 L100 262 L116 356 L140 352 L122 228 Z" fill="${c.tenue}"/><path d="M78 228 L60 352 L70 353 L90 240 Z M122 228 L140 352 L130 353 L110 240 Z" fill="${fonce}"/>
+      <path d="M56 346 L88 346 L90 372 L48 372 Q46 356 56 346 Z M112 346 L144 346 Q154 356 152 372 L110 372 Z" fill="#1b1b24"/>
+      <path d="M64 140 Q100 128 136 140 L128 232 L72 232 Z" fill="${c.tenue}"/><path d="M64 140 L86 134 L100 170 L114 134 L136 140 L120 150 L100 186 L80 150 Z" fill="${fonce}"/><path d="M86 134 L100 168 L114 134 Z" fill="${c.peau}"/>
+      <rect x="70" y="222" width="60" height="12" rx="3" fill="${c.aura}"/><rect x="94" y="221" width="12" height="14" fill="#1b1b24"/>
+      <path d="M66 142 Q48 150 42 196 L56 200 Q62 168 74 156 Z" fill="${c.tenue}"/><path d="M42 196 L56 200 L74 178 L64 168 Z" fill="${c.peau}"/>
+      <path d="M134 142 Q154 152 160 200 L146 204 Q140 170 126 156 Z" fill="${c.tenue}"/><path d="M160 200 L146 204 L130 186 L140 176 Z" fill="${c.peau}"/>
+      <circle cx="72" cy="172" r="12" fill="${c.peau}"/><path d="M62 168 h20" stroke="${fonce}" stroke-width="2"/><rect x="58" y="178" width="18" height="6" fill="${c.aura}" transform="rotate(-30 67 181)"/>
+      <circle cx="132" cy="182" r="12" fill="${c.peau}"/><path d="M122 178 h20" stroke="${fonce}" stroke-width="2"/><rect x="126" y="190" width="18" height="6" fill="${c.aura}" transform="rotate(30 135 193)"/>`;
+    return `<svg viewBox="0 0 200 380" width="${t}" height="${Math.round(t * 1.9)}" role="img" aria-label="${x.nom}">${pied}${cou}${x.coiffure === 'long' ? cheveux : ''}${tete}${regard(-1)}${regard(1)}${brille}${nez}${bouche}${x.coiffure !== 'long' ? cheveux : ''}</svg>`;
+  }
   const svg = `<svg viewBox="0 0 200 200" width="${t}" height="${t}" role="img" aria-label="${x.nom}">${fond}${aura}${corps}${cou}${x.coiffure === 'long' ? cheveux : ''}${tete}${regard(-1)}${regard(1)}${brille}${nez}${bouche}${x.coiffure !== 'long' ? cheveux : ''}</svg>`;
   if (!o.cadre) return svg;
   const R = RARETES[x.rarete];

@@ -43,6 +43,7 @@
     <button class="pastille" id="b-collection"><span>📚</span><small>Collection</small></button>
   </div>
   <button class="quete" id="b-quete"><b>QUÊTE</b></button>
+  <button class="offerte cache" id="b-offerte"><b>🎁 Invocation offerte !</b><small>Ta boîte est vide : touche ici pour ta première multi-invocation</small></button>
   <div class="carrousel" id="carrousel"></div>
   <div class="points" id="points-carrousel"></div>
 </section>
@@ -51,7 +52,9 @@
 <section class="ecran" id="s-quetes">
   <h2 class="titre-ecran">Quêtes</h2>
   <button class="tuile histoire" id="b-histoire"><b>📖 Histoire</b><small id="info-histoire"></small></button>
+  <button class="tuile evenement" id="b-evenement"><b id="evenement-titre">Événement</b><small id="evenement-info"></small></button>
   <button class="tuile fete cache" id="b-epreuve"><b id="epreuve-titre">🎉 Épreuve</b><small id="epreuve-info"></small></button>
+  <button class="tuile eveils" id="b-quete-eveils"><b>🎖️ Événements d’éveil</b><small>Bats un personnage pour gagner ses médailles d’éveil</small></button>
   <button class="tuile defis" id="b-finjeu2"><b>⚔️ Fin de jeu</b><small>Défis suprêmes, combat ultime, tour infinie</small></button>
 </section>
 
@@ -100,6 +103,7 @@
 <!-- ============ LE COMBAT ============ -->
 <section class="ecran combat" id="s-combat">
   <div class="arene" id="arene">
+    <div class="decor-combat"><div class="soleil"></div><div class="monts loin"></div><div class="monts"></div><div class="sol"></div></div>
     <div class="rayons-combat"></div>
     <div class="hud-ennemi">
       <div class="ennemi-mini" id="ennemi-mini"></div>
@@ -111,9 +115,11 @@
     <div class="nombres" id="nombres"></div>
   </div>
   <div class="bas-combat">
+    <span class="groupe">ATTAQUE DE GROUPE</span>
     <div class="trio" id="trio"></div>
-    <div class="ligne-pv"><span class="tour-n" id="tour-n">TOUR 1</span><div class="pv equipe"><i id="equipe-pv"></i><span id="equipe-pv-txt"></span></div></div>
-    <p class="aide" id="aide-combat">Trace un chemin de sphères voisines (glisse le doigt), puis relâche.</p>
+    <div class="chevrons"></div>
+    <div class="ligne-pv"><span class="tour-n" id="tour-n">TOUR 1</span><div class="pv equipe"><i id="equipe-pv"></i><span id="equipe-pv-txt"></span></div><button class="auto" id="b-auto">AUTO</button></div>
+    <p class="aide" id="aide-combat">Touche une sphère : la ligne se relie toute seule jusqu’à tes combattants. Relâche pour attaquer.</p>
   </div>
 </section>
 

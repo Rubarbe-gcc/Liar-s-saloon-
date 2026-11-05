@@ -143,12 +143,16 @@ const BASE = [
   p('taro_ssr', 'Taro', 'Gardien de But Titan', 'SSR', 'roc', ['neant', 'sportifs', 'allies'], 'mur', ['equipe', 'froid'], ['Main du Colosse', 'explosion', 4], ['#8d5524', '#1b1b1f', '#ff7a1a', '#c8913a'], 'court', { sortie: 5 }),
 
   /* ---------------- Les célébrations (ils ne se tirent que pendant leur fête) ---------------- */
-  p('kael_anniv', 'Kael & Ryo', 'Le Duo de l’Anniversaire', 'LR', 'flamme', ['aube', 'rivaux', 'fete', 'duo', 'divin'], 'pivot', ['rivalite', 'legende', 'fete', 'feu'], ['Double Aube Glacée', 'meteore', 5], ['#f1c27d', '#ffd23f', '#ffffff', '#ffd23f'], 'pics', { fete: 'anniversaire', forme: 'divin', chef: ['aube', 'rivaux'] }),
+  p('kael_anniv', 'Kael & Ryo', 'Le Duo de l’Aube Glacée', 'LR', 'flamme', ['aube', 'rivaux', 'fete', 'duo', 'divin'], 'pivot', ['rivalite', 'legende', 'fete', 'feu'], ['Double Aube Glacée', 'meteore', 5], ['#f1c27d', '#ffd23f', '#ffffff', '#ffd23f'], 'pics', { fete: ['lancement', 'anniversaire'], partie: 1, forme: 'divin', chef: ['aube', 'rivaux'] }),
   p('citrouille', 'Morvane', 'La Reine Citrouille', 'LR', 'flamme', ['fete', 'ombre', 'combattantes'], 'critique', ['fete', 'ombres'], ['Nuit des Mille Lanternes', 'ombre', 5], ['#e8d8f0', '#ff7a1a', '#2a0a3a', '#ff7a1a'], 'long', { fete: 'halloween', forme: 'divin', chef: ['fete', 'ombre'] }),
   p('givre', 'Givre', 'L’Esprit de Noël', 'LR', 'maree', ['fete', 'lune', 'glace', 'combattantes'], 'soutien', ['fete', 'froid', 'amis'], ['Tempête de Flocons', 'glace', 5], ['#ffe0bd', '#ffffff', '#c81a2a', '#e8f8ff'], 'long', { fete: 'noel', forme: 'divin', chef: ['fete', 'glace'] }),
   p('aurore', 'Aurore', 'Feu d’Artifice du Nouvel An', 'SSR', 'eclair', ['fete', 'aube', 'combattantes'], 'pivot', ['fete', 'feu'], ['Grand Bouquet Final', 'meteore', 4], ['#ffe0bd', '#ffd23f', '#14142a', '#ff4dd8'], 'queue', { fete: 'nouvelan' }),
   p('cupi', 'Cupi', 'Flèche du Cœur', 'SSR', 'tempete', ['fete', 'duo'], 'esquiveur', ['fete', 'amis'], ['Pluie de Cœurs', 'tir', 4], ['#ffe0bd', '#ff8ad8', '#ff4d6d', '#ff8ad8'], 'meches', { fete: 'valentin' }),
-  p('soleil_ete', 'Sol', 'Roi de la Plage', 'SSR', 'maree', ['fete', 'neant', 'sportifs'], 'frappeur', ['fete', 'equipe'], ['Volée de l’Été', 'tir', 4], ['#c68642', '#ffd23f', '#3a8dff', '#ffd23f'], 'court', { fete: 'ete' }),
+  p('soleil_ete', 'Sol', 'Roi de la Plage', 'SSR', 'maree', ['fete', 'neant', 'sportifs'], 'frappeur', ['fete', 'equipe'], ['Volée de l’Été', 'tir', 4], ['#c68642', '#ffd23f', '#3a8dff', '#ffd23f'], 'court', { fete: 'ete', partie: 1 }),
+  p('jumelles_lr', 'Mira & Kira', 'Les Ombres Jumelles', 'LR', 'tempete', ['ombre', 'ninjas', 'combattantes', 'duo', 'fete'], 'esquiveur', ['ombres', 'amis', 'fete', 'legende'], ['Double Éclipse', 'ombre', 5], ['#ffe0bd', '#3a2a8a', '#0a0a1a', '#b06bff'], 'queue', { fete: 'anniversaire', partie: 2, forme: 'divin', chef: ['ombre', 'duo'] }),
+  p('neant_duo_lr', 'Hiro & Rin', 'Le Duo du Néant', 'LR', 'eclair', ['neant', 'rivaux', 'sportifs', 'duo', 'fete'], 'frappeur', ['rivalite', 'equipe', 'fete', 'legende'], ['Tir à Deux Têtes', 'tir', 5], ['#f1c27d', '#1b3a3a', '#7a1aff', '#ffd23f'], 'meches', { fete: 'anniversaire', partie: 3, forme: 'divin', chef: ['neant', 'duo'] }),
+  p('noa_ete_lr', 'Noa', 'Reine des Vagues', 'LR', 'maree', ['lune', 'combattantes', 'fete', 'transfo'], 'soutien', ['amis', 'froid', 'fete'], ['Vague Céleste', 'rayon', 5], ['#ffe0bd', '#e8f8ff', '#1a5aff', '#7ac8ff'], 'long', { fete: 'ete', partie: 2, forme: 'divin', chef: ['lune', 'fete'] }),
+  p('drax_ete_lr', 'Drax', 'Soleil Noir', 'LR', 'flamme', ['rivaux', 'allies', 'sangchaud', 'fete'], 'critique', ['feu', 'rivalite', 'fete'], ['Éclipse Solaire', 'explosion', 5], ['#c86a5a', '#1b1b1f', '#ff7a1a', '#ff2a2a'], 'crete', { fete: 'ete', partie: 3, forme: 'divin', chef: ['rivaux', 'fete'] }),
 ];
 /**
  * Les UR : chaque SSR (hors fêtes) peut s'éveiller en UR (l'éveil par médailles, eveils.js) : la même
@@ -168,10 +172,18 @@ export const TIRABLE = (x) => !x.dokkan && x.rarete !== 'N';
 /** L'ordre des raretés. */
 export const ORDRE = ['N', 'R', 'SR', 'SSR', 'UR', 'LR'];
 
-/** Les statistiques d'un personnage à son niveau d'éveil (0 à eveilMax) : chaque éveil ajoute 8 %. */
-export function stats(id, eveil = 0) {
+/** Le niveau maximum de chaque rareté. */
+export const NIV_MAX = { N: 20, R: 40, SR: 60, SSR: 80, UR: 100, LR: 120 };
+
+/**
+ * Les statistiques d'un personnage : ses doublons (0 à eveilMax, +8 % chacun) et son niveau (sans niveau :
+ * le maximum ; au niveau 1, environ la moitié).
+ */
+export function stats(id, eveil = 0, niv = null) {
   const x = PERSO[id], R = RARETES[x.rarete];
-  const k = 1 + 0.08 * eveil;
+  const max = NIV_MAX[x.rarete];
+  const n = niv === null || niv === undefined ? max : Math.max(1, Math.min(max, niv));
+  const k = (1 + 0.08 * eveil) * (0.5 + 0.5 * ((n - 1) / Math.max(1, max - 1)));
   const bonus = x.forme === 'divin' ? 1.08 : x.forme === 'eveil' ? 1.03 : 1;
   return { pv: Math.round(R.pv * k * bonus), atq: Math.round(R.atq * k * bonus), def: Math.round(R.def * k * bonus) };
 }

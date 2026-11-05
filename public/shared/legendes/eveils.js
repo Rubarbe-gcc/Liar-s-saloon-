@@ -10,13 +10,13 @@
 
 import { PERSOS, PERSO, ORDRE } from './persos.js';
 
-export const MEDAILLES = {
-  flamme: { nom: 'Médaille de Flamme', glyphe: '🔥' }, tempete: { nom: 'Médaille de Tempête', glyphe: '🌪️' },
-  roc: { nom: 'Médaille de Roc', glyphe: '⛰️' }, eclair: { nom: 'Médaille d’Éclair', glyphe: '⚡' },
-  maree: { nom: 'Médaille de Marée', glyphe: '🌊' }, legende: { nom: 'Médaille légendaire', glyphe: '🏅' },
-};
-/** Le prix d'un éveil, selon la rareté visée. */
-const PRIX = { R: [3, 0], SR: [6, 0], SSR: [14, 0], UR: [25, 2], LR: [40, 6] };
+/** La clé des médailles d'un personnage (toutes ses versions partagent les mêmes). */
+export const cleMedaille = (nom) => `m_${nom.normalize('NFD').replace(/[^A-Za-z0-9]/g, '').toLowerCase()}`;
+/** Les médailles : une par personnage (gagnée dans son événement d'éveil), et les légendaires (les boss du jeu de fin). */
+export const MEDAILLES = { legende: { nom: 'Médaille légendaire', glyphe: '🏅', couleur: '#ffd23f' } };
+for (const x of PERSOS) if (!x.fete) MEDAILLES[cleMedaille(x.nom)] ||= { nom: `Médaille de ${x.nom}`, glyphe: '🎖️', couleur: x.couleurs.aura, perso: x.nom };
+/** Le prix d'un éveil, selon la rareté visée : [ses médailles, médailles légendaires]. */
+const PRIX = { R: [5, 0], SR: [10, 0], SSR: [20, 0], UR: [35, 2], LR: [50, 5] };
 
 /** Les chaînes d'éveil : [{ de, vers, cout: { element: n, legende: n } }]. */
 export const EVEILS = (() => {
@@ -29,7 +29,7 @@ export const EVEILS = (() => {
       const de = g[k], vers = g[k + 1];
       if (de.rarete === vers.rarete) continue;
       const [m, l] = PRIX[vers.rarete];
-      out.push({ de: de.id, vers: vers.id, cout: { [vers.element]: m, ...(l ? { legende: l } : {}) } });
+      out.push({ de: de.id, vers: vers.id, cout: { [cleMedaille(de.nom)]: m, ...(l ? { legende: l } : {}) } });
     }
   }
   return out;

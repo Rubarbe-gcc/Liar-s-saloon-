@@ -10,11 +10,12 @@
 
 import { PERSOS, PERSO, ELEMENTS, CATEGORIES, LIENS, ROLES, RARETES, ORDRE, stats } from '../../../shared/legendes/persos.js';
 import { texteChef } from '../../../shared/legendes/passifs.js';
-import { jourDe, dateDe, portails, fetesDu, FETE, FETES, dansFete } from '../../../shared/legendes/calendrier.js';
+import { jourDe, dateDe, portails, fetesDu, FETE, FETES, dansFete, fetesDe } from '../../../shared/legendes/calendrier.js';
 import { nouvelEtat, invoquer, prixMulti, palierDe, connexion, cadeauFete, recupererCadeaux, PALIERS, PRIX, PITIE, TAUX } from '../../../shared/legendes/gacha.js';
-import { creerCombat, jouerTour, rotation, kiPour, liens, voisines, KI_SUPER, KI_ULTIME, KI_MAX, COLS, NB_SPHERES } from '../../../shared/legendes/combat.js';
-import { CHAPITRES, EPREUVES, DIFFICULTES, ennemisEn, DEFIS, ULTIME, etage, butin, coutAct } from '../../../shared/legendes/niveaux.js';
-import { CHAINES, MEDAILLES, eveilDe, peutEveiller, eveiller, ajouterMedailles, nouveauJoueur, endurance, depenser, gagnerExp, actMax, expPour, prochainPoint } from '../../../shared/legendes/eveils.js';
+import { creerCombat, jouerTour, rotation, kiPour, liens, voisines, cheminAuto, meilleurChemin, KI_SUPER, KI_ULTIME, KI_MAX, COLS, NB_SPHERES } from '../../../shared/legendes/combat.js';
+import { CHAPITRES, EPREUVES, DIFFICULTES, ennemisEn, DEFIS, ULTIME, etage, butin, coutAct, evenementDu, bonusEvenement, EVENEMENTS_EVEIL, medaillesEveil } from '../../../shared/legendes/niveaux.js';
+import { CHAINES, MEDAILLES, eveilDe, peutEveiller, eveiller, ajouterMedailles, nouveauJoueur, endurance, depenser, gagnerExp, actMax, expPour, prochainPoint, cleMedaille } from '../../../shared/legendes/eveils.js';
+import { arbre, texteNoeud, peutDebloquer, debloquer, ajouterOrbes, gagnerExpPerso, expNiveau, NIV_MAX, ROUTES } from '../../../shared/legendes/potentiel.js';
 import { portrait, ennemi } from './portrait.js';
 import { illustration, rendreReactif } from './art.js';
 import { invocation, superAttaque, superEnnemi, transformation, finCombat } from './animations.js';
@@ -31,25 +32,27 @@ const JOUR = parametre && /^\d{4}-\d{2}-\d{2}$/.test(parametre) ? jourDe(new Dat
 
 /* ---------------- La sauvegarde ---------------- */
 const CLE = 'legendes.sauvegarde';
-const DEPART = ['kael_r', 'mira_r', 'bram_r', 'lio_r', 'nami_r', 'tobi_r', 'suzu_r', 'fen_r', 'garde_n', 'forgeron_n'];
 let S = null;
 try { S = JSON.parse(localStorage.getItem(CLE) || 'null'); } catch { /* ignore */ }
 if (!S || !S.gacha) {
-  const g = nouvelEtat(Math.floor(Math.random() * 2 ** 31));
-  for (const id of DEPART) g.collection[id] = { eveil: 0, n: 1 };
-  S = { gacha: g, equipe: DEPART.slice(0, 6), histoire: {}, epreuves: {} };
+  // La boîte est vide au départ : une première multi-invocation est offerte (elle forme l'équipe).
+  S = { gacha: nouvelEtat(Math.floor(Math.random() * 2 ** 31)), equipe: [null, null, null, null, null, null], histoire: {}, epreuves: {}, offerte: true };
 }
 S.fin ??= {};
 S.tour ??= 0;
+S.evenements ??= {};
 S.joueur ??= nouveauJoueur(Date.now());
 S.gacha.medailles ??= {};
 S.gacha.boite ??= [];
+S.gacha.orbes ??= {};
+for (const c of Object.values(S.gacha.collection)) { c.niv ??= 1; c.xp ??= 0; }
 // Les anciennes sauvegardes : un personnage qui n'existe plus est retiré.
 for (const id of Object.keys(S.gacha.collection)) if (!PERSO[id]) delete S.gacha.collection[id];
 S.equipe = S.equipe.map((id) => (id && PERSO[id] && S.gacha.collection[id] ? id : null));
 const garder = () => { try { localStorage.setItem(CLE, JSON.stringify(S)); } catch { /* ignore */ } };
 const possede = (id) => !!S.gacha.collection[id];
 const eveilDe2 = (id) => S.gacha.collection[id]?.eveil ?? 0;
+const nivDe = (id) => S.gacha.collection[id]?.niv ?? 1;
 
 /* ---------------- La navigation, la barre du haut ---------------- */
 let ecran = 'accueil';
@@ -112,6 +115,8 @@ function rendreAccueil() {
     return `<button class="diapo" data-portail="${p.id}" style="--a:${fete ? fete.couleurs[0] : '#ffd23f'};--b:${fete ? fete.couleurs[1] : v.couleurs.aura}">${portrait(v, { taille: 66, fond: false })}
       <span><b>${p.nom}</b><small>${p.nouveaux.length ? `Nouveau : ${PERSO[p.nouveaux[0]].nom} (${PERSO[p.nouveaux[0]].rarete})` : 'Le retour des légendes'} · jusqu’au ${dateFin(p.fin).slice(0, 5)}</small></span></button>`;
   });
+  const ev = evenementDu(JOUR);
+  diapos.push(`<button class="diapo" data-quetes="1" style="--a:#3ae0ff;--b:${ELEMENTS[ev.element].couleur}"><span style="font-size:44px">${ev.glyphe}</span><span><b>${ev.nom}</b><small>Événement court · fin ${jours(ev.fin - JOUR)} · orbes ${ELEMENTS[ev.element].glyphe}</small></span></button>`);
   $('carrousel').innerHTML = diapos.join('');
   $('points-carrousel').innerHTML = diapos.map(() => '<i></i>').join('');
   clearInterval(minuteurCarrousel);
@@ -125,6 +130,7 @@ function rendreAccueil() {
   diapo = -1;
   montrer();
   minuteurCarrousel = setInterval(montrer, 3500);
+  $('b-offerte').classList.toggle('cache', !S.offerte);
   // Les pastilles : les cadeaux qui attendent, les éveils possibles.
   const nC = S.gacha.boite.length;
   $('badge-cadeaux').classList.toggle('cache', !nC);
@@ -164,7 +170,7 @@ function ouvrirInfos() {
   panneau(`<h2 class="titre-ecran">📅 Infos</h2>
     <div class="bloc"><b>Portails ouverts</b>${ps.map((p) => `<div class="cadeau"><span>${p.nom}</span><b>${p.fin !== undefined ? `fin ${jours(p.fin - JOUR)}` : 'toujours'}</b></div>`).join('')}</div>
     <div class="bloc"><b>Les fêtes</b>${aVenir.map(({ f, dans }) => `<div class="cadeau"><span>${f.glyphe} ${f.nom}</span><b>${dans === 0 ? 'en ce moment !' : jours(dans)}</b></div>`).join('')}</div>
-    <div class="bloc">Un nouveau portail tous les 17 jours. Les vedettes rejoignent le portail permanent quand leur portail se termine.</div>`);
+    <div class="bloc">Un nouveau portail toutes les deux semaines (les vedettes rejoignent ensuite le portail permanent), un événement court tous les trois ou quatre jours, et deux grandes fêtes d’un mois en trois parties : l’anniversaire (novembre, dès 2027) et l’été (juillet).</div>`);
 }
 
 function ouvrirMenu() {
@@ -207,8 +213,8 @@ function rendrePortails() {
     ${p.fin !== undefined ? `<div class="fin">Jusqu’au ${dateFin(p.fin)}</div>` : ''}
     <div class="badge-type ${p.type}">${p.type === 'permanent' ? 'Permanent' : p.type === 'garanti' ? 'Garanti' : 'Paliers'}</div>
     <div class="affiche">${affiche}</div>
+    <div class="titre-portail">${(p.fete ? FETE[p.fete].nom : p.nom).toUpperCase()}${p.partie ? `<small>${p.nom.split(' · ').slice(1).join(' · ')}</small>` : ''}</div>
     <div class="garantie">${TYPES[p.type]}${p.vedettes.length ? `<br><small>Une vedette garantie au plus tard dans <b>${PITIE - (S.gacha.pitie[p.id] || 0)}</b> invocations.</small>` : ''}</div>
-    <div class="titre-portail">${(p.fete ? FETE[p.fete].nom : p.nom).toUpperCase()}</div>
     ${p.type === 'paliers' ? `<div class="paliers-ligne">${PALIERS.map((x, k) => `<span class="${k < pal ? 'fait' : k === pal ? 'ici' : ''}">${k + 1}<br>${x.prix} 🪙</span>`).join('')}</div>` : ''}
     <div class="boutons"><button id="b-simple" ${S.gacha.jetons < PRIX.simple ? 'disabled' : ''}>Invocation ×1<small>🪙 × ${PRIX.simple}</small></button><button id="b-multi" ${S.gacha.jetons < prix ? 'disabled' : ''}>Invocation ×10<small>🪙 × ${prix}</small></button></div>`;
   $('b-simple').onclick = () => tirer(p, 1);
@@ -242,46 +248,105 @@ async function tirer(p, n) {
 
 /* ---------------- La collection, la fiche ---------------- */
 let filtre = 'tous';
+let tri = 'rarete', categorie = '';
 function rendreCollection() {
-  $('filtres').innerHTML = ['tous', 'LR', 'UR', 'SSR', 'SR', 'R', 'N'].map((f) => `<button data-f="${f}" class="${filtre === f ? 'oui' : ''}">${f === 'tous' ? 'Tous' : f}</button>`).join('');
+  $('filtres').innerHTML = ['tous', 'LR', 'UR', 'SSR', 'SR', 'R', 'N'].map((f) => `<button data-f="${f}" class="${filtre === f ? 'oui' : ''}">${f === 'tous' ? 'Tous' : f}</button>`).join('')
+    + `<select id="tri" aria-label="Trier">${[['rarete', 'Rareté'], ['element', 'Élément'], ['niveau', 'Niveau'], ['atq', 'ATQ'], ['pv', 'PV']].map(([v, l]) => `<option value="${v}"${tri === v ? ' selected' : ''}>Trier : ${l}</option>`).join('')}</select>
+    <select id="categorie" aria-label="Catégorie"><option value="">Toutes les catégories</option>${Object.entries(CATEGORIES).map(([k, n]) => `<option value="${k}"${categorie === k ? ' selected' : ''}>${n}</option>`).join('')}</select>`;
   const sortis = new Set(portails(JOUR).flatMap((p) => p.pool));
-  const liste = PERSOS.filter((x) => (possede(x.id) || sortis.has(x.id)) && (filtre === 'tous' || x.rarete === filtre))
-    .sort((a, b) => ORDRE.indexOf(b.rarete) - ORDRE.indexOf(a.rarete) || (possede(b.id) - possede(a.id)));
-  $('grille-collection').innerHTML = liste.map((x) => portrait(x, { cadre: true, taille: 100, data: true, eveil: possede(x.id) ? eveilDe2(x.id) : undefined, classe: possede(x.id) ? '' : 'non' })).join('');
+  const val = (x) => (tri === 'atq' ? stats(x.id, eveilDe2(x.id), nivDe(x.id)).atq : tri === 'pv' ? stats(x.id, eveilDe2(x.id), nivDe(x.id)).pv : tri === 'niveau' ? nivDe(x.id) : tri === 'element' ? -Object.keys(ELEMENTS).indexOf(x.element) : ORDRE.indexOf(x.rarete));
+  const liste = PERSOS.filter((x) => (possede(x.id) || sortis.has(x.id)) && (filtre === 'tous' || x.rarete === filtre) && (!categorie || x.categories.includes(categorie)))
+    .sort((a, b) => (possede(b.id) - possede(a.id)) || val(b) - val(a) || ORDRE.indexOf(b.rarete) - ORDRE.indexOf(a.rarete));
+  $('grille-collection').innerHTML = liste.map((x) => portrait(x, { cadre: true, taille: 100, data: true, eveil: possede(x.id) ? eveilDe2(x.id) : undefined, classe: possede(x.id) ? '' : 'non' }).replace('</div>', possede(x.id) ? `<span class="niv">Niv.${nivDe(x.id)}</span></div>` : '</div>')).join('');
 }
 
 function ouvrirFiche(id) {
-  const x = PERSO[id], el = ELEMENTS[x.element], ev = eveilDe2(id), s = stats(id, ev);
+  const x = PERSO[id], el = ELEMENTS[x.element], ev = eveilDe2(id), s = stats(id, ev, possede(id) ? nivDe(id) : null);
+  const c = S.gacha.collection[id];
   const e = eveilDe(id);
   panneau(`<div class="fiche-art">${illustration(x)}</div>
     <div class="fiche-haut"><div><h2>${x.nom}</h2><small>${x.titre}</small><br><small>${x.rarete} · ${el.glyphe} ${el.nom} · ${ROLES[x.role]}</small>
       <div class="categories">${x.categories.map((f) => `<span>${CATEGORIES[f]}</span>`).join('')}</div></div></div>
+    ${c ? `<div class="niveau"><b>Niv. ${c.niv} / ${NIV_MAX[x.rarete]}</b><div class="pv"><i style="width:${c.niv >= NIV_MAX[x.rarete] ? 100 : (c.xp / expNiveau(c.niv)) * 100}%"></i></div></div>` : ''}
     <div class="stats"><div><b>${fr(s.pv)}</b>PV</div><div><b>${fr(s.atq)}</b>ATQ</div><div><b>${fr(s.def)}</b>DÉF</div></div>
+    ${c && arbre(id).length ? `<button class="action potentiel" data-potentiel="${id}">🌳 Arbre de potentiel (${(c.pot || []).length} / ${arbre(id).flat().length})</button>` : ''}
     <div class="bloc"><b>👑 Chef :</b> ${texteChef(x.chef, CATEGORIES)}</div>
     <div class="bloc"><b>💥 Super attaque · ${x.super.nom} :</b> ${x.super.texte}${x.super.ultime ? `<br><b>🌟 Ultime (${KI_ULTIME} de ki) · ${x.super.ultime.nom} :</b> ${x.super.ultime.texte}` : ''}</div>
     <div class="bloc"><b>✨ Passif · ${x.passif.nom}</b><ul class="fiche-lignes">${x.passif.lignes.map((l) => `<li>${l}</li>`).join('')}</ul></div>
     <div class="bloc"><b>🔗 Liens :</b> ${x.liens.map((l) => `${LIENS[l].nom} (${LIENS[l].texte})`).join(' · ')}</div>
     <div class="bloc"><b>⭐ Doublons :</b> ${possede(id) ? `${'★'.repeat(ev)}${'☆'.repeat(RARETES[x.rarete].eveilMax - ev)} (chaque doublon : +8 %)` : 'Pas encore dans ta collection.'}</div>
     ${e ? `<div class="bloc"><b>🏅 Éveil :</b> devient ${PERSO[e.vers].nom} ${PERSO[e.vers].rarete} (${PERSO[e.vers].titre}) contre ${coutTexte(e.cout)}</div>` : ''}
-    ${x.fete ? `<div class="bloc"><b>Personnage de fête :</b> ${FETE[x.fete].glyphe} ${FETE[x.fete].nom} seulement.</div>` : ''}`);
+    ${x.fete ? `<div class="bloc"><b>Personnage de fête :</b> ${fetesDe(x).map((k) => `${FETE[k].glyphe} ${FETE[k].nom}`).join(', ')} seulement${x.partie ? ` (partie ${x.partie})` : ''}.</div>` : ''}`);
   finReactif();
   finReactif = rendreReactif($('fiche'));
 }
-const coutTexte = (cout) => Object.entries(cout).map(([k, n]) => `${n} ${MEDAILLES[k].glyphe}`).join(' + ');
+const coutTexte = (cout) => Object.entries(cout).map(([k, n]) => `${n} ${MEDAILLES[k]?.glyphe || '🎖️'}`).join(' + ');
+
+/* ---------------- L'arbre de potentiel ---------------- */
+function ouvrirArbre(id) {
+  const x = PERSO[id], c = S.gacha.collection[id], o = S.gacha.orbes, pris = new Set(c.pot || []);
+  const el = ELEMENTS[x.element];
+  panneau(`<h2 class="titre-ecran">🌳 ${x.nom} · potentiel</h2>
+    <div class="medailles"><span>${el.glyphe} ${o[x.element] || 0} orbes</span><span>🌈 ${o.arc || 0} orbes</span></div>
+    <p class="consigne">Débloque les nœuds dans l’ordre de chaque route. Les orbes se gagnent en combattant (celles de l’élément des ennemis, et des arc-en-ciel).</p>
+    ${arbre(id).map((route, r) => `<div class="route"><b>${ROUTES[r].nom}</b><div class="noeuds">${route.map((n, k) => {
+      const fait = pris.has(n.id), ok = peutDebloquer(S.gacha, id, n.id), suivant = !fait && (k === 0 || pris.has(route[k - 1].id));
+      return `<button class="noeud${fait ? ' fait' : ok ? ' pret' : suivant ? ' suivant' : ''} t-${n.type}" data-noeud="${n.id}" ${ok ? '' : 'disabled'} title="${texteNoeud(n)}"><span>${texteNoeud(n)}</span><small>${fait ? '✓' : `${n.cout.n} ${n.cout.orbe === 'arc' ? '🌈' : ELEMENTS[n.cout.orbe].glyphe}`}</small></button>`;
+    }).join('')}</div></div>`).join('')}`);
+  $('fiche').querySelectorAll('[data-noeud]').forEach((b) => b.addEventListener('click', () => {
+    if (!debloquer(S.gacha, id, b.dataset.noeud)) return;
+    garder();
+    son.revele('SSR');
+    ouvrirArbre(id);
+  }));
+}
+
+/* ---------------- Les événements d'éveil : on bat le personnage pour gagner ses médailles ---------------- */
+function ouvrirEvenementEveil(evId) {
+  const ev = EVENEMENTS_EVEIL.find((x) => x.id === evId);
+  const x = PERSO[ev.perso];
+  panneau(`<div class="fiche-art">${illustration(x)}</div><h2 class="titre-ecran">${ev.nom}</h2>
+    <p class="consigne">Bats ${x.nom} pour gagner ses médailles (🎖️ ${S.gacha.medailles[ev.medaille] || 0}). Plus le niveau est dur, plus il en lâche.</p>
+    ${ev.niveaux.map((n, k) => `<button class="tuile" data-niv="${k}"><b>${n.nom}</b><small>⚡${n.act} · ${n.medailles[0]} à ${n.medailles[1]} médailles · ${fr(n.ennemis[0].pv)} PV</small></button>`).join('')}`);
+  finReactif();
+  finReactif = rendreReactif($('fiche'));
+  $('fiche').querySelectorAll('[data-niv]').forEach((b) => b.addEventListener('click', () => {
+    const k = +b.dataset.niv, n = ev.niveaux[k];
+    $('v-fiche').classList.add('cache');
+    lancerCombat({ ennemis: n.ennemis.map((e) => ({ ...e })), recompense: 0, premiere: false, act: n.act, d: k, eveil: { ev, k }, retour: () => { rendreEveils(); aller('eveils'); } });
+  }));
+}
+
+/** L'invocation offerte (la boîte est vide au départ) : une multi sur le portail permanent, qui forme l'équipe. */
+async function invocationOfferte() {
+  if (!S.offerte) return;
+  const p = portails(JOUR)[0];
+  S.gacha.jetons += 50;
+  const r = invoquer(S.gacha, p, 10);
+  S.offerte = false;
+  const meilleurs = Object.keys(S.gacha.collection).sort((a, b) => ORDRE.indexOf(PERSO[b].rarete) - ORDRE.indexOf(PERSO[a].rarete)).slice(0, 6);
+  S.equipe = [...meilleurs, null, null, null, null, null, null].slice(0, 6);
+  garder();
+  await invocation($('scene'), r.resultats, ['Ta première invocation, offerte : ton équipe est prête !']);
+  rendreAccueil();
+}
 
 /* ---------------- Les éveils ---------------- */
 function rendreEveils() {
-  const m = S.gacha.medailles;
-  $('medailles').innerHTML = Object.entries(MEDAILLES).map(([k, x]) => `<span title="${x.nom}">${x.glyphe} ${m[k] || 0}</span>`).join('');
-  // D'abord les chaînes où l'on a quelqu'un, puis les autres.
+  const m = S.gacha.medailles, o = S.gacha.orbes;
+  $('medailles').innerHTML = `<span>🏅 ${m.legende || 0}</span>${Object.entries(ELEMENTS).map(([k, x]) => `<span title="Orbes ${x.nom}">${x.glyphe} ${o[k] || 0}</span>`).join('')}<span title="Orbes arc-en-ciel">🌈 ${o.arc || 0}</span>`;
   const chaines = [...CHAINES].sort((a, b) => b.some(possede) - a.some(possede));
-  $('liste-eveils').innerHTML = chaines.map((ch) => `<div class="rangee">${ch.map((id, k) => {
-    const x = PERSO[id], e = eveilDe(id);
-    const carte = `<div class="etape-eveil${possede(id) ? ' ici' : ''}">${portrait(x, { cadre: true, taille: 58, nom: false, classe: possede(id) ? '' : 'non', data: true })}</div>`;
-    if (k === ch.length - 1 || !e) return carte;
-    const ok = peutEveiller(S.gacha, id);
-    return `${carte}<div class="fleche${possede(id) ? '' : ' non'}"><b>➜</b>${coutTexte(e.cout)}${ok ? `<button data-eveil="${id}">Éveiller</button>` : ''}</div>`;
-  }).join('')}</div>`).join('');
+  $('liste-eveils').innerHTML = chaines.map((ch) => {
+    const cle = cleMedaille(PERSO[ch[0]].nom);
+    const ev = EVENEMENTS_EVEIL.find((x) => x.chaine === ch || x.id === ch[0]);
+    return `<div class="rangee"><div class="tete-rangee"><span>🎖️ ${PERSO[ch[0]].nom} : <b>${m[cle] || 0}</b> médailles</span>${ev ? `<button data-evenement="${ev.id}">Gagner des médailles ›</button>` : ''}</div><div class="suite">${ch.map((id, k) => {
+      const x = PERSO[id], e = eveilDe(id);
+      const carte = `<div class="etape-eveil${possede(id) ? ' ici' : ''}">${portrait(x, { cadre: true, taille: 58, nom: false, classe: possede(id) ? '' : 'non', data: true })}</div>`;
+      if (k === ch.length - 1 || !e) return carte;
+      const ok = peutEveiller(S.gacha, id);
+      return `${carte}<div class="fleche${possede(id) ? '' : ' non'}"><b>➜</b>${coutTexte(e.cout)}${ok ? `<button data-eveil="${id}">Éveiller</button>` : ''}</div>`;
+    }).join('')}</div></div>`;
+  }).join('');
 }
 
 async function faireEveil(id) {
@@ -312,12 +377,23 @@ const difficulteOuverte = (d) => d === 0 || CHAPITRES.every((c) => faitesDe(c.id
 function rendreQuetes() {
   const faites = CHAPITRES.reduce((t, c) => t + faitesDe(c.id, 0), 0);
   $('info-histoire').textContent = `${faites} / ${CHAPITRES.length * 5} étapes · Normal, Difficile, Extrême`;
-  const f = fetesDu(JOUR)[0], ep = f && EPREUVES[f.id];
+  const { f, ep, cle } = epreuveDuJour();
   $('b-epreuve').classList.toggle('cache', !ep);
   if (ep) {
     $('epreuve-titre').textContent = `${f.glyphe} ${ep.nom}`;
-    $('epreuve-info').textContent = S.epreuves[`${f.id}-${f.annee}`] ? 'Réussie ! (on peut la refaire, sans jetons)' : `L’épreuve de la fête : ${ep.jetons} jetons à gagner · ${coutAct(true, 0)} d’endurance`;
+    $('epreuve-info').textContent = S.epreuves[cle] ? 'Réussie ! (on peut la refaire, sans jetons)' : `L’épreuve de la fête : ${ep.jetons} jetons à gagner · ⚡${coutAct(true, 0)}`;
   }
+  const ev = evenementDu(JOUR);
+  $('evenement-titre').textContent = `${ev.glyphe} ${ev.nom}`;
+  $('evenement-info').textContent = `Événement court · se termine ${jours(ev.fin - JOUR)} · ${S.evenements[ev.n] ? 'réussi (les médailles restent à gagner)' : '+20 🪙'} · orbes ${ELEMENTS[ev.element].glyphe} en masse · ⚡10`;
+}
+/** L'épreuve de la fête en cours (celle de la partie en cours, pour une grande fête). */
+function epreuveDuJour() {
+  const f = fetesDu(JOUR)[0];
+  if (!f) return {};
+  const x = EPREUVES[f.id];
+  const ep = Array.isArray(x) ? x[(f.partie || 1) - 1] : x;
+  return { f, ep, cle: `${f.id}-${f.annee}${f.partie ? `-${f.partie}` : ''}` };
 }
 function rendreHistoire() {
   const D = DIFFICULTES[difficulte];
@@ -363,11 +439,18 @@ function amisDuJour() {
 const couverture = (chefId) => S.equipe.filter(Boolean).filter((id) => PERSO[id].categories.some((k) => PERSO[chefId].chef.cats.includes(k))).length;
 
 /* ---------------- Le combat ---------------- */
-let C = null, occupe = false, P = null, chemin = [];
+let C = null, occupe = false, P = null, chemin = [], auto = false;
+/** Le mode automatique : l'ordinateur choisit le meilleur chemin à chaque tour. */
+async function tourAuto() {
+  while (auto && C && !C.c.fin && ecran === 'combat') {
+    if (!occupe) { chemin = meilleurChemin(C.c); dessinerChemin(); await attendre(450); if (!auto || !C) break; await jouer(); }
+    await attendre(200);
+  }
+}
 
 /** Lance un combat : l'endurance, puis le choix de l'allié (sauf pour « Réessayer », qui le garde). o : { ennemis, recompense, premiere, fini, retour, act, d, fin } */
 function lancerCombat(o) {
-  if (!S.equipe.some(Boolean)) { bulle('Ton équipe est vide : va dans Équipe.'); return; }
+  if (!S.equipe.some(Boolean)) { bulle(S.offerte ? 'Ta boîte est vide : fais d’abord ton invocation offerte (à l’accueil).' : 'Ton équipe est vide : va dans Équipe.'); return; }
   if (o.ami) { demarrerCombat(o); return; }
   const amis = [{ nom: 'Ton propre chef', id: S.equipe.find(Boolean), eveil: eveilDe2(S.equipe.find(Boolean)), rang: '—', toi: true }, ...amisDuJour()];
   const n = S.equipe.filter(Boolean).length;
@@ -392,7 +475,7 @@ function demarrerCombat(o) {
     o.paye = true;
     garder();
   }
-  const equipe = S.equipe.filter(Boolean).map((id) => ({ id, eveil: eveilDe2(id) }));
+  const equipe = S.equipe.filter(Boolean).map((id) => ({ id, eveil: eveilDe2(id), niv: nivDe(id), pot: S.gacha.collection[id]?.pot || [] }));
   C = { o, c: creerCombat({ equipe, ennemis: o.ennemis, graine: Math.floor(Math.random() * 2 ** 31), ami: o.ami }), ennemiPv: o.ennemis.map((e) => e.pv), pv: 0, cible: 0 };
   C.pv = C.c.pv;
   aller('combat');
@@ -409,7 +492,10 @@ function rendreEnnemi() {
   $('ennemi-nom').textContent = `${ELEMENTS[e.element].glyphe} ${e.nom}${e.boss ? ' · BOSS' : ''}`;
   $('ennemi-info').textContent = [C.c.ennemis.length > 1 ? `Ennemi ${C.cible + 1}/${C.c.ennemis.length}` : '', e.super ? `Super : ${e.super.nom}` : '', e.phases?.length > e.phase ? `${e.phases.length - e.phase} transformation(s) à venir` : ''].filter(Boolean).join(' · ');
   $('monstre').className = 'monstre';
-  $('monstre').innerHTML = ennemi(e, 220);
+  $('monstre').innerHTML = (e.perso ? portrait(PERSO[e.perso], { taille: 220, fond: false, anime: true, enPied: true }) : ennemi(e, 220)) + '<div class="rocher"></div>';
+  const CIELS = { flamme: ['#2a0606', '#b8341a'], tempete: ['#04201a', '#1a8a5a'], roc: ['#1a1006', '#9a6a2a'], eclair: ['#1a1404', '#b8901a'], maree: ['#040e2a', '#1a5ab8'] };
+  $('arene').style.setProperty('--ciel1', CIELS[e.element][0]);
+  $('arene').style.setProperty('--ciel2', CIELS[e.element][1]);
   majPv();
 }
 function majPv() {
@@ -421,12 +507,12 @@ function majPv() {
 }
 
 /** La place d'une sphère sur le plateau (en %), décalée une ligne sur deux. */
-const placeSphere = (p) => { const col = p % COLS, lig = Math.floor(p / COLS); return { x: 11 + col * 19.5 + (lig % 2 ? 4 : -4), y: 8 + lig * 21 }; };
+const placeSphere = (p) => { const col = p % COLS, lig = Math.floor(p / COLS); return { x: 11 + col * 19.5 + (lig % 2 ? 4 : -4) + (((p * 37) % 7) - 3) * 1.1, y: 7 + lig * 21 + (((p * 53) % 7) - 3) * 1.3 }; };
 
 function montrerHeros(id) {
   const x = PERSO[id];
   $('heros').style.setProperty('--aura', x.couleurs.aura);
-  $('heros').innerHTML = portrait(x, { taille: 300, fond: false, anime: true });
+  $('heros').innerHTML = portrait(x, { taille: 300, fond: false, anime: true, enPied: true });
 }
 
 function rendreCombat() {
@@ -434,14 +520,14 @@ function rendreCombat() {
   montrerHeros(c.membres[rot[0]].id);
   $('trio').innerHTML = rot.map((i, k) => {
     const m = c.membres[i], x = PERSO[m.id];
-    return `<div class="combattant" data-i="${i}" style="--el:${ELEMENTS[x.element].couleur};--rar:${RARETES[x.rarete].couleur}"><span class="rar-mini">${x.rarete}</span><div class="rond-perso">${portrait(x, { taille: 140, fond: false })}</div>
+    return `<div class="combattant${m.ki >= KI_SUPER ? ' super' : ''}" data-i="${i}" style="--el:${ELEMENTS[x.element].couleur};--rar:${RARETES[x.rarete].couleur};--ki:${m.ki / KI_MAX}"><span class="anneau-ki"></span><span class="rar-mini">${x.rarete}</span><div class="rond-perso">${portrait(x, { taille: 140, fond: false })}</div>
       <div class="ki${m.ki >= KI_SUPER ? ' plein' : ''}"><i style="width:${(m.ki / KI_MAX) * 100}%"></i></div><div class="ki-txt">Ki ${m.ki}${li[k] ? ` · 🔗${li[k]}` : ''}</div></div>`;
   }).join('');
   const pl = $('plateau');
   pl.querySelectorAll('.sphere-p').forEach((s) => s.remove());
   c.spheres.forEach((s, p) => {
     const { x, y } = placeSphere(p);
-    pl.insertAdjacentHTML('beforeend', `<button class="sphere-p${s === 'arc' ? ' arc' : ''}" data-p="${p}" style="left:${x}%;top:${y}%;--c:${s === 'arc' ? '#fff' : ELEMENTS[s].couleur};animation-delay:${(p % 7) * 0.03}s" aria-label="${s === 'arc' ? 'Arc-en-ciel' : ELEMENTS[s].nom}"></button>`);
+    pl.insertAdjacentHTML('beforeend', `<button class="sphere-p${s === 'arc' ? ' arc' : ''}" data-p="${p}" style="left:${x}%;top:${y}%;--s:${0.86 + ((p * 29) % 5) * 0.07};--dl:${-((p * 0.37) % 2.6)}s;--c:${s === 'arc' ? '#fff' : ELEMENTS[s].couleur};animation-delay:${(p % 7) * 0.03}s,${-((p * 0.37) % 2.6)}s" aria-label="${s === 'arc' ? 'Arc-en-ciel' : ELEMENTS[s].nom}"></button>`);
   });
   chemin = [];
   dessinerChemin();
@@ -458,12 +544,14 @@ function dessinerChemin() {
 /** Montre le ki que chacun gagnerait avec le chemin tracé. */
 function apercu() {
   const g = chemin.length ? kiPour(C.c, chemin) : null;
+  document.querySelectorAll('.ki-plus').forEach((n) => n.remove());
   [...document.querySelectorAll('.combattant')].forEach((el, k) => {
     const m = C.c.membres[+el.dataset.i];
     const ki = Math.min(KI_MAX, m.ki + (g ? g[k] : 0));
-    el.querySelector('.ki i').style.width = `${(ki / KI_MAX) * 100}%`;
-    el.querySelector('.ki').classList.toggle('plein', ki >= KI_SUPER);
-    el.querySelector('.ki-txt').textContent = g ? `Ki ${ki}${ki >= KI_ULTIME && PERSO[m.id].rarete === 'LR' ? ' · ULTIME' : ki >= KI_SUPER ? ' · SUPER' : ''}` : `Ki ${m.ki}`;
+    el.style.setProperty('--ki', ki / KI_MAX);
+    el.classList.toggle('super', ki >= KI_SUPER);
+    el.querySelector('.ki-txt').textContent = `Ki ${ki}${ki >= KI_ULTIME && PERSO[m.id].rarete === 'LR' ? ' · ULTIME' : ki >= KI_SUPER ? ' · SUPER' : ''}`;
+    if (g && g[k]) el.insertAdjacentHTML('beforeend', `<span class="ki-plus" style="left:50%;top:0">+${g[k]}</span>`);
   });
 }
 
@@ -596,7 +684,13 @@ async function victoire() {
   const gagne = o.premiere ? o.recompense : 0;
   if (gagne) S.gacha.jetons += gagne;
   const b = butin(o.ennemis, o.d || 0, Math.random, { fin: !!o.fin });
+  for (const [k, n] of Object.entries(o.bonus || {})) b.orbes[k] = (b.orbes[k] || 0) + n;
+  if (o.eveil) Object.assign(b.medailles, medaillesEveil(o.eveil.ev, o.eveil.k));
   ajouterMedailles(S.gacha, b.medailles);
+  ajouterOrbes(S.gacha, b.orbes);
+  // L'EXP des personnages de l'équipe.
+  const montes = [];
+  for (const id of S.equipe.filter(Boolean)) { const n = gagnerExpPerso(S.gacha.collection[id], id, b.exp * 3); if (n) montes.push(`${PERSO[id].nom} niv. ${S.gacha.collection[id].niv}`); }
   const rangs = gagnerExp(S.joueur, b.exp);
   if (rangs) S.gacha.jetons += 5 * rangs;
   let perso = '';
@@ -609,8 +703,8 @@ async function victoire() {
   garder();
   C = null;
   occupe = false;
-  const med = Object.entries(b.medailles).map(([k, n]) => `${MEDAILLES[k].glyphe}×${n}`).join(' ');
-  await finCombat($('scene'), { victoire: true, texte: `${gagne ? `+${gagne} jetons 🪙<br>` : ''}+${b.exp} EXP · ${med}${perso}${rangs ? `<br>⬆️ Rang ${S.joueur.rang} ! Endurance remplie, +${5 * rangs} jetons` : ''}` });
+  const med = [...Object.entries(b.medailles).map(([k, n]) => `${MEDAILLES[k]?.glyphe || '🎖️'}${MEDAILLES[k]?.perso ? ` ${MEDAILLES[k].perso}` : ''} ×${n}`), ...Object.entries(b.orbes).map(([k, n]) => `${k === 'arc' ? '🌈' : ELEMENTS[k].glyphe}×${n}`)].join(' · ');
+  await finCombat($('scene'), { victoire: true, texte: `${gagne ? `+${gagne} jetons 🪙<br>` : ''}+${b.exp} EXP · ${med}${perso}${rangs ? `<br>⬆️ Rang ${S.joueur.rang} ! Endurance remplie, +${5 * rangs} jetons` : ''}${montes.length ? `<br>⬆️ ${montes.join(', ')}` : ''}` });
   o.retour();
 }
 
@@ -641,19 +735,28 @@ function brancher() {
   $('b-cadeaux').onclick = ouvrirCadeaux;
   $('b-collection').onclick = () => { rendreCollection(); aller('collection'); };
   $('b-histoire').onclick = () => { rendreHistoire(); aller('histoire'); };
-  $('carrousel').onclick = (e) => { const b = e.target.closest('.diapo'); if (b) { portailChoisi = b.dataset.portail; rendrePortails(); aller('portails'); } };
+  $('carrousel').onclick = (e) => { const b = e.target.closest('.diapo'); if (!b) return; if (b.dataset.quetes) { rendreQuetes(); aller('quetes'); return; } portailChoisi = b.dataset.portail; rendrePortails(); aller('portails'); };
+  $('b-evenement').onclick = () => {
+    const ev = evenementDu(JOUR);
+    lancerCombat({ ennemis: ev.ennemis, recompense: 20, premiere: !S.evenements[ev.n], act: 10, d: 1, bonus: bonusEvenement(ev), fini: () => { S.evenements[ev.n] = true; }, retour: () => { rendreQuetes(); aller('quetes'); } });
+  };
   $('b-epreuve').onclick = () => {
-    const f = fetesDu(JOUR)[0], ep = f && EPREUVES[f.id];
+    const { ep, cle } = epreuveDuJour();
     if (!ep) return;
-    const cle = `${f.id}-${f.annee}`;
     lancerCombat({ ennemis: ep.ennemis, recompense: ep.jetons, premiere: !S.epreuves[cle], act: coutAct(true, 0), d: 1, fini: () => { S.epreuves[cle] = true; }, retour: () => { rendreQuetes(); aller('quetes'); } });
   };
   $('onglets-portails').onclick = (e) => { const b = e.target.closest('button'); if (b) { portailChoisi = b.dataset.id; son.bip(); rendrePortails(); } };
   $('filtres').onclick = (e) => { const b = e.target.closest('button'); if (b) { filtre = b.dataset.f; rendreCollection(); } };
   $('grille-collection').onclick = (e) => { const c = e.target.closest('.carte'); if (c) ouvrirFiche(c.dataset.id); };
+  $('filtres').onchange = (e) => { if (e.target.id === 'tri') tri = e.target.value; if (e.target.id === 'categorie') categorie = e.target.value; rendreCollection(); };
+  $('fiche').addEventListener('click', (e) => { const b = e.target.closest('[data-potentiel]'); if (b) ouvrirArbre(b.dataset.potentiel); });
+  $('b-offerte').onclick = () => { son.reveiller(); invocationOfferte(); };
+  $('b-quete-eveils').onclick = () => { rendreEveils(); aller('eveils'); };
   $('liste-eveils').onclick = (e) => {
     const b = e.target.closest('[data-eveil]');
     if (b) { faireEveil(b.dataset.eveil); return; }
+    const ev = e.target.closest('[data-evenement]');
+    if (ev) { ouvrirEvenementEveil(ev.dataset.evenement); return; }
     const c = e.target.closest('.carte');
     if (c) ouvrirFiche(c.dataset.id);
   };
@@ -691,25 +794,29 @@ function brancher() {
   // Le plateau : on trace un chemin du doigt (de voisine en voisine), on relâche pour jouer.
   const pl = $('plateau');
   const sous = (e) => document.elementFromPoint(e.clientX, e.clientY)?.closest?.('.sphere-p');
+  let depart = -1;
   pl.addEventListener('pointerdown', (e) => {
     if (occupe || !C) return;
     const s = sous(e);
     if (!s) return;
     pl.setPointerCapture(e.pointerId);
-    chemin = [+s.dataset.p];
-    son.bip();
+    depart = +s.dataset.p;
+    chemin = cheminAuto(C.c, depart);
+    son.sphere();
     dessinerChemin();
   });
   pl.addEventListener('pointermove', (e) => {
     if (!chemin.length || occupe) return;
     const s = sous(e);
-    if (!s) return;
-    const p = +s.dataset.p, der = chemin[chemin.length - 1];
-    if (p === der) return;
-    if (chemin.length > 1 && p === chemin[chemin.length - 2]) { chemin.pop(); dessinerChemin(); return; }
-    if (!chemin.includes(p) && voisines(der, p)) { chemin.push(p); son.sphere(); dessinerChemin(); }
+    if (!s || +s.dataset.p === depart) return;
+    // Glisser sur une autre sphère : la ligne part de celle-là.
+    depart = +s.dataset.p;
+    chemin = cheminAuto(C.c, depart);
+    son.bip();
+    dessinerChemin();
   });
   pl.addEventListener('pointerup', () => { if (chemin.length) jouer(); });
+  $('b-auto').onclick = () => { auto = !auto; $('b-auto').classList.toggle('oui', auto); if (auto) tourAuto(); };
   pl.addEventListener('pointercancel', () => { chemin = []; dessinerChemin(); });
 }
 

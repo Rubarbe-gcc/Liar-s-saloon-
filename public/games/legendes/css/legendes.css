@@ -154,12 +154,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .portail .badge-type { position: absolute; z-index: 2; right: 8px; top: 6px; padding: 6px 10px; border-radius: 8px; background: linear-gradient(180deg, #8aff6a, #2aa83a); color: #04220a; font: 900 .75em var(--titre); box-shadow: inset 0 0 0 2px #e0ffd0; }
 .portail .badge-type.paliers { background: linear-gradient(180deg, #6ab8ff, #1a6fd0); color: #fff; }
 .portail .badge-type.permanent { background: linear-gradient(180deg, #ccc, #888); color: #222; }
-.portail .affiche { position: relative; height: 330px; }
+.portail .affiche { position: relative; height: 290px; margin-top: 30px; overflow: hidden; mask: linear-gradient(180deg, #000 78%, transparent); }
 .portail .affiche .v { position: absolute; bottom: 0; filter: drop-shadow(0 6px 16px rgba(0, 0, 0, .7)); }
 .portail .affiche .v svg { display: block; height: auto; }
-.portail .garantie { position: relative; z-index: 2; margin: -60px 18px 0; padding: 10px 14px; border-radius: 10px; background: rgba(0, 0, 0, .78); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .3); text-align: center; font-weight: 800; font-size: .88em; }
+.portail .garantie { position: relative; z-index: 2; margin: 8px 14px 0; padding: 10px 14px; border-radius: 10px; background: rgba(0, 0, 0, .78); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .3); text-align: center; font-weight: 800; font-size: .88em; }
 .portail .garantie b { color: #ffd23f; }
-.portail .titre-portail { position: relative; z-index: 2; margin: 10px 0 4px; text-align: center; font: 900 clamp(30px, 10vw, 46px)/1 var(--titre); font-style: italic; color: #ffe27a; -webkit-text-stroke: 2px #6a1a00; paint-order: stroke; text-shadow: 0 4px 0 #3a0a00, 0 0 20px rgba(255, 120, 40, .8); transform: rotate(-3deg); }
+.portail .titre-portail { position: relative; z-index: 2; margin: -14px 8px 0; text-align: center; font: 900 clamp(30px, 10vw, 46px)/1 var(--titre); font-style: italic; color: #ffe27a; -webkit-text-stroke: 2px #6a1a00; paint-order: stroke; text-shadow: 0 4px 0 #3a0a00, 0 0 20px rgba(255, 120, 40, .8); transform: rotate(-3deg); }
 .portail .paliers-ligne { position: relative; z-index: 2; display: flex; gap: 4px; padding: 8px 14px 0; }
 .portail .paliers-ligne span { flex: 1; padding: 5px 2px; border-radius: 8px; background: rgba(0, 0, 0, .55); text-align: center; font-size: .68em; font-weight: 800; }
 .portail .paliers-ligne span.fait { opacity: .35; }
@@ -439,3 +439,76 @@ canvas.particules { position: absolute; inset: 0; width: 100%; height: 100%; z-i
 .art-revele { width: min(78vw, 340px); animation: retourne .8s ease-out; }
 .art-revele .illus { width: 100%; box-shadow: 0 0 0 3px #fff, 0 0 40px var(--aura); }
 .revele .tag, .revele .sous { z-index: 2; }
+
+.portail .titre-portail small { display: block; margin-top: 4px; font-size: .42em; color: #fff; -webkit-text-stroke: 0; text-shadow: 0 2px 0 #000; }
+.tuile.evenement { background: linear-gradient(110deg, #0e8a8a, #0a2f5a); box-shadow: inset 0 0 0 2px #3ae0ff, 0 5px 0 #021a30; }
+
+/* ============ Le combat, refait façon « grand gacha » ============ */
+.arene { background: linear-gradient(180deg, var(--ciel1, #2a0606) 0%, var(--ciel2, #b8341a) 42%, #5a1408 58%, #1a0604 100%); }
+.decor-combat { position: absolute; inset: 0; pointer-events: none; }
+.decor-combat .soleil { position: absolute; left: 62%; top: 30%; width: 70%; aspect-ratio: 1; transform: translate(-50%, -50%); border-radius: 50%; background: radial-gradient(circle, rgba(255, 240, 200, .9) 0, rgba(255, 170, 80, .45) 22%, transparent 60%); }
+.decor-combat .monts { position: absolute; left: -5%; right: -5%; top: 40%; height: 26%; background: linear-gradient(180deg, #3a0c08, #1a0604); clip-path: polygon(0 60%, 8% 35%, 16% 52%, 26% 18%, 36% 46%, 46% 30%, 56% 55%, 66% 22%, 76% 48%, 86% 28%, 96% 50%, 100% 40%, 100% 100%, 0 100%); opacity: .9; }
+.decor-combat .monts.loin { top: 36%; opacity: .45; transform: scaleX(-1); filter: blur(1px); }
+.decor-combat .sol { position: absolute; left: 0; right: 0; bottom: 0; height: 38%; background: radial-gradient(120% 60% at 50% 0%, #6a1e10, #200805 70%), repeating-linear-gradient(170deg, rgba(0, 0, 0, .15) 0 6px, transparent 6px 22px); }
+.rayons-combat { background: repeating-conic-gradient(from 0deg at 62% 30%, rgba(255, 230, 170, .16) 0 3deg, transparent 3deg 11deg); mask: radial-gradient(circle at 62% 30%, #000 0, transparent 70%); }
+.monstre { right: 3%; top: 9%; width: 34%; }
+.monstre .rocher { position: absolute; left: 6%; right: 6%; bottom: -10%; height: 22%; border-radius: 50% 50% 12% 12%; background: linear-gradient(180deg, #5a3a2a, #2a1810); box-shadow: 0 8px 14px rgba(0, 0, 0, .6); z-index: -1; }
+.heros { left: -2%; bottom: -2%; width: 46%; opacity: 1; }
+.heros svg { width: 100%; height: auto; filter: drop-shadow(0 0 10px var(--aura, #fff)) drop-shadow(0 8px 10px rgba(0, 0, 0, .6)); animation: garde 1.6s ease-in-out infinite; transform-origin: 50% 100%; }
+@keyframes garde { 50% { transform: scaleY(1.012) translateY(-2px); } }
+.hud-ennemi { right: 30%; border-radius: 6px; background: linear-gradient(90deg, rgba(10, 6, 20, .9), rgba(10, 6, 20, .55)); box-shadow: inset 0 0 0 2px #c98a12, 0 3px 8px rgba(0, 0, 0, .5); }
+.ennemi-mini svg { border-radius: 6px; box-shadow: 0 0 0 2px var(--el, #ff5a36); }
+.pv.ennemi { height: 14px; border-radius: 3px; }
+.pv.ennemi i { background: linear-gradient(90deg, #ffd23f 0, #b8ff6a 30%, #3ae0ff 70%, #3a8dff); }
+.plateau { top: 30%; bottom: 2%; left: 3%; right: 3%; }
+.sphere-p { width: calc(12.5% * var(--s, 1)); margin: calc(-6.25% * var(--s, 1)) 0 0 calc(-6.25% * var(--s, 1)); background: radial-gradient(circle at 34% 28%, #fff 0 7%, color-mix(in srgb, var(--c) 40%, #fff) 16%, var(--c) 42%, color-mix(in srgb, var(--c) 40%, #000) 100%); box-shadow: 0 0 10px var(--c), 0 0 22px color-mix(in srgb, var(--c) 60%, transparent), inset 0 -5px 10px rgba(0, 0, 0, .35); animation: arrive .35s cubic-bezier(.2, 1.4, .4, 1) backwards, flotteSphere 2.6s ease-in-out var(--dl, 0s) infinite; }
+.sphere-p::after { content: ''; position: absolute; inset: 14%; border-radius: 50%; background: conic-gradient(from 30deg, transparent, rgba(255, 255, 255, .35), transparent 40%); animation: tourne 3s linear infinite; }
+@keyframes flotteSphere { 50% { transform: translateY(-4px); } }
+.sphere-p.arc { animation: arrive .35s backwards, arc 2s linear infinite, flotteSphere 2.6s ease-in-out var(--dl, 0s) infinite; }
+.sphere-p.prise { transform: scale(1.25); animation: none; box-shadow: 0 0 0 3px #fff, 0 0 24px #fff, 0 0 34px var(--c); }
+.trace polyline { stroke: #fff2a0; stroke-width: 7; filter: drop-shadow(0 0 4px #ffd23f) drop-shadow(0 0 10px #ff9a1a); stroke-dasharray: 14 6; animation: defile .6s linear infinite; }
+@keyframes defile { to { stroke-dashoffset: -20; } }
+.ki-plus { position: absolute; z-index: 5; font: 900 22px var(--titre); color: #fff; text-shadow: 0 0 10px #3ae0ff, 0 2px 0 #000; pointer-events: none; transform: translate(-50%, -100%); }
+.bas-combat { position: relative; padding: 4px 8px 6px; background: linear-gradient(180deg, #0b3a2a, #041a12 60%, #020c08); border-top: 3px solid #3ad37a; box-shadow: 0 -6px 16px rgba(0, 0, 0, .6); }
+.groupe { position: absolute; left: 50%; top: -12px; transform: translateX(-50%); padding: 2px 12px; border-radius: 10px; background: linear-gradient(180deg, #ffe27a, #e09a10); color: #3a2000; font: 900 10px var(--titre); letter-spacing: .1em; box-shadow: 0 2px 6px rgba(0, 0, 0, .5); }
+.trio { gap: 10px; padding-top: 8px; }
+.combattant { width: 96px; }
+.combattant .rond-perso { width: 76px; height: 76px; box-shadow: 0 0 0 3px #000, 0 4px 10px rgba(0, 0, 0, .7); }
+.combattant .anneau-ki { position: absolute; top: -5px; left: 50%; width: 86px; height: 86px; margin-left: -43px; border-radius: 50%; background: conic-gradient(var(--el) calc(var(--ki, 0) * 1turn), rgba(255, 255, 255, .12) 0); mask: radial-gradient(circle, transparent 37px, #000 38px); }
+.combattant.super .anneau-ki { background: conic-gradient(#ffd23f calc(var(--ki, 0) * 1turn), rgba(255, 255, 255, .12) 0); filter: drop-shadow(0 0 6px #ffd23f); animation: battre .5s infinite alternate; }
+.combattant .ki { display: none; }
+.combattant .ki-txt { margin-top: 6px; font: 900 11px var(--titre); }
+.combattant.super .ki-txt { color: #ffd23f; }
+.chevrons { height: 12px; margin: 4px -8px 2px; background: repeating-linear-gradient(90deg, transparent 0 8px, rgba(184, 255, 106, .55) 8px 14px, transparent 14px 22px); clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); mask: linear-gradient(90deg, transparent, #000 15%, #000 85%, transparent); animation: chevrons 1s linear infinite; }
+@keyframes chevrons { to { background-position: 22px 0; } }
+.ligne-pv { margin-top: 2px; }
+.tour-n { padding: 2px 8px; border-radius: 4px; background: #031019; box-shadow: inset 0 0 0 1px #3ad37a; }
+.auto { flex: none; padding: 5px 10px; border: 0; border-radius: 14px; background: radial-gradient(circle at 40% 30%, #6ad8ff, #1460c8); box-shadow: inset 0 0 0 2px #b8f0ff, 0 3px 0 #021a40; font: 900 10px var(--titre); color: #fff; }
+.auto.oui { background: radial-gradient(circle at 40% 30%, #ffe27a, #e09a10); color: #3a2000; }
+
+/* La collection : le niveau, le tri, les catégories. */
+.carte .niv { position: absolute; right: 3px; bottom: 17px; padding: 0 4px; border-radius: 4px; background: rgba(0, 0, 0, .75); font: 900 9px/1.5 system-ui; }
+.filtres select { flex: none; padding: 6px 8px; border-radius: 14px; border: 0; background: #0d3a55; color: #fff; font-weight: 800; box-shadow: inset 0 0 0 1px #2b8fb5; }
+.niveau { display: flex; align-items: center; gap: 8px; margin: 8px 0 0; font: 900 .85em var(--titre); }
+.niveau .pv { flex: 1; height: 10px; }
+.niveau .pv i { background: linear-gradient(90deg, #3ae0ff, #b8ff6a); }
+.action.potentiel { background: linear-gradient(180deg, #8affd8, #1a9a7a); color: #02201a; }
+/* L'arbre de potentiel. */
+.route { margin: 10px 0; padding: 10px; border-radius: 12px; background: rgba(0, 0, 0, .3); box-shadow: inset 0 0 0 1px #2b8fb5; }
+.route > b { display: block; margin-bottom: 6px; color: var(--or); font-family: var(--titre); font-size: .9em; }
+.noeuds { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.noeud { display: grid; place-items: center; gap: 2px; aspect-ratio: 1; padding: 2px; border: 0; border-radius: 50%; background: radial-gradient(circle at 40% 30%, #2a3a4a, #0a141c); box-shadow: inset 0 0 0 2px #3a5a6a; color: #8aa0b4; font-size: .58em; font-weight: 800; text-align: center; }
+.noeud span { line-height: 1.1; }
+.noeud small { font-size: .95em; }
+.noeud.fait { background: radial-gradient(circle at 40% 30%, #fff6c8, #e09a10); color: #3a2000; box-shadow: 0 0 10px #ffd23f; }
+.noeud.pret { background: radial-gradient(circle at 40% 30%, #8affd8, #1a9a7a); color: #02201a; box-shadow: 0 0 12px #3ae0a0; animation: battre .6s infinite alternate; cursor: pointer; }
+.noeud.suivant { box-shadow: inset 0 0 0 2px #ffd23f; color: #ffe27a; }
+/* Les éveils : la tête de chaque rangée (ses médailles, son événement). */
+.rangee { flex-direction: column; align-items: stretch; }
+.tete-rangee { display: flex; justify-content: space-between; align-items: center; gap: 8px; font-size: .8em; font-weight: 800; }
+.tete-rangee button { padding: 4px 8px; border: 0; border-radius: 8px; background: linear-gradient(180deg, #ffe27a, #e09a10); color: #3a2000; font-weight: 900; font-size: .9em; }
+.rangee .suite { display: flex; align-items: center; gap: 4px; overflow-x: auto; }
+.tuile.eveils { background: linear-gradient(110deg, #2aa83a, #0a3a14); box-shadow: inset 0 0 0 2px #8aff6a, 0 5px 0 #021a08; }
+/* L'invocation offerte. */
+.offerte { position: absolute; z-index: 4; left: 50%; top: 40%; transform: translate(-50%, -50%); width: min(86%, 360px); padding: 18px; border: 0; border-radius: 18px; background: linear-gradient(110deg, #ffe27a, #ff4dd8); color: #2a0a2a; box-shadow: 0 0 0 4px #fff, 0 0 40px #ff4dd8, 0 10px 30px rgba(0, 0, 0, .6); animation: respire 1.4s ease-in-out infinite; }
+.offerte b { display: block; font: 900 1.4em var(--titre); }

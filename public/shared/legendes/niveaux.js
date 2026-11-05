@@ -11,6 +11,10 @@
  * boss peut avoir des PHASES (sous un seuil de PV, il se transforme : plus fort, parfois soigné).
  */
 
+import { LANCEMENT } from './calendrier.js';
+import { PERSO } from './persos.js';
+import { CHAINES, cleMedaille } from './eveils.js';
+
 /** Les réglages d'ensemble : les combats doivent durer quelques tours (une dizaine contre un boss). */
 const PV = 6, ATQ = 0.8;
 const e = (nom, element, pv, atq, def, o = {}) => ({ nom, element, pv: Math.round(pv * PV), atq: Math.round(atq * ATQ), def, coups: [2, 3], ...o });
@@ -55,14 +59,26 @@ export const CHAPITRES = [
   },
 ];
 
-/** Les épreuves des fêtes (elles n'ouvrent que pendant leur fête) : plus difficiles, plus de jetons. */
+/**
+ * Les épreuves des fêtes (elles n'ouvrent que pendant leur fête) : plus difficiles, plus de jetons. Une grande
+ * fête (en trois parties) a une épreuve par partie (une liste).
+ */
 export const EPREUVES = {
-  anniversaire: { nom: 'Le Gâteau Géant', ennemis: [e('Gâteau Géant', 'flamme', 150000, 6000, 2000, { boss: true, super: sup('Avalanche de Crème', 2.2, 0.35, true), phases: [{ seuil: 0.5, nom: 'Gâteau Géant · Mille Bougies', atq: 1.3, texte: 'Les bougies s’allument toutes !' }] })], jetons: 100 },
+  lancement: { nom: 'La Fusée Rouillée', ennemis: [e('Rouilleux pilote', 'eclair', 40000, 3600, 900), e('La Fusée Rouillée', 'roc', 90000, 4400, 1200, { boss: true, super: sup('Décollage', 2, 0.35, true) })], jetons: 100 },
+  anniversaire: [
+    { nom: 'Partie 1 · Le Gâteau Géant', ennemis: [e('Gâteau Géant', 'flamme', 150000, 6000, 2000, { boss: true, super: sup('Avalanche de Crème', 2.2, 0.35, true), phases: [{ seuil: 0.5, nom: 'Gâteau Géant · Mille Bougies', atq: 1.3, texte: 'Les bougies s’allument toutes !' }] })], jetons: 100 },
+    { nom: 'Partie 2 · Les Ombres de la Fête', ennemis: [e('Ombre festive', 'tempete', 120000, 6800, 2200, { esquive: 0.2 }), e('Le Masque aux Mille Rires', 'maree', 260000, 8000, 2800, { boss: true, super: sup('Rire Glacé', 2.4, 0.4) })], jetons: 120 },
+    { nom: 'Partie 3 · Le Grand Final', ennemis: [e('Le Dieu de la Fête', 'eclair', 480000, 9500, 3400, { boss: true, coups: [3, 5], super: sup('Feu d’Artifice Divin', 2.6, 0.45, true), phases: [{ seuil: 0.4, nom: 'Le Dieu de la Fête · Apothéose', atq: 1.3, soin: 0.15, texte: 'Le ciel explose de couleurs !' }] })], jetons: 200 },
+  ],
   halloween: { nom: 'Le Manoir des Citrouilles', ennemis: [e('Citrouille hurlante', 'flamme', 90000, 6000, 2000), e('Le Comte Lanterne', 'tempete', 200000, 7500, 2600, { boss: true, super: sup('Nuit sans Fin', 2.4, 0.35), phases: [{ seuil: 0.4, nom: 'Le Comte · Lanterne Maudite', atq: 1.3, soin: 0.1 }] })], jetons: 80 },
   noel: { nom: 'La Tempête de Neige', ennemis: [e('Bonhomme de neige furieux', 'maree', 120000, 6500, 2200), e('Le Krampus de Givre', 'maree', 240000, 8000, 2800, { boss: true, super: sup('Blizzard', 2.2, 0.4, true) })], jetons: 100 },
   nouvelan: { nom: 'Le Dernier Coup de Minuit', ennemis: [e('Horloge folle', 'eclair', 200000, 7500, 2500, { boss: true, coups: [3, 5], super: sup('Douze Coups', 2.6, 0.4) })], jetons: 80 },
   valentin: { nom: 'Le Cœur de Pierre', ennemis: [e('Cœur de Pierre', 'roc', 160000, 6500, 2800, { boss: true, reduction: 0.2, super: sup('Cœur Brisé', 2.4, 0.35) })], jetons: 60 },
-  ete: { nom: 'Le Kraken de la Plage', ennemis: [e('Kraken', 'maree', 220000, 7200, 2600, { boss: true, coups: [3, 5], super: sup('Tentacules Géants', 2, 0.4, true) })], jetons: 80 },
+  ete: [
+    { nom: 'Partie 1 · Le Crabe des Sables', ennemis: [e('Crabe des Sables', 'roc', 160000, 6400, 3000, { boss: true, reduction: 0.15, super: sup('Pinces de Fer', 2.2, 0.35) })], jetons: 80 },
+    { nom: 'Partie 2 · Le Kraken de la Plage', ennemis: [e('Kraken', 'maree', 220000, 7200, 2600, { boss: true, coups: [3, 5], super: sup('Tentacules Géants', 2, 0.4, true) })], jetons: 100 },
+    { nom: 'Partie 3 · Le Soleil Furieux', ennemis: [e('Le Soleil Furieux', 'flamme', 420000, 9000, 3200, { boss: true, super: sup('Canicule', 2.6, 0.45, true), phases: [{ seuil: 0.4, nom: 'Le Soleil Furieux · Zénith', atq: 1.35, texte: 'Il atteint son zénith !' }] })], jetons: 180 },
+  ],
 };
 
 /* ------------------------------------------------------------------ */
@@ -127,15 +143,70 @@ export const ETAPE = (ch, k) => CHAPITRES.find((c) => c.id === ch)?.etapes[k];
  */
 export const DROPS = ['garde_n', 'eclaireuse_n', 'forgeron_n', 'mousse_n', 'coursier_n', 'moine_n', 'kael_r', 'mira_r', 'bram_r', 'lio_r', 'nami_r', 'tobi_r', 'suzu_r', 'fen_r'];
 export function butin(ennemis, d = 0, R = Math.random, { fin = false } = {}) {
-  const medailles = {};
+  const medailles = {}, orbes = {};
   let exp = 12;
   for (const x of ennemis) {
-    medailles[x.element] = (medailles[x.element] || 0) + (x.boss ? 3 : 1) + d + Math.floor(R() * 2);
-    if (x.boss) medailles.legende = (medailles.legende || 0) + 1 + d + (fin ? 3 : 0);
+    // Des orbes de potentiel de l'élément de chaque ennemi (et parfois arc-en-ciel) ; des médailles légendaires sur les boss du jeu de fin.
+    orbes[x.element] = (orbes[x.element] || 0) + (x.boss ? 8 : 3) * (1 + d) + Math.floor(R() * 3);
+    if (x.boss || R() < 0.25) orbes.arc = (orbes.arc || 0) + (x.boss ? 2 : 1) + d;
+    if (x.boss && (fin || d >= 2)) medailles.legende = (medailles.legende || 0) + 1 + (fin ? 2 : 0);
     exp += (x.boss ? 40 : 15) * (1 + d);
   }
   const perso = !fin && R() < 0.3 ? DROPS[Math.floor(R() * (d ? DROPS.length : 6))] : null;
-  return { medailles, exp, perso };
+  return { medailles, orbes, exp, perso };
 }
 /** Ce que coûte un combat en endurance. */
 export const coutAct = (boss, d = 0, fin = false) => (fin ? 25 : (boss ? 10 : 5) * (1 + d));
+
+/* ------------------------------------------------------------------ */
+/* Les événements courts : un nouveau tous les trois ou quatre jours    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Les événements courts (des ennemis d'un élément, des médailles de cet élément à gagner) : ils tournent tout
+ * seuls, trois jours puis quatre jours (deux par semaine), dans cet ordre, et recommencent.
+ */
+export const EVENEMENTS = [
+  { id: 'braises', nom: 'L’Assaut des Braises', glyphe: '🔥', element: 'flamme', ennemis: [e('Salamandre', 'flamme', 50000, 4200, 1300), e('Reine Salamandre', 'flamme', 110000, 5200, 1700, { boss: true, super: sup('Souffle Brûlant', 2.2, 0.35) })] },
+  { id: 'cyclone', nom: 'L’Œil du Cyclone', glyphe: '🌪️', element: 'tempete', ennemis: [e('Harpie', 'tempete', 50000, 4300, 1200, { esquive: 0.15 }), e('Seigneur du Cyclone', 'tempete', 110000, 5300, 1600, { boss: true, super: sup('Tornade', 2.2, 0.35, true) })] },
+  { id: 'carriere', nom: 'La Carrière Hantée', glyphe: '⛰️', element: 'roc', ennemis: [e('Golem de carrière', 'roc', 60000, 4000, 1800, { reduction: 0.15 }), e('Le Contremaître', 'roc', 120000, 5000, 2200, { boss: true, super: sup('Éboulement', 2.2, 0.35, true) })] },
+  { id: 'orage', nom: 'La Nuit de l’Orage', glyphe: '⚡', element: 'eclair', ennemis: [e('Esprit de foudre', 'eclair', 50000, 4500, 1200), e('Le Roi Tonnerre', 'eclair', 110000, 5500, 1600, { boss: true, super: sup('Foudre Royale', 2.4, 0.35) })] },
+  { id: 'abysses', nom: 'Les Abysses', glyphe: '🌊', element: 'maree', ennemis: [e('Anguille géante', 'maree', 50000, 4200, 1300), e('Le Léviathan', 'maree', 120000, 5200, 1800, { boss: true, coups: [3, 4], super: sup('Raz-de-Marée', 2.2, 0.35, true) })] },
+  { id: 'arene', nom: 'L’Arène des Champions', glyphe: '🏆', element: 'flamme', ennemis: [e('Champion de bronze', 'roc', 60000, 4600, 1500), e('Champion d’argent', 'eclair', 70000, 5000, 1600), e('Champion d’or', 'flamme', 120000, 5800, 1900, { boss: true, super: sup('Coup du Champion', 2.4, 0.4) })] },
+];
+/** L'événement court ouvert ce jour-là (n : son numéro depuis le lancement), avec ses dates. */
+export function evenementDu(jour) {
+  const j = Math.max(0, jour - LANCEMENT);
+  const semaine = Math.floor(j / 7), r = j % 7;
+  const n = semaine * 2 + (r >= 3 ? 1 : 0);
+  const debut = LANCEMENT + semaine * 7 + (r >= 3 ? 3 : 0);
+  return { ...EVENEMENTS[n % EVENEMENTS.length], n, debut, fin: debut + (r >= 3 ? 3 : 2) };
+}
+/** Les médailles d'un événement (en plus du butin) : beaucoup de médailles de son élément. */
+export const bonusEvenement = (ev) => ({ [ev.element]: 30, arc: 6 });
+
+/* ------------------------------------------------------------------ */
+/* Les événements d'éveil : on bat le personnage pour gagner ses médailles */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Pour chaque personnage qui s'éveille, un événement où on l'affronte (sa version la plus forte), en trois
+ * niveaux : plus c'est dur, plus il lâche de ses médailles. Toujours ouverts.
+ */
+export const NIVEAUX_EVEIL = [
+  { nom: 'Niveau 1', pv: 12000, atq: 2600, def: 700, medailles: [2, 3], act: 10 },
+  { nom: 'Niveau 2', pv: 40000, atq: 4400, def: 1500, medailles: [4, 6], act: 15 },
+  { nom: 'Niveau 3', pv: 110000, atq: 7000, def: 2800, medailles: [8, 11], act: 20 },
+];
+export const EVENEMENTS_EVEIL = CHAINES.map((ch) => {
+  const haut = PERSO[ch[ch.length - 1]];
+  const force = { N: 0.5, R: 0.6, SR: 0.75, SSR: 0.9, UR: 1, LR: 1.1 }[haut.rarete];
+  return {
+    id: ch[0], nom: `Éveil · ${haut.nom}`, chaine: ch, perso: haut.id, medaille: cleMedaille(haut.nom),
+    niveaux: NIVEAUX_EVEIL.map((n, k) => ({
+      ...n, ennemis: [e(`${haut.nom} · ${haut.titre}`, haut.element, Math.round(n.pv * force), Math.round(n.atq * force), Math.round(n.def * force), { boss: true, perso: haut.id, super: sup(haut.super.nom, 2 + k * 0.3, 0.35) })],
+    })),
+  };
+});
+/** Les médailles gagnées en battant un événement d'éveil (niveau k). */
+export const medaillesEveil = (ev, k, R = Math.random) => { const [a, b] = NIVEAUX_EVEIL[k].medailles; return { [ev.medaille]: a + Math.floor(R() * (b - a + 1)) }; };

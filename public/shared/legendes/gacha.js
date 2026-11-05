@@ -144,10 +144,10 @@ export function connexion(etat, jour, { boite = false } = {}) {
 
 /** Le cadeau d'une fête (une fois par année de fête). */
 export function cadeauFete(etat, fete, { boite = false } = {}) {
-  const cle = `${fete.id}-${fete.annee}`;
+  const cle = `${fete.id}-${fete.annee}${fete.partie ? `-${fete.partie}` : ''}`;
   if (etat.cadeaux[cle]) return 0;
   etat.cadeaux[cle] = true;
-  if (boite) (etat.boite ||= []).push({ texte: `${fete.glyphe} ${fete.nom}`, jetons: fete.cadeau, medailles: { legende: 3 } });
+  if (boite) (etat.boite ||= []).push({ texte: `${fete.glyphe} ${fete.nom}${fete.partie ? ` · ${fete.partieNom}` : ''}`, jetons: fete.cadeau, medailles: { legende: 3 } });
   else etat.jetons += fete.cadeau;
   return fete.cadeau;
 }

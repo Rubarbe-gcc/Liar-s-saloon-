@@ -43,7 +43,8 @@ test('le calendrier : un nouveau portail tous les 17 jours, garanti puis à pali
 });
 
 test('les célébrations : anniversaire, Halloween, Noël, Nouvel An (à cheval sur deux années)', () => {
-  assert.deepEqual(fetesDu(jour(2026, 11, 5)).map((f) => f.id), ['anniversaire']);
+  assert.deepEqual(fetesDu(jour(2026, 11, 5)).map((f) => f.id), ['lancement'], 'pas d’anniversaire la première année');
+  assert.deepEqual(fetesDu(jour(2027, 11, 5)).map((f) => f.id), ['anniversaire']);
   assert.deepEqual(fetesDu(jour(2027, 10, 31)).map((f) => f.id), ['halloween']);
   assert.deepEqual(fetesDu(jour(2027, 12, 24)).map((f) => f.id), ['noel']);
   assert.deepEqual(fetesDu(jour(2028, 1, 3)).map((f) => f.id), ['nouvelan']);
@@ -204,10 +205,10 @@ test('les éveils : Kael R → SR → SSR → UR → LR avec des médailles ; un
   const e = nouvelEtat(1);
   e.collection.kael_ssr = { eveil: 3, n: 1 };
   assert.equal(peutEveiller(e, 'kael_ssr'), false);
-  ajouterMedailles(e, { flamme: 25, legende: 2 });
+  ajouterMedailles(e, { m_kael: 35, legende: 2 });
   assert.equal(eveiller(e, 'kael_ssr'), 'kael_ssr_ur');
   assert.ok(!e.collection.kael_ssr && e.collection.kael_ssr_ur);
-  assert.equal(e.medailles.flamme, 0);
+  assert.equal(e.medailles.m_kael, 0);
   assert.ok(EVEILS.length > 10);
 });
 
@@ -221,10 +222,60 @@ test('le rang, l’endurance qui remonte avec le temps, le butin, la boîte à c
   let k = 0;
   const R = () => ((k = (k * 9301 + 49297) % 233280) / 233280);
   const b = butin(CHAPITRES[0].etapes[4].ennemis, 1, R);
-  assert.ok(b.medailles.legende >= 2 && b.medailles.roc > 0 && b.exp > 50);
+  assert.ok(b.orbes.roc > 0 && b.orbes.arc > 0 && b.exp > 50);
   const e = nouvelEtat(2);
   connexion(e, 100, { boite: true });
   assert.equal(e.jetons, 300, 'pas encore récupéré');
   const t = recupererCadeaux(e);
   assert.ok(t.jetons > 0 && e.jetons === 300 + t.jetons && e.boite.length === 0);
+});
+
+import { evenementDu } from '../public/shared/legendes/niveaux.js';
+
+test('les grandes fêtes : un mois, trois parties (chacune son nouveau LR) ; un événement court tous les 3 ou 4 jours', () => {
+  const nouveaux = [5, 15, 25].map((d) => portails(jour(2027, 11, d)).find((p) => p.fete === 'anniversaire'));
+  assert.deepEqual(nouveaux.map((p) => p.partie), [1, 2, 3]);
+  assert.deepEqual(nouveaux.map((p) => p.nouveaux), [['kael_anniv'], ['jumelles_lr'], ['neant_duo_lr']]);
+  assert.ok(nouveaux[2].pool.includes('kael_anniv') && nouveaux[2].type === 'garanti', 'le final reprend toute la fête');
+  assert.equal(portails(jour(2027, 7, 25)).find((p) => p.fete === 'ete').nouveaux[0], 'drax_ete_lr');
+  const ids = [];
+  for (let d = 0; d < 21; d++) ids.push(evenementDu(LANCEMENT + d).n);
+  const durees = Object.values(ids.reduce((t, n) => ({ ...t, [n]: (t[n] || 0) + 1 }), {}));
+  assert.ok(durees.every((n) => n === 3 || n === 4), JSON.stringify(durees));
+  assert.equal(ROTATION, 14);
+});
+
+import { arbre, bonusPotentiel, peutDebloquer, debloquer, ajouterOrbes, gagnerExpPerso, NIV_MAX } from '../public/shared/legendes/potentiel.js';
+import { EVENEMENTS_EVEIL, medaillesEveil } from '../public/shared/legendes/niveaux.js';
+import { cheminAuto } from '../public/shared/legendes/combat.js';
+
+test('l’arbre de potentiel : des routes selon la rareté, débloquées dans l’ordre avec des orbes ; les niveaux', () => {
+  assert.equal(arbre('kael_lr').length, 3);
+  assert.equal(arbre('kael_ssr').length, 2);
+  assert.equal(arbre('kael_sr').length, 1);
+  const e = nouvelEtat(1);
+  e.collection.kael_lr = { eveil: 0, n: 1 };
+  const [r1] = arbre('kael_lr');
+  assert.equal(peutDebloquer(e, 'kael_lr', r1[1].id), false, 'dans l’ordre');
+  ajouterOrbes(e, { flamme: 200, arc: 50 });
+  for (const n of r1) assert.ok(debloquer(e, 'kael_lr', n.id), n.id);
+  const b = bonusPotentiel('kael_lr', e.collection.kael_lr.pot);
+  assert.ok(b.atq > 0 && b.pv > 0 && b.critique > 0);
+  assert.ok(stats('kael_lr', 0, 1).atq < stats('kael_lr', 0, NIV_MAX.LR).atq * 0.6);
+  const entree = { niv: 1, xp: 0 };
+  assert.ok(gagnerExpPerso(entree, 'kael_lr', 5000) > 3);
+});
+
+test('les événements d’éveil : on bat le personnage pour ses médailles ; la liaison automatique des sphères', () => {
+  const ev = EVENEMENTS_EVEIL.find((x) => x.chaine.includes('kael_ssr'));
+  assert.equal(ev.niveaux.length, 3);
+  const m = medaillesEveil(ev, 2, () => 0.5);
+  assert.ok(m.m_kael >= 8);
+  const c = creerCombat({ equipe: equipe(['kael_ssr', 'ryo_ssr', 'mira_ssr']), ennemis: CHAPITRES[0].etapes[0].ennemis, graine: 1 });
+  for (let p = 0; p < 25; p++) {
+    const ch = cheminAuto(c, p);
+    assert.ok(cheminValide(ch), `chemin depuis ${p}`);
+    assert.equal(Math.floor(ch[ch.length - 1] / 5) >= Math.floor(p / 5), true);
+  }
+  assert.equal(Math.floor(cheminAuto(c, 2).slice(-1)[0] / 5), 4, 'il descend jusqu’à la dernière rangée');
 });

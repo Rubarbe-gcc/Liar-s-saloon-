@@ -19,6 +19,7 @@
  */
 
 import { PERSO, CYCLE, LIENS, avantage, stats } from './persos.js';
+import { bonusPotentiel } from './potentiel.js';
 
 export const KI_SUPER = 12, KI_ULTIME = 18, KI_MAX = 24;
 /**
@@ -60,8 +61,12 @@ const kiChef = (chef, id) => (chef && PERSO[id].categories.some((k) => PERSO[che
 export function creerCombat({ equipe, ennemis, graine = 1, ami = null }) {
   const chef = equipe[0].id;
   const membres = equipe.map((m) => {
-    const s = stats(m.id, m.eveil || 0), b = 1 + bonusChef(chef, m.id) + bonusChef(ami, m.id);
-    return { id: m.id, pv: Math.round(s.pv * b), atq: Math.round(s.atq * b), def: Math.round(s.def * b), ki: 0, cumulAtq: 0, cumulDef: 0, apresEsquive: 0 };
+    // Le niveau et l'arbre de potentiel (des statistiques en plus, et des capacités), puis le chef et l'ami.
+    const s = stats(m.id, m.eveil || 0, m.niv), p = bonusPotentiel(m.id, m.pot), b = 1 + bonusChef(chef, m.id) + bonusChef(ami, m.id);
+    return {
+      id: m.id, pv: Math.round((s.pv + p.pv) * b), atq: Math.round((s.atq + p.atq) * b), def: Math.round((s.def + p.def) * b), ki: 0, cumulAtq: 0, cumulDef: 0, apresEsquive: 0,
+      extra: { critique: p.critique, esquive: p.esquive, attAdd: p.attAdd, soin: p.soin },
+    };
   });
   const pvMax = membres.reduce((t, m) => t + m.pv, 0);
   const c = {
@@ -154,7 +159,7 @@ function frapper(c, i, k, type, f, ki, evs, add = false) {
     if (x.super.atqTour) atq *= 1 + x.super.atqTour;
   }
   const adv = avantage(x.element, e.element);
-  const crit = effets(m.id, 'critique').some((cr) => hasard(c) < cr.chance);
+  const crit = effets(m.id, 'critique').some((cr) => hasard(c) < cr.chance) || (m.extra?.critique > 0 && hasard(c) < m.extra.critique);
   if (e.esquive && !crit && hasard(c) < e.esquive) { evs.push({ type: 'esquiveEnnemi', qui: i, id: m.id, add }); return null; }
   const defE = crit ? 0 : e.def * (1 - e.defBaisse);
   const brut = atq * mult * (crit ? 1.6 : adv) * (0.95 + hasard(c) * 0.1);
@@ -216,6 +221,7 @@ export function jouerTour(c, chemin) {
   const arcs = chemin.filter((p) => c.spheres[p] === 'arc').length;
   // Le début du tour : les soins.
   let soin = Math.round(c.pvMax * 0.03 * arcs);
+  for (const i of rot) soin += Math.round(c.pvMax * (c.membres[i].extra?.soin || 0));
   for (const i of rot) for (const e of effets(c.membres[i].id, 'soin')) soin += Math.round(c.pvMax * e.taux);
   if (soin) { c.pv = Math.min(c.pvMax, c.pv + soin); evs.push({ type: 'debut', soin }); }
   const formes = rot.map((i, k) => forme(c, i, k, rot.length ? nSph : 0));
@@ -227,7 +233,7 @@ export function jouerTour(c, chemin) {
     const type = x.rarete === 'LR' && ki >= KI_ULTIME ? 'ultime' : ki >= KI_SUPER ? 'super' : 'attaque';
     frapper(c, i, k, type, formes[k], ki, evs);
     // Les attaques additionnelles.
-    for (const a of effets(m.id, 'attAdd')) if (!c.fin && hasard(c) < a.chance) frapper(c, i, k, hasard(c) < 0.5 ? 'super' : 'attaque', formes[k], ki, evs, true);
+    for (const a of [...effets(m.id, 'attAdd'), ...(m.extra?.attAdd ? [{ chance: m.extra.attAdd }] : [])]) if (!c.fin && hasard(c) < a.chance) frapper(c, i, k, hasard(c) < 0.5 ? 'super' : 'attaque', formes[k], ki, evs, true);
     for (const a of effets(m.id, 'superAdd')) if (!c.fin && type !== 'attaque' && hasard(c) < a.chance) frapper(c, i, k, 'super', formes[k], ki, evs, true);
     m.ki = 0;
   });
@@ -252,7 +258,7 @@ function riposte(c, rot, formes, evs) {
   for (const coup of coups) {
     if (c.fin) return;
     const i = coup.i, m = c.membres[i], x = PERSO[m.id], k = rot.indexOf(i);
-    const esq = effets(m.id, 'esquive').reduce((t, x2) => t + x2.chance, 0) + (m.esquiveTour || 0);
+    const esq = effets(m.id, 'esquive').reduce((t, x2) => t + x2.chance, 0) + (m.esquiveTour || 0) + (m.extra?.esquive || 0);
     if (esq && hasard(c) < esq) {
       evs.push({ type: 'esquive', cible: i });
       for (const ae of effets(m.id, 'apresEsquive')) m.apresEsquive = ae.atq;
@@ -319,3 +325,31 @@ export function meilleurChemin(c) {
 }
 /** Ancien nom. */
 export const meilleureCouleur = meilleurChemin;
+
+/**
+ * La liaison automatique (comme dans les grands gachas) : on touche une sphère, la ligne descend toute seule
+ * jusqu'à la rangée du bas (vers les combattants), de voisine en voisine, en restant sur la même couleur
+ * (ou un arc-en-ciel) tant qu'elle peut.
+ */
+export function cheminAuto(c, p) {
+  if (!Number.isInteger(p) || p < 0 || p >= NB_SPHERES) return [];
+  const couleur = c.spheres[p];
+  const ch = [p];
+  let cur = p;
+  while (Math.floor(cur / COLS) < LIGNES - 1) {
+    const lig = Math.floor(cur / COLS) + 1;
+    const cands = [];
+    for (let col = 0; col < COLS; col++) { const q = lig * COLS + col; if (voisines(cur, q)) cands.push(q); }
+    // D'abord la même couleur (ou un arc-en-ciel), puis tout droit en dessous.
+    const meme = cands.filter((q) => c.spheres[q] === couleur || c.spheres[q] === 'arc' || couleur === 'arc');
+    const choix = (meme.length ? meme : cands).sort((a, b) => Math.abs((a % COLS) - (cur % COLS)) - Math.abs((b % COLS) - (cur % COLS)))[0];
+    ch.push(choix);
+    cur = choix;
+  }
+  // Puis, sur la dernière rangée, les voisines de la même couleur à côté.
+  for (const d of [-1, 1]) {
+    let q = cur + d;
+    while (Math.floor(q / COLS) === LIGNES - 1 && q >= 0 && q < NB_SPHERES && !ch.includes(q) && c.spheres[q] === couleur) { ch.push(q); q += d; break; }
+  }
+  return cheminValide(ch) ? ch : [p];
+}
