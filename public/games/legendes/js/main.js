@@ -532,7 +532,7 @@ function rendreEnnemi() {
   $('monstre').innerHTML = (e.perso ? portrait(PERSO[e.perso], { taille: 220, fond: false, anime: true, enPied: true }) : ennemi(e, 220)) + '<div class="rocher"></div>';
   const PAYSAGES = {
     flamme: ['#ff7a3a', '#ffd8a0', '#8a3a1a', '#5a2410', '#c8603a'], tempete: ['#3a9ae0', '#c8ecff', '#5aa85a', '#2e7a3e', '#6aa0c0'],
-    roc: ['#d89a50', '#f6e2b8', '#b8884a', '#8a6030', '#a07a5a'], eclair: ['#4a4a9a', '#c8c0ff', '#4a7a5a', '#2a4a3a', '#6a6aa0'], maree: ['#2a8ae0', '#b8f0ff', '#e8d8a0', '#c8b070', '#5a90c0'],
+    roc: ['#4a9ae0', '#d8f0ff', '#c8955a', '#8a5a34', '#9a7a8a'], eclair: ['#4a4a9a', '#c8c0ff', '#4a7a5a', '#2a4a3a', '#6a6aa0'], maree: ['#2a8ae0', '#b8f0ff', '#e8d8a0', '#c8b070', '#5a90c0'],
   }[e.element];
   ['--ciel1', '--ciel2', '--colline1', '--colline2', '--monts'].forEach((v, k) => $('arene').style.setProperty(v, PAYSAGES[k]));
   majPv();
@@ -546,17 +546,16 @@ function majPv() {
 }
 
 /**
- * La place d'une sphère (en % du plateau) et sa taille : le plateau est vu en perspective, comme un chemin qui
- * part du héros (la rangée du bas, de grosses sphères, en bas à gauche) vers l'ennemi au loin (la rangée du haut,
- * de petites sphères, en haut à droite).
+ * La place d'une sphère (en % du plateau) et sa taille : une grille vue en perspective, à droite du héros
+ * (la rangée du bas, la plus proche, a les plus grosses sphères).
  */
 const placeSphere = (p) => {
+  // Une grille nette vue en perspective, posée au sol à droite du héros : la rangée du bas est la plus grande.
   const col = p % COLS, lig = Math.floor(p / COLS), t = lig / 4;
-  const cx = 76 - 14 * t, cy = 12 + 64 * t;
-  const large = 6 + 9.5 * t;
-  const decal = (col - 2 + (lig % 2 ? 0.35 : -0.35)) * large;
-  const j = (((p * 37) % 7) - 3) * 0.5;
-  return { x: cx + decal * 0.86 + j, y: cy + decal * 0.42 + (((p * 53) % 7) - 3) * 0.5, s: 0.45 + 0.6 * t };
+  const large = 7.6 + 5.4 * t;
+  const cx = 67 - 2 * t;
+  const decal = (col - 2 + (lig % 2 ? 0.25 : -0.25)) * large * 1.08;
+  return { x: cx + decal, y: 36 + 49 * (0.6 * t + 0.4 * t * t), s: large / 13.5 };
 };
 
 function montrerHeros(id) {

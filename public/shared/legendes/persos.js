@@ -20,7 +20,7 @@ import { creerPassif, creerChef, creerSuper } from './passifs.js';
 export const ELEMENTS = {
   flamme: { nom: 'Flamme', glyphe: '🔥', couleur: '#ff5a36' },
   tempete: { nom: 'Tempête', glyphe: '🌪️', couleur: '#36d39a' },
-  roc: { nom: 'Roc', glyphe: '⛰️', couleur: '#c8913a' },
+  roc: { nom: 'Roc', glyphe: '⛰️', couleur: '#a463ff' },
   eclair: { nom: 'Éclair', glyphe: '⚡', couleur: '#ffd23f' },
   maree: { nom: 'Marée', glyphe: '🌊', couleur: '#3a8dff' },
 };

@@ -587,3 +587,16 @@ canvas.particules { position: absolute; inset: 0; width: 100%; height: 100%; z-i
 .badge-cat.oui { box-shadow: inset 0 0 0 3px #fff, 0 0 14px #fff; }
 #b-badges { flex: none; padding: 7px 12px; border-radius: 18px; border: 0; background: linear-gradient(180deg, #8ad85a, #2e8a3e); font-weight: 800; white-space: nowrap; }
 .nom-annonce { display: block; text-align: center; margin-top: 4px; font: 900 .9em var(--titre); color: #ffd23f; }
+
+/* Les sphères : pleines, brillantes, posées au sol (une ombre dessous), sans flotter. */
+.sphere-p { background: radial-gradient(circle at 36% 30%, #fff 0 5%, color-mix(in srgb, var(--c) 30%, #fff) 13%, var(--c) 42%, color-mix(in srgb, var(--c) 55%, #000) 94%); border: 2px solid color-mix(in srgb, var(--c) 45%, #000); box-shadow: 0 7px 5px -3px rgba(0, 0, 0, .45), 0 0 10px color-mix(in srgb, var(--c) 60%, transparent); animation: arrive .35s cubic-bezier(.2, 1.4, .4, 1) backwards; filter: none; }
+.sphere-p::after { inset: 9% 22% 58% 22%; background: linear-gradient(180deg, rgba(255, 255, 255, .75), rgba(255, 255, 255, 0)); animation: none; }
+.sphere-p.arc { background: radial-gradient(circle at 36% 30%, #fff 0 6%, transparent 30%), conic-gradient(#ff4d6d, #ffd23f, #36d39a, #3ae0ff, #b06bff, #ff4d6d); border-color: #fff; animation: arrive .35s backwards, arc 2s linear infinite; }
+.sphere-p:not(.bas) { filter: none; }
+.sphere-p.bas { border-color: #fff; box-shadow: 0 7px 5px -3px rgba(0, 0, 0, .45), 0 0 14px #fff, 0 0 20px var(--c); animation: arrive .35s backwards, pulseBas 1.4s ease-in-out infinite; }
+.sphere-p.arc.bas { animation: arrive .35s backwards, arc 2s linear infinite, pulseBas 1.4s ease-in-out infinite; }
+@keyframes pulseBas { 50% { transform: scale(1.07); } }
+.sphere-p.descend { animation: descendre .35s cubic-bezier(.3, 1.3, .5, 1) backwards; }
+.sphere-p.bas.descend { animation: descendre .35s cubic-bezier(.3, 1.3, .5, 1) backwards, pulseBas 1.4s ease-in-out .35s infinite; }
+.sphere-p.prise { animation: none; transform: scale(1.18); }
+.heros { width: 40%; left: -6%; }
