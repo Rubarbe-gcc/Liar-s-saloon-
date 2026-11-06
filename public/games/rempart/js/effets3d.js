@@ -176,11 +176,13 @@ export function creerEffets(scene) {
     line.geometry.setDrawRange(0, k + 1);
     line.geometry.attributes.position.needsUpdate = true;
   }
-  function eclair(pts) {
+  function eclair(pts, { coeur = '#fffbe0', halo = '#ffd23f', ampl = 0.12, vie = 0.2 } = {}) {
     const s = eclairs.find(q => q.vie <= 0) || eclairs[0];
-    s.vie = 0.2; s.pts = pts;
+    Object.assign(s, { vie, vieMax: vie, pts, ampl });
+    s.coeur.material.color.set(coeur);
+    s.halo.material.color.set(halo);
     s.coeur.visible = s.halo.visible = true;
-    for (const q of pts.slice(1)) gerbe(q.x, q.y, q.z, { n: 6, couleurs: ['#fff6a8', '#ffd23f'], vitesse: 2.5, vie: 0.3, taille: 0.1 });
+    for (const q of pts.slice(1)) gerbe(q.x, q.y, q.z, { n: 6, couleurs: [coeur, halo], vitesse: 2.5, vie: 0.3, taille: 0.1 });
   }
 
   /* ----- lueurs (un petit nombre de lumières toujours présentes) */
@@ -218,9 +220,9 @@ export function creerEffets(scene) {
     for (const s of eclairs) {
       if (s.vie <= 0) continue;
       s.vie -= dt;
-      zigzag(s.coeur, s.pts, 0.12);
-      zigzag(s.halo, s.pts, 0.3);
-      s.coeur.material.opacity = s.halo.material.opacity = Math.max(0, s.vie / 0.2);
+      zigzag(s.coeur, s.pts, s.ampl);
+      zigzag(s.halo, s.pts, s.ampl * 2.5);
+      s.coeur.material.opacity = s.halo.material.opacity = Math.max(0, s.vie / s.vieMax);
       if (s.vie <= 0) s.coeur.visible = s.halo.visible = false;
     }
     for (const s of lueurs) {

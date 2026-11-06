@@ -505,7 +505,8 @@ export function creerMonde(canvas, { mobile = false } = {}) {
       let v = vuesTours.get(t.id);
       if (!v || v.niveau !== t.niveau) {
         const ancien = v;
-        const m = creerTour(t.type, t.niveau, TOURS[t.type].couleur);
+        const br = t.niveau === 4 ? TOURS[t.type].branches[t.branche] : null;
+        const m = creerTour(t.type, t.niveau, TOURS[t.type].couleur, br ? t.branche : null, br?.couleur);
         const s = socles[t.emp];
         m.groupe.position.set(t.x, s.y, t.z);
         if (ancien) { niveau.remove(ancien.m.groupe); m.apparition = 0.55; m.tete.rotation.y = ancien.m.tete.rotation.y; }
@@ -542,9 +543,10 @@ export function creerMonde(canvas, { mobile = false } = {}) {
       if (e.pv < v.pv - 0.01) v.m.flash = 1;
       v.pv = e.pv;
       const frein = e.ralenti * (1 - (e.def.resisteRalenti || 0));
-      animerEnnemi(v.m, temps, dt, { vitesse: (1 - frein) * (e.def.vitesse / 1.5), ralenti: e.ralentiT > 0 ? e.ralenti : 0 });
+      const cache = !e.revele;
+      animerEnnemi(v.m, temps, dt, { vitesse: e.etourdiT > 0 ? 0 : (1 - frein) * (e.def.vitesse / 1.5), ralenti: e.ralentiT > 0 ? e.ralenti : 0, cache, sous: e.sous, bouclier: e.bouclier });
       const r = e.pv / e.pvMax;
-      v.barre.visible = r < 0.999 && !demo;
+      v.barre.visible = r < 0.999 && !demo && !cache && !e.sous;
       if (v.barre.visible) {
         const { plein, largeur } = v.barre.userData;
         plein.scale.x = Math.max(0.001, largeur * r);
@@ -558,6 +560,10 @@ export function creerMonde(canvas, { mobile = false } = {}) {
         effets.gerbe(c.x, c.y + 0.3, c.z, { n: 1, couleurs: ['#3a3430'], vitesse: 0.3, haut: 2, vie: 1.6, taille: 0.45, croit: 2.5, additif: false, alpha: 0.6, frein: 0.6 });
       }
       if (e.ralentiT > 0 && Math.random() < dt * 8) effets.gerbe(x, y + 0.3, z, { n: 1, couleurs: ['#bff0ff'], vitesse: 0.4, vie: 0.5, taille: 0.08, grav: -0.5 });
+      // Le feu qui brûle, les étoiles d'un Rouilleux sonné, la terre d'un Fouisseur.
+      if (e.bruleT > 0 && !e.sous && Math.random() < dt * 22) effets.gerbe(x + (Math.random() - 0.5) * 0.3, y + 0.25, z + (Math.random() - 0.5) * 0.3, { n: 1, couleurs: ['#ffd23f', '#ff8a2a', '#ff4a1a'], vitesse: 0.3, vie: 0.45, taille: 0.16, grav: -2, croit: 0.3 });
+      if (e.etourdiT > 0 && Math.random() < dt * 12) { const a = temps * 8; effets.gerbe(x + Math.cos(a) * 0.25, y + v.m.haut + 0.1, z + Math.sin(a) * 0.25, { n: 1, couleurs: ['#fff6a8'], vitesse: 0.1, vie: 0.3, taille: 0.1 }); }
+      if (e.sous && Math.random() < dt * 10) effets.gerbe(x, 0.05, z, { n: 1, couleurs: ['#6a5040', '#8a7058'], vitesse: 0.8, haut: 1.5, vie: 0.6, taille: 0.1, grav: 6, additif: false, sol: true });
       if (e.def.boss && (!boss || e.pv > boss.pv)) boss = e;
     }
     for (const [id, v] of vuesEnnemis) if (!vues.has(id)) { niveau.remove(v.m.groupe); libererEnnemi(v.m); vuesEnnemis.delete(id); }
@@ -625,6 +631,37 @@ export function creerMonde(canvas, { mobile = false } = {}) {
           }
           break;
         }
+        case 'flamme': {
+          const v = vuesTours.get(e.tour);
+          if (v) v.m.recul = 1;
+          const n = 14;
+          for (let i = 0; i < n; i++) {
+            const u = i / n;
+            effets.gerbe(e.x0 + (e.x - e.x0) * u, e.y0 + (e.y - e.y0) * u + Math.sin(u * Math.PI) * 0.2, e.z0 + (e.z - e.z0) * u,
+              { n: 1, couleurs: u < 0.4 ? ['#fff2a8', '#ffd23f'] : ['#ffb347', '#ff6a1a', '#ff3a1a'], vitesse: 0.6, vie: 0.25 + u * 0.15, taille: 0.12 + u * 0.22, croit: 1.4 });
+          }
+          effets.gerbe(e.x, e.y, e.z, { n: 10, couleurs: ['#ffd23f', '#ff6a1a'], vitesse: 1.6 * e.rayon, vie: 0.35, taille: 0.18 });
+          effets.onde(e.x, e.air ? e.y : 0.08, e.z, { couleur: '#ff8a3a', r1: e.rayon, vie: 0.3, opacite: 0.6 });
+          effets.lueur(e.x, 0.6, e.z, '#ff7a2a', 3, 0.15);
+          break;
+        }
+        case 'traverse':
+          effets.eclair(e.pts, { coeur: '#f4e8ff', halo: '#b06cff', ampl: 0.02, vie: 0.25 });
+          break;
+        case 'aura':
+          effets.onde(e.x, 0.2, e.z, { couleur: '#bff4ff', r0: e.rayon * 0.3, r1: e.rayon, vie: 0.7, opacite: 0.35 });
+          effets.gerbe(e.x, 1.4, e.z, { n: 8, couleurs: ['#ffffff', '#dff8ff'], vitesse: e.rayon * 0.9, haut: 0.3, vie: 0.9, taille: 0.09, grav: 0.6, frein: 0.5 });
+          break;
+        case 'bouclier':
+          effets.onde(e.x, 0.15, e.z, { couleur: '#6ab8ff', r0: 0.2, r1: e.rayon, vie: 0.5, opacite: 0.6 });
+          break;
+        case 'bouclierBrise':
+          effets.gerbe(e.x, (e.y || 0) + 0.4, e.z, { n: 12, couleurs: ['#6ab8ff', '#cfe8ff'], vitesse: 2, vie: 0.4, taille: 0.1 });
+          break;
+        case 'fouit':
+          effets.gerbe(e.x, 0.1, e.z, { n: 14, couleurs: ['#6a5040', '#8a7058', '#4a3a2a'], vitesse: 1.8, haut: 2, vie: 0.8, taille: 0.12, grav: 8, additif: false, sol: true });
+          effets.gerbe(e.x, 0.2, e.z, { n: 5, couleurs: ['#8a7a68'], vitesse: 0.5, haut: 1, vie: 1, taille: 0.4, croit: 2, additif: false, alpha: 0.5 });
+          break;
         case 'explosion':
           effets.gerbe(e.x, 0.2, e.z, { n: 26, couleurs: ['#fff2a8', '#ffb347', '#ff6a2a', '#ff3a1a'], vitesse: 3.2 * e.rayon, haut: 1.4, vie: 0.5, taille: 0.3, frein: 0.05, croit: 0.3 });
           effets.gerbe(e.x, 0.3, e.z, { n: 10, couleurs: ['#6a625a', '#4a4440', '#8a8078'], vitesse: 1.2, haut: 1.2, vie: 1.3, taille: 0.45, croit: 2.2, additif: false, alpha: 0.75, frein: 0.4 });

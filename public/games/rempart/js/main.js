@@ -17,8 +17,8 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const mobile = matchMedia('(pointer: coarse)').matches;
 
-export const ICONES = { rodeur: '🪲', filou: '💨', cuirasse: '🛡️', bourdon: '🐝', grappe: '🫧', grappillon: '🫧', tisseur: '💚', broyeur: '⚙️', nuee: '👑' };
-const COULEUR_ENNEMI = { rodeur: '#a0522d', filou: '#c0703a', cuirasse: '#5b5f66', bourdon: '#d9a53a', grappe: '#5f9a6e', grappillon: '#6fb07e', tisseur: '#5b3a5a', broyeur: '#5a4a3e', nuee: '#3a2350' };
+export const ICONES = { rodeur: '🪲', filou: '💨', cuirasse: '🛡️', bourdon: '🐝', grappe: '🫧', grappillon: '🫧', tisseur: '💚', furtif: '👻', fouisseur: '🪱', pavois: '🔰', broyeur: '⚙️', nuee: '👑' };
+const COULEUR_ENNEMI = { rodeur: '#a0522d', filou: '#c0703a', cuirasse: '#5b5f66', bourdon: '#d9a53a', grappe: '#5f9a6e', grappillon: '#6fb07e', tisseur: '#5b3a5a', furtif: '#2a2440', fouisseur: '#7a5a3a', pavois: '#4a5a7a', broyeur: '#5a4a3e', nuee: '#3a2350' };
 const NOMS_SPECIAUX = { canons: 'Deux canons', zone: 'Gel en zone', brise: 'Brise-armure' };
 
 /* ------------------------------------------------------------ état */
@@ -106,18 +106,20 @@ function remplirCodex(onglet = 'tours') {
     c.innerHTML = ORDRE_TOURS.map(k => {
       const t = TOURS[k];
       const lieu = NIVEAUX.find(n => n.tours.includes(k));
-      const lignes = t.niveaux.map((s, i) => `<tr><td>${i + 1}</td><td>${s.cout} 🪙</td><td>${s.degats}</td><td>${s.cadence}</td><td>${s.portee}</td></tr>`).join('');
+      const lignes = t.niveaux.map((s, i) => `<tr><td>${i + 1}</td><td>${s.cout} 🪙</td><td>${t.soutien ? `+${Math.round(s.bonus * 100)} %` : s.degats}</td><td>${t.soutien ? '—' : s.cadence}</td><td>${s.portee}</td></tr>`).join('');
+      const branches = t.branches.map(b => `<li style="--c:${b.couleur}"><b>${b.nom}</b> · ${b.cout} 🪙 — ${b.desc}</li>`).join('');
       return `<article class="fiche">
         <header><span class="ico" style="--c:${t.couleur}">${t.icone}</span><div><h3>${t.nom}</h3><span class="role">${t.role}</span></div></header>
         <p>${t.desc}</p>
-        <div class="etiquettes"><span>${t.sol ? '✔' : '✘'} au sol</span><span>${t.air ? '✔' : '✘'} volants</span>${t.niveaux[2].special ? `<span>Niv. 3 : ${t.niveaux[2].special}</span>` : ''}<span>Dès « ${lieu.nom} »</span></div>
-        <table><tr><th>Niv.</th><th>Prix</th><th>Dégâts</th><th>Tirs/s</th><th>Portée</th></tr>${lignes}</table>
+        <div class="etiquettes">${t.soutien ? '<span>Soutien</span>' : `<span>${t.sol ? '✔' : '✘'} au sol</span><span>${t.air ? '✔' : '✘'} volants</span>`}${t.niveaux[2].special ? `<span>Niv. 3 : ${t.niveaux[2].special}</span>` : ''}<span>Dès « ${lieu.nom} »</span></div>
+        <table><tr><th>Niv.</th><th>Prix</th><th>${t.soutien ? 'Renfort' : 'Dégâts'}</th><th>Tirs/s</th><th>Portée</th></tr>${lignes}</table>
+        <p class="role">Niveau 4, au choix :</p><ul class="branches-codex">${branches}</ul>
       </article>`;
     }).join('');
   } else {
     c.innerHTML = ORDRE_ENNEMIS.map(k => {
       const e = ENNEMIS[k];
-      const tags = [`${e.pv} PV`, `vitesse ${e.vitesse}`, e.armure ? `armure ${e.armure}` : null, e.vole ? 'vole' : null, `${e.vies} vie${e.vies > 1 ? 's' : ''}`, `${e.or} 🪙`, e.boss ? 'BOSS' : null].filter(Boolean);
+      const tags = [`${e.pv} PV`, `vitesse ${e.vitesse}`, e.armure ? `armure ${e.armure}` : null, e.vole ? 'vole' : null, e.furtif ? 'invisible' : null, e.fouit ? 'sous terre' : null, e.bouclier ? 'bouclier' : null, `${e.vies} vie${e.vies > 1 ? 's' : ''}`, `${e.or} 🪙`, e.boss ? 'BOSS' : null].filter(Boolean);
       return `<article class="fiche">
         <header><span class="ico" style="--c:${COULEUR_ENNEMI[k]}">${ICONES[k]}</span><div><h3>${e.nom}</h3><span class="role">${e.boss ? 'Boss' : e.enfant ? 'Fragment' : 'Rouilleux'}</span></div></header>
         <p>${e.desc}</p>
@@ -316,52 +318,81 @@ function batir(type) {
   ouvrirTour(r.tour);
 }
 
+const pct = v => `${Math.round(v * 100)} %`;
+
+/** Les caractéristiques d'une tour, avec en vert ce que donne le niveau suivant. */
 function statsHTML(t) {
-  const def = TOURS[t.type], s = P.statsTour(t.type, t.niveau), n = t.niveau < 3 ? P.statsTour(t.type, t.niveau + 1) : null;
-  const plus = (k, fmt = v => v) => (n && n[k] !== s[k] ? `<em>→ ${fmt(n[k])}</em>` : '');
-  const lignes = [
-    ['Dégâts', s.degats, plus('degats')],
-    ['Tirs/s', s.cadence, plus('cadence')],
-    ['Portée', s.portee, plus('portee')],
-  ];
-  if (s.rayon) lignes.push(['Souffle', s.rayon, plus('rayon')]);
-  if (s.ralenti) lignes.push(['Ralenti', `${Math.round(s.ralenti * 100)} %`, plus('ralenti', v => `${Math.round(v * 100)} %`)]);
-  if (s.chaine) lignes.push(['Sauts', s.chaine, plus('chaine')]);
-  lignes.push(['Cibles', `${def.sol ? 'sol' : ''}${def.sol && def.air ? ' + ' : ''}${def.air ? 'air' : ''}`, '']);
+  const def = TOURS[t.type], s = P.statsDe(t), n = t.niveau < 3 ? P.statsTour(t.type, t.niveau + 1) : null;
+  const plus = (k, fmt = v => v) => (n && n[k] != null && n[k] !== s[k] ? `<em>→ ${fmt(n[k])}</em>` : '');
+  const lignes = [];
+  if (def.soutien) {
+    lignes.push(['Renfort', `+${pct(s.bonus)}`, plus('bonus', v => `+${pct(v)}`)]);
+    if (s.bonusCadence) lignes.push(['Cadence', `+${pct(s.bonusCadence)}`, '']);
+    if (s.orBonus) lignes.push(['Or', `+${s.orBonus} par Rouilleux`, '']);
+    lignes.push(['Portée', s.portee, plus('portee')]);
+    lignes.push(['Révèle', 'les Furtifs', '']);
+  } else {
+    lignes.push([s.aura ? 'Dégâts/s' : 'Dégâts', s.degats, plus('degats')]);
+    if (!s.aura) lignes.push(['Tirs/s', s.cadence, plus('cadence')]);
+    lignes.push(['Portée', s.portee, plus('portee')]);
+    if (s.rayon) lignes.push(['Souffle', s.rayon, plus('rayon')]);
+    if (s.brulure) lignes.push(['Brûlure', `${s.brulure}/s`, plus('brulure', v => `${v}/s`)]);
+    if (s.ralenti) lignes.push(['Ralenti', pct(s.ralenti), plus('ralenti', pct)]);
+    if (s.chaine > 1) lignes.push(['Sauts', s.chaine, plus('chaine')]);
+    if (s.etourdit) lignes.push(['Sonne', `${s.etourdit} s`, '']);
+    const air = s.air ?? def.air;
+    lignes.push(['Cibles', `${def.sol ? 'sol' : ''}${def.sol && air ? ' + ' : ''}${air ? 'air' : ''}`, '']);
+    if (t.renfort) lignes.push(['Phare', `+${pct(t.renfort)}`, '']);
+  }
   return `<div class="stats">${lignes.map(([a, b, c]) => `<div><span>${a}</span><b>${b}${c}</b></div>`).join('')}</div>`;
 }
 
+const etoilesTour = t => (t.niveau === 4 ? '★★★<span class="br">✦</span>' : `${'★'.repeat(t.niveau)}${'☆'.repeat(3 - t.niveau)}`);
+
 function ouvrirTour(t) {
   selection = { tour: t.id, emp: t.emp };
-  const def = TOURS[t.type];
-  monde.selectionner(t.emp, P.statsTour(t.type, t.niveau).portee, def.couleur);
+  const def = TOURS[t.type], s = P.statsDe(t), br = P.brancheDe(t);
+  monde.selectionner(t.emp, s.portee, br?.couleur || def.couleur);
   $('#astuce').hidden = true;
   $('#s-jeu').classList.add('panneau-ouvert');
   panneau.hidden = false;
   const cout = P.coutAmelioration(t);
   const prochain = t.niveau < 3 ? P.statsTour(t.type, t.niveau + 1) : null;
+  let haut = '';
+  if (br) haut = `<p class="special" style="color:${br.couleur}">✦ ${br.nom} : ${br.desc}</p>`;
+  else if (prochain?.special) haut = `<p class="special">Niveau 3 : ${prochain.special}</p>`;
+  else if (s.special) haut = `<p class="special">✦ ${s.special}</p>`;
+  // Au niveau 3, on choisit sa spécialisation.
+  const choix = t.niveau === 3 ? `<p class="choix-titre">Niveau 4 : choisissez une spécialisation</p><div class="branches">${def.branches.map((b, i) => `
+      <button class="branche" data-branche="${i}" style="--c:${b.couleur}"><b>${b.nom}</b><small>${b.desc}</small><span class="prix" data-prix="${b.cout}">${b.cout} 🪙</span></button>`).join('')}</div>` : '';
   panneau.innerHTML = `<header><span class="ico" style="--c:${def.couleur};width:36px;height:36px;border-radius:10px;display:grid;place-items:center;background:var(--c)">${def.icone}</span>
-      <h3>${def.nom} <span class="niv">${'★'.repeat(t.niveau)}${'☆'.repeat(3 - t.niveau)}</span></h3><button class="fermer" aria-label="Fermer">✕</button></header>
+      <h3>${br ? br.nom : def.nom} <span class="niv">${etoilesTour(t)}</span></h3><button class="fermer" aria-label="Fermer">✕</button></header>
     ${statsHTML(t)}
-    ${prochain?.special ? `<p class="special">Niveau 3 : ${prochain.special}</p>` : P.statsTour(t.type, t.niveau).special ? `<p class="special">✦ ${P.statsTour(t.type, t.niveau).special}</p>` : ''}
+    ${haut}
+    ${choix}
     <div class="actions">
-      <button class="btn or" id="b-ameliorer" ${cout == null ? 'disabled' : ''}><b>${cout == null ? 'Niveau max' : '⬆ Améliorer'}</b>${cout == null ? '' : `<small id="prix-amelio">${cout} 🪙</small>`}</button>
-      <button class="btn" id="b-vendre"><b>Vendre</b><small>+${P.valeurRevente(t)} 🪙</small></button>
-      <button class="btn fin cible" id="b-cible">🎯 Cible : ${P.NOMS_MODES[t.mode]}</button>
+      ${t.niveau < 3 ? `<button class="btn or" id="b-ameliorer"><b>⬆ Améliorer</b><small id="prix-amelio">${cout} 🪙</small></button>` : t.niveau === 4 ? '<button class="btn" disabled><b>Niveau max</b></button>' : ''}
+      <button class="btn" id="b-vendre" ${t.niveau === 3 ? 'style="grid-column:1 / -1"' : ''}><b>Vendre</b><small>+${P.valeurRevente(t)} 🪙</small></button>
+      ${def.soutien ? '' : `<button class="btn fin cible" id="b-cible">🎯 Cible : ${P.NOMS_MODES[t.mode]}</button>`}
     </div>`;
   panneau.querySelector('.fermer').onclick = () => { son.jouer('clic'); fermerPanneau(); };
-  $('#b-ameliorer').onclick = ameliorerSelection;
+  if ($('#b-ameliorer')) $('#b-ameliorer').onclick = () => ameliorerSelection();
+  for (const b of panneau.querySelectorAll('.branche')) {
+    b.onclick = () => ameliorerSelection(+b.dataset.branche);
+    b.addEventListener('pointerenter', () => monde.montrerPortee(t.x, t.z, def.branches[+b.dataset.branche].portee, def.branches[+b.dataset.branche].couleur));
+    b.addEventListener('pointerleave', () => monde.montrerPortee(t.x, t.z, s.portee, br?.couleur || def.couleur));
+  }
   $('#b-vendre').onclick = vendreSelection;
-  $('#b-cible').onclick = cibleSelection;
+  if ($('#b-cible')) $('#b-cible').onclick = cibleSelection;
   majPanneau();
 }
 
 function tourSelection() { return selection?.tour ? partie.tours.find(t => t.id === selection.tour) : null; }
 
-function ameliorerSelection() {
+function ameliorerSelection(branche = null) {
   const t = tourSelection();
-  if (!t) return;
-  const r = P.ameliorer(partie, t.id);
+  if (!t || (t.niveau === 3 && branche == null)) return;
+  const r = P.ameliorer(partie, t.id, branche);
   if (!r.ok) { son.jouer('refus'); if (r.raison === 'or') rejouerAnim($('#j-or'), 'choc'); return; }
   ouvrirTour(t);
 }
@@ -373,7 +404,7 @@ function vendreSelection() {
 }
 function cibleSelection() {
   const t = tourSelection();
-  if (!t) return;
+  if (!t || TOURS[t.type].soutien) return;
   P.changerCible(partie, t.id);
   son.jouer('clic');
   $('#b-cible').textContent = `🎯 Cible : ${P.NOMS_MODES[t.mode]}`;
@@ -385,6 +416,7 @@ function majPanneau() {
   const t = tourSelection();
   const prix = $('#prix-amelio');
   if (t && prix) prix.classList.toggle('cher-txt', partie.or < P.coutAmelioration(t));
+  for (const p of panneau.querySelectorAll('.branche .prix')) p.classList.toggle('cher-txt', partie.or < +p.dataset.prix);
 }
 
 function fermerPanneau() {
@@ -412,6 +444,10 @@ function traiter(evts) {
     switch (e.k) {
       case 'tir': son.jouer(SON_TIR[e.type]); break;
       case 'eclair': son.jouer('foudre'); break;
+      case 'flamme': son.jouer('flamme'); break;
+      case 'traverse': son.jouer('impactLourd'); break;
+      case 'bouclier': son.jouer('bouclier'); break;
+      case 'fouit': son.jouer('fouit'); break;
       case 'explosion': son.jouer('explosion'); break;
       case 'gel': son.jouer('gel'); break;
       case 'impact': if (e.p === 'trait' || e.blinde) son.jouer(e.p === 'trait' ? 'impactLourd' : 'ting'); break;
@@ -522,7 +558,7 @@ addEventListener('keydown', e => {
   if (k === 'escape') { if (selection) fermerPanneau(); else basculerPause(true); return; }
   if (k === 'f') { basculerVitesse(); return; }
   if (k === 'n' || k === 'enter') { e.preventDefault(); lancerVague(); return; }
-  if (/^[1-5]$/.test(k) && selection && !selection.tour) { batir(ORDRE_TOURS[+k - 1]); return; }
+  if (/^[1-7]$/.test(k) && selection && !selection.tour) { batir(ORDRE_TOURS[+k - 1]); return; }
   if (k === 'u') ameliorerSelection();
   if (k === 'x' || k === 'delete' || k === 'backspace') vendreSelection();
   if (k === 't') cibleSelection();

@@ -195,7 +195,7 @@ kbd{display:inline-block;padding:1px 6px;border-radius:6px;background:rgba(255,2
 .panneau header h3{font-family:var(--f-titre);font-size:1.1rem;flex:1;}
 .panneau header .niv{font-size:.8rem;color:var(--or);}
 .fermer{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.08);font-size:1rem;}
-.choix-tours{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;}
+.choix-tours{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
 .carte-tour{
   display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;border-radius:12px;background:rgba(255,255,255,.05);
   border:1px solid rgba(255,255,255,.08);transition:transform .1s,background .1s;position:relative;
@@ -219,6 +219,16 @@ kbd{display:inline-block;padding:1px 6px;border-radius:6px;background:rgba(255,2
 .actions .btn b{font-size:.92rem;}
 .actions .cible{grid-column:1 / -1;}
 .cher-txt{color:var(--rouge)!important;}
+.niv .br{color:#fff;text-shadow:0 0 8px var(--or);margin-left:2px;}
+.choix-titre{font-size:.8rem;color:var(--or);margin:2px 0 6px;font-weight:700;}
+.branches{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;}
+.branche{display:flex;flex-direction:column;gap:3px;text-align:left;padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid var(--c);box-shadow:inset 0 0 14px color-mix(in srgb,var(--c) 22%,transparent);transition:transform .1s,background .1s;}
+.branche:hover{background:rgba(255,255,255,.1);transform:translateY(-2px);}
+.branche b{color:var(--c);font-size:.9rem;}
+.branche small{font-size:.72rem;color:var(--pale);line-height:1.3;}
+.branche .prix{font-size:.8rem;font-weight:800;color:var(--or);}
+.branches-codex{list-style:none;display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--pale);}
+.branches-codex b{color:var(--c);}
 
 /* ---------------------------------------------------------- bulles d'or */
 .bulles{position:fixed;inset:0;overflow:hidden;}

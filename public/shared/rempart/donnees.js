@@ -8,6 +8,7 @@
 /**
  * Les tours. Chaque tour a trois niveaux ; `cout` est le prix pour atteindre
  * ce niveau (construire = niveau 1). `air` / `sol` : ce qu'elle peut viser.
+ * Au niveau 4, on choisit une des deux `branches` (spécialisations).
  */
 export const TOURS = {
   rafale: {
@@ -20,6 +21,10 @@ export const TOURS = {
       { cout: 75, degats: 14, cadence: 3.2, portee: 3.0 },
       { cout: 130, degats: 12, cadence: 3.6, portee: 3.3, canons: 2, special: 'Deux canons' },
     ],
+    branches: [
+      { id: 'mitrailleuse', nom: 'Mitrailleuse', couleur: '#ffcf3c', desc: 'Trois canons qui crachent sans s’arrêter.', cout: 280, degats: 13, cadence: 5.6, portee: 3.4, canons: 3 },
+      { id: 'elite', nom: 'Tireur d’élite', couleur: '#ff5a3c', desc: 'Un seul tir, de très loin, qui fait très mal.', cout: 260, degats: 100, cadence: 1.1, portee: 5.4 },
+    ],
   },
   mortier: {
     nom: 'Mortier', icone: '💣', couleur: '#d2553a',
@@ -30,6 +35,10 @@ export const TOURS = {
       { cout: 90, degats: 27, cadence: 0.55, portee: 3.4, rayon: 1.0 },
       { cout: 105, degats: 46, cadence: 0.62, portee: 3.8, rayon: 1.2 },
       { cout: 170, degats: 72, cadence: 0.7, portee: 4.2, rayon: 1.5, special: 'Grand souffle' },
+    ],
+    branches: [
+      { id: 'bombarde', nom: 'Bombarde', couleur: '#ff7a2a', desc: 'Des obus énormes, un souffle immense.', cout: 300, degats: 150, cadence: 0.6, portee: 4.6, rayon: 1.9 },
+      { id: 'sismique', nom: 'Sismique', couleur: '#c8a46a', desc: 'Chaque obus fait trembler le sol et sonne les Rouilleux.', cout: 270, degats: 85, cadence: 0.8, portee: 4.2, rayon: 1.6, etourdit: 0.7 },
     ],
   },
   givre: {
@@ -42,6 +51,10 @@ export const TOURS = {
       { cout: 80, degats: 9, cadence: 1.4, portee: 2.8, ralenti: 0.5, duree: 2.0 },
       { cout: 125, degats: 14, cadence: 1.6, portee: 3.1, ralenti: 0.6, duree: 2.5, zone: 1.1, special: 'Gel en zone' },
     ],
+    branches: [
+      { id: 'blizzard', nom: 'Blizzard', couleur: '#bff4ff', desc: 'Une tempête de neige permanente : tout ce qui passe autour est ralenti.', cout: 260, degats: 12, cadence: 0, portee: 3.0, ralenti: 0.55, duree: 0.4, aura: true },
+      { id: 'glace', nom: 'Cœur de glace', couleur: '#3aa8ff', desc: 'Des éclats qui figent net les Rouilleux un instant.', cout: 270, degats: 40, cadence: 1.4, portee: 3.4, ralenti: 0.65, duree: 2.5, zone: 1.3, etourdit: 0.8 },
+    ],
   },
   perce: {
     nom: 'Perce-Acier', icone: '🗡️', couleur: '#b06cff',
@@ -52,6 +65,10 @@ export const TOURS = {
       { cout: 110, degats: 60, cadence: 0.6, portee: 3.3 },
       { cout: 130, degats: 100, cadence: 0.66, portee: 3.7 },
       { cout: 210, degats: 160, cadence: 0.75, portee: 4.1, brise: 3, special: 'Brise-armure' },
+    ],
+    branches: [
+      { id: 'baliste', nom: 'Baliste', couleur: '#d9a8ff', desc: 'Un carreau qui traverse toute une file de Rouilleux.', cout: 290, degats: 180, cadence: 0.8, portee: 4.8, brise: 3, traverse: true },
+      { id: 'briseur', nom: 'Briseur', couleur: '#7a3cff', desc: 'Un coup monstrueux qui arrache l’armure.', cout: 300, degats: 330, cadence: 0.7, portee: 4.4, brise: 8 },
     ],
   },
   foudre: {
@@ -64,10 +81,44 @@ export const TOURS = {
       { cout: 140, degats: 27, cadence: 1.0, portee: 3.2, chaine: 4 },
       { cout: 210, degats: 38, cadence: 1.1, portee: 3.5, chaine: 6, special: 'Six sauts' },
     ],
+    branches: [
+      { id: 'tempete', nom: 'Tempête', couleur: '#fff6a8', desc: 'Un éclair qui saute dix fois, et plus loin.', cout: 290, degats: 42, cadence: 1.3, portee: 3.8, chaine: 10, saut: 2.6 },
+      { id: 'surcharge', nom: 'Surcharge', couleur: '#ffb020', desc: 'Toute la foudre sur une seule cible, qui reste sonnée.', cout: 280, degats: 230, cadence: 0.8, portee: 3.6, chaine: 1, etourdit: 0.6 },
+    ],
+  },
+  braise: {
+    nom: 'Braise', icone: '🔥', couleur: '#ff6a1a',
+    role: 'Brûlure',
+    desc: 'Un jet de flammes à courte portée. Le feu continue de brûler et passe sous les armures.',
+    air: false, sol: true, projectile: 'flamme',
+    niveaux: [
+      { cout: 90, degats: 8, cadence: 1.5, portee: 2.0, rayon: 0.7, brulure: 10, duree: 2 },
+      { cout: 100, degats: 12, cadence: 1.6, portee: 2.2, rayon: 0.8, brulure: 18, duree: 2.5 },
+      { cout: 160, degats: 18, cadence: 1.8, portee: 2.4, rayon: 1.0, brulure: 30, duree: 3, special: 'Feu tenace' },
+    ],
+    branches: [
+      { id: 'fournaise', nom: 'Fournaise', couleur: '#ff3a1a', desc: 'Un feu si chaud qu’il fond le métal.', cout: 270, degats: 25, cadence: 1.8, portee: 2.5, rayon: 1.0, brulure: 75, duree: 3.5 },
+      { id: 'dragon', nom: 'Souffle de dragon', couleur: '#ffb347', desc: 'Un souffle long et large, qui brûle aussi les volants.', cout: 260, degats: 30, cadence: 2.0, portee: 3.2, rayon: 1.6, brulure: 35, duree: 3, air: true },
+    ],
+  },
+  phare: {
+    nom: 'Phare', icone: '🗼', couleur: '#fff0b0',
+    role: 'Soutien',
+    desc: 'Ne tire pas. Sa lumière renforce les tours voisines et révèle les Furtifs.',
+    air: false, sol: false, soutien: true,
+    niveaux: [
+      { cout: 110, portee: 3.0, bonus: 0.15 },
+      { cout: 130, portee: 3.4, bonus: 0.25 },
+      { cout: 190, portee: 3.8, bonus: 0.35, bonusCadence: 0.1, special: 'Lumière vive' },
+    ],
+    branches: [
+      { id: 'fanal', nom: 'Fanal de guerre', couleur: '#ff9a3c', desc: 'Les tours voisines frappent bien plus fort et plus vite.', cout: 260, portee: 4.2, bonus: 0.5, bonusCadence: 0.2 },
+      { id: 'marchand', nom: 'Phare marchand', couleur: '#ffd84d', desc: 'Chaque Rouilleux détruit dans sa lumière rapporte 2 pièces de plus.', cout: 240, portee: 4.0, bonus: 0.3, orBonus: 2 },
+    ],
   },
 };
 
-export const ORDRE_TOURS = ['rafale', 'mortier', 'givre', 'perce', 'foudre'];
+export const ORDRE_TOURS = ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare'];
 
 /** Part du prix rendue à la vente. */
 export const REVENTE = 0.7;
@@ -118,9 +169,23 @@ export const ENNEMIS = {
     pv: 1400, vitesse: 0.65, armure: 2, or: 200, vies: 8, taille: 1.0, vole: true,
     boss: true, resisteRalenti: 0.5, ponte: { type: 'bourdon', n: 2, toutes: 4.5 },
   },
+  furtif: {
+    nom: 'Furtif', desc: 'Invisible pour les tours, sauf dans la lumière d’un Phare. Les explosions et les flammes le touchent quand même.',
+    pv: 50, vitesse: 1.5, armure: 0, or: 9, vies: 1, taille: 0.42, furtif: true,
+  },
+  fouisseur: {
+    nom: 'Fouisseur', desc: 'Il s’enfouit sous terre par moments : rien ne peut le toucher tant qu’il est dessous.',
+    pv: 110, vitesse: 1.15, armure: 2, or: 10, vies: 1, taille: 0.5,
+    fouit: { toutes: 4, duree: 1.6, vitesse: 1.6 },
+  },
+  pavois: {
+    nom: 'Pavois', desc: 'Il couvre ses voisins d’un bouclier d’énergie qui encaisse les coups.',
+    pv: 140, vitesse: 1.0, armure: 3, or: 14, vies: 2, taille: 0.55,
+    bouclier: { pv: 30, rayon: 1.5, toutes: 6 },
+  },
 };
 
-export const ORDRE_ENNEMIS = ['rodeur', 'filou', 'cuirasse', 'bourdon', 'grappe', 'grappillon', 'tisseur', 'broyeur', 'nuee'];
+export const ORDRE_ENNEMIS = ['rodeur', 'filou', 'cuirasse', 'bourdon', 'grappe', 'grappillon', 'tisseur', 'furtif', 'fouisseur', 'pavois', 'broyeur', 'nuee'];
 
 /** Hauteur de vol (en cases). */
 export const ALTITUDE = 1.6;

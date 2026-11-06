@@ -77,6 +77,9 @@ const SONS = {
   perce: () => { ton(900, 0.18, { type: 'sawtooth', vol: 0.06, vers: 160, filtre: 2500 }); souffle(0.12, { vol: 0.1, f: 2000, type: 'bandpass', q: 2 }); },
   impactLourd: () => ton(180, 0.12, { type: 'square', vol: 0.06, vers: 90, filtre: 900 }),
   foudre: () => { souffle(0.22, { vol: 0.2, f: 2500, type: 'bandpass', q: 0.7 }); ton(120, 0.2, { type: 'sawtooth', vol: 0.06, vers: 60, filtre: 1600 }); },
+  flamme: () => { souffle(0.35, { vol: 0.16, f: 700, vers: 1800, q: 0.5 }); souffle(0.25, { vol: 0.06, f: 3000, type: 'highpass' }); },
+  bouclier: () => { ton(880, 0.35, { type: 'sine', vol: 0.04, vers: 1320 }); ton(1320, 0.3, { type: 'sine', vol: 0.03, t0: 0.05 }); },
+  fouit: () => { souffle(0.4, { vol: 0.12, f: 300, vers: 120 }); ton(90, 0.3, { type: 'triangle', vol: 0.06, vers: 50 }); },
   ting: () => ton(1400, 0.05, { type: 'triangle', vol: 0.03 }),
   mort: () => { ton(320 + Math.random() * 120, 0.12, { type: 'triangle', vol: 0.08, vers: 90 }); souffle(0.1, { vol: 0.06, f: 1500 }); },
   piece: () => { ton(1320, 0.08, { type: 'triangle', vol: 0.05 }); ton(1760, 0.12, { type: 'triangle', vol: 0.05, t0: 0.05 }); },
@@ -96,7 +99,7 @@ const SONS = {
 };
 
 /** Délai minimal entre deux lectures du même son (en secondes). */
-const ECART = { rafale: 0.06, mortier: 0.1, explosion: 0.08, givre: 0.08, gel: 0.1, perce: 0.08, foudre: 0.08, ting: 0.05, mort: 0.04, piece: 0.07, soin: 0.3, impactLourd: 0.07 };
+const ECART = { flamme: 0.12, bouclier: 0.3, fouit: 0.2, rafale: 0.06, mortier: 0.1, explosion: 0.08, givre: 0.08, gel: 0.1, perce: 0.08, foudre: 0.08, ting: 0.05, mort: 0.04, piece: 0.07, soin: 0.3, impactLourd: 0.07 };
 
 export function jouer(nom) {
   if (!reglages.son || muet || !SONS[nom] || !ac()) return;

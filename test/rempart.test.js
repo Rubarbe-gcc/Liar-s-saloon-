@@ -53,15 +53,18 @@ test('une carte mal dessinée est refusée', () => {
   assert.throws(() => P.analyserCarte(carte), /orpheline/);
 });
 
-test('trois premiers niveaux : toutes les tours et tous les ennemis, boss compris', () => {
-  const premiers = NIVEAUX.slice(0, 3);
-  const tours = new Set(premiers.flatMap(n => n.tours));
+test('la campagne : toutes les tours et tous les ennemis ; les trois premiers lieux ont les cinq tours de base et les deux boss', () => {
+  const tours = new Set(NIVEAUX.flatMap(n => n.tours));
   for (const t of ORDRE_TOURS) assert.ok(tours.has(t), t);
-  const ennemis = new Set(premiers.flatMap(n => n.vagues.flat().map(g => g.type)));
-  for (const [ty, def] of Object.entries(ENNEMIS)) {
-    if (def.enfant) continue;
-    assert.ok(ennemis.has(ty), ty);
-  }
+  const ennemis = new Set(NIVEAUX.flatMap(n => n.vagues.flat().map(g => g.type)));
+  for (const [ty, def] of Object.entries(ENNEMIS)) if (!def.enfant) assert.ok(ennemis.has(ty), ty);
+  const premiers = NIVEAUX.slice(0, 3);
+  for (const t of ['rafale', 'mortier', 'givre', 'perce', 'foudre']) assert.ok(premiers.some(n => n.tours.includes(t)), t);
+  for (const b of ['broyeur', 'nuee']) assert.ok(premiers.some(n => n.vagues.flat().some(g => g.type === b)), b);
+  // Pas de Furtif avant qu'on puisse bâtir un Phare.
+  for (const n of NIVEAUX) if (n.vagues.flat().some(g => ENNEMIS[g.type].furtif)) assert.ok(n.tours.includes('phare'), n.nom);
+  // Chaque tour a deux spécialisations.
+  for (const t of ORDRE_TOURS) assert.equal(TOURS[t].branches.length, 2, t);
 });
 
 test('construire, améliorer, vendre : l’or est juste', () => {
@@ -79,7 +82,20 @@ test('construire, améliorer, vendre : l’or est juste', () => {
   assert.equal(P.ameliorer(p, r.tour.id).raison, 'or');
   p.or = 1000;
   P.ameliorer(p, r.tour.id);
-  assert.equal(P.ameliorer(p, r.tour.id).raison, 'max');
+  assert.equal(r.tour.niveau, 3);
+  assert.equal(P.ameliorer(p, r.tour.id).raison, 'branche', 'au niveau 3, il faut choisir');
+  const orAvant = p.or;
+  assert.ok(P.ameliorer(p, r.tour.id, 1).ok);
+  assert.equal(r.tour.niveau, 4);
+  assert.equal(p.or, orAvant - TOURS.rafale.branches[1].cout);
+  assert.equal(P.statsDe(r.tour).portee, TOURS.rafale.branches[1].portee);
+  assert.equal(P.ameliorer(p, r.tour.id, 0).raison, 'max');
+  p.or = 1000;
+  P.vendre(p, r.tour.id);
+  P.construire(p, 0, 'rafale');
+  r.tour = p.tours[0];
+  P.ameliorer(p, r.tour.id);
+  P.ameliorer(p, r.tour.id);
   const avant = p.or;
   const v = P.vendre(p, r.tour.id);
   assert.equal(v.or, Math.floor((60 + 75 + 130) * 0.7));
@@ -199,4 +215,125 @@ test('équilibre : un joueur raisonnable gagne chaque niveau, un joueur paresseu
     const rafales = jouer(n.id, { types: ['rafale'], maxTours: 5 });
     assert.ok(P.etoiles(rafales) <= 1, `${n.nom} : cinq Rafales suffisent`);
   }
+});
+
+/** Une partie vide (aucune vague prévue) où l'on pose ce qu'on veut. */
+function bac(id = 6) {
+  const p = P.creerPartie(id);
+  p.phase = 'jeu';
+  p.vague = p.totalVagues;
+  p.or = 10000;
+  return p;
+}
+const ajouter = (p, type, d = 4) => { p.file.push({ t: 0, type, depart: 0, vague: 0 }); P.pas(p); const e = p.ennemis[p.ennemis.length - 1]; e.d = d; return e; };
+const pres = (p, e) => p.carte.emplacements.reduce((a, b) => (Math.hypot(a.x - e.x, a.z - e.z) <= Math.hypot(b.x - e.x, b.z - e.z) ? a : b));
+
+test('le Furtif : invisible pour les tours, sauf dans la lumière d’un Phare', () => {
+  const p = bac();
+  const e = ajouter(p, 'furtif', 6);
+  P.pas(p);
+  const emp = pres(p, e);
+  const t = P.construire(p, emp.id, 'rafale').tour;
+  for (let i = 0; i < 10; i++) P.pas(p);
+  assert.equal(t.tirs, 0, 'sans Phare, la Rafale ne le voit pas');
+  const autre = p.carte.emplacements.filter(m => m.id !== emp.id).reduce((a, b) => (Math.hypot(a.x - e.x, a.z - e.z) <= Math.hypot(b.x - e.x, b.z - e.z) ? a : b));
+  P.construire(p, autre.id, 'phare');
+  for (let i = 0; i < 10; i++) P.pas(p);
+  assert.ok(t.tirs > 0, 'dans la lumière, elle tire');
+});
+
+test('le Phare renforce les tours voisines', () => {
+  const tirer = avecPhare => {
+    const p = bac();
+    const e = ajouter(p, 'cuirasse', 6);
+    e.pv = e.pvMax = 1e6;
+    P.pas(p);
+    const emp = pres(p, e);
+    const t = P.construire(p, emp.id, 'perce').tour;
+    if (avecPhare) {
+      const autre = p.carte.emplacements.filter(m => m.id !== emp.id).reduce((a, b) => (Math.hypot(a.x - emp.x, a.z - emp.z) <= Math.hypot(b.x - emp.x, b.z - emp.z) ? a : b));
+      P.construire(p, autre.id, 'phare');
+    }
+    for (let i = 0; i < 60; i++) { e.d = 6; P.pas(p); }
+    return t.degats / Math.max(1, t.tirs);
+  };
+  const sans = tirer(false), avec = tirer(true);
+  assert.ok(avec > sans * 1.1, `${sans} → ${avec}`);
+});
+
+test('le Fouisseur ne prend aucun coup sous terre', () => {
+  const p = bac();
+  const e = ajouter(p, 'fouisseur');
+  e.fouitT = 0.01;
+  P.pas(p);
+  assert.ok(e.sous);
+  const pv = e.pv;
+  e.bruleT = 1; e.brule = 1000;
+  P.pas(p);
+  assert.equal(e.pv, pv, 'même le feu ne l’atteint pas');
+  for (let i = 0; i < 60; i++) P.pas(p);
+  assert.equal(e.sous, false, 'il ressort');
+});
+
+test('le Pavois donne un bouclier qui encaisse avant les PV', () => {
+  const p = bac();
+  const pav = ajouter(p, 'pavois', 5);
+  const voisin = ajouter(p, 'rodeur', 5.3);
+  P.pas(p);
+  pav.bouclierT = 0.01;
+  P.pas(p);
+  assert.ok(voisin.bouclier > 0);
+  const pv = voisin.pv, b = voisin.bouclier;
+  voisin.bruleT = P.DT * 1.5; voisin.brule = 10 / P.DT; // ~10 dégâts d'un coup
+  P.pas(p);
+  assert.equal(voisin.pv, pv);
+  assert.ok(voisin.bouclier < b);
+});
+
+test('la Braise met le feu, et le feu passe sous l’armure', () => {
+  const p = bac();
+  const e = ajouter(p, 'cuirasse', 6);
+  e.pv = e.pvMax = 1e6;
+  P.pas(p);
+  const t = P.construire(p, pres(p, e).id, 'braise').tour;
+  for (let i = 0; i < 40 && !t.tirs; i++) { e.d = 6; P.pas(p); }
+  assert.ok(t.tirs > 0);
+  assert.ok(e.bruleT > 0 && e.brule === TOURS.braise.niveaux[0].brulure);
+  const pv = e.pv;
+  t.recharge = 100;
+  for (let i = 0; i < 30; i++) { e.d = 6; P.pas(p); }
+  assert.ok(pv - e.pv > TOURS.braise.niveaux[0].brulure * 0.9, 'une seconde de brûlure entière, malgré 6 d’armure');
+});
+
+test('spécialisations : la Baliste traverse, le Blizzard ralentit tout, la Surcharge sonne', () => {
+  // Baliste : plusieurs Rouilleux alignés prennent le carreau.
+  let p = bac();
+  const file = [5, 5.3, 5.6].map(d => ajouter(p, 'rodeur', d));
+  for (const e of file) e.pv = e.pvMax = 1e6;
+  P.pas(p);
+  let t = P.construire(p, pres(p, file[1]).id, 'perce').tour;
+  Object.assign(t, { niveau: 4, branche: 0, recharge: 0 });
+  for (let i = 0; i < 3; i++) P.pas(p);
+  assert.ok(file.filter(e => e.pv < e.pvMax).length >= 2, 'au moins deux touchés d’un coup');
+  // Blizzard : tout ce qui est à portée ralentit, sans tir.
+  p = bac();
+  const a = ajouter(p, 'rodeur', 6), b = ajouter(p, 'filou', 6.4);
+  P.pas(p);
+  t = P.construire(p, pres(p, a).id, 'givre').tour;
+  Object.assign(t, { niveau: 4, branche: 0 });
+  P.pas(p);
+  assert.ok(a.ralenti > 0 && b.ralenti > 0);
+  assert.equal(t.tirs, 0);
+  // Surcharge : la cible reste sonnée.
+  p = bac();
+  const c = ajouter(p, 'cuirasse', 6);
+  c.pv = c.pvMax = 1e6;
+  P.pas(p);
+  t = P.construire(p, pres(p, c).id, 'foudre').tour;
+  Object.assign(t, { niveau: 4, branche: 1, recharge: 0 });
+  for (let i = 0; i < 3; i++) { c.d = 6; P.pas(p); }
+  assert.ok(c.etourdiT > 0);
+  const d0 = c.d;
+  P.pas(p);
+  assert.equal(c.d, d0, 'sonné, il ne bouge plus');
 });

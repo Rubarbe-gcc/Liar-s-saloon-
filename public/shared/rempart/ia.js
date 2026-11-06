@@ -26,7 +26,7 @@ export function couverture(carte, emp, portee = 3) {
   return { sol, air };
 }
 
-const PLAN = ['rafale', 'mortier', 'givre', 'perce', 'rafale', 'foudre', 'mortier', 'perce', 'foudre', 'givre', 'rafale', 'mortier', 'perce', 'foudre'];
+const PLAN = ['rafale', 'mortier', 'givre', 'perce', 'rafale', 'foudre', 'braise', 'mortier', 'perce', 'foudre', 'givre', 'rafale', 'braise', 'mortier', 'perce', 'foudre'];
 
 /**
  * @param {object} p  la partie
@@ -40,7 +40,20 @@ export function creerIA(p, { types = null, maxTours = Infinity, ameliore = true,
   const permis = (types || p.def.tours).filter(t => p.def.tours.includes(t));
   const plan = PLAN.filter(t => permis.includes(t));
   const scores = p.carte.emplacements.map(emp => ({ emp, ...couverture(p.carte, emp) }));
-  return { plan: plan.length ? plan : permis, maxTours, ameliore, appelle, scores, k: 0, n: 0, attente: 0 };
+  return { plan: plan.length ? plan : permis, permis, maxTours, ameliore, appelle, scores, k: 0, n: 0, attente: 0 };
+}
+
+/** Les bouts de chemin qu'un Phare posé là éclairerait et qui sont encore dans le noir. */
+function lumiereUtile(p, emp, portee = 3) {
+  const phares = p.tours.filter(t => TOURS[t.type].soutien);
+  let n = 0;
+  for (const ch of p.carte.chemins) for (let d = 0; d < ch.total; d += 0.25) {
+    const q = surChemin(ch, d);
+    if ((q.x - emp.x) ** 2 + (q.z - emp.z) ** 2 > portee * portee) continue;
+    if (phares.some(ph => (q.x - ph.x) ** 2 + (q.z - ph.z) ** 2 <= 3 * 3)) continue;
+    n++;
+  }
+  return n;
 }
 
 function meilleurEmplacement(p, ia, type) {
@@ -48,7 +61,9 @@ function meilleurEmplacement(p, ia, type) {
   const libres = ia.scores.filter(s => !p.tours.some(t => t.emp === s.emp.id));
   let best = null, v = -1;
   for (const s of libres) {
-    const val = (def.sol ? s.sol : 0) + (def.air ? s.air * 0.8 : 0);
+    // Un Phare se pose là où il éclaire le chemin et le plus de tours.
+    const voisines = def.soutien ? p.tours.filter(t => (t.x - s.emp.x) ** 2 + (t.z - s.emp.z) ** 2 <= 2.6 ** 2).length : 0;
+    const val = def.soutien ? lumiereUtile(p, s.emp) + voisines * 4 : (def.sol ? s.sol : 0) + (def.air ? s.air * 0.8 : 0);
     if (val > v) { v = val; best = s.emp; }
   }
   return best;
@@ -62,10 +77,18 @@ export function jouerIA(p, ia) {
   if (p.phase === 'preparation' && p.tours.length >= 2) { lancerVague(p); return; }
   if (ia.appelle && p.compte != null && p.compte < 10 && p.ennemis.length === 0) lancerVague(p);
 
-  // Au début, il construit ; ensuite, il alterne une tour neuve et une amélioration.
   const nb = p.tours.length;
+  // Des Furtifs arrivent bientôt : un Phare par chemin, avant tout le reste.
+  const bientot = [p.vague - 1, p.vague, p.vague + 1].some(i => i >= 0 && apercuVague(p, i)?.furtif);
+  if (bientot && ia.permis.includes('phare') && nb < p.carte.emplacements.length && p.tours.filter(t => t.type === 'phare').length < p.carte.chemins.length) {
+    if (p.or >= TOURS.phare.niveaux[0].cout) { const emp = meilleurEmplacement(p, ia, 'phare'); if (emp) construire(p, emp.id, 'phare'); }
+    return;
+  }
+  // Au début, il construit ; ensuite, il alterne une tour neuve et une amélioration.
   const peutConstruire = nb < Math.min(ia.maxTours, p.carte.emplacements.length);
-  const aAmeliorer = ia.ameliore ? p.tours.filter(t => t.niveau < 3).sort((a, b) => a.niveau - b.niveau || a.id - b.id)[0] : null;
+  const aAmeliorer = ia.ameliore ? p.tours.filter(t => t.niveau < 4).sort((a, b) => a.niveau - b.niveau || a.id - b.id)[0] : null;
+  // Au niveau 3, il choisit une spécialisation (une sur deux, selon la tour).
+  const branche = aAmeliorer && aAmeliorer.niveau === 3 ? aAmeliorer.id % 2 : null;
   const construireMaintenant = peutConstruire && (nb < 4 || !aAmeliorer || ia.k % 2 === 0);
   if (construireMaintenant) {
     let type = ia.plan[ia.n % ia.plan.length];
@@ -77,11 +100,12 @@ export function jouerIA(p, ia) {
     if (!TOURS[type].air && volants / total > 0.25 && air < (nb + 1) * (volants / total + 0.2)) {
       type = ia.plan.find(ty => TOURS[ty].air) || type;
     }
+    // Des Furtifs arrivent et aucun Phare n'est là : il en bâtit un.
     if (p.or < TOURS[type].niveaux[0].cout) return;
     const emp = meilleurEmplacement(p, ia, type);
     if (emp && construire(p, emp.id, type).ok) { ia.n++; ia.k++; }
     return;
   }
-  if (aAmeliorer && p.or >= coutAmelioration(aAmeliorer) && ameliorer(p, aAmeliorer.id).ok) ia.k++;
+  if (aAmeliorer && p.or >= coutAmelioration(aAmeliorer, branche ?? 0) && ameliorer(p, aAmeliorer.id, branche).ok) ia.k++;
 }
 

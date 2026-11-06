@@ -132,7 +132,7 @@ export function creerPartie(id, { graine = 1 } = {}) {
     vague: 0, totalVagues: def.vagues.length,
     file: [], compte: null, phase: 'preparation',
     ennemis: [], tours: [], projectiles: [],
-    prochainId: 1, evts: [],
+    prochainId: 1, evts: [], phares: [],
     stats: { tues: 0, fuites: 0, orGagne: 0, bonus: 0, tirs: 0, degats: 0 },
   };
 }
@@ -142,8 +142,12 @@ const evt = (p, e) => {
   if (p.evts.length > 600) p.evts.splice(0, p.evts.length - 600);
 };
 
-export const statsTour = (type, niv) => TOURS[type].niveaux[niv - 1];
-export const coutAmelioration = t => (t.niveau < 3 ? TOURS[t.type].niveaux[t.niveau].cout : null);
+/** Les caractéristiques d'un niveau (1 à 3) ou d'une spécialisation (niveau 4, branche 0 ou 1). */
+export const statsTour = (type, niv, branche = 0) => (niv <= 3 ? TOURS[type].niveaux[niv - 1] : TOURS[type].branches[branche]);
+export const statsDe = t => statsTour(t.type, t.niveau, t.branche ?? 0);
+/** Prix du niveau suivant ; au niveau 3, celui de la branche choisie. */
+export const coutAmelioration = (t, branche = 0) => (t.niveau < 3 ? TOURS[t.type].niveaux[t.niveau].cout : t.niveau === 3 ? TOURS[t.type].branches[branche].cout : null);
+export const brancheDe = t => (t.niveau === 4 ? TOURS[t.type].branches[t.branche] : null);
 export const valeurRevente = t => Math.floor(t.investi * REVENTE);
 
 export function construire(p, empId, type) {
@@ -157,23 +161,26 @@ export function construire(p, empId, type) {
   p.or -= cout;
   const t = {
     id: p.prochainId++, type, niveau: 1, emp: empId, x: emp.x, z: emp.z,
-    recharge: 0.2, cible: null, mode: 'premier', investi: cout, angle: 0, tirs: 0, degats: 0,
+    recharge: 0.2, cible: null, mode: 'premier', investi: cout, angle: 0, tirs: 0, degats: 0, branche: null, renfort: 0,
   };
   p.tours.push(t);
   evt(p, { k: 'construit', tour: t.id, type, x: t.x, z: t.z });
   return { ok: true, tour: t };
 }
 
-export function ameliorer(p, tourId) {
+/** Monte une tour d'un niveau. Du niveau 3 au 4, il faut choisir la branche (0 ou 1). */
+export function ameliorer(p, tourId, branche = null) {
   const t = p.tours.find(x => x.id === tourId);
   if (!t) return { ok: false, raison: 'tour' };
-  const cout = coutAmelioration(t);
-  if (cout == null) return { ok: false, raison: 'max' };
+  if (t.niveau >= 4) return { ok: false, raison: 'max' };
+  if (t.niveau === 3 && branche !== 0 && branche !== 1) return { ok: false, raison: 'branche' };
+  const cout = coutAmelioration(t, branche ?? 0);
   if (p.or < cout) return { ok: false, raison: 'or' };
   p.or -= cout;
   t.niveau++;
+  if (t.niveau === 4) t.branche = branche;
   t.investi += cout;
-  evt(p, { k: 'ameliore', tour: t.id, type: t.type, niveau: t.niveau, x: t.x, z: t.z });
+  evt(p, { k: 'ameliore', tour: t.id, type: t.type, niveau: t.niveau, branche: t.branche, x: t.x, z: t.z });
   return { ok: true, tour: t };
 }
 
@@ -246,6 +253,8 @@ function apparaitre(p, type, depart, vague, d = 0, decal = null) {
     decal: decal ?? (def.boss ? 0 : (p.rng() - 0.5) * 0.36),
     x: pos.x, z: pos.z, y: def.vole ? ALTITUDE : 0, px: pos.x, pz: pos.z, angle: pos.angle,
     ralenti: 0, ralentiT: 0, ponteT: def.ponte ? def.ponte.toutes : 0, soinT: 1, mort: false,
+    etourdiT: 0, brule: 0, bruleT: 0, bruleSrc: null, bouclier: 0, bouclierT: 1, sous: false,
+    fouitT: def.fouit ? def.fouit.toutes * (0.5 + p.rng() * 0.5) : 0, revele: !def.furtif,
   };
   const p2 = surChemin(ch, d, e.decal);
   e.x = e.px = p2.x; e.z = e.pz = p2.z;
@@ -258,9 +267,16 @@ const reste = e => e.ch.total - e.d;
 const distance2 = (a, b) => (a.x - b.x) ** 2 + (a.z - b.z) ** 2;
 
 function infliger(p, e, degats, { perce = false, demi = false, source = null } = {}) {
-  if (e.mort) return 0;
+  if (e.mort || e.sous) return 0;
   const armure = perce ? 0 : (demi ? e.armure / 2 : e.armure);
-  const eff = Math.max(degats * 0.25, degats - armure);
+  let eff = Math.max(degats * 0.25, degats - armure);
+  // Le bouclier d'un Pavois encaisse d'abord.
+  if (e.bouclier > 0) {
+    const pris = Math.min(e.bouclier, eff);
+    e.bouclier -= pris;
+    eff -= pris;
+    if (e.bouclier <= 0) evt(p, { k: 'bouclierBrise', id: e.id, x: e.x, y: e.y, z: e.z });
+  }
   e.pv -= eff;
   p.stats.degats += eff;
   if (source) source.degats += eff;
@@ -271,10 +287,17 @@ function infliger(p, e, degats, { perce = false, demi = false, source = null } =
 function mourir(p, e) {
   e.mort = true;
   e.pv = 0;
-  p.or += e.def.or;
+  // Un Phare marchand rapporte un peu d'or sur ce qui meurt dans sa lumière.
+  let bonus = 0;
+  for (const ph of p.phares) {
+    const s = statsDe(ph);
+    if (s.orBonus && distance2(ph, e) <= s.portee ** 2) bonus = Math.max(bonus, s.orBonus);
+  }
+  const gain = e.def.or + bonus;
+  p.or += gain;
   p.stats.tues++;
-  p.stats.orGagne += e.def.or;
-  evt(p, { k: 'mort', id: e.id, type: e.type, x: e.x, y: e.y, z: e.z, or: e.def.or, boss: !!e.def.boss });
+  p.stats.orGagne += gain;
+  evt(p, { k: 'mort', id: e.id, type: e.type, x: e.x, y: e.y, z: e.z, or: gain, boss: !!e.def.boss });
   const div = e.def.division;
   if (div) {
     for (let i = 0; i < div.n; i++) {
@@ -289,8 +312,23 @@ function bougerEnnemis(p) {
     if (e.mort) continue;
     e.px = e.x; e.pz = e.z;
     if (e.ralentiT > 0) { e.ralentiT -= DT; if (e.ralentiT <= 0) e.ralenti = 0; }
+    // Le feu continue de brûler, et passe sous l'armure.
+    if (e.bruleT > 0) {
+      e.bruleT -= DT;
+      infliger(p, e, e.brule * DT, { perce: true, source: e.bruleSrc });
+      if (e.bruleT <= 0) e.brule = 0;
+      if (e.mort) continue;
+    }
+    // Le Fouisseur plonge sous terre, puis ressort.
+    if (e.def.fouit && (e.fouitT -= DT) <= 0) {
+      e.sous = !e.sous;
+      e.fouitT = e.sous ? e.def.fouit.duree : e.def.fouit.toutes;
+      evt(p, { k: 'fouit', id: e.id, x: e.x, z: e.z, sous: e.sous });
+    }
     const frein = e.ralenti * (1 - (e.def.resisteRalenti || 0));
-    e.d += e.def.vitesse * (1 - frein) * DT;
+    let v = e.def.vitesse * (1 - frein) * (e.sous ? e.def.fouit.vitesse : 1);
+    if (e.etourdiT > 0) { e.etourdiT -= DT; v = 0; }
+    e.d += v * DT;
     if (e.d >= e.ch.total) {
       e.mort = true;
       p.vies = Math.max(0, p.vies - e.def.vies);
@@ -312,6 +350,14 @@ function bougerEnnemis(p) {
       }
       evt(p, { k: 'soin', id: e.id, x: e.x, z: e.z, n });
     }
+    // Le Pavois couvre ses voisins d'un bouclier.
+    if (e.def.bouclier && (e.bouclierT -= DT) <= 0) {
+      const b = e.def.bouclier;
+      e.bouclierT += b.toutes;
+      const val = b.pv * p.def.force, r2 = b.rayon ** 2;
+      for (const o of p.ennemis) if (!o.mort && distance2(o, e) <= r2) o.bouclier = Math.max(o.bouclier, val);
+      evt(p, { k: 'bouclier', id: e.id, x: e.x, z: e.z, rayon: b.rayon });
+    }
     // La Grande Nuée pond des Bourdons.
     if (e.def.ponte && (e.ponteT -= DT) <= 0) {
       e.ponteT += e.def.ponte.toutes;
@@ -325,10 +371,11 @@ function bougerEnnemis(p) {
 
 function choisirCible(p, t, s, def) {
   const r2 = s.portee ** 2;
+  const air = s.air ?? def.air;
   let meilleure = null, score = -Infinity;
   for (const e of p.ennemis) {
-    if (e.mort || e.d < 0.4) continue;
-    if (e.def.vole ? !def.air : !def.sol) continue;
+    if (e.mort || e.d < 0.4 || e.sous || !e.revele) continue;
+    if (e.def.vole ? !air : !def.sol) continue;
     const d2 = distance2(e, t);
     if (d2 > r2) continue;
     let v;
@@ -343,17 +390,45 @@ function choisirCible(p, t, s, def) {
   return meilleure;
 }
 
+const etourdir = (o, d) => { if (!o.mort) o.etourdiT = Math.max(o.etourdiT, d * (o.def.boss ? 0.35 : 1)); };
+
 function tirer(p, t, e, s, def) {
   t.tirs++;
   p.stats.tirs++;
   const depart = { x: t.x, y: HAUT_TOUR + 0.12 * t.niveau, z: t.z };
+  if (def.projectile === 'flamme') {
+    // Un jet de flammes : touche tout autour de la cible et y met le feu.
+    const air = s.air ?? def.air, r2 = s.rayon ** 2;
+    for (const o of p.ennemis.slice()) {
+      if (o.mort || o.sous || (o.def.vole && !air) || distance2(o, e) > r2) continue;
+      infliger(p, o, s.degats, { source: t });
+      if (!o.mort && s.brulure >= o.brule) { o.brule = s.brulure; o.bruleT = Math.max(o.bruleT, s.duree); o.bruleSrc = t; }
+    }
+    evt(p, { k: 'flamme', tour: t.id, x0: depart.x, y0: depart.y, z0: depart.z, x: e.x, y: e.y + 0.3, z: e.z, rayon: s.rayon, air: !!e.def.vole });
+    return;
+  }
+  if (s.traverse) {
+    // La Baliste : un carreau qui traverse toute la file.
+    const ux = Math.sin(t.angle), uz = Math.cos(t.angle), L = s.portee + 0.6;
+    for (const o of p.ennemis.slice()) {
+      if (o.mort || o.sous || o.def.vole) continue;
+      const rx = o.x - t.x, rz = o.z - t.z, proj = rx * ux + rz * uz;
+      if (proj < 0 || proj > L || rx * rx + rz * rz - proj * proj > 0.42 ** 2) continue;
+      infliger(p, o, s.degats, { perce: true, source: t });
+      if (s.brise) o.armure = Math.max(0, o.armure - s.brise);
+    }
+    evt(p, { k: 'traverse', tour: t.id, pts: [depart, { x: t.x + ux * L, y: 0.35, z: t.z + uz * L }] });
+    evt(p, { k: 'tir', tour: t.id, type: t.type });
+    return;
+  }
   if (def.projectile === 'eclair') {
     const touches = [e];
     let dernier = e;
+    const saut = (s.saut || 1.9) ** 2;
     for (let k = 1; k < s.chaine; k++) {
-      let suivant = null, best = 1.9 ** 2;
+      let suivant = null, best = saut;
       for (const o of p.ennemis) {
-        if (o.mort || touches.includes(o)) continue;
+        if (o.mort || o.sous || touches.includes(o)) continue;
         const d2 = distance2(o, dernier);
         if (d2 < best) { best = d2; suivant = o; }
       }
@@ -362,7 +437,7 @@ function tirer(p, t, e, s, def) {
       dernier = suivant;
     }
     const pts = [depart, ...touches.map(o => ({ x: o.x, y: o.y + 0.35, z: o.z }))];
-    touches.forEach((o, k) => infliger(p, o, s.degats * 0.85 ** k, { demi: true, source: t }));
+    touches.forEach((o, k) => { infliger(p, o, s.degats * 0.85 ** k, { demi: true, source: t }); if (s.etourdit) etourdir(o, s.etourdit); });
     evt(p, { k: 'eclair', tour: t.id, pts });
     return;
   }
@@ -373,7 +448,7 @@ function tirer(p, t, e, s, def) {
     const vise = surChemin(e.ch, Math.min(e.ch.total, e.d + e.def.vitesse * (1 - frein) * T), e.decal);
     p.projectiles.push({
       id: p.prochainId++, k: 'obus', tour: t.id, x0: depart.x, y0: depart.y, z0: depart.z,
-      x1: vise.x, z1: vise.z, u: 0, T, arc: 1.4 + dist * 0.25, degats: s.degats, rayon: s.rayon,
+      x1: vise.x, z1: vise.z, u: 0, T, arc: 1.4 + dist * 0.25, degats: s.degats, rayon: s.rayon, etourdit: s.etourdit,
       x: depart.x, y: depart.y, z: depart.z, px: depart.x, py: depart.y, pz: depart.z,
     });
     evt(p, { k: 'tir', tour: t.id, type: t.type });
@@ -387,23 +462,59 @@ function tirer(p, t, e, s, def) {
     p.projectiles.push({
       id: p.prochainId++, k: def.projectile, tour: t.id, cible: e.id, vitesse,
       x, y: depart.y, z, px: x, py: depart.y, pz: z, tx: e.x, ty: e.y + 0.3, tz: e.z,
-      degats: s.degats, ralenti: s.ralenti, duree: s.duree, zone: s.zone, brise: s.brise,
+      degats: s.degats, ralenti: s.ralenti, duree: s.duree, zone: s.zone, brise: s.brise, etourdit: s.etourdit,
     });
   }
   evt(p, { k: 'tir', tour: t.id, type: t.type });
 }
 
+/** Le meilleur renfort des Phares voisins : { d: bonus de dégâts, c: bonus de cadence }. */
+function renfort(p, t) {
+  let d = 0, c = 0;
+  for (const ph of p.phares) {
+    if (ph === t) continue;
+    const s = statsDe(ph);
+    if (distance2(ph, t) > s.portee ** 2) continue;
+    d = Math.max(d, s.bonus || 0);
+    c = Math.max(c, s.bonusCadence || 0);
+  }
+  return { d, c };
+}
+
 function majTours(p) {
+  // La lumière des Phares : elle révèle les Furtifs.
+  p.phares = p.tours.filter(t => TOURS[t.type].soutien);
+  for (const e of p.ennemis) {
+    e.revele = !e.def.furtif || p.phares.some(ph => distance2(ph, e) <= statsDe(ph).portee ** 2);
+  }
   for (const t of p.tours) {
-    const def = TOURS[t.type], s = statsTour(t.type, t.niveau);
+    const def = TOURS[t.type], s = statsDe(t);
+    if (def.soutien) { t.cible = null; continue; }
+    const b = renfort(p, t);
+    t.renfort = b.d;
+    if (s.aura) {
+      // Le Blizzard : tout ce qui passe autour est ralenti et gèle peu à peu.
+      const r2 = s.portee ** 2;
+      let n = 0;
+      for (const e of p.ennemis) {
+        if (e.mort || e.sous || distance2(e, t) > r2) continue;
+        if (s.ralenti >= e.ralenti) { e.ralenti = s.ralenti; e.ralentiT = Math.max(e.ralentiT, s.duree); }
+        infliger(p, e, s.degats * (1 + b.d) * DT, { perce: true, source: t });
+        n++;
+      }
+      t.cible = n ? -1 : null;
+      if ((t.recharge -= DT) <= 0) { t.recharge = 0.6; if (n) evt(p, { k: 'aura', tour: t.id, x: t.x, z: t.z, rayon: s.portee }); }
+      continue;
+    }
     t.recharge -= DT;
     const e = choisirCible(p, t, s, def);
     t.cible = e ? e.id : null;
     if (!e) { if (t.recharge < 0) t.recharge = 0; continue; }
     t.angle = Math.atan2(e.x - t.x, e.z - t.z);
     if (t.recharge <= 0) {
-      tirer(p, t, e, s, def);
-      t.recharge += 1 / s.cadence;
+      const k = 1 + b.d;
+      tirer(p, t, e, k > 1 ? { ...s, degats: s.degats * k, brulure: s.brulure && s.brulure * k } : s, def);
+      t.recharge += 1 / (s.cadence * (1 + b.c));
     }
   }
 }
@@ -428,6 +539,7 @@ function majProjectiles(p) {
           const d2 = distance2(e, pr);
           if (d2 > r2) continue;
           infliger(p, e, pr.degats * (d2 < r2 / 4 ? 1 : 0.6), { source: src });
+          if (pr.etourdit) etourdir(e, pr.etourdit);
           n++;
         }
         evt(p, { k: 'explosion', x: pr.x1, z: pr.z1, rayon: pr.rayon, n });
@@ -451,6 +563,7 @@ function majProjectiles(p) {
       for (const o of cibles) {
         if (pr.ralenti >= o.ralenti) { o.ralenti = pr.ralenti; o.ralentiT = Math.max(o.ralentiT, pr.duree); }
         infliger(p, o, pr.degats, { source: src });
+        if (pr.etourdit) etourdir(o, pr.etourdit);
       }
       evt(p, { k: 'gel', x: e.x, y: e.y, z: e.z, zone: pr.zone || 0 });
     } else if (pr.k === 'trait') {
