@@ -10,9 +10,9 @@
 
 import { PERSOS, PERSO, ELEMENTS, CATEGORIES, LIENS, ROLES, RARETES, ORDRE, stats, peutDevenirLR, formeLR } from '../../../shared/legendes/persos.js';
 import { texteChef } from '../../../shared/legendes/passifs.js';
-import { jourDe, dateDe, portails, fetesDu, FETE, FETES, dansFete, fetesDe, prochaineMaj } from '../../../shared/legendes/calendrier.js';
+import { jourDe, dateDe, portails, fetesDu, FETE, FETES, dansFete, fetesDe, prochaineMaj, estSorti, annonces } from '../../../shared/legendes/calendrier.js';
 import { nouvelEtat, invoquer, prixMulti, palierDe, connexion, cadeauFete, recupererCadeaux, PALIERS, PRIX, PITIE, TAUX, PART_VEDETTE } from '../../../shared/legendes/gacha.js';
-import { creerCombat, jouerTour, rotation, kiPour, liens, voisines, cheminAuto, meilleurChemin, KI_SUPER, KI_ULTIME, KI_MAX, COLS, NB_SPHERES } from '../../../shared/legendes/combat.js';
+import { creerCombat, jouerTour, rotation, kiPour, kiFixe, kiSpheres, choisir, liens, voisines, cheminAuto, meilleurChemin, meilleurCheminPour, dansRangBas, KI_SUPER, KI_ULTIME, KI_MAX, COLS, NB_SPHERES } from '../../../shared/legendes/combat.js';
 import { CHAPITRES, EPREUVES, DIFFICULTES, ennemisEn, DEFIS, ULTIME, etage, butin, coutAct, evenementDu, bonusEvenement, EVENEMENTS_EVEIL, medaillesEveil, EVENEMENTS_LANCEMENT, lancementOuvert, JOURS_LANCEMENT } from '../../../shared/legendes/niveaux.js';
 import { CHAINES, MEDAILLES, eveilDe, peutEveiller, eveiller, ajouterMedailles, nouveauJoueur, endurance, depenser, gagnerExp, actMax, expPour, prochainPoint, cleMedaille } from '../../../shared/legendes/eveils.js';
 import { arbre, texteNoeud, peutDebloquer, debloquer, ajouterOrbes, gagnerExpPerso, expNiveau, NIV_MAX, ROUTES } from '../../../shared/legendes/potentiel.js';
@@ -116,6 +116,10 @@ function rendreAccueil() {
     return `<button class="diapo" data-portail="${p.id}" style="--a:${fete ? fete.couleurs[0] : '#ffd23f'};--b:${fete ? fete.couleurs[1] : v.couleurs.aura}">${portrait(v, { taille: 66, fond: false })}
       <span><b>${p.nom}</b><small>${p.nouveaux.length ? `Nouveau : ${PERSO[p.nouveaux[0]].nom} (${PERSO[p.nouveaux[0]].rarete})` : p.retour ? `Retour : ${PERSO[p.vedettes[0]].nom} (${PERSO[p.vedettes[0]].rarete})` : 'Le retour des légendes'} · jusqu’au ${dateFin(p.fin).slice(0, 5)}</small></span></button>`;
   });
+  for (const an of annonces(JOUR)) {
+    const v = PERSO[an.persos[0]];
+    diapos.unshift(`<button class="diapo bientot" data-annonce="1" style="--a:#1a1a3a;--b:${v.couleurs.aura}">${portrait(v, { taille: 66, fond: false })}<span><b>BIENTÔT · ${an.nom}</b><small>${an.persos.map((id) => `${PERSO[id].nom} (${PERSO[id].rarete})`).join(', ')} · ${jours(an.jour - JOUR)}</small></span></button>`);
+  }
   const ev = evenementDu(JOUR);
   diapos.push(`<button class="diapo" data-quetes="1" style="--a:#3ae0ff;--b:${ELEMENTS[ev.element].couleur}"><span style="font-size:44px">${ev.glyphe}</span><span><b>${ev.nom}</b><small>Événement court · fin ${jours(ev.fin - JOUR)} · orbes ${ELEMENTS[ev.element].glyphe}</small></span></button>`);
   $('carrousel').innerHTML = diapos.join('');
@@ -196,6 +200,12 @@ function ouvrirMenu() {
   }));
 }
 
+/** Les annonces : les prochains personnages, trois jours avant leur sortie. */
+function ouvrirAnnonces() {
+  const an = annonces(JOUR);
+  panneau(`<h2 class="titre-ecran">📣 Bientôt</h2>${an.length ? an.map((a) => `<div class="bloc"><b>${a.nom}</b> · ${jours(a.jour - JOUR)}<div class="annonce">${a.persos.map((id) => `<div>${illustration(PERSO[id], { petit: true })}<b class="nom-annonce">${PERSO[id].nom}</b></div>`).join('')}</div></div>`).join('') : '<p class="consigne">Rien d’annoncé pour l’instant : les nouveautés sont dévoilées trois jours avant leur sortie.</p>'}`);
+}
+
 /* ---------------- Les portails ---------------- */
 let portailChoisi = null;
 const TYPES = {
@@ -261,10 +271,9 @@ let tri = 'rarete', categorie = '';
 function rendreCollection() {
   $('filtres').innerHTML = ['tous', 'LR', 'UR', 'SSR', 'SR', 'R', 'N'].map((f) => `<button data-f="${f}" class="${filtre === f ? 'oui' : ''}">${f === 'tous' ? 'Tous' : f}</button>`).join('')
     + `<select id="tri" aria-label="Trier">${[['rarete', 'Rareté'], ['element', 'Élément'], ['niveau', 'Niveau'], ['atq', 'ATQ'], ['pv', 'PV']].map(([v, l]) => `<option value="${v}"${tri === v ? ' selected' : ''}>Trier : ${l}</option>`).join('')}</select>
-    <select id="categorie" aria-label="Catégorie"><option value="">Toutes les catégories</option>${Object.entries(CATEGORIES).map(([k, n]) => `<option value="${k}"${categorie === k ? ' selected' : ''}>${n}</option>`).join('')}</select>`;
-  const sortis = new Set(portails(JOUR).flatMap((p) => p.pool));
+    <button id="b-badges" class="${categorie ? 'oui' : ''}">🏷️ ${categorie ? CATEGORIES[categorie] : 'Catégories'}</button>`;
   const val = (x) => (tri === 'atq' ? stats(x.id, eveilDe2(x.id), nivDe(x.id)).atq : tri === 'pv' ? stats(x.id, eveilDe2(x.id), nivDe(x.id)).pv : tri === 'niveau' ? nivDe(x.id) : tri === 'element' ? -Object.keys(ELEMENTS).indexOf(x.element) : ORDRE.indexOf(x.rarete));
-  const liste = PERSOS.filter((x) => (possede(x.id) || sortis.has(x.id)) && (filtre === 'tous' || x.rarete === filtre) && (!categorie || x.categories.includes(categorie)))
+  const liste = PERSOS.filter((x) => (possede(x.id) || estSorti(x.id, JOUR)) && (filtre === 'tous' || x.rarete === filtre) && (!categorie || x.categories.includes(categorie)))
     .sort((a, b) => (possede(b.id) - possede(a.id)) || val(b) - val(a) || ORDRE.indexOf(b.rarete) - ORDRE.indexOf(a.rarete));
   $('grille-collection').innerHTML = liste.map((x) => portrait(x, { cadre: true, taille: 100, data: true, eveil: possede(x.id) ? eveilDe2(x.id) : undefined, classe: possede(x.id) ? '' : 'non' }).replace('</div>', possede(x.id) ? `<span class="niv">Niv.${nivDe(x.id)}</span></div>` : '</div>')).join('');
 }
@@ -359,7 +368,7 @@ async function invocationOfferte() {
 function rendreEveils() {
   const m = S.gacha.medailles, o = S.gacha.orbes;
   $('medailles').innerHTML = `<span>🏅 ${m.legende || 0}</span>${Object.entries(ELEMENTS).map(([k, x]) => `<span title="Orbes ${x.nom}">${x.glyphe} ${o[k] || 0}</span>`).join('')}<span title="Orbes arc-en-ciel">🌈 ${o.arc || 0}</span>`;
-  const chaines = [...CHAINES].sort((a, b) => b.some(possede) - a.some(possede));
+  const chaines = CHAINES.filter((ch) => ch.some(possede) || estSorti(ch[0], JOUR)).sort((a, b) => b.some(possede) - a.some(possede));
   $('liste-eveils').innerHTML = chaines.map((ch) => {
     const cle = cleMedaille(PERSO[ch[0]].nom);
     const ev = EVENEMENTS_EVEIL.find((x) => x.chaine === ch || x.id === ch[0]);
@@ -471,7 +480,7 @@ let C = null, occupe = false, P = null, chemin = [], auto = false;
 /** Le mode automatique : l'ordinateur choisit le meilleur chemin à chaque tour. */
 async function tourAuto() {
   while (auto && C && !C.c.fin && ecran === 'combat') {
-    if (!occupe) { chemin = meilleurChemin(C.c); dessinerChemin(); await attendre(450); if (!auto || !C) break; await jouer(); }
+    if (!occupe) { chemin = meilleurCheminPour(C.c, (C.c.choix || []).length); dessinerChemin(); await attendre(380); if (!auto || !C) break; await valider(); }
     await attendre(200);
   }
 }
@@ -521,9 +530,11 @@ function rendreEnnemi() {
   $('ennemi-info').textContent = [C.c.ennemis.length > 1 ? `Ennemi ${C.cible + 1}/${C.c.ennemis.length}` : '', e.super ? `Super : ${e.super.nom}` : '', e.phases?.length > e.phase ? `${e.phases.length - e.phase} transformation(s) à venir` : ''].filter(Boolean).join(' · ');
   $('monstre').className = 'monstre';
   $('monstre').innerHTML = (e.perso ? portrait(PERSO[e.perso], { taille: 220, fond: false, anime: true, enPied: true }) : ennemi(e, 220)) + '<div class="rocher"></div>';
-  const CIELS = { flamme: ['#2a0606', '#b8341a'], tempete: ['#04201a', '#1a8a5a'], roc: ['#1a1006', '#9a6a2a'], eclair: ['#1a1404', '#b8901a'], maree: ['#040e2a', '#1a5ab8'] };
-  $('arene').style.setProperty('--ciel1', CIELS[e.element][0]);
-  $('arene').style.setProperty('--ciel2', CIELS[e.element][1]);
+  const PAYSAGES = {
+    flamme: ['#ff7a3a', '#ffd8a0', '#8a3a1a', '#5a2410', '#c8603a'], tempete: ['#3a9ae0', '#c8ecff', '#5aa85a', '#2e7a3e', '#6aa0c0'],
+    roc: ['#d89a50', '#f6e2b8', '#b8884a', '#8a6030', '#a07a5a'], eclair: ['#4a4a9a', '#c8c0ff', '#4a7a5a', '#2a4a3a', '#6a6aa0'], maree: ['#2a8ae0', '#b8f0ff', '#e8d8a0', '#c8b070', '#5a90c0'],
+  }[e.element];
+  ['--ciel1', '--ciel2', '--colline1', '--colline2', '--monts'].forEach((v, k) => $('arene').style.setProperty(v, PAYSAGES[k]));
   majPv();
 }
 function majPv() {
@@ -534,8 +545,19 @@ function majPv() {
   $('tour-n').textContent = `TOUR ${C.c.tour + 1}`;
 }
 
-/** La place d'une sphère sur le plateau (en %), décalée une ligne sur deux. */
-const placeSphere = (p) => { const col = p % COLS, lig = Math.floor(p / COLS); return { x: 11 + col * 19.5 + (lig % 2 ? 4 : -4) + (((p * 37) % 7) - 3) * 1.1, y: 7 + lig * 21 + (((p * 53) % 7) - 3) * 1.3 }; };
+/**
+ * La place d'une sphère (en % du plateau) et sa taille : le plateau est vu en perspective, comme un chemin qui
+ * part du héros (la rangée du bas, de grosses sphères, en bas à gauche) vers l'ennemi au loin (la rangée du haut,
+ * de petites sphères, en haut à droite).
+ */
+const placeSphere = (p) => {
+  const col = p % COLS, lig = Math.floor(p / COLS), t = lig / 4;
+  const cx = 76 - 14 * t, cy = 12 + 64 * t;
+  const large = 6 + 9.5 * t;
+  const decal = (col - 2 + (lig % 2 ? 0.35 : -0.35)) * large;
+  const j = (((p * 37) % 7) - 3) * 0.5;
+  return { x: cx + decal * 0.86 + j, y: cy + decal * 0.42 + (((p * 53) % 7) - 3) * 0.5, s: 0.45 + 0.6 * t };
+};
 
 function montrerHeros(id) {
   const x = PERSO[id];
@@ -548,18 +570,29 @@ function rendreCombat() {
   montrerHeros(c.membres[rot[0]].id);
   $('trio').innerHTML = rot.map((i, k) => {
     const m = c.membres[i], x = PERSO[m.id];
-    return `<div class="combattant${m.ki >= KI_SUPER ? ' super' : ''}" data-i="${i}" style="--el:${ELEMENTS[x.element].couleur};--rar:${RARETES[x.rarete].couleur};--ki:${m.ki / KI_MAX}"><span class="anneau-ki"></span><span class="rar-mini">${x.rarete}</span><div class="rond-perso">${portrait(x, { taille: 140, fond: false })}</div>
+    return `<div class="combattant${m.ki >= KI_SUPER ? ' super' : ''}${k === 0 ? ' actif' : ''}" data-k="${k}" data-i="${i}" style="--el:${ELEMENTS[x.element].couleur};--rar:${RARETES[x.rarete].couleur};--ki:${m.ki / KI_MAX}"><span class="anneau-ki"></span><span class="rar-mini">${x.rarete}</span><div class="rond-perso">${portrait(x, { taille: 140, fond: false })}</div>
       <div class="ki${m.ki >= KI_SUPER ? ' plein' : ''}"><i style="width:${(m.ki / KI_MAX) * 100}%"></i></div><div class="ki-txt">Ki ${m.ki}${li[k] ? ` · 🔗${li[k]}` : ''}</div></div>`;
   }).join('');
   const pl = $('plateau');
   pl.querySelectorAll('.sphere-p').forEach((s) => s.remove());
-  c.spheres.forEach((s, p) => {
-    const { x, y } = placeSphere(p);
-    pl.insertAdjacentHTML('beforeend', `<button class="sphere-p${s === 'arc' ? ' arc' : ''}" data-p="${p}" style="left:${x}%;top:${y}%;--s:${0.86 + ((p * 29) % 5) * 0.07};--dl:${-((p * 0.37) % 2.6)}s;--c:${s === 'arc' ? '#fff' : ELEMENTS[s].couleur};animation-delay:${(p % 7) * 0.03}s,${-((p * 0.37) % 2.6)}s" aria-label="${s === 'arc' ? 'Arc-en-ciel' : ELEMENTS[s].nom}"></button>`);
-  });
+  dessinerSpheres();
   chemin = [];
   dessinerChemin();
+  // Au premier tour, une main montre quoi faire.
+  pl.querySelector('.main-touche')?.remove();
+  if (c.tour === 0) { const { x, y } = placeSphere(22); pl.insertAdjacentHTML('beforeend', `<div class="main-touche" style="left:${x}%;top:${y}%">👆<small>TOUCHE</small></div>`); }
   majPv();
+}
+
+/** Les sphères du plateau (descendues : les colonnes touchées glissent du haut, comme un tapis roulant). */
+function dessinerSpheres(descendues = new Set()) {
+  const c = C.c, pl = $('plateau');
+  pl.querySelectorAll('.sphere-p').forEach((s) => s.remove());
+  c.spheres.forEach((s, p) => {
+    const { x, y, s: taille } = placeSphere(p);
+    const bas = dansRangBas(p);
+    pl.insertAdjacentHTML('beforeend', `<button class="sphere-p${s === 'arc' ? ' arc' : ''}${bas ? ' bas' : ''}${descendues.has(p % COLS) ? ' descend' : ''}" data-p="${p}" style="left:${x}%;top:${y}%;z-index:${2 + Math.floor(p / COLS)};--s:${taille};--dl:${-((p * 0.37) % 2.6)}s;--c:${s === 'arc' ? '#fff' : ELEMENTS[s].couleur};animation-delay:${(p % 7) * 0.03}s,${-((p * 0.37) % 2.6)}s" aria-label="${s === 'arc' ? 'Arc-en-ciel' : ELEMENTS[s].nom}"></button>`);
+  });
 }
 
 function dessinerChemin() {
@@ -569,18 +602,58 @@ function dessinerChemin() {
   apercu();
 }
 
-/** Montre le ki que chacun gagnerait avec le chemin tracé. */
+/** Montre le ki : celui de ceux qui ont déjà choisi, et ce que gagnerait celui qui choisit avec le chemin montré. */
 function apercu() {
-  const g = chemin.length ? kiPour(C.c, chemin) : null;
+  const c = C.c, choix = c.choix || [], k0 = choix.length;
   document.querySelectorAll('.ki-plus').forEach((n) => n.remove());
-  [...document.querySelectorAll('.combattant')].forEach((el, k) => {
-    const m = C.c.membres[+el.dataset.i];
-    const ki = Math.min(KI_MAX, m.ki + (g ? g[k] : 0));
+  [...document.querySelectorAll('.combattant')].forEach((el) => {
+    const k = +el.dataset.k, m = c.membres[+el.dataset.i];
+    const gain = k < k0 ? choix[k].ki + kiFixe(c, k) : k === k0 && chemin.length ? kiSpheres(c, k, chemin) + kiFixe(c, k) : 0;
+    const ki = Math.min(KI_MAX, m.ki + gain);
+    el.classList.toggle('actif', k === k0);
+    el.classList.toggle('fait', k < k0);
     el.style.setProperty('--ki', ki / KI_MAX);
     el.classList.toggle('super', ki >= KI_SUPER);
     el.querySelector('.ki-txt').textContent = `Ki ${ki}${ki >= KI_ULTIME && PERSO[m.id].rarete === 'LR' ? ' · ULTIME' : ki >= KI_SUPER ? ' · SUPER' : ''}`;
-    if (g && g[k]) el.insertAdjacentHTML('beforeend', `<span class="ki-plus" style="left:50%;top:0">+${g[k]}</span>`);
+    if (gain) el.insertAdjacentHTML('beforeend', `<span class="ki-plus${k < k0 ? ' fixe' : ''}" style="left:50%;top:0">+${gain}</span>`);
   });
+  // Le héros affiché : celui qui choisit.
+  const i = rotation(c)[Math.min(k0, rotation(c).length - 1)];
+  if ($('heros').dataset.id !== c.membres[i].id) { montrerHeros(c.membres[i].id); $('heros').dataset.id = c.membres[i].id; }
+}
+
+/**
+ * Valide le chemin du combattant qui choisit : ses sphères volent vers lui, le tapis roulant les remplace (celles du
+ * dessus descendent), puis au suivant ; après le troisième, le tour se joue.
+ */
+async function valider() {
+  if (occupe || !C || C.c.fin || !chemin.length) return;
+  occupe = true;
+  son.reveiller();
+  const pris = [...chemin];
+  const k = (C.c.choix || []).length;
+  const cible = document.querySelector(`.combattant[data-k="${k}"]`);
+  const pl = $('plateau'), rp = pl.getBoundingClientRect(), rc = cible?.getBoundingClientRect();
+  pris.forEach((p, n) => {
+    const sph = pl.querySelector(`.sphere-p[data-p="${p}"]`);
+    if (!sph || !rc) return;
+    const rs = sph.getBoundingClientRect();
+    sph.style.setProperty('--vx', `${rc.left + rc.width / 2 - (rs.left + rs.width / 2)}px`);
+    sph.style.setProperty('--vy', `${rc.top + rc.height / 2 - (rs.top + rs.height / 2)}px`);
+    sph.style.animationDelay = `${n * 0.05}s`;
+    sph.classList.add('vole');
+    setTimeout(() => son.sphere(), n * 50);
+  });
+  chemin = [];
+  $('trace-ligne').setAttribute('points', '');
+  await attendre(380 + pris.length * 50);
+  choisir(C.c, pris);
+  cible?.classList.add('recoit');
+  setTimeout(() => cible?.classList.remove('recoit'), 400);
+  dessinerSpheres(new Set(pris.map((p) => p % COLS)));
+  apercu();
+  occupe = false;
+  if ((C.c.choix || []).length >= rotation(C.c).length) await jouer();
 }
 
 function nombre(texte, x, y, o = {}) {
@@ -606,16 +679,10 @@ function etiquette(texte, x, y, couleur) {
 }
 
 async function jouer() {
-  if (occupe || !C || C.c.fin || !chemin.length) return;
+  if (occupe || !C || C.c.fin) return;
   occupe = true;
-  son.reveiller();
-  const pris = [...chemin];
-  pris.forEach((p, k) => { const s = $('plateau').querySelector(`.sphere-p[data-p="${p}"]`); if (s) { s.style.animationDelay = `${k * 0.04}s`; s.classList.add('part'); } });
-  for (let k = 0; k < pris.length; k++) setTimeout(() => son.sphere(), k * 45);
-  chemin = [];
-  $('trace-ligne').setAttribute('points', '');
-  await attendre(420 + pris.length * 30);
-  const evs = jouerTour(C.c, pris);
+  await attendre(250);
+  const evs = jouerTour(C.c, []);
   const toucher = () => { $('monstre').classList.remove('touche'); void $('monstre').offsetWidth; $('monstre').classList.add('touche'); };
   const sur = (i) => document.querySelector(`.combattant[data-i="${i}"]`);
   const auDessus = (el, texte, couleur) => {
@@ -763,7 +830,7 @@ function brancher() {
   $('b-cadeaux').onclick = ouvrirCadeaux;
   $('b-collection').onclick = () => { rendreCollection(); aller('collection'); };
   $('b-histoire').onclick = () => { rendreHistoire(); aller('histoire'); };
-  $('carrousel').onclick = (e) => { const b = e.target.closest('.diapo'); if (!b) return; if (b.dataset.quetes) { rendreQuetes(); aller('quetes'); return; } portailChoisi = b.dataset.portail; rendrePortails(); aller('portails'); };
+  $('carrousel').onclick = (e) => { const b = e.target.closest('.diapo'); if (!b) return; if (b.dataset.annonce) { ouvrirAnnonces(); return; } if (b.dataset.quetes) { rendreQuetes(); aller('quetes'); return; } portailChoisi = b.dataset.portail; rendrePortails(); aller('portails'); };
   $('b-evenement').onclick = () => {
     const ev = evenementDu(JOUR);
     lancerCombat({ ennemis: ev.ennemis, recompense: 20, premiere: !S.evenements[ev.n], act: 10, d: 1, bonus: bonusEvenement(ev), fini: () => { S.evenements[ev.n] = true; }, retour: () => { rendreQuetes(); aller('quetes'); } });
@@ -774,8 +841,15 @@ function brancher() {
     lancerCombat({ ennemis: ep.ennemis, recompense: ep.jetons, premiere: !S.epreuves[cle], act: coutAct(true, 0), d: 1, fini: () => { S.epreuves[cle] = true; }, retour: () => { rendreQuetes(); aller('quetes'); } });
   };
   $('onglets-portails').onclick = (e) => { const b = e.target.closest('button'); if (b) { portailChoisi = b.dataset.id; son.bip(); rendrePortails(); } };
-  $('filtres').onclick = (e) => { const b = e.target.closest('button'); if (b) { filtre = b.dataset.f; rendreCollection(); } };
+  $('filtres').onclick = (e) => { const b = e.target.closest('button'); if (b?.dataset.f) { filtre = b.dataset.f; rendreCollection(); } };
   $('grille-collection').onclick = (e) => { const c = e.target.closest('.carte'); if (c) ouvrirFiche(c.dataset.id); };
+  $('filtres').addEventListener('click', (e) => {
+    if (e.target.closest('#b-badges')) {
+      const groupes = Object.keys(CATEGORIES);
+      panneau(`<h2 class="titre-ecran">🏷️ Ranger par catégorie</h2><div class="badges"><button class="badge-cat tous" data-cat="">Toutes</button>${groupes.map((k, i) => `<button class="badge-cat g${Math.floor(i / 7)}${categorie === k ? ' oui' : ''}" data-cat="${k}">${CATEGORIES[k]}</button>`).join('')}</div>`);
+      $('fiche').querySelectorAll('[data-cat]').forEach((b) => b.addEventListener('click', () => { categorie = b.dataset.cat; $('v-fiche').classList.add('cache'); rendreCollection(); }));
+    }
+  });
   $('filtres').onchange = (e) => { if (e.target.id === 'tri') tri = e.target.value; if (e.target.id === 'categorie') categorie = e.target.value; rendreCollection(); };
   $('fiche').addEventListener('click', (e) => { const b = e.target.closest('[data-potentiel]'); if (b) ouvrirArbre(b.dataset.potentiel); });
   $('b-offerte').onclick = () => { son.reveiller(); invocationOfferte(); };
@@ -828,7 +902,9 @@ function brancher() {
     if (occupe || !C) return;
     const s = sous(e);
     if (!s) return;
+    if (!dansRangBas(+s.dataset.p)) { bulle('Touche une sphère de la première rangée (la plus proche).'); return; }
     pl.setPointerCapture(e.pointerId);
+    pl.querySelector('.main-touche')?.remove();
     depart = +s.dataset.p;
     chemin = cheminAuto(C.c, depart);
     son.sphere();
@@ -837,14 +913,14 @@ function brancher() {
   pl.addEventListener('pointermove', (e) => {
     if (!chemin.length || occupe) return;
     const s = sous(e);
-    if (!s || +s.dataset.p === depart) return;
-    // Glisser sur une autre sphère : la ligne part de celle-là.
+    if (!s || +s.dataset.p === depart || !dansRangBas(+s.dataset.p)) return;
+    // Glisser sur une autre sphère du bas : le chemin part de celle-là.
     depart = +s.dataset.p;
     chemin = cheminAuto(C.c, depart);
     son.bip();
     dessinerChemin();
   });
-  pl.addEventListener('pointerup', () => { if (chemin.length) jouer(); });
+  pl.addEventListener('pointerup', () => { if (chemin.length) valider(); });
   $('b-auto').onclick = () => { auto = !auto; $('b-auto').classList.toggle('oui', auto); if (auto) tourAuto(); };
   pl.addEventListener('pointercancel', () => { chemin = []; dessinerChemin(); });
 }
@@ -855,4 +931,4 @@ rendreAccueil();
 aller('accueil');
 
 // Pour les essais : window.legendes
-window.legendes = { S, JOUR, garder, lancerCombat, demarrerCombat, portails: () => portails(JOUR), jouerChemin: (ch) => { chemin = ch; return jouer(); } };
+window.legendes = { S, JOUR, garder, lancerCombat, demarrerCombat, portails: () => portails(JOUR), jouerChemin: (ch) => { chemin = ch; return valider(); } };

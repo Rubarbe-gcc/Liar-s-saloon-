@@ -250,7 +250,7 @@ test('les grandes fêtes : un mois, trois parties (chacune son nouveau LR) ; un 
 
 import { arbre, bonusPotentiel, peutDebloquer, debloquer, ajouterOrbes, gagnerExpPerso, NIV_MAX } from '../public/shared/legendes/potentiel.js';
 import { EVENEMENTS_EVEIL, medaillesEveil } from '../public/shared/legendes/niveaux.js';
-import { cheminAuto } from '../public/shared/legendes/combat.js';
+import { cheminAuto, ramasser, choisir } from '../public/shared/legendes/combat.js';
 
 test('l’arbre de potentiel : des routes selon la rareté, débloquées dans l’ordre avec des orbes ; les niveaux', () => {
   assert.equal(arbre('kael_lr').length, 3);
@@ -275,12 +275,23 @@ test('les événements d’éveil : on bat le personnage pour ses médailles ; l
   const m = medaillesEveil(ev, 2, () => 0.5);
   assert.ok(m.m_kael >= 8);
   const c = creerCombat({ equipe: equipe(['kael_ssr', 'ryo_ssr', 'mira_ssr']), ennemis: CHAPITRES[0].etapes[0].ennemis, graine: 1 });
-  for (let p = 0; p < 25; p++) {
+  for (let p = 20; p < 25; p++) {
     const ch = cheminAuto(c, p);
-    assert.ok(cheminValide(ch), `chemin depuis ${p}`);
-    assert.equal(Math.floor(ch[ch.length - 1] / 5) >= Math.floor(p / 5), true);
+    assert.ok(cheminValide(ch), 'chemin depuis ' + p);
+    const coul = c.spheres[p];
+    assert.ok(ch.every((q) => c.spheres[q] === 'arc' || coul === 'arc' || c.spheres[q] === coul), 'une seule couleur');
   }
-  assert.equal(Math.floor(cheminAuto(c, 2).slice(-1)[0] / 5), 4, 'il descend jusqu’à la dernière rangée');
+  // Le tapis roulant : la sphère du dessus descend à la place de celle qu'on a prise ; une nouvelle arrive au fond.
+  const avant = [...c.spheres];
+  ramasser(c, [22]);
+  assert.equal(c.spheres[22], avant[17], 'celle du dessus descend');
+  assert.equal(c.spheres[2 + 5], avant[2], 'et ainsi de suite');
+  // Chacun son chemin : trois choix, puis le tour se joue.
+  const d = creerCombat({ equipe: equipe(['kael_ssr', 'ryo_ssr', 'mira_ssr']), ennemis: CHAPITRES[0].etapes[0].ennemis, graine: 2 });
+  assert.ok(choisir(d, cheminAuto(d, 20)) && choisir(d, null) && choisir(d, null));
+  assert.equal(choisir(d, null), null, 'pas plus de trois');
+  const evs = jouerTour(d, []);
+  assert.ok(evs.some((e) => e.type === 'attaque' || e.type === 'super'));
 });
 
 test('le portail du retour : d’anciens personnages reviennent, pour 50 invocations au plus', () => {
@@ -293,4 +304,18 @@ test('le portail du retour : d’anciens personnages reviennent, pour 50 invocat
   const r = invoquer(e, p, 1);
   assert.equal(r.ok, false);
   assert.equal(r.limite, true);
+});
+
+import { sortieDe, estSorti, annonces } from '../public/shared/legendes/calendrier.js';
+
+test('les sorties et les annonces : un personnage à venir est caché, puis annoncé trois jours avant', () => {
+  assert.equal(estSorti('kael_r', LANCEMENT), true);
+  assert.equal(estSorti('givre_ssr', jour(2026, 12, 1)), false, 'pas avant Noël');
+  assert.equal(estSorti('givre', jour(2026, 12, 15)), true);
+  assert.equal(sortieDe('vash_lr_ssr'), LANCEMENT + ROTATION);
+  assert.deepEqual(annonces(LANCEMENT + ROTATION - 5), []);
+  const a = annonces(LANCEMENT + ROTATION - 2);
+  assert.ok(a.length === 1 && a[0].persos.includes('vash_lr') && a[0].jour === LANCEMENT + ROTATION);
+  const n = annonces(jour(2026, 12, 13));
+  assert.ok(n.some((x) => x.fete === 'noel' && x.persos.includes('givre')));
 });

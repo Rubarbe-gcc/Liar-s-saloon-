@@ -117,17 +117,47 @@ function soutienPour(c, k) {
   return { ki, atq };
 }
 
-/** Combien de ki chaque combattant gagnerait avec ce chemin (passif, chef, liens et soutien compris). */
-export function kiPour(c, chemin) {
-  const sph = (cheminValide(chemin) ? chemin : []).map((p) => c.spheres[p]);
-  const li = liensActifs(c);
-  return rotation(c).map((i, k) => {
-    const id = c.membres[i].id, x = PERSO[id];
-    const passif = effets(id, 'ki').reduce((t, e) => t + e.n, 0);
-    const liensKi = li[k].reduce((t, l) => t + (LIENS[l].ki || 0), 0);
-    const doux = sph.reduce((t, s) => t + (s === x.element ? 2 : 1), 0);
-    return doux + passif + kiChef(c.chef, id) + kiChef(c.ami, id) + liensKi + soutienPour(c, k).ki;
-  });
+/** Le ki fixe du combattant k de la rotation (son passif, le chef, l'ami, ses liens, le soutien des autres). */
+export function kiFixe(c, k) {
+  const i = rotation(c)[k], id = c.membres[i].id;
+  const passif = effets(id, 'ki').reduce((t, e) => t + e.n, 0);
+  const liensKi = liensActifs(c)[k].reduce((t, l) => t + (LIENS[l].ki || 0), 0);
+  return passif + kiChef(c.chef, id) + kiChef(c.ami, id) + liensKi + soutienPour(c, k).ki;
+}
+/** Le ki que le combattant k tire d'un chemin : 2 par sphère de son élément, 1 par autre sphère (l'arc-en-ciel aussi). */
+export function kiSpheres(c, k, chemin) {
+  const x = PERSO[c.membres[rotation(c)[k]].id];
+  return (cheminValide(chemin) ? chemin : []).reduce((t, p) => t + (c.spheres[p] === x.element ? 2 : 1), 0);
+}
+/** Combien de ki chaque combattant gagnerait avec ce chemin (à lui seul). */
+export const kiPour = (c, chemin) => rotation(c).map((_, k) => kiSpheres(c, k, chemin) + kiFixe(c, k));
+
+/**
+ * Le tapis roulant : les sphères du chemin sont ramassées ; dans chaque colonne, celles du dessus (plus loin)
+ * descendent combler les trous (vers la rangée du bas, la plus proche), et de nouvelles arrivent au fond.
+ */
+export function ramasser(c, chemin) {
+  for (let col = 0; col < COLS; col++) {
+    const restent = [];
+    for (let lig = LIGNES - 1; lig >= 0; lig--) { const p = lig * COLS + col; if (!chemin.includes(p)) restent.push(c.spheres[p]); }
+    for (let lig = LIGNES - 1, n = 0; lig >= 0; lig--, n++) c.spheres[lig * COLS + col] = n < restent.length ? restent[n] : uneSphere(c);
+  }
+}
+
+/**
+ * Le choix du combattant suivant de la rotation : son chemin (s'il n'est pas valable, le meilleur pour lui) ;
+ * ses sphères sont ramassées tout de suite (le tapis roulant), son ki attendra la résolution du tour.
+ * Rend { k, chemin, ki, arcs }, ou null si les trois ont déjà choisi.
+ */
+export function choisir(c, chemin) {
+  c.choix ||= [];
+  const k = c.choix.length;
+  if (k >= rotation(c).length || c.fin) return null;
+  if (!cheminValide(chemin)) chemin = meilleurCheminPour(c, k);
+  const pris = { k, chemin: [...chemin], ki: kiSpheres(c, k, chemin), arcs: chemin.filter((p) => c.spheres[p] === 'arc').length };
+  c.choix.push(pris);
+  ramasser(c, chemin);
+  return pris;
 }
 
 /** L'ATQ et la DÉF d'un combattant pour ce tour (passifs, liens, soutien, cumuls), sans la super. */
@@ -212,19 +242,23 @@ function verifierEnnemi(c, evs) {
  * { qui, degats, crit, avantage, add }, esquiveEnnemi, transformation { nom }, ko, superEnnemi { nom },
  * riposte { cible, degats, super, garde, avantage }, esquive { cible }, contre { qui, degats }, victoire, defaite.
  */
-export function jouerTour(c, chemin) {
+export function jouerTour(c, chemins) {
   if (c.fin) return [];
+  // Un seul chemin (une liste de places) : c'est celui du premier ; les autres prennent le meilleur pour eux.
+  if (Array.isArray(chemins) && typeof chemins[0] === 'number') chemins = [chemins];
+  chemins ||= [];
+  c.choix ||= [];
+  while (c.choix.length < rotation(c).length) choisir(c, chemins[c.choix.length]);
   const evs = [];
-  if (!cheminValide(chemin)) chemin = meilleurChemin(c);
-  const rot = rotation(c), gains = kiPour(c, chemin);
-  const nSph = chemin.length;
-  const arcs = chemin.filter((p) => c.spheres[p] === 'arc').length;
+  const rot = rotation(c), choix = c.choix;
+  const gains = rot.map((_, k) => choix[k].ki + kiFixe(c, k));
+  const arcs = choix.reduce((t, x) => t + x.arcs, 0);
   // Le début du tour : les soins.
   let soin = Math.round(c.pvMax * 0.03 * arcs);
   for (const i of rot) soin += Math.round(c.pvMax * (c.membres[i].extra?.soin || 0));
   for (const i of rot) for (const e of effets(c.membres[i].id, 'soin')) soin += Math.round(c.pvMax * e.taux);
   if (soin) { c.pv = Math.min(c.pvMax, c.pv + soin); evs.push({ type: 'debut', soin }); }
-  const formes = rot.map((i, k) => forme(c, i, k, rot.length ? nSph : 0));
+  const formes = rot.map((i, k) => forme(c, i, k, choix[k].chemin.length));
   rot.forEach((i, k) => {
     if (c.fin) return;
     const m = c.membres[i], x = PERSO[m.id];
@@ -240,9 +274,8 @@ export function jouerTour(c, chemin) {
   if (!c.fin) riposte(c, rot, formes, evs);
   for (const i of rot) c.membres[i].esquiveTour = 0;
   c.tour += 1;
-  // Les sphères ramassées sont remplacées.
-  for (const p of chemin) c.spheres[p] = uneSphere(c);
-  c.journal.push(chemin.join('-'));
+  c.journal.push(choix.map((x) => x.chemin.join('-')).join('|'));
+  c.choix = [];
   return evs;
 }
 
@@ -293,63 +326,42 @@ function contre(c, i, k, formes, evs) {
 }
 
 /**
- * Le meilleur chemin (l'aide, et l'ordinateur des tests) : depuis chaque sphère, on avance vers la voisine qui
- * rapporte le plus (en visant les supers), jusqu'à douze sphères.
+ * La liaison automatique (comme dans les grands gachas) : on touche une sphère de la rangée du bas (la plus
+ * proche), et le jeu cherche tout seul le plus long chemin de SA couleur (les arcs-en-ciel comptent avec toutes),
+ * de voisine en voisine, vers le fond.
  */
-export function meilleurChemin(c) {
-  const rot = rotation(c);
-  const valeur = (ch) => {
-    const g = kiPour(c, ch);
-    return rot.reduce((t, i, k) => {
-      const ki = Math.min(KI_MAX, c.membres[i].ki + g[k]);
-      return t + (PERSO[c.membres[i].id].rarete === 'LR' && ki >= KI_ULTIME ? 45 : ki >= KI_SUPER ? 30 : 0) + g[k];
-    }, 0);
-  };
-  let best = [0], score = -1;
-  for (let d = 0; d < NB_SPHERES; d++) {
-    const ch = [d];
-    for (let l = 1; l < 12; l++) {
-      let suiv = -1, sv = valeur(ch);
-      for (let p = 0; p < NB_SPHERES; p++) {
-        if (ch.includes(p) || !voisines(ch[ch.length - 1], p)) continue;
-        const v = valeur([...ch, p]);
-        if (v > sv) { sv = v; suiv = p; }
-      }
-      if (suiv < 0) break;
-      ch.push(suiv);
-    }
-    const v = valeur(ch);
+export const RANG_BAS = LIGNES - 1;
+export const dansRangBas = (p) => Math.floor(p / COLS) === RANG_BAS;
+export function cheminAuto(c, p) {
+  if (!Number.isInteger(p) || p < 0 || p >= NB_SPHERES) return [];
+  const couleurs = c.spheres[p] === 'arc' ? CYCLE : [c.spheres[p]];
+  let best = [p];
+  for (const coul of couleurs) {
+    const ok = (q) => c.spheres[q] === coul || c.spheres[q] === 'arc';
+    const fouille = (ch) => {
+      if (ch.length > best.length) best = [...ch];
+      if (ch.length >= 10) return;
+      const der = ch[ch.length - 1];
+      for (let q = 0; q < NB_SPHERES; q++) if (!ch.includes(q) && voisines(der, q) && ok(q)) { ch.push(q); fouille(ch); ch.pop(); }
+    };
+    fouille([p]);
+  }
+  return best;
+}
+/** Le meilleur chemin pour le combattant k (l'aide, le mode auto, l'ordinateur des tests) : il essaie chaque sphère du bas. */
+export function meilleurCheminPour(c, k = 0) {
+  const i = rotation(c)[k];
+  const m = c.membres[i], x = PERSO[m.id];
+  const fixe = kiFixe(c, k);
+  let best = [RANG_BAS * COLS], score = -1;
+  for (let col = 0; col < COLS; col++) {
+    const ch = cheminAuto(c, RANG_BAS * COLS + col);
+    const ki = Math.min(KI_MAX, m.ki + fixe + kiSpheres(c, k, ch));
+    const v = (x.rarete === 'LR' && ki >= KI_ULTIME ? 45 : ki >= KI_SUPER ? 30 : 0) + ki;
     if (v > score) { score = v; best = ch; }
   }
   return best;
 }
-/** Ancien nom. */
+/** Anciens noms. */
+export const meilleurChemin = (c) => meilleurCheminPour(c, (c.choix || []).length);
 export const meilleureCouleur = meilleurChemin;
-
-/**
- * La liaison automatique (comme dans les grands gachas) : on touche une sphère, la ligne descend toute seule
- * jusqu'à la rangée du bas (vers les combattants), de voisine en voisine, en restant sur la même couleur
- * (ou un arc-en-ciel) tant qu'elle peut.
- */
-export function cheminAuto(c, p) {
-  if (!Number.isInteger(p) || p < 0 || p >= NB_SPHERES) return [];
-  const couleur = c.spheres[p];
-  const ch = [p];
-  let cur = p;
-  while (Math.floor(cur / COLS) < LIGNES - 1) {
-    const lig = Math.floor(cur / COLS) + 1;
-    const cands = [];
-    for (let col = 0; col < COLS; col++) { const q = lig * COLS + col; if (voisines(cur, q)) cands.push(q); }
-    // D'abord la même couleur (ou un arc-en-ciel), puis tout droit en dessous.
-    const meme = cands.filter((q) => c.spheres[q] === couleur || c.spheres[q] === 'arc' || couleur === 'arc');
-    const choix = (meme.length ? meme : cands).sort((a, b) => Math.abs((a % COLS) - (cur % COLS)) - Math.abs((b % COLS) - (cur % COLS)))[0];
-    ch.push(choix);
-    cur = choix;
-  }
-  // Puis, sur la dernière rangée, les voisines de la même couleur à côté.
-  for (const d of [-1, 1]) {
-    let q = cur + d;
-    while (Math.floor(q / COLS) === LIGNES - 1 && q >= 0 && q < NB_SPHERES && !ch.includes(q) && c.spheres[q] === couleur) { ch.push(q); q += d; break; }
-  }
-  return cheminValide(ch) ? ch : [p];
-}

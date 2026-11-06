@@ -529,3 +529,61 @@ canvas.particules { position: absolute; inset: 0; width: 100%; height: 100%; z-i
 .tuile.lancement small { color: #2a1a3a; }
 .tuile.fait { opacity: .7; }
 .tuile:disabled { opacity: .35; }
+
+/* ============ Le combat en plein jour, le plateau en perspective ============ */
+.arene { background: linear-gradient(180deg, var(--ciel1, #3a9ae0) 0%, var(--ciel2, #c8ecff) 48%, var(--colline1, #5aa85a) 48%); }
+.decor-combat .soleil { left: 80%; top: 6%; width: 30%; background: radial-gradient(circle, #fffbe8 0 18%, rgba(255, 245, 200, .5) 32%, transparent 62%); }
+.decor-combat .nuage { position: absolute; height: 7%; border-radius: 40px; background: #fff; opacity: .9; box-shadow: 30px -12px 0 6px #fff, 60px 0 0 -2px #fff; animation: nuage 40s linear infinite; }
+.decor-combat .n1 { left: 6%; top: 8%; width: 18%; }
+.decor-combat .n2 { left: 44%; top: 4%; width: 14%; opacity: .75; animation-duration: 55s; }
+.decor-combat .n3 { left: 70%; top: 20%; width: 12%; opacity: .7; animation-duration: 48s; }
+@keyframes nuage { 50% { transform: translateX(20px); } }
+.decor-combat .monts { top: 30%; height: 20%; background: linear-gradient(180deg, color-mix(in srgb, var(--monts, #6aa0c0) 80%, #fff), var(--monts, #6aa0c0)); opacity: .85; }
+.decor-combat .monts.loin { top: 26%; opacity: .45; filter: none; }
+.decor-combat .collines { position: absolute; left: -10%; right: -10%; top: 44%; height: 22%; background: var(--colline1, #5aa85a); clip-path: polygon(0 40%, 12% 20%, 28% 38%, 44% 10%, 60% 34%, 76% 14%, 90% 30%, 100% 22%, 100% 100%, 0 100%); }
+.decor-combat .sol { top: 56%; height: auto; bottom: 0; background: linear-gradient(180deg, var(--colline1, #5aa85a), var(--colline2, #2e7a3e)); }
+.decor-combat .arbre { position: absolute; width: 5%; aspect-ratio: .6; background: radial-gradient(ellipse at 50% 35%, color-mix(in srgb, var(--colline2, #2e7a3e) 70%, #000) 0 45%, transparent 47%), linear-gradient(90deg, transparent 44%, #5a3a1a 44% 56%, transparent 56%); }
+.decor-combat .a1 { left: 58%; top: 44%; }
+.decor-combat .a2 { left: 64%; top: 46%; width: 4%; }
+.decor-combat .a3 { left: 88%; top: 47%; width: 6%; }
+.rayons-combat { display: none; }
+.monstre { right: 8%; top: 12%; width: 22%; }
+.monstre .rocher { background: linear-gradient(180deg, #9a8a7a, #5a4a3a); }
+.heros { left: -6%; bottom: -1%; width: 52%; z-index: 1; }
+.plateau { top: 8%; bottom: 2%; left: 0; right: 0; z-index: 2; }
+.sphere-p { width: calc(13.5% * var(--s, 1)); margin: calc(-6.75% * var(--s, 1)) 0 0 calc(-6.75% * var(--s, 1)); box-shadow: 0 0 8px var(--c), 0 0 18px color-mix(in srgb, var(--c) 55%, transparent), inset 0 -4px 8px rgba(0, 0, 0, .3), 0 4px 6px rgba(0, 0, 0, .25); }
+.hud-ennemi { background: linear-gradient(90deg, rgba(10, 20, 40, .85), rgba(10, 20, 40, .4)); }
+.main-touche { position: absolute; z-index: 9; transform: translate(-30%, -10%); font-size: 42px; line-height: 1; pointer-events: none; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .5)); animation: touche-main 1s ease-in-out infinite; text-align: center; }
+.main-touche small { display: block; font: 900 11px var(--titre); color: #fff; text-shadow: 0 2px 0 #000; }
+@keyframes touche-main { 50% { transform: translate(-30%, -10%) scale(.85); } }
+.trace polyline { stroke-width: 6; }
+
+/* Le combat : le héros devant, à gauche ; le plateau à sa droite ; un chemin par combattant, le tapis roulant. */
+.heros { left: -8%; bottom: 0; width: 44%; z-index: 4; }
+.sphere-p:not(.bas) { cursor: default; filter: saturate(.85); }
+.sphere-p.bas { box-shadow: 0 0 0 2px rgba(255, 255, 255, .55), 0 0 12px var(--c), 0 0 22px color-mix(in srgb, var(--c) 55%, transparent); }
+.sphere-p.vole { animation: vole .45s ease-in forwards !important; z-index: 20 !important; }
+@keyframes vole { to { transform: translate(var(--vx), var(--vy)) scale(.3); opacity: .2; } }
+.sphere-p.descend { animation: descendre .35s cubic-bezier(.3, 1.3, .5, 1) backwards, flotteSphere 2.6s ease-in-out var(--dl, 0s) infinite; }
+@keyframes descendre { from { transform: translate(18px, -60px) scale(.8); } }
+.combattant { opacity: .6; transition: opacity .2s, transform .2s; }
+.combattant.actif { opacity: 1; transform: translateY(-6px) scale(1.06); }
+.combattant.actif .rond-perso { box-shadow: 0 0 0 3px #fff, 0 0 18px #ffd23f, 0 4px 10px rgba(0, 0, 0, .7); }
+.combattant.fait { opacity: .95; }
+.combattant.recoit .rond-perso { animation: recoit .4s; }
+@keyframes recoit { 40% { transform: scale(1.15); filter: brightness(1.8); } }
+.ki-plus.fixe { animation: none; opacity: .9; font-size: 16px; }
+/* Les annonces (bientôt). */
+.diapo.bientot { color: #fff; }
+.diapo.bientot b { color: #ffd23f; }
+.annonce { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-top: 8px; }
+/* Le rangement par badge. */
+.badges { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.badge-cat { padding: 10px 6px; border: 0; border-radius: 8px; transform: skewX(-8deg); font: 900 .78em var(--titre); color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 0, .5); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .5), 0 3px 0 rgba(0, 0, 0, .4); }
+.badge-cat.g0 { background: linear-gradient(180deg, #ffb35a, #d0661a); }
+.badge-cat.g1 { background: linear-gradient(180deg, #8ad85a, #2e8a3e); }
+.badge-cat.g2 { background: linear-gradient(180deg, #ffe27a, #c9a012); color: #3a2a00; text-shadow: none; }
+.badge-cat.tous { grid-column: 1 / -1; background: linear-gradient(180deg, #6ab8ff, #1460c8); }
+.badge-cat.oui { box-shadow: inset 0 0 0 3px #fff, 0 0 14px #fff; }
+#b-badges { flex: none; padding: 7px 12px; border-radius: 18px; border: 0; background: linear-gradient(180deg, #8ad85a, #2e8a3e); font-weight: 800; white-space: nowrap; }
+.nom-annonce { display: block; text-align: center; margin-top: 4px; font: 900 .9em var(--titre); color: #ffd23f; }

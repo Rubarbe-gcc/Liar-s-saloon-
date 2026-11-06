@@ -158,3 +158,64 @@ export function portails(jour) {
   }
   return out;
 }
+
+/* ------------------------------------------------------------------ */
+/* Les sorties et les annonces                                         */
+/* ------------------------------------------------------------------ */
+
+import { LIGNEES, ligneeDe, PERSO as _PERSO } from './persos.js';
+
+/** Le jour où une lignée devient tirable : le lancement (les personnages de base), son portail, ou sa première fête. */
+const debutPremiereFete = (x) => {
+  let best = Infinity;
+  for (const id of fetesDe(x)) {
+    const f = FETE[id];
+    for (let a = 2026; a < 2040; a++) {
+      if ((f.depuis && a < f.depuis) || (f.seulement && a !== f.seulement)) continue;
+      const de = f.parties ? f.parties[(x.partie || 1) - 1] : f;
+      const { debut } = intervalle(a, de);
+      if (debut < LANCEMENT) continue;
+      best = Math.min(best, debut);
+      break;
+    }
+  }
+  return best;
+};
+export function sortieDe(id) {
+  const l = LIGNEES[ligneeDe(_PERSO[id])].map((y) => _PERSO[y]);
+  let jour = -Infinity;
+  for (const x of l) {
+    if (x.fete) jour = Math.max(jour, debutPremiereFete(x));
+    else if (x.sortie !== undefined) jour = Math.max(jour, LANCEMENT + x.sortie * ROTATION);
+  }
+  return jour;
+}
+/** Le personnage (sa lignée) est-il déjà sorti ce jour-là ? */
+export const estSorti = (id, jour) => sortieDe(id) <= jour;
+
+/** Combien de jours avant une sortie on l'annonce (le teasing). */
+export const JOURS_ANNONCE = 3;
+/**
+ * Les annonces : ce qui sort dans les JOURS_ANNONCE prochains jours (le prochain portail, la prochaine fête ou
+ * partie de fête) : [{ nom, jour (de la sortie), persos: [ids], fete? }].
+ */
+export function annonces(jour) {
+  const out = [];
+  const r = rotationDu(jour), k = r.k + 1, debut = LANCEMENT + k * ROTATION;
+  if (debut - jour <= JOURS_ANNONCE && k < NB_SORTIES) {
+    const persos = PERSOS.filter((x) => x.sortie === k && x.rarete !== 'UR' && !x.dokkan && (x.rarete === 'LR' || TIRABLE(x))).map((x) => x.id);
+    if (persos.length) out.push({ nom: 'Nouvelles Légendes', jour: debut, persos });
+  }
+  for (let d = 1; d <= JOURS_ANNONCE; d++) {
+    for (const f of fetesDu(jour + d)) {
+      const deja = fetesDu(jour).some((g) => g.id === f.id && g.partie === f.partie);
+      const debutF = f.partieDebut ?? f.debut;
+      if (deja || debutF !== jour + d) continue;
+      const persos = PERSOS.filter((x) => fetesDe(x).includes(f.id) && (!f.partie || (x.partie || 1) === f.partie) && !x.dokkan && (x.rarete === 'LR' || TIRABLE(x))).map((x) => x.id);
+      out.push({ nom: `${f.glyphe} ${f.nom}${f.partie ? ` · ${f.partieNom}` : ''}`, jour: debutF, persos, fete: f.id });
+    }
+  }
+  // Une base SSR dont la forme LR est déjà montrée ne compte pas deux fois.
+  for (const a of out) a.persos = a.persos.filter((id) => !a.persos.includes(_PERSO[id].versLR));
+  return out;
+}
