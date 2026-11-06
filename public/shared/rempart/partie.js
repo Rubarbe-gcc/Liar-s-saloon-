@@ -8,7 +8,7 @@
  * Repère : x = colonne, z = ligne (le centre d'une case est à +0,5), y = hauteur.
  */
 
-import { TOURS, ENNEMIS, REVENTE, ALTITUDE } from './donnees.js';
+import { TOURS, ENNEMIS, REVENTE, ALTITUDE, FACTEUR_OR_DEPART } from './donnees.js';
 import { niveau as trouverNiveau } from './niveaux.js';
 import { makeRng } from '../hasard.js';
 
@@ -128,7 +128,7 @@ export function creerPartie(id, { graine = 1 } = {}) {
   if (!def) throw new Error(`niveau inconnu : ${id}`);
   return {
     niveau: id, def, carte: analyserCarte(def.carte), rng: makeRng(graine),
-    t: 0, or: def.or, vies: def.vies, viesMax: def.vies,
+    t: 0, or: Math.round(def.or * FACTEUR_OR_DEPART), vies: def.vies, viesMax: def.vies,
     vague: 0, totalVagues: def.vagues.length,
     file: [], compte: null, phase: 'preparation',
     ennemis: [], tours: [], projectiles: [],

@@ -17,6 +17,15 @@
  */
 export const FACTEUR_DEGATS = 0.8;
 
+/** Réglage global des PV de tous les ennemis et boss (appliqué au chargement). */
+export const FACTEUR_PV = 2;
+
+/** Réglage global de l'or rapporté par chaque ennemi détruit (appliqué au chargement). */
+export const FACTEUR_OR_ENNEMIS = 2;
+
+/** Réglage global de l'or de départ de chaque lieu (appliqué au début de la partie). */
+export const FACTEUR_OR_DEPART = 0.9;
+
 export const TOURS = {
   rafale: {
     nom: 'Rafale', icone: '🏹', couleur: '#ff9a3c',
@@ -284,6 +293,12 @@ export const ENNEMIS = {
     ponte: { type: 'cliquet', n: 4, toutes: 5, seuil: 0.75 }, rage: { seuil: 0.4, vitesse: 1.6, armure: 3 },
   },
 };
+
+// Application du facteur de PV, ennemis et boss.
+for (const e of Object.values(ENNEMIS)) {
+  e.pv = Math.round(e.pv * FACTEUR_PV);
+  e.or = Math.round(e.or * FACTEUR_OR_ENNEMIS);
+}
 
 export const ORDRE_ENNEMIS = ['rodeur', 'filou', 'cuirasse', 'bourdon', 'grappe', 'grappillon', 'tisseur', 'furtif', 'fouisseur', 'pavois', 'bondisseur', 'dirigeable', 'mue', 'broyeur', 'nuee', 'hydre', 'tete', 'seigneur', 'cliquet', 'bastion', 'reparateur', 'scarabee', 'colosse'];
 
