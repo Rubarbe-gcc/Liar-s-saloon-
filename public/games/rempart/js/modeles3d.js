@@ -176,6 +176,33 @@ const TETES = {
     t.add(faisceau);
     return { faisceau, lampe, fixe: true };
   },
+  harpon(n, t, b) {
+    // Une grande arbalète tournée vers le ciel, un harpon chargé.
+    piece(cyl(0.22, 0.26, 0.14, 8), METAL_SOMBRE, 0, 0.07, 0, t);
+    const canons = new THREE.Group();
+    canons.position.y = 0.26;
+    canons.rotation.x = -0.55;
+    t.add(canons);
+    const vert = mat('harponVert', { color: '#2a6a5a', metalness: 0.4 });
+    piece(boite(0.1, 0.1, 0.7 + n * 0.08), vert, 0, 0, 0.1, canons);
+    for (const sg of [-1, 1]) piece(boite(0.4 + n * 0.06, 0.05, 0.06), n === 1 ? BOIS : METAL, sg * (0.22 + n * 0.03), 0.02, 0.3, canons).rotation.y = sg * 0.4;
+    const carreau = piece(boite(0.04, 0.04, b === 1 ? 0.9 : 0.6), mat('harponFer', { color: '#8aa8a0', metalness: 0.8, roughness: 0.3 }), 0, 0.08, 0.25, canons);
+    piece(cone(0.06, 0.14, 4), lueur('#8af0c8', 1.4), 0, 0.08, 0.25 + (b === 1 ? 0.5 : 0.36), canons).rotation.x = Math.PI / 2;
+    if (b === 0) piece(tore(0.16, 0.02, 6, 12), lueur('#8af0c8', 1.2), 0, 0.08, 0.5, canons);
+    return { canons, carreau };
+  },
+  piegeur(n, t) {
+    // Un atelier trapu : une cuve à mines et un bras qui les lance.
+    piece(boite(0.4, 0.22, 0.4), mat('piegeurCaisse', { color: '#6a5a30' }), 0, 0.11, 0, t);
+    for (let i = 0; i < n + 1; i++) piece(cyl(0.07, 0.08, 0.05, 8), mat('mineMat', { color: '#4a4030', metalness: 0.6 }), -0.12 + (i % 2) * 0.24, 0.25 + Math.floor(i / 2) * 0.05, -0.1, t);
+    const canons = new THREE.Group();
+    canons.position.set(0, 0.26, 0.05);
+    t.add(canons);
+    const bras = piece(boite(0.06, 0.06, 0.4), n >= 3 ? OR : METAL, 0, 0.05, 0.15, canons);
+    bras.rotation.x = -0.4;
+    piece(boule(0.06, 6, 4), lueur('#ff3a1a', 2), 0, 0.14, 0.33, canons);
+    return { canons };
+  },
   foudre(n, t) {
     piece(cyl(0.09, 0.15, 0.62, 8), CUIVRE, 0, 0.31, 0, t);
     for (let i = 0; i <= n; i++) piece(tore(0.19 - i * 0.025, 0.035), i % 2 ? METAL : CUIVRE, 0, 0.14 + i * 0.15, 0, t).rotation.x = Math.PI / 2;
@@ -378,6 +405,93 @@ const ENNEMIS3D = {
     yeux(g, '#6ab8ff', 0.08, 0.4, 0.2, 0.03);
     return { pattes: pattes(g, 4, m(FER), 0.2, 0.26, 0.2), haut: 0.95, rythme: 7 };
   },
+  bondisseur(g, m) {
+    // Une sauterelle de fer aux grandes pattes repliées.
+    const corps = piece(boule(0.2, 8, 6), m('#8a9a3a'), 0, 0.32, 0, g);
+    corps.scale.set(0.9, 0.8, 1.4);
+    piece(boule(0.12, 8, 6), m('#6a7a2a'), 0, 0.4, 0.28, g);
+    yeux(g, '#ffd23f', 0.06, 0.44, 0.36, 0.035);
+    for (const sg of [-1, 1]) {
+      const p = piece(boite(0.05, 0.36, 0.05), m(FER), sg * 0.2, 0.3, -0.12, g);
+      p.rotation.x = 0.9;
+      piece(boite(0.04, 0.3, 0.04), m(FER), sg * 0.2, 0.12, -0.02, g).rotation.x = -0.6;
+    }
+    return { pattes: pattes(g, 2, m(FER), 0.12, 0.2, 0.18, 0.035), haut: 0.7, rythme: 8 };
+  },
+  dirigeable(g, m) {
+    // Un ballon de toile rapiécée, une nacelle blindée et deux hélices.
+    const ballon = piece(boule(0.4, 12, 8), m('#a87a4a'), 0, 0.35, 0, g);
+    ballon.scale.set(0.8, 0.7, 1.4);
+    for (const z of [-0.25, 0.1]) piece(cyl(0.33, 0.33, 0.04, 12), m(ROUILLE_SOMBRE), 0, 0.35, z, g).rotation.x = Math.PI / 2;
+    piece(boite(0.26, 0.14, 0.4), m('#4a4e56', { metalness: 0.5 }), 0, -0.02, 0, g);
+    yeux(g, '#ff8a3a', 0.07, 0, 0.2, 0.04);
+    const helices = [-1, 1].map(sg => {
+      const h = new THREE.Group();
+      h.position.set(sg * 0.18, -0.02, -0.22);
+      piece(boite(0.3, 0.03, 0.05), m(FER), 0, 0, 0, h);
+      g.add(h);
+      return h;
+    });
+    return { helices, haut: 0.9, vol: true };
+  },
+  mue(g, m) {
+    // Un crabe de fer à la carapace verte qui se reforme.
+    const carapace = piece(boule(0.3, 10, 6), m('#4f8a6a', { metalness: 0.3 }), 0, 0.26, 0, g);
+    carapace.scale.set(1.2, 0.55, 1);
+    piece(boule(0.06, 6, 4), lueur('#6dff9a', 1.6), 0, 0.42, 0, g).castShadow = false;
+    for (const sg of [-1, 1]) {
+      const pince = piece(boite(0.12, 0.08, 0.2), m(ROUILLE), sg * 0.3, 0.2, 0.22, g);
+      pince.rotation.y = sg * 0.4;
+    }
+    yeux(g, '#c8ff5a', 0.07, 0.32, 0.26, 0.03);
+    return { pattes: pattes(g, 6, m(FER), 0.28, 0.16, 0.16, 0.035), haut: 0.6, rythme: 10, carapace };
+  },
+  hydre(g, m) {
+    // Un serpent de métal à trois têtes.
+    const vert = m('#3a5a4a', { metalness: 0.5 }), sombre = m('#24342c', { metalness: 0.5 });
+    for (let i = 0; i < 5; i++) piece(boule(0.34 - i * 0.04, 10, 8), i % 2 ? sombre : vert, Math.sin(i * 1.2) * 0.12, 0.34, -i * 0.32, g);
+    const cous = [];
+    for (const [x, rz] of [[-0.3, 0.5], [0, 0], [0.3, -0.5]]) {
+      const cou = new THREE.Group();
+      cou.position.set(x, 0.45, 0.2);
+      cou.rotation.z = rz;
+      piece(cyl(0.08, 0.12, 0.7, 6), vert, 0, 0.35, 0, cou);
+      piece(cone(0.16, 0.32, 6), sombre, 0, 0.78, 0.08, cou).rotation.x = 1.4;
+      yeux(cou, '#ff3a3a', 0.07, 0.82, 0.12, 0.04);
+      g.add(cou);
+      cous.push(cou);
+    }
+    return { cous, haut: 1.6, rythme: 3, chenilles: true };
+  },
+  tete(g, m) {
+    const vert = m('#3a5a4a', { metalness: 0.5 });
+    for (let i = 0; i < 3; i++) piece(boule(0.2 - i * 0.03, 8, 6), vert, 0, 0.22, -i * 0.22, g);
+    const cou = new THREE.Group();
+    cou.position.set(0, 0.3, 0.12);
+    piece(cyl(0.07, 0.1, 0.4, 6), vert, 0, 0.2, 0, cou);
+    piece(cone(0.13, 0.26, 6), m('#24342c'), 0, 0.46, 0.06, cou).rotation.x = 1.4;
+    yeux(cou, '#ff3a3a', 0.05, 0.5, 0.1, 0.035);
+    g.add(cou);
+    return { cous: [cou], haut: 0.85, rythme: 6, chenilles: true };
+  },
+  seigneur(g, m) {
+    // Le Seigneur Rouille : un géant couronné, une masse, un cœur de braise.
+    const rouille = m(ROUILLE), sombre = m('#3a2a24', { metalness: 0.5 });
+    for (const sg of [-1, 1]) piece(boite(0.3, 0.7, 0.34), sombre, sg * 0.3, 0.35, 0, g);
+    piece(boite(1.0, 0.8, 0.6), rouille, 0, 1.1, 0, g);
+    piece(boite(1.2, 0.18, 0.7), sombre, 0, 1.52, 0, g);
+    piece(boule(0.15, 8, 6), lueur('#ff5a1a', 2.4), 0, 1.15, 0.31, g).castShadow = false;
+    piece(boule(0.26, 8, 6), sombre, 0, 1.78, 0.02, g);
+    yeux(g, '#ff2a2a', 0.1, 1.82, 0.22, 0.05);
+    for (let i = 0; i < 5; i++) piece(cone(0.06, 0.24, 4), OR, (i - 2) * 0.1, 2.05, 0, g);
+    const bras = new THREE.Group();
+    bras.position.set(0.68, 1.35, 0);
+    piece(boite(0.22, 0.7, 0.22), rouille, 0, -0.35, 0, bras);
+    piece(boite(0.4, 0.4, 0.4), sombre, 0, -0.8, 0.1, bras);
+    g.add(bras);
+    piece(boite(0.22, 0.7, 0.22), rouille, -0.68, 1.0, 0, g);
+    return { bras, haut: 2.3, rythme: 3 };
+  },
   broyeur(g, m) {
     for (const s of [-1, 1]) piece(boite(0.24, 0.34, 1.2), m('#262626'), s * 0.5, 0.17, 0, g);
     piece(boite(0.86, 0.6, 1.0), m('#5a4a3e', { metalness: 0.45 }), 0, 0.6, -0.05, g);
@@ -427,7 +541,7 @@ export function creerEnnemi(type, taille) {
   groupe.add(corps);
   const { liste, m } = matsPropres();
   const anim = ENNEMIS3D[type](corps, m);
-  const echelle = type === 'broyeur' || type === 'nuee' ? 1 : taille / 0.45;
+  const echelle = ['broyeur', 'nuee', 'hydre', 'seigneur', 'dirigeable'].includes(type) ? 1 : taille / 0.45;
   corps.scale.setScalar(echelle);
   return { groupe, corps, anim, mats: liste, haut: anim.haut * echelle, echelle, flash: 0, phase: Math.random() * 10 };
 }
@@ -464,6 +578,10 @@ export function animerEnnemi(m, t, dt, { vitesse = 1, ralenti = 0, cache = false
   if (a.saut) a.saut.position.y = 0.15 + Math.abs(Math.sin(tt * r)) * 0.12;
   if (a.orbe) a.orbe.position.y = 0.86 + Math.sin(tt * 3) * 0.05;
   if (a.broyeur) a.broyeur.rotation.x += dt * 8;
+  if (a.helices) for (const h of a.helices) h.rotation.z += dt * 25;
+  if (a.cous) a.cous.forEach((c, i) => { c.rotation.x = Math.sin(tt * 2 + i) * 0.25; });
+  if (a.bras) a.bras.rotation.x = Math.sin(tt * 1.5) * 0.5;
+  if (a.carapace) a.carapace.scale.y = 0.55 + Math.sin(tt * 3) * 0.03;
   m.flash = Math.max(0, m.flash - dt * 7);
   const em = m.flash > 0 ? BLANC : ralenti > 0 ? BLEU : NOIR;
   const k = m.flash > 0 ? m.flash * 0.9 : ralenti > 0 ? 0.35 : 0;

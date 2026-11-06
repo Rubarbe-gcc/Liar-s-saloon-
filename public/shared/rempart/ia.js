@@ -26,7 +26,7 @@ export function couverture(carte, emp, portee = 3) {
   return { sol, air };
 }
 
-const PLAN = ['rafale', 'mortier', 'givre', 'perce', 'rafale', 'foudre', 'braise', 'mortier', 'perce', 'foudre', 'givre', 'rafale', 'braise', 'mortier', 'perce', 'foudre'];
+const PLAN = ['rafale', 'mortier', 'givre', 'perce', 'rafale', 'foudre', 'braise', 'harpon', 'mortier', 'piegeur', 'perce', 'foudre', 'givre', 'harpon', 'rafale', 'braise', 'piegeur', 'mortier', 'perce', 'foudre'];
 
 /**
  * @param {object} p  la partie

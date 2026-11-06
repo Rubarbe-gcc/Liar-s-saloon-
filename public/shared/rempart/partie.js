@@ -132,7 +132,7 @@ export function creerPartie(id, { graine = 1 } = {}) {
     vague: 0, totalVagues: def.vagues.length,
     file: [], compte: null, phase: 'preparation',
     ennemis: [], tours: [], projectiles: [],
-    prochainId: 1, evts: [], phares: [],
+    prochainId: 1, evts: [], phares: [], mines: [],
     stats: { tues: 0, fuites: 0, orGagne: 0, bonus: 0, tirs: 0, degats: 0 },
   };
 }
@@ -191,6 +191,7 @@ export function vendre(p, tourId) {
   const gain = valeurRevente(t);
   p.or += gain;
   p.tours.splice(i, 1);
+  p.mines = p.mines.filter(m => m.tour !== t.id);
   evt(p, { k: 'vendu', tour: t.id, type: t.type, x: t.x, z: t.z, or: gain });
   return { ok: true, or: gain };
 }
@@ -255,6 +256,7 @@ function apparaitre(p, type, depart, vague, d = 0, decal = null) {
     ralenti: 0, ralentiT: 0, ponteT: def.ponte ? def.ponte.toutes : 0, soinT: 1, mort: false,
     etourdiT: 0, brule: 0, bruleT: 0, bruleSrc: null, bouclier: 0, bouclierT: 1, sous: false,
     fouitT: def.fouit ? def.fouit.toutes * (0.5 + p.rng() * 0.5) : 0, revele: !def.furtif,
+    sautT: def.saut ? def.saut.toutes * (0.4 + p.rng() * 0.6) : 0, saute: 0, calme: 99, enrage: false,
   };
   const p2 = surChemin(ch, d, e.decal);
   e.x = e.px = p2.x; e.z = e.pz = p2.z;
@@ -270,6 +272,7 @@ function infliger(p, e, degats, { perce = false, demi = false, source = null } =
   if (e.mort || e.sous) return 0;
   const armure = perce ? 0 : (demi ? e.armure / 2 : e.armure);
   let eff = Math.max(degats * 0.25, degats - armure);
+  e.calme = 0;
   // Le bouclier d'un Pavois encaisse d'abord.
   if (e.bouclier > 0) {
     const pris = Math.min(e.bouclier, eff);
@@ -325,8 +328,26 @@ function bougerEnnemis(p) {
       e.fouitT = e.sous ? e.def.fouit.duree : e.def.fouit.toutes;
       evt(p, { k: 'fouit', id: e.id, x: e.x, z: e.z, sous: e.sous });
     }
+    // La Mue (et le Seigneur) se réparent quand on les laisse tranquilles.
+    e.calme += DT;
+    if (e.def.regen && e.calme > 1 && e.pv < e.pvMax) e.pv = Math.min(e.pvMax, e.pv + e.pvMax * e.def.regen * DT);
+    // La rage d'un boss affaibli : plus vite, mieux protégé.
+    if (e.def.rage && !e.enrage && e.pv < e.pvMax * e.def.rage.seuil) {
+      e.enrage = true;
+      e.armure += e.def.rage.armure;
+      evt(p, { k: 'rage', id: e.id, type: e.type, x: e.x, z: e.z });
+    }
     const frein = e.ralenti * (1 - (e.def.resisteRalenti || 0));
-    let v = e.def.vitesse * (1 - frein) * (e.sous ? e.def.fouit.vitesse : 1);
+    let v = e.def.vitesse * (1 - frein) * (e.sous ? e.def.fouit.vitesse : 1) * (e.enrage ? e.def.rage.vitesse : 1);
+    // Le Bondisseur : un grand bond en avant de temps en temps.
+    if (e.def.saut && e.etourdiT <= 0) {
+      if (e.saute > 0) { e.saute -= DT; v = e.def.saut.distance / 0.4; }
+      else if ((e.sautT -= DT) <= 0) {
+        e.sautT = e.def.saut.toutes;
+        e.saute = 0.4;
+        evt(p, { k: 'saut', id: e.id, x: e.x, z: e.z });
+      }
+    }
     if (e.etourdiT > 0) { e.etourdiT -= DT; v = 0; }
     e.d += v * DT;
     if (e.d >= e.ch.total) {
@@ -454,7 +475,7 @@ function tirer(p, t, e, s, def) {
     evt(p, { k: 'tir', tour: t.id, type: t.type });
     return;
   }
-  const vitesse = { balle: 15, eclat: 10, trait: 20 }[def.projectile];
+  const vitesse = { balle: 15, eclat: 10, trait: 20, harpon: 16 }[def.projectile];
   const n = s.canons || 1;
   for (let i = 0; i < n; i++) {
     const cote = n > 1 ? (i - 0.5) * 0.22 : 0;
@@ -462,10 +483,63 @@ function tirer(p, t, e, s, def) {
     p.projectiles.push({
       id: p.prochainId++, k: def.projectile, tour: t.id, cible: e.id, vitesse,
       x, y: depart.y, z, px: x, py: depart.y, pz: z, tx: e.x, ty: e.y + 0.3, tz: e.z,
-      degats: s.degats, ralenti: s.ralenti, duree: s.duree, zone: s.zone, brise: s.brise, etourdit: s.etourdit,
+      degats: s.degats, ralenti: s.ralenti, duree: s.duree, zone: s.zone, brise: s.brise, etourdit: s.etourdit, perce: s.perce,
     });
   }
   evt(p, { k: 'tir', tour: t.id, type: t.type });
+}
+
+/** Les points du chemin où un Piégeur peut poser ses mines (recalculés quand il change de niveau). */
+function pointsMines(p, t, s) {
+  const cle = `${t.niveau}-${t.branche}`;
+  if (t.pointsMines?.cle === cle) return t.pointsMines.pts;
+  const pts = [], r2 = (s.portee - 0.2) ** 2;
+  for (const ch of p.carte.chemins) {
+    for (let d = 1; d < ch.total - 0.5; d += 0.5) {
+      const q = surChemin(ch, d);
+      if ((q.x - t.x) ** 2 + (q.z - t.z) ** 2 <= r2) pts.push({ x: q.x, z: q.z });
+    }
+  }
+  t.pointsMines = { cle, pts };
+  return pts;
+}
+
+function poserMine(p, t, s, b) {
+  const miennes = p.mines.filter(m => m.tour === t.id);
+  if (t.recharge > 0 || miennes.length >= s.mines) { if (t.recharge < 0) t.recharge = 0; return; }
+  const pts = pointsMines(p, t, s);
+  if (!pts.length) return;
+  // On essaie quelques points, et l'on garde le premier assez loin des autres mines.
+  for (let essai = 0; essai < pts.length; essai++) {
+    t.kMine = ((t.kMine || 0) + 7) % pts.length;
+    const q = pts[t.kMine];
+    if (miennes.some(m => (m.x - q.x) ** 2 + (m.z - q.z) ** 2 < 0.5 ** 2)) continue;
+    const m = { id: p.prochainId++, tour: t.id, x: q.x, z: q.z, degats: s.degats * (1 + b.d), rayon: s.rayon, etourdit: s.etourdit, arme: 0.6 };
+    p.mines.push(m);
+    t.tirs++;
+    evt(p, { k: 'mine', id: m.id, tour: t.id, x: m.x, z: m.z });
+    break;
+  }
+  t.recharge += 1 / (s.cadence * (1 + b.c));
+}
+
+/** Une mine saute quand un Rouilleux (au sol, même invisible) marche dessus. */
+function majMines(p) {
+  if (!p.mines.length) return;
+  const tourDe = id => p.tours.find(t => t.id === id) || null;
+  for (const m of p.mines) {
+    if ((m.arme -= DT) > 0) continue;
+    if (!p.ennemis.some(e => !e.mort && !e.sous && !e.def.vole && (e.x - m.x) ** 2 + (e.z - m.z) ** 2 < 0.4 ** 2)) continue;
+    m.saute = true;
+    const r2 = m.rayon ** 2, src = tourDe(m.tour);
+    for (const e of p.ennemis.slice()) {
+      if (e.mort || e.def.vole || (e.x - m.x) ** 2 + (e.z - m.z) ** 2 > r2) continue;
+      infliger(p, e, m.degats, { source: src });
+      if (m.etourdit) etourdir(e, m.etourdit);
+    }
+    evt(p, { k: 'explosion', x: m.x, z: m.z, rayon: m.rayon, mine: m.id });
+  }
+  p.mines = p.mines.filter(m => !m.saute);
 }
 
 /** Le meilleur renfort des Phares voisins : { d: bonus de dégâts, c: bonus de cadence }. */
@@ -507,6 +581,7 @@ function majTours(p) {
       continue;
     }
     t.recharge -= DT;
+    if (def.projectile === 'mine') { poserMine(p, t, s, b); continue; }
     const e = choisirCible(p, t, s, def);
     t.cible = e ? e.id : null;
     if (!e) { if (t.recharge < 0) t.recharge = 0; continue; }
@@ -566,6 +641,15 @@ function majProjectiles(p) {
         if (pr.etourdit) etourdir(o, pr.etourdit);
       }
       evt(p, { k: 'gel', x: e.x, y: e.y, z: e.z, zone: pr.zone || 0 });
+    } else if (pr.k === 'harpon') {
+      // Le harpon accroche ; le Lance-filet cloue tous les volants autour.
+      const cibles = pr.zone ? p.ennemis.filter(o => !o.mort && o.def.vole && distance2(o, e) <= pr.zone ** 2) : [e];
+      for (const o of cibles) {
+        if (pr.ralenti && pr.ralenti >= o.ralenti) { o.ralenti = pr.ralenti; o.ralentiT = Math.max(o.ralentiT, pr.duree); }
+        infliger(p, o, pr.degats, { perce: !!pr.perce, source: src });
+        if (pr.etourdit) etourdir(o, pr.etourdit);
+      }
+      evt(p, { k: 'impact', x: e.x, y: e.y + 0.3, z: e.z, p: 'harpon', zone: pr.zone || 0 });
     } else if (pr.k === 'trait') {
       infliger(p, e, pr.degats, { perce: true, source: src });
       if (pr.brise) e.armure = Math.max(0, e.armure - pr.brise);
@@ -592,6 +676,7 @@ export function pas(p) {
   bougerEnnemis(p);
   majTours(p);
   majProjectiles(p);
+  majMines(p);
   p.ennemis = p.ennemis.filter(e => !e.mort);
 
   if (p.vies <= 0) {

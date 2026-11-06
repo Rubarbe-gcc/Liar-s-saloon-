@@ -40,7 +40,27 @@ export const AMBIANCES = {
   fosse: {
     ciel: '#2a1612', horizon: '#ff7a3a', herbe: '#5a4a3a', herbe2: '#6e5440', chemin: '#7a5a40', colline: '#4a3a32', roche: '#3a3230',
     eau: '#ff6a1a', fond: '#401a0a', feuillage: ['#4a3a28', '#5a4030'], fleurs: ['#ff8a3a'],
-    soleil: '#ffa070', intens: 2.4, hemi: 0.85, pins: 0, particules: 'braises', mort: true,
+    soleil: '#ffa070', intens: 2.4, hemi: 0.85, pins: 0, particules: 'braises', mort: true, lave: true,
+  },
+  desert: {
+    ciel: '#4f9ce8', horizon: '#ffe2ae', herbe: '#d6b276', herbe2: '#e6c690', chemin: '#a8804c', colline: '#c8945a', roche: '#a07850',
+    eau: '#36b0c0', fond: '#2a6a6a', feuillage: ['#5f8a3a', '#7a9a4a', '#6a8a30'], fleurs: ['#ff8a5a', '#ffd84d'],
+    soleil: '#fff0d0', intens: 2.6, hemi: 0.85, pins: 0.9, particules: 'sable',
+  },
+  glacier: {
+    ciel: '#6ab0f0', horizon: '#eef6ff', herbe: '#dce8f0', herbe2: '#c4d8e8', chemin: '#7a8ea6', colline: '#b4c8dc', roche: '#8aa0b8',
+    eau: '#4ac0ec', fond: '#2a5a7a', feuillage: ['#2f5a4a', '#3a6a5a'], fleurs: ['#ffffff', '#cfe8ff'],
+    soleil: '#ffffff', intens: 2.3, hemi: 0.9, pins: 1, particules: 'neige', neige: '#ffffff',
+  },
+  nuit: {
+    ciel: '#0e1430', horizon: '#3a3a7a', herbe: '#2e4a3a', herbe2: '#3a5a44', chemin: '#6a6050', colline: '#2a3a3a', roche: '#4a4a5a',
+    eau: '#2a4a8a', fond: '#101830', feuillage: ['#1a3a2a', '#2a2a4a', '#1a2a3a'], fleurs: ['#8ad8ff', '#c8a0ff'],
+    soleil: '#a8b8ff', intens: 1.4, hemi: 0.75, pins: 0.5, particules: 'lucioles',
+  },
+  forge: {
+    ciel: '#1a0a0a', horizon: '#ff4a1a', herbe: '#3a2a28', herbe2: '#4a3028', chemin: '#5a4038', colline: '#2a1e1c', roche: '#2a2422',
+    eau: '#ff5a10', fond: '#401000', feuillage: ['#2a2018'], fleurs: ['#ff6a1a'],
+    soleil: '#ff9a6a', intens: 2.4, hemi: 0.8, pins: 0, particules: 'braises', mort: true, lave: true,
   },
 };
 
@@ -103,7 +123,9 @@ export function creerMonde(canvas, { mobile = false } = {}) {
   let carte = null, amb = AMBIANCES.printemps;
   let hauteur = () => 0;
   let socles = [], capteurs = [], base = null, portails = [], eau = null, nuages = [], feuillages = [];
-  const vuesTours = new Map(), vuesEnnemis = new Map(), vuesProj = new Map();
+  const vuesTours = new Map(), vuesEnnemis = new Map(), vuesProj = new Map(), vuesMines = new Map();
+  const gMine = new THREE.CylinderGeometry(0.16, 0.2, 0.08, 8), mMine = new THREE.MeshStandardMaterial({ color: '#4a4030', metalness: 0.6, roughness: 0.4, flatShading: true });
+  const gVoyant = new THREE.SphereGeometry(0.045, 6, 4), mVoyant = new THREE.MeshBasicMaterial({ color: '#ff3a1a' });
   const reserveProj = {};
   let temps = 0;
   const uTemps = { value: 0 };
@@ -192,7 +214,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
     niveau.add(sol);
 
     // L'eau (ou la lave, dans la Fosse).
-    const lave = amb === AMBIANCES.fosse;
+    const lave = !!amb.lave;
     const ge = garder(new THREE.PlaneGeometry(larg, prof, 48, 36));
     ge.rotateX(-Math.PI / 2);
     ge.translate(W / 2, -0.22, H / 2);
@@ -294,7 +316,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
 
     // Quelques nuages qui passent.
     nuages = [];
-    const mNuage = garder(new THREE.MeshStandardMaterial({ color: amb === AMBIANCES.fosse ? '#5a3a30' : '#ffffff', flatShading: true, emissive: amb.horizon, emissiveIntensity: 0.15, transparent: true, opacity: 0.92 }));
+    const mNuage = garder(new THREE.MeshStandardMaterial({ color: amb.lave ? '#5a3a30' : '#ffffff', flatShading: true, emissive: amb.horizon, emissiveIntensity: 0.15, transparent: true, opacity: 0.92 }));
     const gNuage = garder(new THREE.IcosahedronGeometry(1, 0));
     for (let i = 0; i < 9; i++) {
       const n = new THREE.Group();
@@ -426,7 +448,8 @@ export function creerMonde(canvas, { mobile = false } = {}) {
     for (const v of vuesTours.values()) niveau.remove(v.m.groupe);
     for (const v of vuesEnnemis.values()) { niveau.remove(v.m.groupe); libererEnnemi(v.m); }
     for (const v of vuesProj.values()) rendreProj(v);
-    vuesTours.clear(); vuesEnnemis.clear(); vuesProj.clear();
+    for (const m of vuesMines.values()) scene.remove(m);
+    vuesTours.clear(); vuesEnnemis.clear(); vuesProj.clear(); vuesMines.clear();
     effets.vider();
     if (niveau) scene.remove(niveau);
     for (const j of jetables) j.dispose?.();
@@ -481,6 +504,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
     obus: () => new THREE.Mesh(boule(0.1, 8, 6), mat('obus', { color: '#2a2622', metalness: 0.5 })),
     eclat: () => new THREE.Mesh(octa(0.09), GLACE),
     trait: () => new THREE.Mesh(boite(0.035, 0.035, 0.42), lueur('#d9a8ff', 2)),
+    harpon: () => new THREE.Mesh(boite(0.05, 0.05, 0.55), mat('harponFer', { color: '#8aa8a0', metalness: 0.8, roughness: 0.3 })),
   };
   function prendreProj(k) {
     const r = (reserveProj[k] ??= []);
@@ -535,7 +559,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
         vuesEnnemis.set(e.id, v);
       }
       const x = lerp(e.px, e.x, alpha), z = lerp(e.pz, e.z, alpha);
-      const y = e.def.vole ? ALTITUDE : 0; // le chemin est au niveau 0
+      const y = e.def.vole ? ALTITUDE : e.saute > 0 ? Math.sin((1 - e.saute / 0.4) * Math.PI) * 0.9 : 0; // le chemin est au niveau 0
       v.m.groupe.position.set(x, y, z);
       let d = e.angle - v.m.groupe.rotation.y;
       d = Math.atan2(Math.sin(d), Math.cos(d));
@@ -568,6 +592,25 @@ export function creerMonde(canvas, { mobile = false } = {}) {
     }
     for (const [id, v] of vuesEnnemis) if (!vues.has(id)) { niveau.remove(v.m.groupe); libererEnnemi(v.m); vuesEnnemis.delete(id); }
 
+    // Mines : un disque de métal et un voyant qui clignote.
+    vues.clear();
+    for (const mi of p.mines) {
+      vues.add(mi.id);
+      let m = vuesMines.get(mi.id);
+      if (!m) {
+        m = new THREE.Mesh(gMine, mMine);
+        m.castShadow = true;
+        const v = new THREE.Mesh(gVoyant, mVoyant);
+        v.position.y = 0.06;
+        m.add(v);
+        m.position.set(mi.x, 0.04, mi.z);
+        scene.add(m);
+        vuesMines.set(mi.id, m);
+      }
+      m.children[0].visible = mi.arme <= 0 && Math.sin(temps * 8 + mi.id) > 0;
+    }
+    for (const [id, m] of vuesMines) if (!vues.has(id)) { scene.remove(m); vuesMines.delete(id); }
+
     // Projectiles
     vues.clear();
     for (const pr of p.projectiles) {
@@ -575,7 +618,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
       let m = vuesProj.get(pr.id);
       if (!m) { m = prendreProj(pr.k); vuesProj.set(pr.id, m); }
       const x = lerp(pr.px, pr.x, alpha), y = lerp(pr.py, pr.y, alpha), z = lerp(pr.pz, pr.z, alpha);
-      if (pr.k === 'trait') m.lookAt(x + (pr.x - pr.px), y + (pr.y - pr.py), z + (pr.z - pr.pz));
+      if (pr.k === 'trait' || pr.k === 'harpon') m.lookAt(x + (pr.x - pr.px), y + (pr.y - pr.py), z + (pr.z - pr.pz));
       if (pr.k === 'eclat') m.rotation.y += dt * 12;
       m.position.set(x, y, z);
       if (pr.k === 'obus') effets.gerbe(x, y, z, { n: 1, couleurs: ['#ff9a3a', '#ffd23f'], vitesse: 0.2, vie: 0.3, taille: 0.14 });
@@ -645,6 +688,18 @@ export function creerMonde(canvas, { mobile = false } = {}) {
           effets.lueur(e.x, 0.6, e.z, '#ff7a2a', 3, 0.15);
           break;
         }
+        case 'mine':
+          effets.gerbe(e.x, 0.1, e.z, { n: 4, couleurs: ['#8a7a68'], vitesse: 0.5, haut: 0.6, vie: 0.5, taille: 0.18, croit: 1.5, additif: false, alpha: 0.5 });
+          break;
+        case 'saut':
+          effets.gerbe(e.x, 0.1, e.z, { n: 8, couleurs: ['#b8a888', '#8a7a68'], vitesse: 1.2, haut: 0.5, vie: 0.6, taille: 0.22, croit: 1.6, additif: false, alpha: 0.55 });
+          break;
+        case 'rage':
+          effets.gerbe(e.x, 1.2, e.z, { n: 40, couleurs: ['#ff3a1a', '#ff8a3a', '#ffd23f'], vitesse: 4, vie: 0.8, taille: 0.25 });
+          effets.onde(e.x, 0.15, e.z, { couleur: '#ff3a1a', r1: 3.5, vie: 0.8 });
+          effets.lueur(e.x, 1.5, e.z, '#ff3a1a', 14, 0.6);
+          cam.secouer(0.45);
+          break;
         case 'traverse':
           effets.eclair(e.pts, { coeur: '#f4e8ff', halo: '#b06cff', ampl: 0.02, vie: 0.25 });
           break;
@@ -676,6 +731,11 @@ export function creerMonde(canvas, { mobile = false } = {}) {
           if (e.zone) effets.onde(e.x, (e.y || 0) + 0.1, e.z, { couleur: '#7fe0ff', r1: e.zone, vie: 0.4 });
           break;
         case 'impact':
+          if (e.p === 'harpon') {
+            effets.gerbe(e.x, e.y, e.z, { n: 10, couleurs: ['#8af0c8', '#ffffff', '#4ac8a8'], vitesse: 2, vie: 0.3, taille: 0.11 });
+            if (e.zone) effets.onde(e.x, e.y, e.z, { couleur: '#8af0c8', r1: e.zone, vie: 0.4 });
+            break;
+          }
           if (e.p === 'trait') effets.gerbe(e.x, e.y, e.z, { n: 10, couleurs: ['#e0c0ff', '#b06cff', '#ffffff'], vitesse: 2.2, vie: 0.3, taille: 0.12 });
           else effets.gerbe(e.x, e.y, e.z, { n: 3, couleurs: e.blinde ? ['#ffffff', '#c8d8ff'] : ['#ffd23f', '#ff9a3c'], vitesse: 1.6, vie: 0.18, taille: 0.08 });
           break;
@@ -742,6 +802,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
       case 'feuilles': if (r() < dt * 6) effets.gerbe(r() * W, 3 + r() * 2, r() * H, { n: 1, couleurs: amb.feuillage, vitesse: 0.5, vie: 5, taille: 0.1, grav: 0.5, frein: 0.4, additif: false }); break;
       case 'lucioles': if (r() < dt * 9) effets.gerbe(r() * W, 0.4 + r() * 1.4, r() * H, { n: 1, couleurs: ['#e8ff8a', '#c8ff5a'], vitesse: 0.25, vie: 3.5, taille: 0.12, grav: -0.05 }); break;
       case 'neige': if (r() < dt * 22) effets.gerbe(-4 + r() * (W + 8), 7, -4 + r() * (H + 8), { n: 1, couleurs: ['#ffffff'], vitesse: 0.2, vie: 6, taille: 0.08, grav: 1.1, frein: 0.6, additif: false, alpha: 0.9 }); break;
+      case 'sable': if (r() < dt * 16) effets.gerbe(-3, 0.3 + r() * 1.5, r() * H, { n: 1, couleurs: ['#e8c890', '#d6b276'], vitesse: 0.3, vie: 5, taille: 0.06, grav: 0, frein: 1, additif: false, alpha: 0.7 }); break;
       case 'braises': if (r() < dt * 14) effets.gerbe(r() * W, 0.1, r() * H, { n: 1, couleurs: ['#ff8a3a', '#ffd23f', '#ff4a1a'], vitesse: 0.3, vie: 3, taille: 0.08, grav: -0.6 }); break;
     }
     // Les portails crachent quelques étincelles.

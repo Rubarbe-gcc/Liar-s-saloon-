@@ -116,9 +116,39 @@ export const TOURS = {
       { id: 'marchand', nom: 'Phare marchand', couleur: '#ffd84d', desc: 'Chaque Rouilleux détruit dans sa lumière rapporte 2 pièces de plus.', cout: 240, portee: 4.0, bonus: 0.3, orBonus: 2 },
     ],
   },
+  harpon: {
+    nom: 'Harpon', icone: '🪝', couleur: '#4ac8a8',
+    role: 'Anti-aérien',
+    desc: 'Un harpon lourd qui ne vise que les volants, et les ralentit en les accrochant.',
+    air: true, sol: false, projectile: 'harpon',
+    niveaux: [
+      { cout: 80, degats: 40, cadence: 0.9, portee: 3.6, ralenti: 0.3, duree: 1.2 },
+      { cout: 95, degats: 70, cadence: 1.0, portee: 4.0, ralenti: 0.35, duree: 1.5 },
+      { cout: 150, degats: 110, cadence: 1.1, portee: 4.4, ralenti: 0.4, duree: 1.8, special: 'Pointe d’acier' },
+    ],
+    branches: [
+      { id: 'filet', nom: 'Lance-filet', couleur: '#8af0c8', desc: 'Un filet qui cloue sur place tous les volants autour de la cible.', cout: 270, degats: 80, cadence: 1.0, portee: 4.4, zone: 1.4, ralenti: 0.5, duree: 2, etourdit: 1.2 },
+      { id: 'baleinier', nom: 'Baleinier', couleur: '#2a9a8a', desc: 'Un harpon géant qui transperce les blindés du ciel.', cout: 280, degats: 320, cadence: 0.9, portee: 5.0, perce: true },
+    ],
+  },
+  piegeur: {
+    nom: 'Piégeur', icone: '💥', couleur: '#c8b030',
+    role: 'Mines',
+    desc: 'Sème des mines sur le chemin, à sa portée. Elles sautent quand un Rouilleux marche dessus, même un Furtif.',
+    air: false, sol: true, projectile: 'mine',
+    niveaux: [
+      { cout: 85, degats: 45, cadence: 0.5, portee: 2.4, rayon: 0.8, mines: 3 },
+      { cout: 95, degats: 75, cadence: 0.6, portee: 2.7, rayon: 0.9, mines: 4 },
+      { cout: 150, degats: 120, cadence: 0.7, portee: 3.0, rayon: 1.1, mines: 5, special: 'Grosses mines' },
+    ],
+    branches: [
+      { id: 'champ', nom: 'Champ de mines', couleur: '#ffe14d', desc: 'Des mines partout, posées très vite.', cout: 260, degats: 130, cadence: 1.4, portee: 3.2, rayon: 1.1, mines: 10 },
+      { id: 'charge', nom: 'Charge d’ambre', couleur: '#ff9a1a', desc: 'Des mines énormes qui sonnent tout autour.', cout: 280, degats: 320, cadence: 0.6, portee: 3.2, rayon: 1.6, mines: 4, etourdit: 1 },
+    ],
+  },
 };
 
-export const ORDRE_TOURS = ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare'];
+export const ORDRE_TOURS = ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur'];
 
 /** Part du prix rendue à la vente. */
 export const REVENTE = 0.7;
@@ -183,9 +213,40 @@ export const ENNEMIS = {
     pv: 140, vitesse: 1.0, armure: 3, or: 14, vies: 2, taille: 0.55,
     bouclier: { pv: 30, rayon: 1.5, toutes: 6 },
   },
+  bondisseur: {
+    nom: 'Bondisseur', desc: 'De temps en temps, il fait un grand bond en avant.',
+    pv: 70, vitesse: 1.3, armure: 1, or: 9, vies: 1, taille: 0.45,
+    saut: { toutes: 3.5, distance: 2.2 },
+  },
+  dirigeable: {
+    nom: 'Dirigeable', desc: 'Un ballon blindé qui vole lentement. Quand il éclate, il lâche trois Bourdons.',
+    pv: 260, vitesse: 0.8, armure: 4, or: 18, vies: 2, taille: 0.7, vole: true,
+    division: { type: 'bourdon', n: 3 },
+  },
+  mue: {
+    nom: 'Mue', desc: 'Sa carapace se reforme : si on cesse de la frapper, elle regagne très vite ses PV.',
+    pv: 150, vitesse: 1.05, armure: 2, or: 13, vies: 1, taille: 0.5,
+    regen: 0.07,
+  },
+  hydre: {
+    nom: 'L’Hydre de Fer', desc: 'Un serpent de métal. Quand elle tombe, deux Têtes en sortent et continuent la route.',
+    pv: 2400, vitesse: 0.55, armure: 5, or: 150, vies: 8, taille: 1.1,
+    boss: true, resisteRalenti: 0.5, division: { type: 'tete', n: 2 },
+  },
+  tete: {
+    nom: 'Tête d’Hydre', desc: 'Une tête de l’Hydre, encore pleine de rage.',
+    pv: 650, vitesse: 0.9, armure: 4, or: 40, vies: 3, taille: 0.75,
+    boss: true, enfant: true, resisteRalenti: 0.5,
+  },
+  seigneur: {
+    nom: 'Le Seigneur Rouille', desc: 'Le maître de la Fosse. Il appelle des Furtifs, se répare quand on le laisse, et enrage quand il faiblit.',
+    pv: 5200, vitesse: 0.45, armure: 10, or: 400, vies: 15, taille: 1.4,
+    boss: true, resisteRalenti: 0.6, regen: 0.004,
+    ponte: { type: 'furtif', n: 3, toutes: 7 }, rage: { seuil: 0.5, vitesse: 1.5, armure: 4 },
+  },
 };
 
-export const ORDRE_ENNEMIS = ['rodeur', 'filou', 'cuirasse', 'bourdon', 'grappe', 'grappillon', 'tisseur', 'furtif', 'fouisseur', 'pavois', 'broyeur', 'nuee'];
+export const ORDRE_ENNEMIS = ['rodeur', 'filou', 'cuirasse', 'bourdon', 'grappe', 'grappillon', 'tisseur', 'furtif', 'fouisseur', 'pavois', 'bondisseur', 'dirigeable', 'mue', 'broyeur', 'nuee', 'hydre', 'tete', 'seigneur'];
 
 /** Hauteur de vol (en cases). */
 export const ALTITUDE = 1.6;

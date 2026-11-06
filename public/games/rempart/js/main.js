@@ -17,8 +17,8 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const mobile = matchMedia('(pointer: coarse)').matches;
 
-export const ICONES = { rodeur: '🪲', filou: '💨', cuirasse: '🛡️', bourdon: '🐝', grappe: '🫧', grappillon: '🫧', tisseur: '💚', furtif: '👻', fouisseur: '🪱', pavois: '🔰', broyeur: '⚙️', nuee: '👑' };
-const COULEUR_ENNEMI = { rodeur: '#a0522d', filou: '#c0703a', cuirasse: '#5b5f66', bourdon: '#d9a53a', grappe: '#5f9a6e', grappillon: '#6fb07e', tisseur: '#5b3a5a', furtif: '#2a2440', fouisseur: '#7a5a3a', pavois: '#4a5a7a', broyeur: '#5a4a3e', nuee: '#3a2350' };
+export const ICONES = { rodeur: '🪲', filou: '💨', cuirasse: '🛡️', bourdon: '🐝', grappe: '🫧', grappillon: '🫧', tisseur: '💚', furtif: '👻', fouisseur: '🪱', pavois: '🔰', bondisseur: '🦗', dirigeable: '🎈', mue: '🦀', broyeur: '⚙️', nuee: '👑', hydre: '🐉', tete: '🐍', seigneur: '💀' };
+const COULEUR_ENNEMI = { rodeur: '#a0522d', filou: '#c0703a', cuirasse: '#5b5f66', bourdon: '#d9a53a', grappe: '#5f9a6e', grappillon: '#6fb07e', tisseur: '#5b3a5a', furtif: '#2a2440', fouisseur: '#7a5a3a', pavois: '#4a5a7a', bondisseur: '#8a9a3a', dirigeable: '#a87a4a', mue: '#4f8a6a', broyeur: '#5a4a3e', nuee: '#3a2350', hydre: '#3a5a4a', tete: '#3a5a4a', seigneur: '#7a2a1a' };
 const NOMS_SPECIAUX = { canons: 'Deux canons', zone: 'Gel en zone', brise: 'Brise-armure' };
 
 /* ------------------------------------------------------------ état */
@@ -448,6 +448,9 @@ function traiter(evts) {
       case 'traverse': son.jouer('impactLourd'); break;
       case 'bouclier': son.jouer('bouclier'); break;
       case 'fouit': son.jouer('fouit'); break;
+      case 'saut': son.jouer('saut'); break;
+      case 'mine': son.jouer('mine'); break;
+      case 'rage': son.jouer('boss'); annoncer(`${ENNEMIS[e.type].nom} enrage !`, 'Plus rapide, plus solide', true); break;
       case 'explosion': son.jouer('explosion'); break;
       case 'gel': son.jouer('gel'); break;
       case 'impact': if (e.p === 'trait' || e.blinde) son.jouer(e.p === 'trait' ? 'impactLourd' : 'ting'); break;
@@ -558,7 +561,7 @@ addEventListener('keydown', e => {
   if (k === 'escape') { if (selection) fermerPanneau(); else basculerPause(true); return; }
   if (k === 'f') { basculerVitesse(); return; }
   if (k === 'n' || k === 'enter') { e.preventDefault(); lancerVague(); return; }
-  if (/^[1-7]$/.test(k) && selection && !selection.tour) { batir(ORDRE_TOURS[+k - 1]); return; }
+  if (/^[1-9]$/.test(k) && selection && !selection.tour) { batir(ORDRE_TOURS[+k - 1]); return; }
   if (k === 'u') ameliorerSelection();
   if (k === 'x' || k === 'delete' || k === 'backspace') vendreSelection();
   if (k === 't') cibleSelection();

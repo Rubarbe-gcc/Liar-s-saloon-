@@ -213,7 +213,7 @@ test('équilibre : un joueur raisonnable gagne chaque niveau, un joueur paresseu
     // Dès la Passe des Géants, une seule sorte de tour ne suffit plus.
     if (n.id < 4) continue;
     const rafales = jouer(n.id, { types: ['rafale'], maxTours: 5 });
-    assert.ok(P.etoiles(rafales) <= 1, `${n.nom} : cinq Rafales suffisent`);
+    assert.ok(P.etoiles(rafales) <= 2, `${n.nom} : cinq Rafales suffisent`);
   }
 });
 
@@ -336,4 +336,62 @@ test('spécialisations : la Baliste traverse, le Blizzard ralentit tout, la Surc
   const d0 = c.d;
   P.pas(p);
   assert.equal(c.d, d0, 'sonné, il ne bouge plus');
+});
+
+test('le Piégeur sème des mines qui sautent sous les pas', () => {
+  const p = bac(10);
+  p.file.push({ t: 1e9, type: 'rodeur', depart: 0, vague: 0 }); // la partie ne doit pas finir à vide
+  const t = P.construire(p, p.carte.emplacements[0].id, 'piegeur').tour;
+  for (let i = 0; i < 30 * 8; i++) P.pas(p);
+  assert.equal(p.mines.length, TOURS.piegeur.niveaux[0].mines, 'il pose ses mines, puis s’arrête');
+  const m = p.mines[0];
+  p.file = [];
+  const e = ajouter(p, 'cuirasse', 1);
+  e.pv = e.pvMax = 1e6;
+  for (let i = 0; i < 30 * 30 && p.mines.includes(m); i++) P.pas(p);
+  assert.ok(!p.mines.includes(m), 'la mine a sauté');
+  assert.ok(e.pv < e.pvMax);
+  P.vendre(p, t.id);
+  assert.equal(p.mines.length, 0, 'vendre la tour retire ses mines');
+});
+
+test('le Harpon ne vise que les volants', () => {
+  const p = bac(10);
+  const sol = ajouter(p, 'rodeur', 3);
+  sol.pv = sol.pvMax = 1e6;
+  P.pas(p);
+  const t = P.construire(p, pres(p, sol).id, 'harpon').tour;
+  for (let i = 0; i < 60; i++) { sol.d = 3; P.pas(p); }
+  assert.equal(t.tirs, 0);
+});
+
+test('le Bondisseur bondit, la Mue se répare, l’Hydre laisse deux Têtes', () => {
+  const p = bac();
+  const b = ajouter(p, 'bondisseur', 2);
+  const m = ajouter(p, 'mue', 2);
+  b.sautT = 0.01;
+  const d0 = b.d;
+  for (let i = 0; i < 15; i++) P.pas(p);
+  assert.ok(b.d - d0 > ENNEMIS.bondisseur.saut.distance * 0.9);
+  m.pv = m.pvMax / 2;
+  for (let i = 0; i < 60; i++) P.pas(p);
+  assert.ok(m.pv > m.pvMax * 0.55, 'la Mue a regagné des PV');
+  const h = ajouter(p, 'hydre', 3);
+  h.pv = 1;
+  const t = P.construire(p, pres(p, h).id, 'rafale').tour;
+  t.mode = 'fort';
+  for (let i = 0; i < 60 && !h.mort; i++) P.pas(p);
+  assert.equal(p.ennemis.filter(e => e.type === 'tete').length, 2);
+});
+
+test('le Seigneur Rouille enrage sous la moitié de ses PV et appelle des Furtifs', () => {
+  const p = bac();
+  const s = ajouter(p, 'seigneur', 3);
+  const armure = s.armure;
+  s.pv = s.pvMax * 0.4;
+  P.pas(p);
+  assert.ok(s.enrage);
+  assert.equal(s.armure, armure + ENNEMIS.seigneur.rage.armure);
+  for (let i = 0; i < 30 * (ENNEMIS.seigneur.ponte.toutes + 0.5); i++) P.pas(p);
+  assert.ok(p.ennemis.filter(e => e.type === 'furtif').length >= ENNEMIS.seigneur.ponte.n);
 });

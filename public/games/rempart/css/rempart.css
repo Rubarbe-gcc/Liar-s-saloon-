@@ -195,7 +195,7 @@ kbd{display:inline-block;padding:1px 6px;border-radius:6px;background:rgba(255,2
 .panneau header h3{font-family:var(--f-titre);font-size:1.1rem;flex:1;}
 .panneau header .niv{font-size:.8rem;color:var(--or);}
 .fermer{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.08);font-size:1rem;}
-.choix-tours{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+.choix-tours{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;}
 .carte-tour{
   display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;border-radius:12px;background:rgba(255,255,255,.05);
   border:1px solid rgba(255,255,255,.08);transition:transform .1s,background .1s;position:relative;
