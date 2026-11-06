@@ -395,3 +395,40 @@ test('le Seigneur Rouille enrage sous la moitié de ses PV et appelle des Furtif
   for (let i = 0; i < 30 * (ENNEMIS.seigneur.ponte.toutes + 0.5); i++) P.pas(p);
   assert.ok(p.ennemis.filter(e => e.type === 'furtif').length >= ENNEMIS.seigneur.ponte.n);
 });
+
+test('les dégâts des tours passent par FACTEUR_DEGATS', async () => {
+  const { FACTEUR_DEGATS } = await import('../public/shared/rempart/donnees.js');
+  assert.equal(FACTEUR_DEGATS, 0.8);
+  assert.equal(TOURS.rafale.niveaux[0].degats, 7.2);
+  for (const t of Object.values(TOURS)) for (const s of [...t.niveaux, ...t.branches]) if (s.degats != null) assert.ok(s.degats >= 1);
+});
+
+test('le Bastion arrive avec un bouclier, le Réparateur soigne sauf s’il est sonné', () => {
+  const p = bac();
+  const b = ajouter(p, 'bastion', 4);
+  assert.ok(b.bouclier > 0);
+  const rep = ajouter(p, 'reparateur', 4.2);
+  const r = ajouter(p, 'rodeur', 4.4);
+  P.pas(p);
+  r.pv = r.pvMax / 2;
+  let pv = r.pv;
+  for (let i = 0; i < 10; i++) P.pas(p);
+  assert.ok(r.pv > pv, 'soigné en continu');
+  rep.etourdiT = 2;
+  pv = r.pv;
+  for (let i = 0; i < 10; i++) P.pas(p);
+  assert.equal(r.pv, pv, 'sonné, il ne soigne plus');
+});
+
+test('le Colosse de Rouille ne lâche des Cliquets qu’une fois blessé', () => {
+  const p = bac();
+  const c = ajouter(p, 'colosse', 3);
+  for (let i = 0; i < 30 * 8; i++) P.pas(p);
+  assert.equal(p.ennemis.filter(e => e.type === 'cliquet').length, 0);
+  c.pv = c.pvMax * 0.7;
+  for (let i = 0; i < 30 * 6; i++) P.pas(p);
+  assert.ok(p.ennemis.filter(e => e.type === 'cliquet').length >= ENNEMIS.colosse.ponte.n);
+  c.pv = c.pvMax * 0.3;
+  P.pas(p);
+  assert.ok(c.enrage);
+});

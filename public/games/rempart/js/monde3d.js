@@ -62,6 +62,21 @@ export const AMBIANCES = {
     eau: '#ff5a10', fond: '#401000', feuillage: ['#2a2018'], fleurs: ['#ff6a1a'],
     soleil: '#ff9a6a', intens: 2.4, hemi: 0.8, pins: 0, particules: 'braises', mort: true, lave: true,
   },
+  canyon: {
+    ciel: '#5aa0e0', horizon: '#ffcf9a', herbe: '#a86a3a', herbe2: '#c08048', chemin: '#d8a868', colline: '#b0582a', roche: '#8a4a2a',
+    eau: '#3a9ab0', fond: '#2a5a5a', feuillage: ['#6a7a3a', '#8a8a3a'], fleurs: ['#ffb347', '#ffe08a'],
+    soleil: '#ffe0b0', intens: 2.5, hemi: 0.8, pins: 0.6, particules: 'sable', arbresCollines: 0.04,
+  },
+  brume: {
+    ciel: '#8aa8b8', horizon: '#d8e4e8', herbe: '#5a8a6a', herbe2: '#7aa080', chemin: '#b8a888', colline: '#6a8a7a', roche: '#8a9898',
+    eau: '#5a8aa0', fond: '#2a4a5a', feuillage: ['#3a6a5a', '#4a7a6a'], fleurs: ['#ffffff', '#c8e8ff'],
+    soleil: '#f0f4ff', intens: 1.9, hemi: 0.95, pins: 0.4, particules: 'brume', brouillard: [24, 70],
+  },
+  ruines: {
+    ciel: '#6a5a8a', horizon: '#ffb07a', herbe: '#5a7a4a', herbe2: '#7a8a5a', chemin: '#a89070', colline: '#6a6a5a', roche: '#9a9080',
+    eau: '#4a7a9a', fond: '#2a3a4a', feuillage: ['#4a6a3a', '#6a5a3a', '#3a5a3a'], fleurs: ['#ffd84d', '#ff8ab0'],
+    soleil: '#ffc890', intens: 2.1, hemi: 0.75, pins: 0.2, particules: 'pollen',
+  },
 };
 
 const MARGE = 10, SEG = 3;
@@ -245,10 +260,10 @@ export function creerMonde(canvas, { mobile = false } = {}) {
       const j = () => (rng() - 0.5) * 0.6;
       if (cel.ch === '*') { arbre(x + j() - 0.15, z + j(), 0.9 + rng() * 0.4); if (rng() < 0.7) arbre(x + j() + 0.2, z + j(), 0.7 + rng() * 0.3); }
       else if (cel.ch === 'o') { for (let i = 0; i < 2 + rng() * 2; i++) pose(rochers, x + j(), z + j(), 0.5 + rng() * 0.7); }
-      else if (cel.ch === '^') { if (rng() < 0.5) arbre(x + j(), z + j(), 0.8 + rng() * 0.4); if (rng() < 0.4) pose(rochers, x + j(), z + j(), 0.6 + rng() * 0.8); }
+      else if (cel.ch === '^') { if (rng() < (amb.arbresCollines ?? 0.5)) arbre(x + j(), z + j(), 0.8 + rng() * 0.4); if (rng() < 0.4) pose(rochers, x + j(), z + j(), 0.6 + rng() * 0.8); }
       else if (cel.ch === 'X') {
         const d = Math.max(-c - 1, c - W, -r - 1, r - H, 0);
-        if (d >= 2 && d < 9 && rng() < 0.12 + d * 0.05) arbre(x + j(), z + j(), 0.6 + rng() * 0.4 + d * 0.06);
+        if (d >= 2 && d < 9 && rng() < (0.12 + d * 0.05) * (amb.arbresCollines != null ? 0.3 : 1)) arbre(x + j(), z + j(), 0.6 + rng() * 0.4 + d * 0.06);
         else if (d < 2 && rng() < 0.25) pose(touffes, x + j(), z + j(), 1);
         if (rng() < 0.12) pose(rochers, x + j(), z + j(), 0.8 + rng() * 1.4);
       } else if (cel.ch === '.' || cel.ch === 'T') {
@@ -467,7 +482,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
     construireLieux();
     ciel.material.uniforms.haut.value.set(amb.ciel);
     ciel.material.uniforms.horizon.value.set(amb.horizon);
-    scene.fog = new THREE.Fog(amb.horizon, 45, 120);
+    scene.fog = new THREE.Fog(amb.horizon, ...(amb.brouillard || [45, 120]));
     hemi.color.set(amb.ciel).lerp(new THREE.Color('#ffffff'), 0.5);
     hemi.groundColor.set(amb.herbe).multiplyScalar(0.6);
     hemi.intensity = amb.hemi;
@@ -759,7 +774,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
           effets.gerbe(e.x, 0.35, e.z, { n: 14, couleurs: ['#8fff9a', '#5f9a6e', '#c8ff5a'], vitesse: 2, vie: 0.5, taille: 0.13 });
           break;
         case 'soin':
-          effets.onde(e.x, 0.1, e.z, { couleur: '#6dff9a', r0: 0.2, r1: 1.6, vie: 0.6, opacite: 0.6 });
+          effets.onde(e.x, 0.1, e.z, { couleur: '#6dff9a', r0: 0.2, r1: e.rayon || 1.6, vie: 0.6, opacite: 0.6 });
           effets.gerbe(e.x, 0.9, e.z, { n: 5, couleurs: ['#6dff9a', '#c8ffd0'], vitesse: 0.6, haut: 2, vie: 0.8, taille: 0.1, grav: -0.8 });
           break;
         case 'ponte':
@@ -802,6 +817,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
       case 'feuilles': if (r() < dt * 6) effets.gerbe(r() * W, 3 + r() * 2, r() * H, { n: 1, couleurs: amb.feuillage, vitesse: 0.5, vie: 5, taille: 0.1, grav: 0.5, frein: 0.4, additif: false }); break;
       case 'lucioles': if (r() < dt * 9) effets.gerbe(r() * W, 0.4 + r() * 1.4, r() * H, { n: 1, couleurs: ['#e8ff8a', '#c8ff5a'], vitesse: 0.25, vie: 3.5, taille: 0.12, grav: -0.05 }); break;
       case 'neige': if (r() < dt * 22) effets.gerbe(-4 + r() * (W + 8), 7, -4 + r() * (H + 8), { n: 1, couleurs: ['#ffffff'], vitesse: 0.2, vie: 6, taille: 0.08, grav: 1.1, frein: 0.6, additif: false, alpha: 0.9 }); break;
+      case 'brume': if (r() < dt * 6) effets.gerbe(r() * W, 0.2 + r() * 0.6, r() * H, { n: 1, couleurs: ['#e8eef2'], vitesse: 0.15, vie: 6, taille: 1.6, croit: 1.6, grav: 0, frein: 1, additif: false, alpha: 0.25 }); break;
       case 'sable': if (r() < dt * 16) effets.gerbe(-3, 0.3 + r() * 1.5, r() * H, { n: 1, couleurs: ['#e8c890', '#d6b276'], vitesse: 0.3, vie: 5, taille: 0.06, grav: 0, frein: 1, additif: false, alpha: 0.7 }); break;
       case 'braises': if (r() < dt * 14) effets.gerbe(r() * W, 0.1, r() * H, { n: 1, couleurs: ['#ff8a3a', '#ffd23f', '#ff4a1a'], vitesse: 0.3, vie: 3, taille: 0.08, grav: -0.6 }); break;
     }

@@ -98,7 +98,9 @@ export function jouerIA(p, ia) {
     const total = Object.values(proch).reduce((s, n) => s + n, 0) || 1;
     const air = p.tours.filter(t => TOURS[t.type].air).length;
     if (!TOURS[type].air && volants / total > 0.25 && air < (nb + 1) * (volants / total + 0.2)) {
-      type = ia.plan.find(ty => TOURS[ty].air) || type;
+      // Contre des volants blindés, le Harpon ; sinon la première tour qui vise le ciel.
+      const blindes = Object.keys(proch).some(ty => ENNEMIS[ty].vole && ENNEMIS[ty].armure >= 3);
+      type = (blindes && ia.plan.includes('harpon') ? 'harpon' : ia.plan.find(ty => TOURS[ty].air)) || type;
     }
     // Des Furtifs arrivent et aucun Phare n'est là : il en bâtit un.
     if (p.or < TOURS[type].niveaux[0].cout) return;

@@ -10,6 +10,13 @@
  * ce niveau (construire = niveau 1). `air` / `sol` : ce qu'elle peut viser.
  * Au niveau 4, on choisit une des deux `branches` (spécialisations).
  */
+/**
+ * Réglage global des dégâts des tours (dégâts directs, brûlure, mines, aura,
+ * éclair, carreaux…). Les valeurs écrites plus bas sont multipliées par ce
+ * facteur au chargement (arrondi à 1 décimale, au moins 1).
+ */
+export const FACTEUR_DEGATS = 0.8;
+
 export const TOURS = {
   rafale: {
     nom: 'Rafale', icone: '🏹', couleur: '#ff9a3c',
@@ -148,6 +155,15 @@ export const TOURS = {
   },
 };
 
+// Application du facteur de dégâts, niveaux 1 à 3 et spécialisations.
+for (const t of Object.values(TOURS)) {
+  for (const s of [...t.niveaux, ...t.branches]) {
+    for (const k of ['degats', 'brulure']) {
+      if (s[k] != null) s[k] = Math.max(1, Math.round(s[k] * FACTEUR_DEGATS * 10) / 10);
+    }
+  }
+}
+
 export const ORDRE_TOURS = ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur'];
 
 /** Part du prix rendue à la vente. */
@@ -244,9 +260,32 @@ export const ENNEMIS = {
     boss: true, resisteRalenti: 0.6, regen: 0.004,
     ponte: { type: 'furtif', n: 3, toutes: 7 }, rage: { seuil: 0.5, vitesse: 1.5, armure: 4 },
   },
+  cliquet: {
+    nom: 'Cliquet', desc: 'Un petit rouage sur pattes, le plus rapide des Rouilleux. Il file sous les tours lentes.',
+    pv: 18, vitesse: 3.6, armure: 0, or: 3, vies: 1, taille: 0.3,
+  },
+  bastion: {
+    nom: 'Bastion', desc: 'Une forteresse qui marche : une armure énorme et un bouclier. Il faut du Perce-Acier, de la foudre ou des flammes.',
+    pv: 260, vitesse: 0.7, armure: 12, or: 22, vies: 2, taille: 0.7, bouclierInitial: 80,
+  },
+  reparateur: {
+    nom: 'Réparateur', desc: 'Un petit mécano qui répare sans arrêt les Rouilleux autour de lui. Sonnez-le pour l’interrompre, ou abattez-le en premier.',
+    pv: 45, vitesse: 1.4, armure: 0, or: 10, vies: 1, taille: 0.38,
+    repare: { pv: 10, rayon: 1.8 },
+  },
+  scarabee: {
+    nom: 'Scarabée de laiton', desc: 'Un scarabée volant à carapace de laiton. Seules les tours qui visent le ciel l’atteignent, et son armure use les petits tirs.',
+    pv: 120, vitesse: 1.5, armure: 4, or: 12, vies: 1, taille: 0.5, vole: true,
+  },
+  colosse: {
+    nom: 'Le Colosse de Rouille', desc: 'Le plus grand des Rouilleux. Blessé, il lâche des Cliquets ; à bout de forces, il enrage.',
+    pv: 4200, vitesse: 0.35, armure: 9, or: 300, vies: 12, taille: 1.5,
+    boss: true, resisteRalenti: 0.6,
+    ponte: { type: 'cliquet', n: 4, toutes: 5, seuil: 0.75 }, rage: { seuil: 0.4, vitesse: 1.6, armure: 3 },
+  },
 };
 
-export const ORDRE_ENNEMIS = ['rodeur', 'filou', 'cuirasse', 'bourdon', 'grappe', 'grappillon', 'tisseur', 'furtif', 'fouisseur', 'pavois', 'bondisseur', 'dirigeable', 'mue', 'broyeur', 'nuee', 'hydre', 'tete', 'seigneur'];
+export const ORDRE_ENNEMIS = ['rodeur', 'filou', 'cuirasse', 'bourdon', 'grappe', 'grappillon', 'tisseur', 'furtif', 'fouisseur', 'pavois', 'bondisseur', 'dirigeable', 'mue', 'broyeur', 'nuee', 'hydre', 'tete', 'seigneur', 'cliquet', 'bastion', 'reparateur', 'scarabee', 'colosse'];
 
 /** Hauteur de vol (en cases). */
 export const ALTITUDE = 1.6;

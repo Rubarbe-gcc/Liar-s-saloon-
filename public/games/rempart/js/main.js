@@ -17,8 +17,8 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const mobile = matchMedia('(pointer: coarse)').matches;
 
-export const ICONES = { rodeur: '🪲', filou: '💨', cuirasse: '🛡️', bourdon: '🐝', grappe: '🫧', grappillon: '🫧', tisseur: '💚', furtif: '👻', fouisseur: '🪱', pavois: '🔰', bondisseur: '🦗', dirigeable: '🎈', mue: '🦀', broyeur: '⚙️', nuee: '👑', hydre: '🐉', tete: '🐍', seigneur: '💀' };
-const COULEUR_ENNEMI = { rodeur: '#a0522d', filou: '#c0703a', cuirasse: '#5b5f66', bourdon: '#d9a53a', grappe: '#5f9a6e', grappillon: '#6fb07e', tisseur: '#5b3a5a', furtif: '#2a2440', fouisseur: '#7a5a3a', pavois: '#4a5a7a', bondisseur: '#8a9a3a', dirigeable: '#a87a4a', mue: '#4f8a6a', broyeur: '#5a4a3e', nuee: '#3a2350', hydre: '#3a5a4a', tete: '#3a5a4a', seigneur: '#7a2a1a' };
+export const ICONES = { rodeur: '🪲', filou: '💨', cuirasse: '🛡️', bourdon: '🐝', grappe: '🫧', grappillon: '🫧', tisseur: '💚', furtif: '👻', fouisseur: '🪱', pavois: '🔰', bondisseur: '🦗', dirigeable: '🎈', mue: '🦀', broyeur: '⚙️', nuee: '👑', hydre: '🐉', tete: '🐍', seigneur: '💀', cliquet: '🔩', bastion: '🧱', reparateur: '🔧', scarabee: '🐞', colosse: '🗿' };
+const COULEUR_ENNEMI = { rodeur: '#a0522d', filou: '#c0703a', cuirasse: '#5b5f66', bourdon: '#d9a53a', grappe: '#5f9a6e', grappillon: '#6fb07e', tisseur: '#5b3a5a', furtif: '#2a2440', fouisseur: '#7a5a3a', pavois: '#4a5a7a', bondisseur: '#8a9a3a', dirigeable: '#a87a4a', mue: '#4f8a6a', broyeur: '#5a4a3e', nuee: '#3a2350', hydre: '#3a5a4a', tete: '#3a5a4a', seigneur: '#7a2a1a', cliquet: '#b0884a', bastion: '#6a6a72', reparateur: '#c89a4a', scarabee: '#c8a040', colosse: '#8a4a24' };
 const NOMS_SPECIAUX = { canons: 'Deux canons', zone: 'Gel en zone', brise: 'Brise-armure' };
 
 /* ------------------------------------------------------------ état */
@@ -119,7 +119,7 @@ function remplirCodex(onglet = 'tours') {
   } else {
     c.innerHTML = ORDRE_ENNEMIS.map(k => {
       const e = ENNEMIS[k];
-      const tags = [`${e.pv} PV`, `vitesse ${e.vitesse}`, e.armure ? `armure ${e.armure}` : null, e.vole ? 'vole' : null, e.furtif ? 'invisible' : null, e.fouit ? 'sous terre' : null, e.bouclier ? 'bouclier' : null, `${e.vies} vie${e.vies > 1 ? 's' : ''}`, `${e.or} 🪙`, e.boss ? 'BOSS' : null].filter(Boolean);
+      const tags = [`${e.pv} PV`, `vitesse ${e.vitesse}`, e.armure ? `armure ${e.armure}` : null, e.vole ? 'vole' : null, e.furtif ? 'invisible' : null, e.fouit ? 'sous terre' : null, e.bouclier || e.bouclierInitial ? 'bouclier' : null, e.repare ? 'répare' : null, `${e.vies} vie${e.vies > 1 ? 's' : ''}`, `${e.or} 🪙`, e.boss ? 'BOSS' : null].filter(Boolean);
       return `<article class="fiche">
         <header><span class="ico" style="--c:${COULEUR_ENNEMI[k]}">${ICONES[k]}</span><div><h3>${e.nom}</h3><span class="role">${e.boss ? 'Boss' : e.enfant ? 'Fragment' : 'Rouilleux'}</span></div></header>
         <p>${e.desc}</p>

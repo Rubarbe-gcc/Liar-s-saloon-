@@ -258,6 +258,7 @@ function apparaitre(p, type, depart, vague, d = 0, decal = null) {
     fouitT: def.fouit ? def.fouit.toutes * (0.5 + p.rng() * 0.5) : 0, revele: !def.furtif,
     sautT: def.saut ? def.saut.toutes * (0.4 + p.rng() * 0.6) : 0, saute: 0, calme: 99, enrage: false,
   };
+  if (def.bouclierInitial) e.bouclier = def.bouclierInitial * echelle;
   const p2 = surChemin(ch, d, e.decal);
   e.x = e.px = p2.x; e.z = e.pz = p2.z;
   p.ennemis.push(e);
@@ -379,8 +380,19 @@ function bougerEnnemis(p) {
       for (const o of p.ennemis) if (!o.mort && distance2(o, e) <= r2) o.bouclier = Math.max(o.bouclier, val);
       evt(p, { k: 'bouclier', id: e.id, x: e.x, z: e.z, rayon: b.rayon });
     }
-    // La Grande Nuée pond des Bourdons.
-    if (e.def.ponte && (e.ponteT -= DT) <= 0) {
+    // Le Réparateur soigne sans arrêt ses voisins, sauf s'il est sonné.
+    if (e.def.repare && e.etourdiT <= 0) {
+      const r2 = e.def.repare.rayon ** 2, soin = e.def.repare.pv * p.def.force * DT;
+      let n = 0;
+      for (const o of p.ennemis) {
+        if (o === e || o.mort || o.def.boss || o.pv >= o.pvMax || distance2(o, e) > r2) continue;
+        o.pv = Math.min(o.pvMax, o.pv + soin);
+        n++;
+      }
+      if ((e.soinT -= DT) <= 0) { e.soinT += 1; if (n) evt(p, { k: 'soin', id: e.id, x: e.x, z: e.z, n, rayon: e.def.repare.rayon }); }
+    }
+    // La Grande Nuée (et d'autres) pondent en chemin ; le Colosse seulement une fois blessé.
+    if (e.def.ponte && (!e.def.ponte.seuil || e.pv < e.pvMax * e.def.ponte.seuil) && (e.ponteT -= DT) <= 0) {
       e.ponteT += e.def.ponte.toutes;
       for (let i = 0; i < e.def.ponte.n; i++) apparaitre(p, e.def.ponte.type, e.depart, e.vague, e.d, (i - 0.5) * 0.6);
       evt(p, { k: 'ponte', id: e.id, x: e.x, z: e.z });
