@@ -187,6 +187,21 @@ export function evenementDu(jour) {
   const debut = LANCEMENT + n * DUREE_EVENEMENT;
   return { ...EVENEMENTS[n % EVENEMENTS.length], n, debut, fin: debut + DUREE_EVENEMENT - 1 };
 }
+/**
+ * Les événements du lancement : cinq combats ouverts le premier mois (JOURS_LANCEMENT jours), qui rapportent
+ * beaucoup de jetons la première fois (de quoi bien démarrer sa collection).
+ */
+export const JOURS_LANCEMENT = 30;
+export const EVENEMENTS_LANCEMENT = [
+  { id: 'l1', nom: 'L’Ouverture du Portail', glyphe: '🚪', jetons: 30, act: 5, ennemis: [e('Rouilleux curieux', 'roc', 6000, 1800, 300), e('Rouilleux curieux', 'eclair', 6000, 1800, 300)] },
+  { id: 'l2', nom: 'Les Rouilleux de Bienvenue', glyphe: '🤖', jetons: 40, act: 5, ennemis: [e('Rouilleux farceur', 'flamme', 9000, 2000, 400), e('Rouilleux farceur', 'maree', 9000, 2000, 400), e('Chef farceur', 'tempete', 14000, 2300, 500)] },
+  { id: 'l3', nom: 'Le Défi des Recrues', glyphe: '🎯', jetons: 50, act: 8, ennemis: [e('Recrue de feu', 'flamme', 14000, 2400, 600), e('Recrue de glace', 'maree', 14000, 2400, 600), e('Recrue de foudre', 'eclair', 18000, 2600, 700)] },
+  { id: 'l4', nom: 'La Garde du Lancement', glyphe: '🛡️', jetons: 60, act: 10, ennemis: [e('Garde de bronze', 'roc', 22000, 2600, 900, { reduction: 0.1 }), e('Capitaine de la Garde', 'roc', 40000, 3000, 1000, { boss: true, super: sup('Charge de la Garde', 1.8, 0.3) })] },
+  { id: 'l5', nom: 'Le Gardien du Portail', glyphe: '🌀', jetons: 100, act: 10, ennemis: [e('Le Gardien du Portail', 'eclair', 70000, 3400, 1100, { boss: true, super: sup('Tempête du Portail', 2, 0.35, true), phases: [{ seuil: 0.5, nom: 'Le Gardien · Portail Ouvert', atq: 1.25, texte: 'Le portail s’ouvre en grand !' }] })] },
+];
+/** Les événements du lancement sont-ils ouverts ce jour-là ? */
+export const lancementOuvert = (jour) => jour >= LANCEMENT && jour < LANCEMENT + JOURS_LANCEMENT;
+
 /** Les médailles d'un événement (en plus du butin) : beaucoup de médailles de son élément. */
 export const bonusEvenement = (ev) => ({ [ev.element]: 30, arc: 6 });
 

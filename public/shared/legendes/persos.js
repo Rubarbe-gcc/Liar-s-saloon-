@@ -160,6 +160,25 @@ const BASE = [
   p('zan_ssr', 'Zan', 'Le Rônin', 'SSR', 'tempete', ['ombre', 'solitaire', 'rivaux'], 'critique', ['ombres', 'rivalite'], ['Coupe du Vent Gris', 'lame', 3], ['#e0ac69', '#2a2a2a', '#3a3a3a', '#36d39a'], 'long'),
   p('oboro_ssr', 'Oboro', 'Ninja des Brumes', 'SSR', 'maree', ['ninjas', 'ombre', 'solitaire'], 'esquiveur', ['ombres', 'froid'], ['Voile de Brume', 'ombre', 3], ['#ffe0bd', '#6a6a8a', '#1a2a3a', '#9ad8ff'], 'meches'),
 
+  /* ---------------- Les héros du lancement (au portail permanent dès le départ) ---------------- */
+  p('kiri_r', 'Kiri', 'Ombre du port', 'R', 'maree', ['ninjas', 'ombre'], 'esquiveur', ['ombres', 'froid'], ['Lame d’Écume', 'lame', 1], ['#ffe0bd', '#3a4a6a', '#1a2a3a', '#7ac8ff'], 'queue'),
+  p('kiri_sr', 'Kiri', 'Lame des Marées', 'SR', 'maree', ['ninjas', 'ombre', 'combattantes'], 'esquiveur', ['ombres', 'froid', 'amis'], ['Danse de l’Écume', 'ombre', 2], ['#ffe0bd', '#3a4a6a', '#1a2a3a', '#7ac8ff'], 'queue'),
+  p('kiri_ssr', 'Kiri', 'Reine des Courants', 'SSR', 'maree', ['ninjas', 'ombre', 'combattantes', 'transfo'], 'esquiveur', ['ombres', 'froid', 'amis'], ['Tourbillon des Abysses', 'ombre', 3], ['#ffe0bd', '#6a8aba', '#0a1a2a', '#9ad8ff'], 'queue', { forme: 'eveil' }),
+  p('bastian_sr', 'Bastian', 'Gardien de But', 'SR', 'roc', ['arcade', 'allies', 'sportifs'], 'mur', ['equipe', 'froid'], ['Parade de Pierre', 'explosion', 2], ['#c68642', '#1b1b1f', '#2e8a3e', '#c8913a'], 'court'),
+  p('bastian_ssr', 'Bastian', 'Le Mur Infranchissable', 'SSR', 'roc', ['arcade', 'allies', 'sportifs', 'neant'], 'mur', ['equipe', 'froid', 'rivalite'], ['Forteresse', 'explosion', 3], ['#c68642', '#1b1b1f', '#1d7a4a', '#ff9a3a'], 'court'),
+  p('elio_r', 'Elio', 'Apprenti du feu', 'R', 'flamme', ['aube', 'heritiers'], 'frappeur', ['feu', 'amis'], ['Étincelle', 'combo', 1], ['#f1c27d', '#ff9a3a', '#7a2a0a', '#ffb347'], 'meches'),
+  p('elio_sr', 'Elio', 'Flamme Naissante', 'SR', 'flamme', ['aube', 'heritiers', 'sangchaud'], 'frappeur', ['feu', 'amis', 'rivalite'], ['Brasier Rapide', 'combo', 2], ['#f1c27d', '#ff9a3a', '#7a2a0a', '#ffb347'], 'meches'),
+  p('mako_sr', 'Mako', 'Buteur Électrique', 'SR', 'eclair', ['sportifs', 'neant'], 'critique', ['equipe', 'instinct'], ['Reprise de Volée', 'tir', 2], ['#8d5524', '#ffd23f', '#1b1b3a', '#ffd23f'], 'crete'),
+  p('mako_ssr', 'Mako', 'Le Canonnier', 'SSR', 'eclair', ['sportifs', 'neant', 'rivaux'], 'critique', ['equipe', 'instinct', 'rivalite'], ['Canon Foudroyant', 'tir', 3], ['#8d5524', '#fff2a0', '#14142a', '#ffd23f'], 'crete'),
+  p('iris_r', 'Iris', 'Fille du vent', 'R', 'tempete', ['lune', 'combattantes'], 'soutien', ['amis', 'maitre'], ['Brise Douce', 'rayon', 1], ['#ffe0bd', '#8affd8', '#2a5a4a', '#36d39a'], 'long'),
+  p('iris_sr', 'Iris', 'Chanteuse des Cimes', 'SR', 'tempete', ['lune', 'combattantes', 'genies'], 'soutien', ['amis', 'maitre', 'froid'], ['Chant du Vent', 'rayon', 2], ['#ffe0bd', '#8affd8', '#2a5a4a', '#36d39a'], 'long'),
+  p('iris_ssr', 'Iris', 'Voix de la Tempête', 'SSR', 'tempete', ['lune', 'combattantes', 'genies', 'divin'], 'soutien', ['amis', 'maitre', 'froid'], ['Hymne des Tempêtes', 'glace', 3], ['#ffe0bd', '#c8fff0', '#1a4a3a', '#36d39a'], 'long', { forme: 'eveil' }),
+  p('grom_ssr', 'Grom', 'Le Barbare', 'SSR', 'roc', ['rivaux', 'allies', 'sangchaud', 'solitaire'], 'frappeur', ['rivalite', 'feu'], ['Hache de Montagne', 'explosion', 3], ['#c68642', '#7a3a1a', '#4a2a1a', '#ff7a1a'], 'crete'),
+  p('vex_ssr', 'Vex', 'La Vipère', 'SSR', 'flamme', ['ombre', 'solitaire', 'combattantes'], 'critique', ['ombres', 'feu'], ['Morsure Ardente', 'lame', 3], ['#e8d8c8', '#1b1b1f', '#4a0a1a', '#ff4d6d'], 'long'),
+  p('juno_ssr', 'Juno', 'Prêtresse du Ciel', 'SSR', 'maree', ['lune', 'divin', 'maitres'], 'soutien', ['maitre', 'froid', 'amis'], ['Pluie Bénie', 'rayon', 3], ['#8d5524', '#e8e8f0', '#3a5aff', '#9ad8ff'], 'long'),
+  p('taka_r', 'Taka', 'Coureur des toits', 'R', 'eclair', ['sportifs', 'ninjas'], 'pivot', ['instinct', 'equipe'], ['Saut Électrique', 'combo', 1], ['#f1c27d', '#1b1b1f', '#4a3a1a', '#ffd23f'], 'meches'),
+  p('rook_sr', 'Rook', 'Le Moine Roc', 'SR', 'roc', ['maitres', 'heritiers'], 'mur', ['maitre', 'equipe'], ['Paume de Granit', 'explosion', 2], ['#e0ac69', '#1b1b1f', '#8a5a2a', '#c8913a'], 'chauve'),
+
   /* ---------------- Les vedettes des six mois suivants (un portail toutes les deux semaines) ---------------- */
   p('sora_lr', 'Sora', 'L’Héritier du Ciel', 'LR', 'tempete', ['aube', 'heritiers', 'divin', 'transfo'], 'frappeur', ['amis', 'feu', 'legende'], ['Ciel Infini', 'meteore', 5], ['#f1c27d', '#ffffff', '#2a6a4a', '#36d39a'], 'pics', { sortie: 6, forme: 'divin', chef: ['aube', 'heritiers'] }),
   p('nyx_ssr', 'Nyx', 'La Nuit Vivante', 'SSR', 'eclair', ['ombre', 'combattantes', 'solitaire'], 'esquiveur', ['ombres', 'froid'], ['Minuit Électrique', 'ombre', 4], ['#d8c8f0', '#1b1b3a', '#0a0a1a', '#b06bff'], 'long', { sortie: 6 }),

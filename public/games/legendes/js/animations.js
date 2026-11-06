@@ -152,7 +152,7 @@ function deroule(scene) {
   scene.addEventListener('pointerdown', ecoute);
   return {
     get passe() { return passe; },
-    attendre: (ms) => (passe ? Promise.resolve() : new Promise((r) => { const t0 = performance.now(); const pas = () => (passe || performance.now() - t0 >= ms ? r() : requestAnimationFrame(pas)); requestAnimationFrame(pas); })),
+    attendre: (ms) => (passe ? Promise.resolve() : new Promise((r) => { const t0 = performance.now(); const pas = () => (passe || performance.now() - t0 >= ms ? r() : setTimeout(pas, 30)); setTimeout(pas, 30); })),
     fin() { scene.removeEventListener('pointerdown', ecoute); },
   };
 }

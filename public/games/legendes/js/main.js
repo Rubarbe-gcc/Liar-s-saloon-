@@ -13,7 +13,7 @@ import { texteChef } from '../../../shared/legendes/passifs.js';
 import { jourDe, dateDe, portails, fetesDu, FETE, FETES, dansFete, fetesDe, prochaineMaj } from '../../../shared/legendes/calendrier.js';
 import { nouvelEtat, invoquer, prixMulti, palierDe, connexion, cadeauFete, recupererCadeaux, PALIERS, PRIX, PITIE, TAUX, PART_VEDETTE } from '../../../shared/legendes/gacha.js';
 import { creerCombat, jouerTour, rotation, kiPour, liens, voisines, cheminAuto, meilleurChemin, KI_SUPER, KI_ULTIME, KI_MAX, COLS, NB_SPHERES } from '../../../shared/legendes/combat.js';
-import { CHAPITRES, EPREUVES, DIFFICULTES, ennemisEn, DEFIS, ULTIME, etage, butin, coutAct, evenementDu, bonusEvenement, EVENEMENTS_EVEIL, medaillesEveil } from '../../../shared/legendes/niveaux.js';
+import { CHAPITRES, EPREUVES, DIFFICULTES, ennemisEn, DEFIS, ULTIME, etage, butin, coutAct, evenementDu, bonusEvenement, EVENEMENTS_EVEIL, medaillesEveil, EVENEMENTS_LANCEMENT, lancementOuvert, JOURS_LANCEMENT } from '../../../shared/legendes/niveaux.js';
 import { CHAINES, MEDAILLES, eveilDe, peutEveiller, eveiller, ajouterMedailles, nouveauJoueur, endurance, depenser, gagnerExp, actMax, expPour, prochainPoint, cleMedaille } from '../../../shared/legendes/eveils.js';
 import { arbre, texteNoeud, peutDebloquer, debloquer, ajouterOrbes, gagnerExpPerso, expNiveau, NIV_MAX, ROUTES } from '../../../shared/legendes/potentiel.js';
 import { portrait, ennemi } from './portrait.js';
@@ -41,6 +41,7 @@ if (!S || !S.gacha) {
 S.fin ??= {};
 S.tour ??= 0;
 S.evenements ??= {};
+S.lancement ??= {};
 S.joueur ??= nouveauJoueur(Date.now());
 S.gacha.medailles ??= {};
 S.gacha.boite ??= [];
@@ -290,6 +291,21 @@ function ouvrirFiche(id) {
 }
 const coutTexte = (cout) => Object.entries(cout).map(([k, n]) => `${n} ${MEDAILLES[k]?.glyphe || '🎖️'}`).join(' + ');
 
+/* ---------------- Les événements du lancement ---------------- */
+function ouvrirLancement() {
+  panneau(`<h2 class="titre-ecran">🚀 Événements de lancement</h2><p class="consigne">Pour bien démarrer : cinq combats, des jetons la première fois. Ouverts ${jours(LANCEMENT_FIN - JOUR)} encore.</p>
+    ${EVENEMENTS_LANCEMENT.map((x, k) => {
+      const ouvert = k === 0 || S.lancement[EVENEMENTS_LANCEMENT[k - 1].id];
+      return `<button class="tuile${S.lancement[x.id] ? ' fait' : ''}" data-lancement="${x.id}" ${ouvert ? '' : 'disabled'}><b>${x.glyphe} ${k + 1}. ${x.nom}${S.lancement[x.id] ? ' ✓' : ''}</b><small>⚡${x.act} · ${S.lancement[x.id] ? 'Réussi (on peut le refaire)' : `+${x.jetons} 🪙`}</small></button>`;
+    }).join('')}`);
+  $('fiche').querySelectorAll('[data-lancement]').forEach((b) => b.addEventListener('click', () => {
+    const x = EVENEMENTS_LANCEMENT.find((y) => y.id === b.dataset.lancement);
+    $('v-fiche').classList.add('cache');
+    lancerCombat({ ennemis: x.ennemis.map((e) => ({ ...e, phases: e.phases?.map((p) => ({ ...p })) })), recompense: x.jetons, premiere: !S.lancement[x.id], act: x.act, d: 0, fini: () => { S.lancement[x.id] = true; }, retour: () => { rendreQuetes(); aller('quetes'); ouvrirLancement(); } });
+  }));
+}
+const LANCEMENT_FIN = jourDe(new Date(Date.UTC(2026, 10, 5))) + JOURS_LANCEMENT;
+
 /* ---------------- L'arbre de potentiel ---------------- */
 function ouvrirArbre(id) {
   const x = PERSO[id], c = S.gacha.collection[id], o = S.gacha.orbes, pris = new Set(c.pot || []);
@@ -391,6 +407,10 @@ function rendreQuetes() {
     $('epreuve-titre').textContent = `${f.glyphe} ${ep.nom}`;
     $('epreuve-info').textContent = S.epreuves[cle] ? 'Réussie ! (on peut la refaire, sans jetons)' : `L’épreuve de la fête : ${ep.jetons} jetons à gagner · ⚡${coutAct(true, 0)}`;
   }
+  // Les événements du lancement (le premier mois).
+  $('b-lancement').classList.toggle('cache', !lancementOuvert(JOUR));
+  const faitsL = EVENEMENTS_LANCEMENT.filter((x) => S.lancement[x.id]).length;
+  $('lancement-info').textContent = `${faitsL} / ${EVENEMENTS_LANCEMENT.length} réussis · ${EVENEMENTS_LANCEMENT.filter((x) => !S.lancement[x.id]).reduce((t, x) => t + x.jetons, 0)} jetons à gagner`;
   const ev = evenementDu(JOUR);
   $('evenement-titre').textContent = `${ev.glyphe} ${ev.nom}`;
   $('evenement-info').textContent = `Événement court · se termine ${jours(ev.fin - JOUR)} · ${S.evenements[ev.n] ? 'réussi (les médailles restent à gagner)' : '+20 🪙'} · orbes ${ELEMENTS[ev.element].glyphe} en masse · ⚡10`;
@@ -760,6 +780,7 @@ function brancher() {
   $('fiche').addEventListener('click', (e) => { const b = e.target.closest('[data-potentiel]'); if (b) ouvrirArbre(b.dataset.potentiel); });
   $('b-offerte').onclick = () => { son.reveiller(); invocationOfferte(); };
   $('b-quete-eveils').onclick = () => { rendreEveils(); aller('eveils'); };
+  $('b-lancement').onclick = ouvrirLancement;
   $('liste-eveils').onclick = (e) => {
     const b = e.target.closest('[data-eveil]');
     if (b) { faireEveil(b.dataset.eveil); return; }

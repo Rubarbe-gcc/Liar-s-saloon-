@@ -525,3 +525,7 @@ canvas.particules { position: absolute; inset: 0; width: 100%; height: 100%; z-i
 .rangee .suite::-webkit-scrollbar { height: 6px; }
 .rangee .suite::-webkit-scrollbar-thumb { background: #2aa83a; border-radius: 3px; }
 .rangee .suite::-webkit-scrollbar-track { background: transparent; }
+.tuile.lancement { background: linear-gradient(110deg, #3ae0ff, #ff4dd8); color: #1a0f2a; box-shadow: inset 0 0 0 2px #fff, 0 5px 0 rgba(0, 0, 0, .4); }
+.tuile.lancement small { color: #2a1a3a; }
+.tuile.fait { opacity: .7; }
+.tuile:disabled { opacity: .35; }
