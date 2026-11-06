@@ -201,12 +201,14 @@ test('déterministe : même graine, même partie', () => {
   assert.deepEqual(a.stats, b.stats);
 });
 
-test('équilibre : un joueur raisonnable gagne chaque niveau, un joueur paresseux perd', () => {
+test('équilibre : un joueur raisonnable gagne chaque niveau, un joueur paresseux perd, et ce n’est pas trop facile', () => {
+  let faciles = 0; // lieux où le bon joueur finit avec 3 étoiles
   for (const n of NIVEAUX) {
     for (const graine of [1, 2]) {
       const bon = jouer(n.id, {}, graine);
       assert.equal(bon.phase, 'victoire', `${n.nom} (graine ${graine}) : le bon joueur perd à la vague ${bon.vague}`);
       assert.ok(P.etoiles(bon) >= 1);
+      if (graine === 1 && P.etoiles(bon) === 3) faciles++;
     }
     const paresseux = jouer(n.id, { maxTours: 4, ameliore: false });
     assert.equal(paresseux.phase, 'defaite', `${n.nom} : quatre tours sans amélioration suffisent`);
@@ -215,6 +217,8 @@ test('équilibre : un joueur raisonnable gagne chaque niveau, un joueur paresseu
     const rafales = jouer(n.id, { types: ['rafale'], maxTours: 5 });
     assert.ok(P.etoiles(rafales) <= 2, `${n.nom} : cinq Rafales suffisent`);
   }
+  // Pas trop facile : le bon joueur ne prend pas 3 étoiles partout.
+  assert.ok(faciles <= 3, `${faciles} lieux sur ${NIVEAUX.length} finis avec 3 étoiles par le bon joueur : trop facile`);
 });
 
 /** Une partie vide (aucune vague prévue) où l'on pose ce qu'on veut. */
