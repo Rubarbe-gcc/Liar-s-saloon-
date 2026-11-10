@@ -16,7 +16,7 @@ export const RARETES = {
   mythique:   { nom: 'Mythique',   poids: 7,   recyclage: 800, couleur: '#ff4f9a', rang: 4 },
 };
 export const ORDRE_RARETES = ['commune', 'rare', 'epique', 'legendaire', 'mythique'];
-export const PAR_ENSEIGNE = { commune: 15, rare: 7, epique: 5, legendaire: 2, mythique: 1 };
+export const PAR_ENSEIGNE = { commune: 17, rare: 8, epique: 6, legendaire: 3, mythique: 1 };
 
 /**
  * Les enseignes : couleurs, emblème dessiné (si le logo manque) et devise.
@@ -78,6 +78,11 @@ export const CARTES = [
     ['royalbacon', 'Royal Bacon', 'burger-luxe', 'rare', 'Le Royal avec des tranches de bacon grillé.', 570, 6.4, 3, 5],
     ['mcextreme', 'McExtreme double', 'burger-luxe', 'epique', 'Deux steaks, un pain nouveau, une sauce qui ne fait pas semblant.', 980, 10.2, 2, 5],
     ['boite20', 'La boîte de 20 McNuggets', 'nuggets', 'legendaire', 'Vingt nuggets à partager. En théorie.', 850, 9.9, 4, 5],
+    ['macarons', 'Macarons McCafé', 'cookie', 'commune', 'Quatre macarons colorés pour accompagner le café.', 280, 3.5, 2, 5],
+    ['latteglace', 'Café Latte glacé', 'soda', 'commune', 'Un latte bien frais, avec des glaçons.', 150, 3.2, 1, 3],
+    ['mcwrap', 'McWrap New York & Poulet Bacon', 'wrap', 'rare', 'Une grande galette roulée autour du poulet et du bacon.', 600, 6.9, 3, 5],
+    ['tasty2', 'Big Tasty double', 'burger-luxe', 'epique', 'Deux steaks dans le Big Tasty. Il déborde de partout.', 1100, 10.5, 2, 5],
+    ['mcflavor', 'McFlavor Fries Reblochon', 'frites', 'legendaire', 'Des frites nappées d’une double sauce au reblochon. Édition d’hiver.', 650, 4.9, 3, 5],
   ]),
   ...L('roi', [
     ['frites', 'Frites', 'frites', 'commune', 'Plus épaisses, parce qu’un roi ne fait rien à moitié.', 380, 2.7, 3, 4],
@@ -110,6 +115,11 @@ export const CARTES = [
     ['doublecheesebacon', 'Double Cheese Bacon', 'burger-double', 'rare', 'Deux steaks, du cheddar et du bacon.', 640, 6.4, 2, 5],
     ['doublesteak', 'Double Steakhouse', 'burger-luxe', 'epique', 'Le Steakhouse avec deux steaks grillés à la flamme.', 1100, 11.2, 3, 5],
     ['bigkingxxl', 'Big King XXL', 'burger-double', 'legendaire', 'Le Big King en taille démesurée. Il faut des bras.', 1200, 10.9, 2, 5],
+    ['icebreak', 'Ice Break', 'boite', 'commune', 'Le goûter du roi : une brioche à la pâte à tartiner et une boisson.', 300, 3.5, 1, 4],
+    ['veggielouisiane', 'Veggie Chicken Louisiane Steakhouse', 'burger-luxe', 'commune', 'La version végétale du Louisiane, toujours aussi fumée.', 650, 8.2, 3, 4],
+    ['doublecbk', 'Double CBK', 'burger-poulet', 'rare', 'Deux filets de poulet et du bacon : le CBK en double.', 850, 8.4, 4, 5],
+    ['masterpoivre', 'Master Raclette Poivre', 'burger-luxe', 'epique', 'Raclette fondue et sauce au poivre sur un steak grillé.', 1000, 11.5, 2, 5],
+    ['masterrosti', 'Master Rösti Raclette Poivre', 'burger-luxe', 'legendaire', 'Une galette de pommes de terre en plus. L’hiver au grand complet.', 1150, 12.5, 3, 5],
   ]),
   ...L('capitaine', [
     ['pilons', 'Original Recipe', 'pilon', 'commune', 'Le poulet pané à la recette d’origine, croustillant sous la dent.', 390, 3.2, 5, 4],
@@ -142,6 +152,11 @@ export const CARTES = [
     ['towerspicy', 'Tower Spicy', 'burger-luxe', 'rare', 'Le Tower avec une sauce qui pique.', 680, 7.4, 4, 5],
     ['ultrabox', 'Ultra Box Tower', 'boite', 'epique', 'Le Tower avec frites, tenders et boisson dans une seule boîte.', 1500, 12.9, 4, 5],
     ['bucket32', 'Bucket 32 Hot Wings', 'seau', 'legendaire', 'Trente-deux ailes épicées dans un seau. La soirée est lancée.', 2600, 24.9, 4, 5],
+    ['onion', 'Onion Rings x5', 'rondelles', 'commune', 'Cinq rondelles d’oignon panées façon KFC.', 280, 2.9, 5, 3],
+    ['kfries', 'Kentucky Fries', 'frites', 'commune', 'Des frites assaisonnées façon Kentucky.', 380, 3.5, 4, 4],
+    ['crispyfish', 'Crispy Burger Fish', 'burger', 'rare', 'Le Crispy en version poisson pané.', 480, 4.9, 4, 3],
+    ['towerraclette', 'Tower Raclette & Bacon', 'burger-luxe', 'epique', 'Le Tower avec de la raclette fondue et du bacon.', 820, 8.9, 4, 5],
+    ['bucket20', 'Bucket 20 Tenders', 'seau', 'legendaire', 'Vingt tenders dans un seau. Pour une très grande tablée.', 2200, 22.9, 5, 5],
   ]),
   ...L('metro', [
     ['thon', 'Sub Thon', 'sandwich-long', 'commune', 'Thon, mayonnaise, et les crudités qu’on choisit soi-même.', 450, 5.2, 2, 3],
@@ -174,6 +189,11 @@ export const CARTES = [
     ['submelt', 'Submelt Supreme Steak’n Cheese', 'sandwich-long', 'rare', 'Steak et fromage fondu, gratiné au four.', 520, 7.9, 3, 5],
     ['delipastrami', 'Deli Pastrami', 'sandwich-long', 'epique', 'Le pastrami de la carte signature, empilé haut.', 560, 8.9, 2, 5],
     ['bellamozza', 'Chicken Bella Mozza', 'sandwich-long', 'legendaire', 'Poulet, mozzarella et pesto : l’Italie revisitée en sub.', 540, 8.9, 2, 5],
+    ['gaufries', 'Gauf’fries', 'frites', 'commune', 'Des frites gaufrées, croustillantes dans chaque alvéole.', 300, 2.9, 4, 4],
+    ['brookie', 'Brookie', 'brownie', 'commune', 'La moitié brownie, la moitié cookie. Le meilleur des deux.', 400, 2.2, 2, 5],
+    ['macadamia', 'Cookie chocolat blanc & macadamia', 'cookie', 'rare', 'Le cookie au chocolat blanc et aux noix de macadamia.', 230, 1.3, 2, 5],
+    ['dipcrunch', 'Dip&Crunch Cheddar', 'nuggets', 'epique', 'Des bouchées croustillantes à tremper dans le cheddar fondu.', 450, 5.9, 4, 5],
+    ['dipgaufries', 'Dip&Crunch Cheddar + Gauf’fries', 'boite', 'legendaire', 'Le grand plateau à tremper : bouchées, frites gaufrées et cheddar.', 900, 8.9, 4, 5],
   ]),
   ...L('domino', [
     ['marg', 'Margherita', 'pizza', 'commune', 'Tomate, mozzarella. La reine de la simplicité.', 900, 8.0, 3, 3],
@@ -206,6 +226,11 @@ export const CARTES = [
     ['bacongroovy', 'Bacon Groovy', 'pizza', 'rare', 'Du bacon partout. Groovy.', 1300, 12, 3, 5],
     ['raclette', 'Authentique Raclette', 'pizza', 'epique', 'Raclette fondue, pommes de terre, charcuterie : l’hiver sur une pâte.', 1500, 13.5, 2, 5],
     ['soulcreeper', 'Soul Creeper Meat', 'pizza', 'legendaire', 'L’édition qui fait frissonner : viandes fumées et sauce noire.', 1650, 14.5, 3, 5],
+    ['campagnarde', 'Campagnarde', 'pizza', 'commune', 'Lardons, champignons et crème : la pizza de la campagne.', 1150, 10.5, 3, 4],
+    ['indienne', 'Indienne', 'pizza', 'commune', 'Poulet au curry et poivrons, un voyage en une part.', 1050, 11, 3, 4],
+    ['kicknspicy', 'Kick’n Spicy', 'pizza', 'rare', 'La pizza qui donne un coup de pied au palais.', 1150, 12, 3, 4],
+    ['chicknraclette', 'Chick’n Raclette', 'pizza', 'epique', 'Poulet et raclette fondue sur la même pâte.', 1400, 13.5, 2, 5],
+    ['pepperoniparty', 'Pepperoni Party', 'pizza', 'legendaire', 'Du pepperoni jusque sur les bords. La fête est sur la pizza.', 1500, 13, 3, 5],
   ]),
   ...L('taco', [
     ['croustillant', 'Crunchy Taco', 'taco', 'commune', 'Une coquille qui se brise toujours à la première bouchée.', 170, 1.9, 5, 3],
@@ -238,6 +263,11 @@ export const CARTES = [
     ['doublequesa', 'Double Crispy Chicken Quesadilla', 'quesadilla', 'rare', 'Deux fois plus de poulet croustillant dans la quesadilla.', 680, 6.5, 4, 5],
     ['fiesta', 'Fiesta Breakfast Burrito', 'burrito', 'epique', 'Des pommes de terre épicées et des œufs pour bien commencer.', 520, 3.9, 2, 4],
     ['plateau', 'Le grand plateau Taco Bell', 'boite', 'legendaire', 'Tout le menu sur une seule table. Personne ne repart le ventre vide.', 3000, 25, 4, 5],
+    ['rattlesnake', 'Rattlesnake Fries Burrito', 'burrito', 'commune', 'Un burrito aux frites épicées. Ça pique comme un serpent.', 560, 4.5, 3, 4],
+    ['scrambler', 'Grande Scrambler', 'burrito', 'commune', 'Œufs brouillés, fromage et salsa dans une galette.', 450, 3.9, 1, 4],
+    ['steakgarlic', 'Steak Garlic Nacho Fries', 'frites', 'rare', 'Les Nacho Fries avec du steak et une sauce à l’ail.', 600, 5.9, 4, 5],
+    ['aardvark', 'Secret Aardvark Nacho Fries', 'frites', 'epique', 'Les Nacho Fries arrosées d’une sauce piquante culte.', 520, 4.9, 4, 5],
+    ['bosswrap', 'Fully Loaded Steak Boss Wrap', 'wrap', 'legendaire', 'Le wrap le plus chargé du menu : steak, fromage, tout.', 750, 6.9, 3, 5],
   ]),
   ...L('rapido', [
     ['frites', 'Frites', 'frites', 'commune', 'Servies en 30 secondes, chrono en main.', 340, 2.6, 4, 4],
@@ -270,6 +300,11 @@ export const CARTES = [
     ['classiq', 'ClassiQ Crispy Onions Chicken', 'burger-poulet', 'rare', 'Du poulet pané et des oignons croustillants.', 620, 6.5, 4, 4],
     ['qpop', 'Q-POP Burger Qorean Beef', 'burger-luxe', 'epique', 'Un burger au bœuf mariné à la coréenne, sucré et pimenté.', 780, 8.9, 3, 5],
     ['remarquable', 'RemarQuable Raclette Bacon', 'burger-luxe', 'legendaire', 'Raclette fondue et bacon fumé : le burger qui se remarque.', 950, 9.9, 2, 5],
+    ['fritecheddar', 'Grande Frite Cheddar', 'frites', 'commune', 'Une grande frite nappée de cheddar fondu.', 600, 4.2, 3, 5],
+    ['qpopsofty', 'Q-POP Softy', 'glace', 'commune', 'La glace à l’italienne version Q-POP, colorée et sucrée.', 300, 3.2, 1, 5],
+    ['supspicy', 'Suprême Spicy Chicken', 'burger-poulet', 'rare', 'Le Suprême au poulet croustillant et épicé.', 650, 6.5, 4, 4],
+    ['qrunchy', 'Qrunchy Doritos Bœuf’N Qrispy', 'burger-luxe', 'epique', 'Un burger avec des chips au fromage dedans. Ça croque.', 820, 8.5, 5, 5],
+    ['quickbox', 'QuickBox Cheesy Nacho Cheese', 'boite', 'legendaire', 'La grande boîte à partager, tout au fromage nacho.', 1800, 14.9, 4, 5],
   ]),
   ...L('cousins', [
     ['little', 'Little Hamburger', 'burger', 'commune', 'Le « petit » : un seul steak. Ici, c’est presque un régime.', 540, 7.5, 2, 4],
@@ -302,6 +337,11 @@ export const CARTES = [
     ['shakepistache', 'Milkshake à emporter', 'milkshake', 'rare', 'Le grand gobelet qu’on emporte pour la route.', 900, 6.9, 1, 5],
     ['shakemms', 'Le combo burger, frites, shake', 'boite', 'epique', 'Le plateau complet : double cheeseburger, frites et milkshake chocolat.', 1050, 7.5, 2, 5],
     ['tonneau', 'Le tonneau de cacahuètes', 'cacahuetes', 'legendaire', 'Des cacahuètes à volonté, servies depuis un grand tonneau.', 0, 0, 4, 5],
+    ['patates', 'Cacahuètes et pommes de terre', 'cacahuetes', 'commune', 'Les sacs de patates empilés dans la salle : c’est d’ici que viennent les frites.', 0, 0, 2, 3],
+    ['dogs', 'Le hot dog classique', 'hotdog', 'commune', 'Grillé, ouvert en deux, garni de tout ce que l’on veut.', 520, 6, 2, 4],
+    ['cornet', 'Le cornet de frites', 'frites', 'rare', 'Un gobelet qui déborde de frites fraîches.', 530, 4.5, 4, 5],
+    ['shakes', 'Le grand milkshake', 'milkshake', 'epique', 'Le gobelet géant, avec tous les mix-ins qu’on veut.', 900, 7.5, 1, 5],
+    ['nuit', 'Five Guys by night', 'cacahuetes', 'legendaire', 'Le restaurant illuminé au bord de la marina, tard le soir.', 0, 0, 1, 5],
   ]),
   ...L('popeyes', [
     ['pilons', '2 pièces Signature Chicken', 'pilon', 'commune', 'Mariné 12 heures aux épices de Louisiane, puis pané à la main.', 520, 5.5, 5, 4],
@@ -334,6 +374,11 @@ export const CARTES = [
     ['honeybiscuit', 'Honey Chicken Biscuit', 'burger-poulet', 'rare', 'Du poulet croustillant dans un biscuit au beurre, nappé de miel.', 600, 5.5, 4, 5],
     ['caramelcup', 'Caramel Apple Cheesecake Cup', 'glace', 'epique', 'Cheesecake, pommes et caramel en petit pot.', 400, 3.9, 2, 5],
     ['bundle', 'Signature Chicken & Tenders', 'seau', 'legendaire', 'Le poulet signature et les tenders, réunis pour la grande tablée.', 3500, 29, 5, 5],
+    ['cupcake', 'Strawberry Cupcake Cup', 'glace', 'commune', 'Un cupcake à la fraise servi en pot.', 380, 3.5, 1, 5],
+    ['pineapple', 'Pineapple Premium Lemonade', 'soda', 'commune', 'Une limonade à l’ananas, sucrée et pétillante.', 200, 3.2, 1, 4],
+    ['shrimptenders', 'Butterfly Shrimp & Tenders', 'nuggets', 'rare', 'Quatre crevettes papillon et deux tenders dans la même boîte.', 620, 8.9, 5, 5],
+    ['ailes12', '12 Wings', 'ailes', 'epique', 'Douze ailes croustillantes à se partager.', 950, 12.9, 4, 5],
+    ['tenders11', '11 Tenders Family Meal', 'seau', 'legendaire', 'Onze tenders, des sides et des biscuits pour toute la famille.', 2800, 27, 5, 5],
   ]),
   ...L('starbucks', [
     ['latte', 'Caffè Latte', 'soda', 'commune', 'De l’espresso et beaucoup de lait chaud.', 190, 4.5, 1, 3],
@@ -366,6 +411,11 @@ export const CARTES = [
     ['pistachio', 'Pistachio Pyramid', 'chausson', 'rare', 'Une viennoiserie en pyramide fourrée à la pistache.', 380, 3.9, 4, 5],
     ['matcha', 'Matcha Cherry Muffin', 'muffin', 'epique', 'Un muffin au thé matcha et aux cerises.', 430, 3.9, 1, 5],
     ['toffee', 'Toffee Nut Latte', 'soda', 'legendaire', 'Le latte au caramel et aux noisettes grillées des fêtes.', 330, 5.9, 1, 5],
+    ['hazelnut', 'Hazelnut Pyramid', 'chausson', 'commune', 'Une viennoiserie en pyramide fourrée à la noisette.', 380, 3.9, 4, 5],
+    ['chocobanana', 'Choco Banana Bread', 'brownie', 'commune', 'Le banana bread avec des pépites de chocolat.', 400, 3.6, 1, 5],
+    ['veryberry', 'Refresha Very Berry', 'soda', 'rare', 'Fruits rouges et hibiscus, la fraîcheur rose.', 90, 4.9, 1, 4],
+    ['frappvanille', 'Frappuccino Vanille', 'milkshake', 'epique', 'Le Frappuccino à la crème vanille, sans café.', 360, 6.2, 1, 5],
+    ['caramelbutter', 'Caramel Butter Vanilla Hot Chocolate', 'soda', 'legendaire', 'Un chocolat chaud au caramel beurre salé et à la vanille.', 420, 6.4, 1, 5],
   ]),
   ...L('otacos', [
     ['frites', 'Frites', 'frites', 'commune', 'Les frites dorées qui accompagnent tout.', 330, 2.5, 4, 4],
@@ -398,6 +448,11 @@ export const CARTES = [
     ['spicytenders', 'Spicy Tenders x2', 'nuggets', 'rare', 'Deux tenders panés qui piquent.', 250, 3.2, 4, 4],
     ['streetbowl', 'O’Street O’Bowl', 'salade', 'epique', 'La recette street du moment, servie dans un bol.', 1150, 10.5, 3, 5],
     ['frero', 'La Box Fréro’', 'boite', 'legendaire', 'La box à partager entre frères : tacos, frites et compagnie.', 2200, 18.9, 3, 5],
+    ['fritescheddar', 'Frites sauce cheddar', 'frites', 'commune', 'Des frites sous une couche de cheddar fondu.', 500, 3.9, 3, 5],
+    ['cookielait', 'Cookie chocolat au lait', 'cookie', 'commune', 'Le cookie moelleux au chocolat au lait.', 360, 2.5, 2, 5],
+    ['croustychili', 'Crousty Chili', 'wrap', 'rare', 'Du poulet croustillant et une sauce chili douce.', 1200, 9.5, 4, 5],
+    ['fromagerbowl', 'O’Fromager O’Bowl', 'salade', 'epique', 'Les quatre fromages du tacos, servis dans un bol.', 1250, 10.5, 2, 5],
+    ['chunky', 'Chunky Churros', 'churros', 'legendaire', 'De gros churros à tremper dans la sauce chocolat.', 550, 4.9, 4, 5],
   ]),
   ...L('pitaya', [
     ['padthai', 'Pad Thaï poulet', 'boite', 'commune', 'Des nouilles de riz sautées au wok, cacahuètes et citron vert.', 650, 11.5, 2, 5],
@@ -430,6 +485,11 @@ export const CARTES = [
     ['baosriracha', 'Bao Thaï Burger Sriracha Mayo', 'burger', 'rare', 'Le bao au poulet croustillant et à la mayo sriracha.', 540, 8.9, 3, 5],
     ['bobunmango', 'Bò Bún Mango Thaï poulet', 'salade', 'epique', 'Le bò bún au poulet et à la mangue fraîche.', 600, 12.9, 2, 5],
     ['sundaepb', 'Maxi Sundae Peanut Butter', 'glace', 'legendaire', 'Un sundae géant au beurre de cacahuète.', 650, 5.9, 2, 5],
+    ['nemsmango', 'Nems Mango Sticky Rice', 'churros', 'commune', 'Des nems sucrés au riz gluant et à la mangue.', 320, 4.5, 4, 5],
+    ['cookiecaramel', 'Cookie cacahuète caramel', 'cookie', 'commune', 'Un cookie aux cacahuètes et au caramel.', 350, 2.9, 2, 5],
+    ['udonboeuf', 'Udon Sie Yai bœuf', 'boite', 'rare', 'Les grosses nouilles udon sautées au bœuf.', 720, 12.5, 1, 4],
+    ['crunchysriracha', 'Crunchy Noodles Sriracha Mayo', 'boite', 'epique', 'Des nouilles croustillantes à la mayo sriracha.', 700, 10.5, 4, 5],
+    ['sundaefruits', 'Maxi Sundae fruits rouges', 'glace', 'legendaire', 'Un sundae géant aux fruits rouges.', 520, 5.9, 1, 5],
   ]),
 ];
 

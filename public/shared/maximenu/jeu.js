@@ -21,9 +21,9 @@ export const REGLES = {
 };
 
 export const BOUTIQUE = {
-  classique: { nom: 'Booster classique', prix: 120, desc: '5 cartes de toutes les enseignes, une Rare au moins.' },
-  enseigne:  { nom: 'Booster d’enseigne', prix: 220, desc: '5 cartes de l’enseigne de votre choix, une Rare au moins.' },
-  prestige:  { nom: 'Booster prestige', prix: 1500, desc: '5 cartes, une Légendaire ou mieux garantie.' },
+  classique: { nom: 'Booster classique', prix: 200, desc: '5 cartes de toutes les enseignes, une Rare au moins.' },
+  enseigne:  { nom: 'Booster d’enseigne', prix: 350, desc: '5 cartes de l’enseigne de votre choix, une Rare au moins.' },
+  prestige:  { nom: 'Booster prestige', prix: 2500, desc: '5 cartes, une Légendaire ou mieux garantie.' },
 };
 
 const JOUR = 24 * 3600 * 1000;

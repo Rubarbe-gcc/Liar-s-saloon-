@@ -2306,5 +2306,372 @@
   "auteur": "Quick",
   "licence": "photo officielle",
   "source": "https://www.quick.fr/produits"
+ },
+ "arches-macarons": {
+  "fichier": "arches-macarons.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
+ },
+ "arches-latteglace": {
+  "fichier": "arches-latteglace.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
+ },
+ "arches-mcwrap": {
+  "fichier": "arches-mcwrap.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
+ },
+ "arches-tasty2": {
+  "fichier": "arches-tasty2.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
+ },
+ "arches-mcflavor": {
+  "fichier": "arches-mcflavor.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
+ },
+ "roi-icebreak": {
+  "fichier": "roi-icebreak.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
+ },
+ "roi-veggielouisiane": {
+  "fichier": "roi-veggielouisiane.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
+ },
+ "roi-doublecbk": {
+  "fichier": "roi-doublecbk.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
+ },
+ "roi-masterpoivre": {
+  "fichier": "roi-masterpoivre.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
+ },
+ "roi-masterrosti": {
+  "fichier": "roi-masterrosti.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
+ },
+ "capitaine-onion": {
+  "fichier": "capitaine-onion.jpg",
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
+ },
+ "capitaine-kfries": {
+  "fichier": "capitaine-kfries.jpg",
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
+ },
+ "capitaine-crispyfish": {
+  "fichier": "capitaine-crispyfish.jpg",
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
+ },
+ "capitaine-towerraclette": {
+  "fichier": "capitaine-towerraclette.jpg",
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
+ },
+ "capitaine-bucket20": {
+  "fichier": "capitaine-bucket20.jpg",
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
+ },
+ "metro-gaufries": {
+  "fichier": "metro-gaufries.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
+ },
+ "metro-brookie": {
+  "fichier": "metro-brookie.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
+ },
+ "metro-macadamia": {
+  "fichier": "metro-macadamia.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
+ },
+ "metro-dipcrunch": {
+  "fichier": "metro-dipcrunch.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
+ },
+ "metro-dipgaufries": {
+  "fichier": "metro-dipgaufries.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
+ },
+ "domino-campagnarde": {
+  "fichier": "domino-campagnarde.jpg",
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
+ },
+ "domino-indienne": {
+  "fichier": "domino-indienne.jpg",
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
+ },
+ "domino-kicknspicy": {
+  "fichier": "domino-kicknspicy.jpg",
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
+ },
+ "domino-chicknraclette": {
+  "fichier": "domino-chicknraclette.jpg",
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
+ },
+ "domino-pepperoniparty": {
+  "fichier": "domino-pepperoniparty.jpg",
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
+ },
+ "rapido-qrunchy": {
+  "fichier": "rapido-qrunchy.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-quickbox": {
+  "fichier": "rapido-quickbox.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "cousins-dogs": {
+  "fichier": "cousins-dogs.jpg",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "cousins-cornet": {
+  "fichier": "cousins-cornet.png",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "cousins-shakes": {
+  "fichier": "cousins-shakes.jpg",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "popeyes-cupcake": {
+  "fichier": "popeyes-cupcake.png",
+  "auteur": "Popeyes",
+  "licence": "photo officielle",
+  "source": "https://www.popeyes.com/menu"
+ },
+ "popeyes-pineapple": {
+  "fichier": "popeyes-pineapple.png",
+  "auteur": "Popeyes",
+  "licence": "photo officielle",
+  "source": "https://www.popeyes.com/menu"
+ },
+ "popeyes-shrimptenders": {
+  "fichier": "popeyes-shrimptenders.png",
+  "auteur": "Popeyes",
+  "licence": "photo officielle",
+  "source": "https://www.popeyes.com/menu"
+ },
+ "popeyes-ailes12": {
+  "fichier": "popeyes-ailes12.png",
+  "auteur": "Popeyes",
+  "licence": "photo officielle",
+  "source": "https://www.popeyes.com/menu"
+ },
+ "popeyes-tenders11": {
+  "fichier": "popeyes-tenders11.png",
+  "auteur": "Popeyes",
+  "licence": "photo officielle",
+  "source": "https://www.popeyes.com/menu"
+ },
+ "starbucks-hazelnut": {
+  "fichier": "starbucks-hazelnut.jpg",
+  "auteur": "Starbucks",
+  "licence": "photo officielle",
+  "source": "https://www.starbucks.fr/menu"
+ },
+ "starbucks-chocobanana": {
+  "fichier": "starbucks-chocobanana.jpg",
+  "auteur": "Starbucks",
+  "licence": "photo officielle",
+  "source": "https://www.starbucks.fr/menu"
+ },
+ "starbucks-veryberry": {
+  "fichier": "starbucks-veryberry.jpg",
+  "auteur": "Starbucks",
+  "licence": "photo officielle",
+  "source": "https://www.starbucks.fr/menu"
+ },
+ "starbucks-frappvanille": {
+  "fichier": "starbucks-frappvanille.jpg",
+  "auteur": "Starbucks",
+  "licence": "photo officielle",
+  "source": "https://www.starbucks.fr/menu"
+ },
+ "starbucks-caramelbutter": {
+  "fichier": "starbucks-caramelbutter.jpg",
+  "auteur": "Starbucks",
+  "licence": "photo officielle",
+  "source": "https://www.starbucks.fr/menu"
+ },
+ "otacos-fritescheddar": {
+  "fichier": "otacos-fritescheddar.png",
+  "auteur": "O’Tacos",
+  "licence": "photo officielle",
+  "source": "https://www.o-tacos.com/fr/nos-produits"
+ },
+ "otacos-cookielait": {
+  "fichier": "otacos-cookielait.png",
+  "auteur": "O’Tacos",
+  "licence": "photo officielle",
+  "source": "https://www.o-tacos.com/fr/nos-produits"
+ },
+ "otacos-croustychili": {
+  "fichier": "otacos-croustychili.png",
+  "auteur": "O’Tacos",
+  "licence": "photo officielle",
+  "source": "https://www.o-tacos.com/fr/nos-produits"
+ },
+ "otacos-fromagerbowl": {
+  "fichier": "otacos-fromagerbowl.png",
+  "auteur": "O’Tacos",
+  "licence": "photo officielle",
+  "source": "https://www.o-tacos.com/fr/nos-produits"
+ },
+ "otacos-chunky": {
+  "fichier": "otacos-chunky.png",
+  "auteur": "O’Tacos",
+  "licence": "photo officielle",
+  "source": "https://www.o-tacos.com/fr/nos-produits"
+ },
+ "pitaya-nemsmango": {
+  "fichier": "pitaya-nemsmango.png",
+  "auteur": "Pitaya",
+  "licence": "photo officielle",
+  "source": "https://pitaya-thaistreetfood.com/pitaya-menu"
+ },
+ "pitaya-cookiecaramel": {
+  "fichier": "pitaya-cookiecaramel.png",
+  "auteur": "Pitaya",
+  "licence": "photo officielle",
+  "source": "https://pitaya-thaistreetfood.com/pitaya-menu"
+ },
+ "pitaya-udonboeuf": {
+  "fichier": "pitaya-udonboeuf.png",
+  "auteur": "Pitaya",
+  "licence": "photo officielle",
+  "source": "https://pitaya-thaistreetfood.com/pitaya-menu"
+ },
+ "pitaya-crunchysriracha": {
+  "fichier": "pitaya-crunchysriracha.png",
+  "auteur": "Pitaya",
+  "licence": "photo officielle",
+  "source": "https://pitaya-thaistreetfood.com/pitaya-menu"
+ },
+ "pitaya-sundaefruits": {
+  "fichier": "pitaya-sundaefruits.png",
+  "auteur": "Pitaya",
+  "licence": "photo officielle",
+  "source": "https://pitaya-thaistreetfood.com/pitaya-menu"
+ },
+ "taco-rattlesnake": {
+  "fichier": "taco-rattlesnake.jpg",
+  "auteur": "Dan Keck from Ohio",
+  "licence": "CC0",
+  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File%3ATaco_Bell_Rattlesnake_Fries_Burrito_(42535021520).jpg"
+ },
+ "taco-scrambler": {
+  "fichier": "taco-scrambler.jpg",
+  "auteur": "theimpulsivebuy",
+  "licence": "CC BY-SA 2.0",
+  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3ATaco_Bell_Grande_Scrambler_005_(14606500869).jpg"
+ },
+ "taco-steakgarlic": {
+  "fichier": "taco-steakgarlic.jpg",
+  "auteur": "Phillip Pessar",
+  "licence": "CC BY 2.0",
+  "lienLicence": "https://creativecommons.org/licenses/by/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3ATaco_Bell_New_Item_Steak_Garlic_Nacho_Fries_(54272343703).jpg"
+ },
+ "taco-aardvark": {
+  "fichier": "taco-aardvark.jpg",
+  "auteur": "Phillip Pessar",
+  "licence": "CC BY 2.0",
+  "lienLicence": "https://creativecommons.org/licenses/by/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3ASecret_Aardvark_Nacho_Fries_Taco_Bell_(53753312714).jpg"
+ },
+ "taco-bosswrap": {
+  "fichier": "taco-bosswrap.jpg",
+  "auteur": "theimpulsivebuy",
+  "licence": "CC BY-SA 2.0",
+  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3ATaco_Bell_Fully_Loaded_Steak_Boss_Wrap_(22110235954).jpg"
+ },
+ "cousins-patates": {
+  "fichier": "cousins-patates.jpg",
+  "auteur": "Danielstats",
+  "licence": "CC0",
+  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File%3AFive_Guys_Peanuts_and_Potatoes.jpg"
+ },
+ "cousins-nuit": {
+  "fichier": "cousins-nuit.jpg",
+  "auteur": "Andy Li",
+  "licence": "CC0",
+  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File%3AFive_Guys_Brighton_Marina_at_night.jpg"
+ },
+ "rapido-qpopsofty": {
+  "fichier": "rapido-qpopsofty.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-supspicy": {
+  "fichier": "rapido-supspicy.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-fritecheddar": {
+  "fichier": "rapido-fritecheddar.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
  }
 }

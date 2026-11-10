@@ -288,3 +288,8 @@ h2{font-family:var(--f-titre);font-size:1.3rem;margin:4px 0 12px;color:var(--mou
 .rangement .arrivee.grande{grid-column:span 2;font-size:1em;animation:pop .5s var(--rebond) backwards;}
 .rangement .arrivee.grande .carte{box-shadow:0 0 26px 6px var(--lum,#ffb52e);}
 .rangement .arrivee .annonce-rare{top:-10px;bottom:auto;font-size:1rem;}
+.rangement .arrivee.cachee{cursor:pointer;aspect-ratio:5/7;animation:pop .45s var(--rebond) backwards,lueur 1s ease-in-out infinite alternate;}
+.rangement .arrivee.cachee .dos-carte{box-shadow:0 0 22px 6px var(--lum);}
+.rangement .arrivee.cachee:hover{transform:translateY(-4px);}
+.rangement .arrivee.grande:not(.cachee){animation:retourne .5s ease-out;}
+@keyframes retourne{from{transform:rotateY(90deg) scale(.9);}to{transform:none;}}

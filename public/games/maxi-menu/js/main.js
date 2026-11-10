@@ -145,7 +145,7 @@ const VUES = {
     </div>
     <div class="etapes">
       <div class="etape"><b>1</b><p><strong>Ouvrez des boosters.</strong> Des gratuits se rechargent toute la journée, et la boutique en vend contre des frites d’or.</p></div>
-      <div class="etape"><b>2</b><p><strong>Complétez les albums.</strong> Une enseigne, trente cartes, de la Commune à la Mythique. Un album complet rapporte 1 000 🍟.</p></div>
+      <div class="etape"><b>2</b><p><strong>Complétez les albums.</strong> Une enseigne, trente-cinq cartes, de la Commune à la Mythique. Un album complet rapporte 1 000 🍟.</p></div>
       <div class="etape"><b>3</b><p><strong>Recyclez les doublons</strong> en frites d’or, et découvrez la fiche de chaque carte obtenue.</p></div>
     </div>
     <p class="mentions">Jeu de fan gratuit et non officiel, sans lien avec les enseignes citées. Les marques et logos appartiennent à leurs propriétaires.
@@ -466,8 +466,9 @@ function pile(ordre, k) {
 
 /*
  * « Aller jusqu'à » : toutes les cartes de tous les boosters, rassemblées et rangées par
- * rareté. Les plus courantes défilent vite, groupe par groupe ; à partir de la rareté visée,
- * chaque carte arrive seule, avec son halo et son annonce.
+ * rareté. Tout ce qui est en dessous de la rareté visée se dévoile tout seul, groupe par
+ * groupe ; les cartes de la rareté visée et au-dessus arrivent face cachée, et c'est le
+ * joueur qui les touche une par une pour les découvrir.
  */
 async function rangement(cible) {
   const jeton = ++session.jeton;
@@ -481,24 +482,51 @@ async function rangement(cible) {
   let vite = false;
   $('#b-vite').onclick = () => { vite = true; };
   const pause = ms => new Promise(r => setTimeout(r, vite ? 0 : ms));
-  for (const g of groupes) {
+  const face = (t, grande) => `${carteHTML(t.carte, { nouveau: t.nouvelle, compte: etat.collection[t.carte.id] })}${grande ? `<div class="annonce-rare" style="--c:${RARETES[t.carte.rarete].couleur}">${RARETES[t.carte.rarete].nom.toUpperCase()} !</div>` : ''}`;
+  // 1) Tout ce qui est en dessous de la rareté visée se dévoile seul.
+  for (const g of groupes.filter(x => RARETES[x.r].rang < cible)) {
     if (jeton !== session.jeton) return;
     const sec = scene.querySelector(`[data-groupe="${g.r}"]`);
     sec.hidden = false;
     const grille = sec.querySelector('.grille');
-    const grande = RARETES[g.r].rang >= cible;
     for (const t of g.cartes) {
       if (jeton !== session.jeton) return;
-      grille.insertAdjacentHTML('beforeend', `<div class="${grande ? 'arrivee grande' : 'arrivee'}" style="--lum:${RARETES[g.r].couleur}">${carteHTML(t.carte, { nouveau: t.nouvelle, compte: etat.collection[t.carte.id] })}${grande ? `<div class="annonce-rare" style="--c:${RARETES[g.r].couleur}">${RARETES[g.r].nom.toUpperCase()} !</div>` : ''}</div>`);
-      if (!vite) grille.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      if (grande) { son.jouer('carte'); setTimeout(() => son.jouer(SONS_RARETE[g.r]), 120); await pause(900); }
-      else { if (!vite) son.jouer('carte'); await pause(60); }
+      grille.insertAdjacentHTML('beforeend', `<div class="arrivee">${face(t, false)}</div>`);
+      if (!vite) { grille.lastElementChild.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); son.jouer('carte'); }
+      await pause(60);
     }
-    await pause(grande ? 300 : 250);
+    await pause(250);
   }
   if (jeton !== session.jeton) return;
-  for (const el of scene.querySelectorAll('[data-carte]')) el.onclick = () => montrerFiche(el.dataset.carte);
-  actionsFin(toutes);
+  // 2) La rareté visée et au-dessus : face cachée, à toucher une par une.
+  const cachees = [];
+  for (const g of groupes.filter(x => RARETES[x.r].rang >= cible)) {
+    const sec = scene.querySelector(`[data-groupe="${g.r}"]`);
+    sec.hidden = false;
+    const grille = sec.querySelector('.grille');
+    for (const t of g.cartes) {
+      grille.insertAdjacentHTML('beforeend', `<div class="arrivee grande cachee" style="--lum:${RARETES[g.r].couleur}"><div class="dos-carte"><span>MAXI<br>MENU</span></div></div>`);
+      cachees.push({ el: grille.lastElementChild, t });
+    }
+  }
+  cachees[0]?.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  let reste = cachees.length;
+  const finir = () => {
+    for (const el of scene.querySelectorAll('[data-carte]')) el.onclick = () => montrerFiche(el.dataset.carte);
+    actionsFin(toutes);
+  };
+  const retourner = ({ el, t }) => {
+    if (!el.classList.contains('cachee')) return;
+    el.classList.remove('cachee');
+    el.innerHTML = face(t, true);
+    son.jouer('carte');
+    setTimeout(() => son.jouer(SONS_RARETE[t.carte.rarete]), 120);
+    if (--reste === 0 && jeton === session.jeton) setTimeout(finir, 700);
+  };
+  for (const c of cachees) c.el.onclick = () => retourner(c);
+  actions.innerHTML = `<p class="sous" style="margin:0;width:100%;text-align:center">Touchez chaque carte pour la découvrir.</p>
+    <div class="lot-btns"><button class="btn" id="b-devoiler">Tout dévoiler</button></div>`;
+  $('#b-devoiler').onclick = () => { son.jouer('clic'); cachees.forEach((c, i) => setTimeout(() => retourner(c), i * 250)); };
 }
 
 /** Le résumé : les cartes données (par défaut toutes), les plus rares d'abord s'il y en a beaucoup. */
