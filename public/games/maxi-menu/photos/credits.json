@@ -49,46 +49,40 @@
   "source": "https://commons.wikimedia.org/wiki/File%3AFive_Guys_logo.svg"
  },
  "arches-cheese": {
-  "fichier": "arches-cheese.jpg",
-  "auteur": "Filippos Fragkogiannis",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AMcDonald's_Cheeseburger_(2024).jpg"
+  "fichier": "arches-cheese.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
  },
  "arches-hamburger": {
   "fichier": "arches-hamburger.png",
-  "auteur": "Filippos Fragkogiannis",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AMcDonald's_Hamburger_(2025).png"
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
  },
  "arches-frites": {
-  "fichier": "arches-frites.jpg",
-  "auteur": "Chris Woodrich",
-  "licence": "Public domain",
-  "lienLicence": "",
-  "source": "https://commons.wikimedia.org/wiki/File%3AMcDonald's_French_Fries%2C_Canada%2C_2026-04-04.jpg"
+  "fichier": "arches-frites.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
  },
  "arches-potatoes": {
-  "fichier": "arches-potatoes.jpg",
-  "auteur": "Qwerty Binary",
-  "licence": "CC BY-SA 3.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/3.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AWedges_with_cheese_and_bacon_(cropped).jpg"
+  "fichier": "arches-potatoes.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
  },
  "arches-nuggets": {
-  "fichier": "arches-nuggets.jpg",
-  "auteur": "Chris Woodrich",
-  "licence": "Public domain",
-  "lienLicence": "",
-  "source": "https://commons.wikimedia.org/wiki/File%3AMcDonald's_10-Piece_Chicken_McNuggets%2C_Canada%2C_2026-04-04.jpg"
+  "fichier": "arches-nuggets.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
  },
  "arches-soda": {
-  "fichier": "arches-soda.jpg",
-  "auteur": "Zheuhoikim",
-  "licence": "CC BY-SA 3.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/3.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AHK_McDonalds_Souvenir_Coca-Cola_Glass_Cup_2.JPG"
+  "fichier": "arches-soda.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
  },
  "arches-chausson": {
   "fichier": "arches-chausson.jpg",
@@ -98,67 +92,58 @@
   "source": "https://commons.wikimedia.org/wiki/File%3AMcD-Apple-Pie.jpg"
  },
  "arches-sundae": {
-  "fichier": "arches-sundae.jpg",
-  "auteur": "Qwertyxp2000",
-  "licence": "CC BY 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AMcDonald's_Choc_Top_Super_Sundae.jpg"
+  "fichier": "arches-sundae.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
  },
  "arches-cafe": {
-  "fichier": "arches-cafe.jpg",
-  "auteur": "Vrindapl",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ACappuccino_6.jpg"
+  "fichier": "arches-cafe.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
  },
  "arches-glace": {
-  "fichier": "arches-glace.jpg",
-  "auteur": "MOs810",
-  "licence": "CC BY 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AMcFlurry_pistacjowy_(Poland).jpg"
+  "fichier": "arches-glace.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
  },
  "arches-muffin": {
-  "fichier": "arches-muffin.jpg",
-  "auteur": "Evan-Amos",
-  "licence": "Public domain",
-  "lienLicence": "",
-  "source": "https://commons.wikimedia.org/wiki/File%3AMcD-Egg-McMuffin.jpg"
+  "fichier": "arches-muffin.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
  },
  "arches-mcchicken": {
   "fichier": "arches-mcchicken.png",
-  "auteur": "Evan-Amos",
-  "licence": "Public domain",
-  "lienLicence": "",
-  "source": "https://commons.wikimedia.org/wiki/File%3AMcD-McChicken_(transparent).png"
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
  },
  "arches-filet": {
   "fichier": "arches-filet.png",
-  "auteur": "Evan-Amos",
-  "licence": "CC0",
-  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-  "source": "https://commons.wikimedia.org/wiki/File%3AFilet-O-Fish_transparent.png"
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
  },
  "arches-royal": {
-  "fichier": "arches-royal.jpg",
-  "auteur": "Evan-Amos",
-  "licence": "CC0",
-  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-  "source": "https://commons.wikimedia.org/wiki/File%3AMcDonald's_Quarter_Pounder_with_Cheese%2C_United_States.jpg"
+  "fichier": "arches-royal.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
  },
  "arches-grand": {
   "fichier": "arches-grand.png",
-  "auteur": "Evan-Amos",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ABig_Mac_hamburger_with_clear_background.png"
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
  },
  "arches-tasty": {
   "fichier": "arches-tasty.png",
-  "auteur": "Filippos Fragkogiannis",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AMcDonald's_Single_Big_Tasty_(June_2025).png"
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
  },
  "arches-clown": {
   "fichier": "arches-clown.jpg",
@@ -905,9 +890,8 @@
  "arches-joyeux": {
   "fichier": "arches-joyeux.png",
   "auteur": "McDonald's",
-  "licence": "Public domain",
-  "lienLicence": "",
-  "source": "https://commons.wikimedia.org/wiki/File%3AHappy_Meal_english_variant.svg"
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
  },
  "capitaine-tenders": {
   "fichier": "capitaine-tenders.jpg",

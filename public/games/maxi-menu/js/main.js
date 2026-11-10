@@ -23,7 +23,7 @@ for (const [id, v] of Object.entries(CREDITS)) {
 const echapper = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
 const credit = id => {
   const v = CREDITS[id];
-  return v ? `Photo : ${echapper(v.auteur || 'auteur inconnu')} · ${echapper(v.licence || '')} · <a href="${echapper(v.source)}" target="_blank" rel="noopener">Wikimedia Commons</a>` : '';
+  return v ? `Photo : ${echapper(v.auteur || 'auteur inconnu')} · ${echapper(v.licence || '')} · <a href="${echapper(v.source)}" target="_blank" rel="noopener">${echapper(new URL(v.source).hostname.replace(/^www./, ""))}</a>` : '';
 };
 
 const $ = s => document.querySelector(s);
@@ -122,7 +122,8 @@ const VUES = {
         <div class="grand">${etat.stock}<small style="font-size:1rem;color:var(--pale)"> / ${J.REGLES.stockMax}</small></div>
         <div class="jauge"><i style="width:${etat.stock / J.REGLES.stockMax * 100}%"></i></div>
         <p>${etat.stock >= J.REGLES.stockMax ? 'Réserve pleine : ouvrez-en un !' : 'Prochain booster gratuit dans <b data-minuteur="recharge"></b>'}</p>
-        <button class="btn rouge" id="b-gratuit" ${etat.stock ? '' : 'disabled'}>Ouvrir un booster</button>
+        <div class="lot-btns"><button class="btn rouge" id="b-gratuit" data-n="1" ${etat.stock ? '' : 'disabled'}>Ouvrir un booster</button>
+          ${[5, 10].filter(n => (n === 5 ? etat.stock >= 2 : etat.stock > 5)).map(n => `<button class="btn rouge" id="b-gratuit" data-n="${n}">×${Math.min(n, etat.stock)}</button>`).join('')}</div>
       </section>
       <section class="tuile">
         <h3>📅 Série de visites</h3>
@@ -164,15 +165,20 @@ const VUES = {
   boutique() {
     const d = J.valeurDoublons(etat);
     const o = J.BOUTIQUE;
+    // Un, cinq ou dix boosters d'un coup.
+    const achats = (sorte, classe) => `<div class="lot-btns">${[1, 5, 10].map(n => {
+      const prix = o[sorte].prix * n;
+      return `<button class="btn ${classe}" data-acheter="${sorte}" data-n="${n}" ${etat.frites < prix ? 'disabled' : ''}>${n > 1 ? `×${n} · ` : ''}${fmtFrites(prix)} 🍟</button>`;
+    }).join('')}</div>`;
     return `<h2>La boutique</h2><p class="sous">Vos frites d’or : <b>${fmtFrites(etat.frites)} 🍟</b>. Gagnez-en en recyclant vos doublons et en complétant des albums.</p>
       <div class="offres">
         <div class="offre">${paquetHTML('MAXI', 'classique', ['#e3262f', '#ffc72c'])}<b>${o.classique.nom}</b><p>${o.classique.desc}</p>
-          <button class="btn rouge" data-acheter="classique" ${etat.frites < o.classique.prix ? 'disabled' : ''}>${o.classique.prix} 🍟</button></div>
+          ${achats('classique', 'rouge')}</div>
         <div class="offre">${paquetHTML('MAXI', 'enseigne', ['#11519c', '#ffc72c'])}<b>${o.enseigne.nom}</b><p>${o.enseigne.desc}</p>
           <select id="choix-enseigne" aria-label="Enseigne">${ORDRE_ENSEIGNES.map(k => `<option value="${k}">${ENSEIGNES[k].nom}</option>`).join('')}</select>
-          <button class="btn rouge" data-acheter="enseigne" ${etat.frites < o.enseigne.prix ? 'disabled' : ''}>${o.enseigne.prix} 🍟</button></div>
+          ${achats('enseigne', 'rouge')}</div>
         <div class="offre">${paquetHTML('MAXI', 'prestige', ['#ff4f9a', '#ffb52e'])}<b>${o.prestige.nom}</b><p>${o.prestige.desc}</p>
-          <button class="btn jaune" data-acheter="prestige" ${etat.frites < o.prestige.prix ? 'disabled' : ''}>${fmtFrites(o.prestige.prix)} 🍟</button></div>
+          ${achats('prestige', 'jaune')}</div>
       </div>
       <div class="tuile doublons"><h3>♻️ Recyclage</h3>
         <p>On garde toujours un exemplaire de chaque carte. Chaque doublon rapporte : Commune ${RARETES.commune.recyclage} · Rare ${RARETES.rare.recyclage} · Épique ${RARETES.epique.recyclage} · Légendaire ${RARETES.legendaire.recyclage} · Mythique ${RARETES.mythique.recyclage} 🍟.</p>
@@ -208,7 +214,7 @@ setInterval(() => {
 /* ------------------------------------------------------------ ouverture d'un booster */
 const SONS_RARETE = { commune: 'commune', rare: 'rare', epique: 'epique', legendaire: 'legendaire', mythique: 'mythique' };
 
-function ouvrir(tirage, { titre = 'MAXI', sous = 'booster', couleurs = ['#e3262f', '#ffc72c'], embleme = '' } = {}) {
+function ouvrir(tirage, { titre = 'MAXI', sous = 'booster', couleurs = ['#e3262f', '#ffc72c'], embleme = '', lots = 1 } = {}) {
   sauver();
   majCompteurs();
   const ouv = $('#ouverture'), scene = $('#ouv-scene'), actions = $('#ouv-actions');
@@ -216,15 +222,30 @@ function ouvrir(tirage, { titre = 'MAXI', sous = 'booster', couleurs = ['#e3262f
   scene.innerHTML = paquetHTML(titre, sous, couleurs, embleme);
   const paquet = scene.querySelector('.paquet');
   paquet.classList.add('tremble');
-  actions.innerHTML = '<p class="sous" style="margin:0">Touchez le paquet pour l’ouvrir</p>';
-  // Du moins rare au plus rare : la meilleure carte arrive en dernier.
-  const ordre = tirage.slice().sort((a, b) => RARETES[a.carte.rarete].rang - RARETES[b.carte.rarete].rang);
+  if (lots > 1) paquet.insertAdjacentHTML('beforeend', `<span class="lots">×${lots}</span>`);
+  actions.innerHTML = `<p class="sous" style="margin:0">Touchez le paquet pour l’ouvrir${lots > 1 ? ` (${lots} boosters, ${tirage.length} cartes)` : ''}</p>`;
+  // Un booster : du moins rare au plus rare, la meilleure carte arrive en dernier.
+  // Plusieurs : on montre tout d'un coup, les plus rares d'abord.
+  const sens = lots > 1 ? -1 : 1;
+  const ordre = tirage.slice().sort((a, b) => sens * (RARETES[a.carte.rarete].rang - RARETES[b.carte.rarete].rang));
   paquet.addEventListener('click', () => {
     son.jouer('dechirer');
     paquet.classList.remove('tremble');
     paquet.classList.add('dechire');
-    setTimeout(() => pile(ordre), 450);
+    setTimeout(() => (lots > 1 ? resume(ordre, lots) : pile(ordre)), 450);
   }, { once: true });
+}
+
+/** Ouvre jusqu'à `n` boosters avec `un()` (qui rend { ok, tirage }) ; rend les cartes et le nombre ouvert. */
+function plusieurs(n, un) {
+  const tirage = [];
+  let lots = 0;
+  for (; lots < n; lots++) {
+    const r = un();
+    if (!r.ok) break;
+    tirage.push(...r.tirage);
+  }
+  return { tirage, lots };
 }
 
 function pile(ordre) {
@@ -232,7 +253,7 @@ function pile(ordre) {
   let i = 0;
   scene.innerHTML = `<div class="pile">${ordre.map((t, k) => `<div class="volante" style="z-index:${10 - k};transform:translate(${k * 3}px,${k * 3}px)">
       <div class="dos"><div class="dos-carte"><span>MAXI<br>MENU</span></div></div>
-      <div class="face">${carteHTML(t.carte, { nouveau: t.nouveau, id: false })}</div>
+      <div class="face">${carteHTML(t.carte, { nouveau: t.nouvelle, id: false })}</div>
       <div class="halo" style="background:radial-gradient(circle,${RARETES[t.carte.rarete].couleur}aa,transparent 60%)"></div>
     </div>`).join('')}<div class="compteur-pile" id="compteur-pile">1 / ${ordre.length}</div></div>`;
   actions.innerHTML = '<button class="btn" id="b-tout">Tout révéler</button>';
@@ -263,18 +284,19 @@ function pile(ordre) {
   $('#b-tout').onclick = () => { son.jouer('clic'); resume(ordre); };
 }
 
-function resume(ordre) {
+function resume(ordre, lots = 1) {
   const scene = $('#ouv-scene'), actions = $('#ouv-actions');
   const meilleure = ordre.reduce((a, b) => (RARETES[b.carte.rarete].rang > RARETES[a.carte.rarete].rang ? b : a));
-  if (RARETES[meilleure.carte.rarete].rang >= 3) son.jouer(SONS_RARETE[meilleure.carte.rarete]);
-  scene.innerHTML = `<div class="resume">${ordre.map((t, k) => `<div style="animation-delay:${k * 0.08}s">${carteHTML(t.carte, { nouveau: t.nouveau, compte: etat.collection[t.carte.id] })}</div>`).join('')}</div>`;
-  const nouvelles = ordre.filter(t => t.nouveau).length;
-  actions.innerHTML = `<p class="sous" style="margin:0;width:100%;text-align:center">${nouvelles ? `${nouvelles} nouvelle${nouvelles > 1 ? 's' : ''} carte${nouvelles > 1 ? 's' : ''} !` : 'Que des doublons… à recycler en frites d’or.'}</p>
+  if (RARETES[meilleure.carte.rarete].rang >= (lots > 1 ? 2 : 3)) son.jouer(SONS_RARETE[meilleure.carte.rarete]);
+  const pas = lots > 1 ? 0.03 : 0.08;
+  scene.innerHTML = `<div class="resume${lots > 1 ? ' multi' : ''}">${ordre.map((t, k) => `<div style="animation-delay:${Math.min(k * pas, 1.2)}s">${carteHTML(t.carte, { nouveau: t.nouvelle, compte: etat.collection[t.carte.id] })}</div>`).join('')}</div>`;
+  const nouvelles = ordre.filter(t => t.nouvelle).length;
+  const encore = Math.min(dernierLot, etat.stock);
+  actions.innerHTML = `<p class="sous" style="margin:0;width:100%;text-align:center">${lots > 1 ? `${lots} boosters · ` : ''}${nouvelles ? `${nouvelles} nouvelle${nouvelles > 1 ? 's' : ''} carte${nouvelles > 1 ? 's' : ''} !` : 'Que des doublons… à recycler en frites d’or.'}</p>
     <button class="btn" id="b-fermer-ouv">Continuer</button>
-    ${etat.stock ? `<button class="btn rouge" id="b-encore">Encore un (${etat.stock})</button>` : ''}`;
+    ${encore ? `<button class="btn rouge" id="b-encore">Encore ${encore > 1 ? `×${encore}` : 'un'} (${etat.stock} en réserve)</button>` : ''}`;
   $('#b-fermer-ouv').onclick = () => { son.jouer('clic'); fermerOuverture(); };
-  const encore = $('#b-encore');
-  if (encore) encore.onclick = () => ouvrirGratuit();
+  if (encore) $('#b-encore').onclick = () => ouvrirGratuit(dernierLot);
   for (const el of scene.querySelectorAll('[data-carte]')) el.onclick = () => montrerFiche(el.dataset.carte);
 }
 
@@ -283,11 +305,14 @@ function fermerOuverture() {
   afficher();
 }
 
-function ouvrirGratuit() {
+let dernierLot = 1;
+function ouvrirGratuit(n = 1) {
   son.debloquer();
-  const r = J.ouvrirGratuit(etat, nouveauRng(), maintenant());
-  if (!r.ok) { son.jouer('refus'); toast('Plus de booster gratuit : patience, il se recharge !'); return; }
-  ouvrir(r.tirage);
+  dernierLot = n;
+  const rng = nouveauRng(), t = maintenant();
+  const r = plusieurs(n, () => J.ouvrirGratuit(etat, rng, t));
+  if (!r.lots) { son.jouer('refus'); toast('Plus de booster gratuit : patience, il se recharge !'); return; }
+  ouvrir(r.tirage, { lots: r.lots });
 }
 
 /* ------------------------------------------------------------ fiche d'une carte */
@@ -342,17 +367,20 @@ document.addEventListener('click', ev => {
   if (el.dataset.carte && !el.closest('.mini')) { son.jouer('clic'); montrerFiche(el.dataset.carte); return; }
   if (el.closest('.ligne')) { montrerFiche(el.closest('.ligne').dataset.carte); return; }
   if (el.dataset.acheter) {
-    const sorte = el.dataset.acheter;
+    const sorte = el.dataset.acheter, n = +(el.dataset.n || 1);
     const ens = sorte === 'enseigne' ? $('#choix-enseigne').value : null;
-    const r = J.acheter(etat, nouveauRng(), maintenant(), sorte, ens);
-    if (!r.ok) { son.jouer('refus'); toast('Pas assez de frites d’or.'); return; }
+    if (etat.frites < J.BOUTIQUE[sorte].prix * n) { son.jouer('refus'); toast('Pas assez de frites d’or.'); return; }
+    const rng = nouveauRng(), t = maintenant();
+    const r = plusieurs(n, () => J.acheter(etat, rng, t, sorte, ens));
+    if (!r.lots) { son.jouer('refus'); toast('Pas assez de frites d’or.'); return; }
     son.jouer('achat');
     const e = ens ? ENSEIGNES[ens] : null;
-    ouvrir(r.tirage, sorte === 'prestige' ? { sous: 'prestige', couleurs: ['#ff4f9a', '#ffb52e'] } : e ? { titre: e.court, sous: 'booster d’enseigne', couleurs: e.couleurs, embleme: embleme(e, 64) } : {});
+    const style = sorte === 'prestige' ? { sous: 'prestige', couleurs: ['#ff4f9a', '#ffb52e'] } : e ? { titre: e.court, sous: 'booster d’enseigne', couleurs: e.couleurs, embleme: embleme(e, 64) } : {};
+    ouvrir(r.tirage, { ...style, lots: r.lots });
     return;
   }
   switch (el.id) {
-    case 'b-gratuit': ouvrirGratuit(); break;
+    case 'b-gratuit': ouvrirGratuit(+(el.dataset.n || 1)); break;
     case 'b-jour': {
       const r = J.ouvrirPackDuJour(etat, nouveauRng(), maintenant());
       if (r.ok) { const e = ENSEIGNES[r.enseigne]; ouvrir(r.tirage, { titre: e.court, sous: 'pack du jour', couleurs: e.couleurs, embleme: embleme(e, 64) }); }
