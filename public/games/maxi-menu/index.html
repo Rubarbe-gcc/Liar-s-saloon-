@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#2a0c08">
+<meta name="description" content="MAXI MENU — le jeu de cartes du fast-food. Ouvrez des boosters, collectionnez burgers, frites et mascottes de huit enseignes, des Communes aux Mythiques.">
+<title>Maxi Menu · Les cartes du fast-food</title>
+<link rel="icon" href="/games/maxi-menu/icons/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="/games/maxi-menu/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/games/maxi-menu/icons/icon.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Maxi Menu">
+<link rel="stylesheet" href="/games/maxi-menu/css/maximenu.css">
+<script src="/maj.js" defer></script>
+</head>
+<body>
+
+<header class="barre">
+  <a class="retour" href="/" aria-label="Retour à l’arcade">←</a>
+  <h1 class="logo"><span>MAXI</span><b>MENU</b></h1>
+  <div class="compteurs">
+    <span class="pastille or" title="Frites d’or">🍟 <b id="c-frites">0</b></span>
+    <span class="pastille" title="Collection">📒 <b id="c-collec">0/96</b></span>
+    <button class="pastille son" id="b-son" aria-label="Son">🔊</button>
+  </div>
+</header>
+
+<main id="ecran"></main>
+
+<nav class="onglets" aria-label="Navigation">
+  <button data-vue="accueil" class="actif"><span>🏠</span>Accueil</button>
+  <button data-vue="albums"><span>📒</span>Albums</button>
+  <button data-vue="boutique"><span>🛒</span>Boutique</button>
+  <button data-vue="tirages"><span>✨</span>Tirages</button>
+</nav>
+
+<!-- L'ouverture d'un booster -->
+<div class="ouverture" id="ouverture" hidden>
+  <div class="ouv-scene" id="ouv-scene"></div>
+  <div class="ouv-actions" id="ouv-actions"></div>
+</div>
+
+<!-- La fiche d'une carte -->
+<div class="modale" id="fiche" hidden></div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script type="module" src="/games/maxi-menu/js/main.js"></script>
+</body>
+</html>

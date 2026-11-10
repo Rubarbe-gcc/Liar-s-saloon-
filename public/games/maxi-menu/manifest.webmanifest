@@ -1,0 +1,17 @@
+{
+  "name": "MAXI MENU — les cartes du fast-food",
+  "short_name": "Maxi Menu",
+  "description": "Ouvrez des boosters et collectionnez les cartes de huit enseignes de fast-food.",
+  "id": "/games/maxi-menu/",
+  "start_url": "/games/maxi-menu/",
+  "scope": "/games/maxi-menu/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#1c0806",
+  "theme_color": "#2a0c08",
+  "lang": "fr",
+  "categories": ["games"],
+  "icons": [
+    { "src": "/games/maxi-menu/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
