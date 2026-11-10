@@ -21,7 +21,7 @@ export const FACTEUR_DEGATS = 0.8;
 export const FACTEUR_PV = 2;
 
 /** Réglage global de l'or rapporté par chaque ennemi détruit (appliqué au chargement). */
-export const FACTEUR_OR_ENNEMIS = 1;
+export const FACTEUR_OR_ENNEMIS = 1.25;
 
 /** Réglage global de l'or de départ de chaque lieu (appliqué au début de la partie). */
 export const FACTEUR_OR_DEPART = 0.9;
