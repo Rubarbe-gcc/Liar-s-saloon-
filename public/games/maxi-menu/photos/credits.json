@@ -1912,5 +1912,399 @@
   "licence": "Public domain",
   "lienLicence": "",
   "source": "https://commons.wikimedia.org/wiki/File%3APopeyes_logo.svg"
+ },
+ "logo-pitaya": {
+  "fichier": "logo-pitaya.svg",
+  "auteur": "Pitaya",
+  "licence": "logo officiel",
+  "source": "https://pitaya-thaistreetfood.com/"
+ },
+ "logo-taco": {
+  "fichier": "logo-taco.svg",
+  "auteur": "Taco Bell",
+  "licence": "logo officiel",
+  "source": "https://www.tacobell.com/"
+ },
+ "logo-starbucks": {
+  "fichier": "logo-starbucks.svg",
+  "auteur": "Starbucks",
+  "licence": "logo officiel",
+  "source": "https://www.starbucks.fr/"
+ },
+ "logo-otacos": {
+  "fichier": "logo-otacos.png",
+  "auteur": "O’Tacos",
+  "licence": "logo officiel",
+  "source": "https://www.o-tacos.com/fr"
+ },
+ "arches-mcfish": {
+  "fichier": "arches-mcfish.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
+ },
+ "arches-mcpops": {
+  "fichier": "arches-mcpops.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
+ },
+ "arches-royalbacon": {
+  "fichier": "arches-royalbacon.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
+ },
+ "arches-mcextreme": {
+  "fichier": "arches-mcextreme.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
+ },
+ "arches-boite20": {
+  "fichier": "arches-boite20.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
+ },
+ "roi-bbk": {
+  "fichier": "roi-bbk.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
+ },
+ "roi-veggiesteak": {
+  "fichier": "roi-veggiesteak.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
+ },
+ "roi-doublecheesebacon": {
+  "fichier": "roi-doublecheesebacon.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
+ },
+ "roi-doublesteak": {
+  "fichier": "roi-doublesteak.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
+ },
+ "roi-bigkingxxl": {
+  "fichier": "roi-bigkingxxl.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
+ },
+ "capitaine-rostis": {
+  "fichier": "capitaine-rostis.jpg",
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
+ },
+ "capitaine-sundae": {
+  "fichier": "capitaine-sundae.jpg",
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
+ },
+ "capitaine-towerspicy": {
+  "fichier": "capitaine-towerspicy.jpg",
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
+ },
+ "capitaine-ultrabox": {
+  "fichier": "capitaine-ultrabox.jpg",
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
+ },
+ "capitaine-bucket32": {
+  "fichier": "capitaine-bucket32.jpg",
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
+ },
+ "metro-crousti": {
+  "fichier": "metro-crousti.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
+ },
+ "metro-cookiechoco": {
+  "fichier": "metro-cookiechoco.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
+ },
+ "metro-submelt": {
+  "fichier": "metro-submelt.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
+ },
+ "metro-delipastrami": {
+  "fichier": "metro-delipastrami.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
+ },
+ "metro-bellamozza": {
+  "fichier": "metro-bellamozza.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
+ },
+ "domino-peppina": {
+  "fichier": "domino-peppina.jpg",
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
+ },
+ "domino-oceana": {
+  "fichier": "domino-oceana.jpg",
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
+ },
+ "domino-bacongroovy": {
+  "fichier": "domino-bacongroovy.jpg",
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
+ },
+ "domino-raclette": {
+  "fichier": "domino-raclette.jpg",
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
+ },
+ "domino-soulcreeper": {
+  "fichier": "domino-soulcreeper.jpg",
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
+ },
+ "rapido-classiq": {
+  "fichier": "rapido-classiq.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-qpop": {
+  "fichier": "rapido-qpop.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-remarquable": {
+  "fichier": "rapido-remarquable.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "cousins-shakecafe": {
+  "fichier": "cousins-shakecafe.jpg",
+  "auteur": "Famartin",
+  "licence": "CC BY-SA 4.0",
+  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3A2020-10-17_18_14_12_A_chocolate_milkshake_from_Five_Guys_in_North_Greenbush%2C_Rensselaer_County%2C_New_York.jpg"
+ },
+ "cousins-shakepistache": {
+  "fichier": "cousins-shakepistache.jpg",
+  "auteur": "ウィ貴公子",
+  "licence": "CC BY-SA 4.0",
+  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3AMilkshake_Five_Guys_QV_Melbourne_CBD_May_17%2C_2025_202505171957_IMG_8954.jpg"
+ },
+ "cousins-shakemms": {
+  "fichier": "cousins-shakemms.jpg",
+  "auteur": "Famartin",
+  "licence": "CC BY-SA 4.0",
+  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3A2023-04-23_17_30_37_Double_cheeseburger%2C_french_fries_and_chocolate_milkshake_from_Five_Guys_in_Ewing_Township%2C_Mercer_County%2C_New_Jersey.jpg"
+ },
+ "popeyes-pie": {
+  "fichier": "popeyes-pie.png",
+  "auteur": "Popeyes",
+  "licence": "photo officielle",
+  "source": "https://www.popeyes.com/menu"
+ },
+ "popeyes-mango": {
+  "fichier": "popeyes-mango.png",
+  "auteur": "Popeyes",
+  "licence": "photo officielle",
+  "source": "https://www.popeyes.com/menu"
+ },
+ "popeyes-honeybiscuit": {
+  "fichier": "popeyes-honeybiscuit.png",
+  "auteur": "Popeyes",
+  "licence": "photo officielle",
+  "source": "https://www.popeyes.com/menu"
+ },
+ "popeyes-caramelcup": {
+  "fichier": "popeyes-caramelcup.png",
+  "auteur": "Popeyes",
+  "licence": "photo officielle",
+  "source": "https://www.popeyes.com/menu"
+ },
+ "popeyes-bundle": {
+  "fichier": "popeyes-bundle.png",
+  "auteur": "Popeyes",
+  "licence": "photo officielle",
+  "source": "https://www.popeyes.com/menu"
+ },
+ "starbucks-icedmocha": {
+  "fichier": "starbucks-icedmocha.jpg",
+  "auteur": "Starbucks",
+  "licence": "photo officielle",
+  "source": "https://www.starbucks.fr/menu"
+ },
+ "starbucks-donutblanc": {
+  "fichier": "starbucks-donutblanc.jpg",
+  "auteur": "Starbucks",
+  "licence": "photo officielle",
+  "source": "https://www.starbucks.fr/menu"
+ },
+ "starbucks-pistachio": {
+  "fichier": "starbucks-pistachio.jpg",
+  "auteur": "Starbucks",
+  "licence": "photo officielle",
+  "source": "https://www.starbucks.fr/menu"
+ },
+ "starbucks-matcha": {
+  "fichier": "starbucks-matcha.jpg",
+  "auteur": "Starbucks",
+  "licence": "photo officielle",
+  "source": "https://www.starbucks.fr/menu"
+ },
+ "starbucks-toffee": {
+  "fichier": "starbucks-toffee.jpg",
+  "auteur": "Starbucks",
+  "licence": "photo officielle",
+  "source": "https://www.starbucks.fr/menu"
+ },
+ "otacos-donutchoco": {
+  "fichier": "otacos-donutchoco.png",
+  "auteur": "O’Tacos",
+  "licence": "photo officielle",
+  "source": "https://www.o-tacos.com/fr/nos-produits"
+ },
+ "otacos-tiramisu": {
+  "fichier": "otacos-tiramisu.png",
+  "auteur": "O’Tacos",
+  "licence": "photo officielle",
+  "source": "https://www.o-tacos.com/fr/nos-produits"
+ },
+ "otacos-spicytenders": {
+  "fichier": "otacos-spicytenders.png",
+  "auteur": "O’Tacos",
+  "licence": "photo officielle",
+  "source": "https://www.o-tacos.com/fr/nos-produits"
+ },
+ "otacos-streetbowl": {
+  "fichier": "otacos-streetbowl.png",
+  "auteur": "O’Tacos",
+  "licence": "photo officielle",
+  "source": "https://www.o-tacos.com/fr/nos-produits"
+ },
+ "otacos-frero": {
+  "fichier": "otacos-frero.png",
+  "auteur": "O’Tacos",
+  "licence": "photo officielle",
+  "source": "https://www.o-tacos.com/fr/nos-produits"
+ },
+ "pitaya-nemslegumes": {
+  "fichier": "pitaya-nemslegumes.png",
+  "auteur": "Pitaya",
+  "licence": "photo officielle",
+  "source": "https://pitaya-thaistreetfood.com/pitaya-menu"
+ },
+ "pitaya-saladmangue": {
+  "fichier": "pitaya-saladmangue.png",
+  "auteur": "Pitaya",
+  "licence": "photo officielle",
+  "source": "https://pitaya-thaistreetfood.com/pitaya-menu"
+ },
+ "pitaya-baosriracha": {
+  "fichier": "pitaya-baosriracha.png",
+  "auteur": "Pitaya",
+  "licence": "photo officielle",
+  "source": "https://pitaya-thaistreetfood.com/pitaya-menu"
+ },
+ "pitaya-bobunmango": {
+  "fichier": "pitaya-bobunmango.png",
+  "auteur": "Pitaya",
+  "licence": "photo officielle",
+  "source": "https://pitaya-thaistreetfood.com/pitaya-menu"
+ },
+ "pitaya-sundaepb": {
+  "fichier": "pitaya-sundaepb.png",
+  "auteur": "Pitaya",
+  "licence": "photo officielle",
+  "source": "https://pitaya-thaistreetfood.com/pitaya-menu"
+ },
+ "taco-cheesychalupa": {
+  "fichier": "taco-cheesychalupa.jpg",
+  "auteur": "Phillip Pessar",
+  "licence": "CC BY 4.0",
+  "lienLicence": "https://creativecommons.org/licenses/by/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3ACheesy_Street_Chalupas_Taco_Bell_(54722668243).jpg"
+ },
+ "taco-cantina": {
+  "fichier": "taco-cantina.jpg",
+  "auteur": "Phillip Pessar",
+  "licence": "CC BY 2.0",
+  "lienLicence": "https://creativecommons.org/licenses/by/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3ATaco_Bell_Caliente_Cantina_Chicken_Soft_TacoBell_(54355197580).jpg"
+ },
+ "taco-doublequesa": {
+  "fichier": "taco-doublequesa.jpg",
+  "auteur": "theimpulsivebuy",
+  "licence": "CC BY-SA 2.0",
+  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3ATaco_Bell_Double_Crispy_Chicken_Quesadilla_Half_(16627562404).jpg"
+ },
+ "taco-fiesta": {
+  "fichier": "taco-fiesta.jpg",
+  "auteur": "theimpulsivebuy",
+  "licence": "CC BY-SA 2.0",
+  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3ATaco_Bell_Fiesta_Potatoes_Grilled_Breakfast_Burrito_2_(14735651468).jpg"
+ },
+ "taco-plateau": {
+  "fichier": "taco-plateau.jpg",
+  "auteur": "Mudwater",
+  "licence": "CC BY-SA 4.0",
+  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3ATaco-Bell-menu-items-01.jpg"
+ },
+ "cousins-shakebanane": {
+  "fichier": "cousins-shakebanane.jpg",
+  "auteur": "Hazel Nicholson from Coventry, United Kingdom",
+  "licence": "CC BY 2.0",
+  "lienLicence": "https://creativecommons.org/licenses/by/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3AFive_Guys_banana_milkshake_(40878734941).jpg"
+ },
+ "cousins-tonneau": {
+  "fichier": "cousins-tonneau.jpg",
+  "auteur": "Tomwsulcer",
+  "licence": "CC0",
+  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File%3APeanuts_in_a_bin_at_Five_Guys_Restaurant_in_NJ.JPG"
+ },
+ "rapido-wings": {
+  "fichier": "rapido-wings.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-donutcheddar": {
+  "fichier": "rapido-donutcheddar.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
  }
 }

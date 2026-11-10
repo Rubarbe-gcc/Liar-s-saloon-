@@ -145,7 +145,7 @@ const VUES = {
     </div>
     <div class="etapes">
       <div class="etape"><b>1</b><p><strong>Ouvrez des boosters.</strong> Des gratuits se rechargent toute la journée, et la boutique en vend contre des frites d’or.</p></div>
-      <div class="etape"><b>2</b><p><strong>Complétez les albums.</strong> Une enseigne, vingt-cinq cartes, de la Commune à la Mythique. Un album complet rapporte 1 000 🍟.</p></div>
+      <div class="etape"><b>2</b><p><strong>Complétez les albums.</strong> Une enseigne, trente cartes, de la Commune à la Mythique. Un album complet rapporte 1 000 🍟.</p></div>
       <div class="etape"><b>3</b><p><strong>Recyclez les doublons</strong> en frites d’or, et découvrez la fiche de chaque carte obtenue.</p></div>
     </div>
     <p class="mentions">Jeu de fan gratuit et non officiel, sans lien avec les enseignes citées. Les marques et logos appartiennent à leurs propriétaires.
