@@ -11,7 +11,7 @@ import { CARTES, RARETES, ORDRE_RARETES, ENSEIGNES, ORDRE_ENSEIGNES, cartesDe } 
 
 export const REGLES = {
   stockMax: 10,                 // boosters gratuits en réserve au plus
-  recharge: 40 * 60 * 1000,     // un booster gratuit toutes les 40 minutes
+  recharge: 10 * 60 * 1000,     // un booster gratuit toutes les 10 minutes
   cartesParBooster: 5,
   pitie: 40,                    // une Légendaire (ou mieux) garantie au plus tard au 40e booster
   depart: { frites: 300 },

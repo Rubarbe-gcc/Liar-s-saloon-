@@ -374,13 +374,6 @@
   "licence": "photo officielle",
   "source": "https://subwayfrance.fr/menu"
  },
- "metro-meatball": {
-  "fichier": "metro-meatball.jpg",
-  "auteur": "GoldPanPizzeria",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AMeatball_Sub.jpg"
- },
  "metro-soda": {
   "fichier": "metro-soda.png",
   "auteur": "Subway",
@@ -451,13 +444,6 @@
   "licence": "CC BY-SA 2.0",
   "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
   "source": "https://commons.wikimedia.org/wiki/File%3AChorizo_Pizza_(2784704784).jpg"
- },
- "domino-ail": {
-  "fichier": "domino-ail.jpg",
-  "auteur": "Infrogmation of New Orleans",
-  "licence": "CC BY-SA 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AGarlic_bread_-_on_plate%2C_ready_to_eat.jpg"
  },
  "domino-cheesybread": {
   "fichier": "domino-cheesybread.jpg",
@@ -726,13 +712,6 @@
   "licence": "photo officielle",
   "source": "https://www.fiveguys.fr/menu/"
  },
- "arches-sauce": {
-  "fichier": "arches-sauce.jpg",
-  "auteur": "Ser Amantio di Nicolao",
-  "licence": "CC0",
-  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-  "source": "https://commons.wikimedia.org/wiki/File%3AMambo_dipping_sauce_at_McDonalds.jpg"
- },
  "arches-joyeux": {
   "fichier": "arches-joyeux.png",
   "auteur": "McDonald's",
@@ -926,13 +905,6 @@
   "licence": "CC0",
   "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
   "source": "https://commons.wikimedia.org/wiki/File%3AMountain_Dew_Baja_Blast_12oz_Can.png"
- },
- "taco-lave": {
-  "fichier": "taco-lave.jpg",
-  "auteur": "Checkingfax",
-  "licence": "CC BY-SA 3.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/3.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ASalsa_packet_from_Taco_Bell.jpg"
  },
  "taco-dore": {
   "fichier": "taco-dore.jpg",

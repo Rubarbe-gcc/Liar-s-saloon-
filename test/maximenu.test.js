@@ -57,7 +57,7 @@ test('la pitié : une Légendaire au plus tard au 40e booster', () => {
   assert.equal(vu, 40);
 });
 
-test('les boosters gratuits : la réserve se vide puis se recharge toutes les 40 minutes', () => {
+test('les boosters gratuits : la réserve se vide puis se recharge toutes les 10 minutes', () => {
   const etat = J.creerEtat(T0);
   const rng = makeRng(1);
   for (let i = 0; i < 10; i++) assert.ok(J.ouvrirGratuit(etat, rng, T0).ok);

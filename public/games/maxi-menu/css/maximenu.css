@@ -222,3 +222,10 @@ h2{font-family:var(--f-titre);font-size:1.3rem;margin:4px 0 12px;color:var(--mou
 .paquet .lots{position:absolute;top:-12px;right:-12px;background:#ffc72c;color:#3a140e;font-family:var(--f-titre);font-size:1.3rem;padding:4px 10px;border-radius:999px;box-shadow:0 4px 12px rgba(0,0,0,.5);}
 .resume.multi{grid-template-columns:repeat(auto-fill,minmax(112px,1fr));max-height:64vh;overflow-y:auto;padding:6px;align-content:start;}
 .resume.multi .carte{font-size:.8em;}
+/* La lumière du paquet annonce la meilleure carte qu'il contient. */
+.paquet.lumiere{box-shadow:0 0 18px 4px var(--lum),0 0 60px 14px color-mix(in srgb,var(--lum) 55%,transparent);animation:tremble .5s ease-in-out infinite,lueur 1.4s ease-in-out infinite alternate;}
+.paquet.lum-commune{box-shadow:0 0 10px 2px color-mix(in srgb,var(--lum) 60%,transparent);}
+.paquet.lum-legendaire,.paquet.lum-mythique{animation:tremble .9s ease-in-out infinite,lueur .7s ease-in-out infinite alternate;}
+.paquet.lum-mythique{box-shadow:0 0 22px 6px #ff4f9a,0 0 70px 22px #ffb52e,0 0 120px 30px #3a9bff;}
+@keyframes lueur{from{filter:brightness(1);}to{filter:brightness(1.25) saturate(1.2);}}
+.raccourcis .btn{flex:1 1 220px;}

@@ -214,38 +214,78 @@ setInterval(() => {
 /* ------------------------------------------------------------ ouverture d'un booster */
 const SONS_RARETE = { commune: 'commune', rare: 'rare', epique: 'epique', legendaire: 'legendaire', mythique: 'mythique' };
 
-function ouvrir(tirage, { titre = 'MAXI', sous = 'booster', couleurs = ['#e3262f', '#ffc72c'], embleme = '', lots = 1 } = {}) {
+/*
+ * Une ouverture = un ou plusieurs boosters, ouverts un par un. Chaque paquet fermé brille
+ * de la couleur de la meilleure carte qu'il contient. Avec plusieurs boosters, des raccourcis
+ * mènent au prochain paquet qui cache une Légendaire (ou mieux) ou une Épique (ou mieux).
+ */
+let session = null;
+const rangMax = tirage => Math.max(...tirage.map(t => RARETES[t.carte.rarete].rang));
+const rareteDuRang = rang => Object.keys(RARETES).find(r => RARETES[r].rang === rang);
+
+function ouvrir(paquets, { titre = 'MAXI', sous = 'booster', couleurs = ['#e3262f', '#ffc72c'], embleme = '' } = {}) {
+  if (!Array.isArray(paquets[0])) paquets = [paquets]; // un seul booster
   sauver();
   majCompteurs();
-  const ouv = $('#ouverture'), scene = $('#ouv-scene'), actions = $('#ouv-actions');
-  ouv.hidden = false;
-  scene.innerHTML = paquetHTML(titre, sous, couleurs, embleme);
+  session = { paquets, style: { titre, sous, couleurs, embleme }, k: 0 };
+  $('#ouverture').hidden = false;
+  montrerPaquet();
+}
+
+/** Les boutons « aller jusqu'à » : le prochain paquet (après `apres`) qui contient ce rang ou mieux. */
+function raccourcis(apres) {
+  const { paquets } = session;
+  if (paquets.length < 2) return '';
+  const prochain = rang => paquets.findIndex((p, j) => j > apres && rangMax(p) >= rang);
+  const btns = [];
+  const l = prochain(3), e = prochain(2);
+  if (l >= 0) btns.push(`<button class="btn jaune" data-aller="${l}">⭐ Aller jusqu’à la Légendaire (booster ${l + 1})</button>`);
+  if (e >= 0 && e !== l) btns.push(`<button class="btn" data-aller="${e}" style="--c:${RARETES.epique.couleur}">💜 Aller jusqu’à l’Épique (booster ${e + 1})</button>`);
+  btns.push('<button class="btn" id="b-tout">Tout révéler</button>');
+  return `<div class="lot-btns raccourcis">${btns.join('')}</div>`;
+}
+function brancherRaccourcis() {
+  for (const b of document.querySelectorAll('#ouv-actions [data-aller]')) b.onclick = () => { son.jouer('clic'); session.k = +b.dataset.aller; montrerPaquet(); };
+  const tout = $('#b-tout');
+  if (tout) tout.onclick = () => { son.jouer('clic'); resume(); };
+}
+
+function montrerPaquet() {
+  const { paquets, style, k } = session;
+  const scene = $('#ouv-scene'), actions = $('#ouv-actions');
+  const tirage = paquets[k];
+  const r = rareteDuRang(rangMax(tirage));
+  scene.innerHTML = paquetHTML(style.titre, style.sous, style.couleurs, style.embleme);
   const paquet = scene.querySelector('.paquet');
-  paquet.classList.add('tremble');
-  if (lots > 1) paquet.insertAdjacentHTML('beforeend', `<span class="lots">×${lots}</span>`);
-  actions.innerHTML = `<p class="sous" style="margin:0">Touchez le paquet pour l’ouvrir${lots > 1 ? ` (${lots} boosters, ${tirage.length} cartes)` : ''}</p>`;
-  // Un booster : du moins rare au plus rare, la meilleure carte arrive en dernier.
-  // Plusieurs : on montre tout d'un coup, les plus rares d'abord.
-  const sens = lots > 1 ? -1 : 1;
-  const ordre = tirage.slice().sort((a, b) => sens * (RARETES[a.carte.rarete].rang - RARETES[b.carte.rarete].rang));
+  paquet.classList.add('tremble', 'lumiere', `lum-${r}`);
+  paquet.style.setProperty('--lum', RARETES[r].couleur);
+  if (paquets.length > 1) paquet.insertAdjacentHTML('beforeend', `<span class="lots">${k + 1} / ${paquets.length}</span>`);
+  actions.innerHTML = `<p class="sous" style="margin:0;width:100%;text-align:center">Touchez le paquet pour l’ouvrir · sa lumière annonce la meilleure carte : <b style="color:${RARETES[r].couleur}">${RARETES[r].nom}</b></p>${raccourcis(k)}`;
+  brancherRaccourcis();
+  // Du moins rare au plus rare : la meilleure carte arrive en dernier.
+  const ordre = tirage.slice().sort((a, b) => RARETES[a.carte.rarete].rang - RARETES[b.carte.rarete].rang);
   paquet.addEventListener('click', () => {
     son.jouer('dechirer');
-    paquet.classList.remove('tremble');
+    paquet.classList.remove('tremble', 'lumiere', `lum-${r}`);
     paquet.classList.add('dechire');
-    setTimeout(() => (lots > 1 ? resume(ordre, lots) : pile(ordre)), 450);
+    setTimeout(() => pile(ordre), 450);
   }, { once: true });
 }
 
-/** Ouvre jusqu'à `n` boosters avec `un()` (qui rend { ok, tirage }) ; rend les cartes et le nombre ouvert. */
+/** Fin d'un paquet : le suivant, ou le résumé. */
+function paquetSuivant() {
+  if (session.k + 1 < session.paquets.length) { session.k++; montrerPaquet(); } else resume();
+}
+
+/** Ouvre jusqu'à `n` boosters avec `un()` (qui rend { ok, tirage }) ; rend la liste des boosters. */
 function plusieurs(n, un) {
-  const tirage = [];
-  let lots = 0;
-  for (; lots < n; lots++) {
+  const paquets = [];
+  while (paquets.length < n) {
     const r = un();
     if (!r.ok) break;
-    tirage.push(...r.tirage);
+    paquets.push(r.tirage);
   }
-  return { tirage, lots };
+  return paquets;
 }
 
 function pile(ordre) {
@@ -256,7 +296,11 @@ function pile(ordre) {
       <div class="face">${carteHTML(t.carte, { nouveau: t.nouvelle, id: false })}</div>
       <div class="halo" style="background:radial-gradient(circle,${RARETES[t.carte.rarete].couleur}aa,transparent 60%)"></div>
     </div>`).join('')}<div class="compteur-pile" id="compteur-pile">1 / ${ordre.length}</div></div>`;
-  actions.innerHTML = '<button class="btn" id="b-tout">Tout révéler</button>';
+  const multi = session.paquets.length > 1;
+  actions.innerHTML = multi ? raccourcis(session.k).replace('Tout révéler', 'Tout révéler (tous les boosters)')
+    + '<div class="lot-btns"><button class="btn" id="b-paquet">Booster suivant ⏭</button></div>'
+    : '<button class="btn" id="b-tout">Tout révéler</button>';
+  brancherRaccourcis();
   const cartes = [...scene.querySelectorAll('.volante')];
   let revelee = false;
   const suivant = () => {
@@ -277,15 +321,20 @@ function pile(ordre) {
     el.classList.add('partie');
     revelee = false;
     i++;
-    if (i >= cartes.length) { setTimeout(() => resume(ordre), 300); return; }
+    if (i >= cartes.length) { setTimeout(paquetSuivant, 300); return; }
     $('#compteur-pile').textContent = `${i + 1} / ${ordre.length}`;
   };
   scene.querySelector('.pile').addEventListener('click', suivant);
-  $('#b-tout').onclick = () => { son.jouer('clic'); resume(ordre); };
+  const bp = $('#b-paquet');
+  if (bp) bp.onclick = () => { son.jouer('clic'); paquetSuivant(); };
 }
 
-function resume(ordre, lots = 1) {
+/** Le résumé : toutes les cartes de l'ouverture, les plus rares d'abord s'il y a plusieurs boosters. */
+function resume() {
+  const lots = session.paquets.length;
   const scene = $('#ouv-scene'), actions = $('#ouv-actions');
+  const ordre = session.paquets.flat();
+  if (lots > 1) ordre.sort((a, b) => RARETES[b.carte.rarete].rang - RARETES[a.carte.rarete].rang);
   const meilleure = ordre.reduce((a, b) => (RARETES[b.carte.rarete].rang > RARETES[a.carte.rarete].rang ? b : a));
   if (RARETES[meilleure.carte.rarete].rang >= (lots > 1 ? 2 : 3)) son.jouer(SONS_RARETE[meilleure.carte.rarete]);
   const pas = lots > 1 ? 0.03 : 0.08;
@@ -310,9 +359,9 @@ function ouvrirGratuit(n = 1) {
   son.debloquer();
   dernierLot = n;
   const rng = nouveauRng(), t = maintenant();
-  const r = plusieurs(n, () => J.ouvrirGratuit(etat, rng, t));
-  if (!r.lots) { son.jouer('refus'); toast('Plus de booster gratuit : patience, il se recharge !'); return; }
-  ouvrir(r.tirage, { lots: r.lots });
+  const paquets = plusieurs(n, () => J.ouvrirGratuit(etat, rng, t));
+  if (!paquets.length) { son.jouer('refus'); toast('Plus de booster gratuit : patience, il se recharge !'); return; }
+  ouvrir(paquets);
 }
 
 /* ------------------------------------------------------------ fiche d'une carte */
@@ -371,12 +420,12 @@ document.addEventListener('click', ev => {
     const ens = sorte === 'enseigne' ? $('#choix-enseigne').value : null;
     if (etat.frites < J.BOUTIQUE[sorte].prix * n) { son.jouer('refus'); toast('Pas assez de frites d’or.'); return; }
     const rng = nouveauRng(), t = maintenant();
-    const r = plusieurs(n, () => J.acheter(etat, rng, t, sorte, ens));
-    if (!r.lots) { son.jouer('refus'); toast('Pas assez de frites d’or.'); return; }
+    const paquets = plusieurs(n, () => J.acheter(etat, rng, t, sorte, ens));
+    if (!paquets.length) { son.jouer('refus'); toast('Pas assez de frites d’or.'); return; }
     son.jouer('achat');
     const e = ens ? ENSEIGNES[ens] : null;
     const style = sorte === 'prestige' ? { sous: 'prestige', couleurs: ['#ff4f9a', '#ffb52e'] } : e ? { titre: e.court, sous: 'booster d’enseigne', couleurs: e.couleurs, embleme: embleme(e, 64) } : {};
-    ouvrir(r.tirage, { ...style, lots: r.lots });
+    ouvrir(paquets, style);
     return;
   }
   switch (el.id) {
