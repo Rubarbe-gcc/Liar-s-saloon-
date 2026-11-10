@@ -91,6 +91,8 @@ h2{font-family:var(--f-titre);font-size:1.3rem;margin:4px 0 12px;color:var(--mou
 .carte .interieur{flex:1;border-radius:10px;background:#fff8ec;color:#2a1206;display:flex;flex-direction:column;overflow:hidden;}
 .carte .art{position:relative;flex:1;background:linear-gradient(180deg,var(--e1),var(--e1b));display:grid;place-items:center;}
 .carte .art svg{width:92%;height:auto;}
+.carte .art .photo{width:88%;height:88%;object-fit:contain;filter:drop-shadow(0 4px 6px rgba(0,0,0,.25));}
+.logo-img{border-radius:50%;object-fit:contain;background:#fff;display:block;}
 .carte .badge{position:absolute;top:6px;left:6px;width:22%;max-width:34px;}
 .carte .badge svg{width:100%;height:auto;display:block;}
 .carte .rarete{position:absolute;top:7px;right:7px;font-size:.55rem;font-weight:900;letter-spacing:.04em;text-transform:uppercase;background:var(--c);color:#fff;padding:2px 6px;border-radius:999px;box-shadow:0 1px 3px rgba(0,0,0,.3);}
@@ -212,3 +214,6 @@ h2{font-family:var(--f-titre);font-size:1.3rem;margin:4px 0 12px;color:var(--mou
   .fiche > .carte{max-width:220px;margin:0 auto;}
   .grille{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px;}
 }
+.fiche .credit{font-size:.72rem;color:var(--faible);margin-top:10px;line-height:1.4;}
+.fiche .credit a{color:inherit;}
+.mentions{max-width:760px;margin:22px auto 8px;font-size:.72rem;line-height:1.5;color:var(--faible);text-align:center;}

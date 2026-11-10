@@ -9,6 +9,23 @@ import { makeRng } from '../../../shared/hasard.js';
 import { dessinCarte, emblemeEnseigne } from './dessins.js';
 import * as son from './sons.js';
 
+/*
+ * Photos des produits et logos des enseignes (Wikimedia Commons) : ../photos/credits.json
+ * donne, pour chaque carte (ou `logo-<enseigne>`), le fichier, l'auteur, la licence et la source.
+ * Sans photo, la carte garde son dessin.
+ */
+const CREDITS = await fetch(new URL('../photos/credits.json', import.meta.url)).then(r => r.json()).catch(() => ({}));
+for (const [id, v] of Object.entries(CREDITS)) {
+  const url = new URL(`../photos/${v.fichier}`, import.meta.url).href;
+  if (id.startsWith('logo-')) { if (ENSEIGNES[id.slice(5)]) ENSEIGNES[id.slice(5)].logo = url; }
+  else if (PAR_ID.has(id)) PAR_ID.get(id).image = url;
+}
+const echapper = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[ch]);
+const credit = id => {
+  const v = CREDITS[id];
+  return v ? `Photo : ${echapper(v.auteur || 'auteur inconnu')} · ${echapper(v.licence || '')} · <a href="${echapper(v.source)}" target="_blank" rel="noopener">Wikimedia Commons</a>` : '';
+};
+
 const $ = s => document.querySelector(s);
 const CLE = 'maximenu.sauvegarde';
 const maintenant = () => Date.now();
@@ -33,6 +50,11 @@ function duree(ms) {
 }
 const finDuJour = t => { const d = new Date(t); d.setHours(24, 0, 0, 0); return d.getTime(); };
 
+/** L'emblème d'une enseigne : son logo s'il y en a un (version perso), sinon le dessin du jeu. */
+function embleme(e, taille) {
+  return e.logo ? `<img class="logo-img" src="${e.logo}" width="${taille}" height="${taille}" alt="">` : emblemeEnseigne(e, taille);
+}
+
 function carteHTML(c, { compte = 0, nouveau = false, manquante = false, id = true } = {}) {
   const e = ENSEIGNES[c.enseigne];
   if (manquante) {
@@ -40,7 +62,7 @@ function carteHTML(c, { compte = 0, nouveau = false, manquante = false, id = tru
   }
   return `<div class="carte ${c.rarete}" ${id ? `data-carte="${c.id}"` : ''} style="--e1:${e.couleurs[0]}33;--e1b:${e.couleurs[0]}88">
     <div class="interieur">
-      <div class="art">${dessinCarte(c, e.couleurs)}<span class="badge">${emblemeEnseigne(e, 34)}</span><span class="rarete">${RARETES[c.rarete].nom}</span></div>
+      <div class="art">${c.image ? `<img class="photo" src="${c.image}" alt="" loading="lazy">` : dessinCarte(c, e.couleurs)}<span class="badge">${embleme(e, 34)}</span><span class="rarete">${RARETES[c.rarete].nom}</span></div>
       <div class="bas"><div class="nom">${c.nom}</div><div class="enseigne">${e.court}</div></div>
     </div>
     ${compte > 1 ? `<span class="compte">×${compte}</span>` : ''}${nouveau ? '<span class="nouveau">NOUVEAU</span>' : ''}
@@ -90,7 +112,7 @@ const VUES = {
     return `<div class="tuiles">
       <section class="tuile jour" style="--c1:${ens.couleurs[0]}">
         <span class="etiquette">PACK DU JOUR · GRATUIT</span>
-        <div style="display:flex;gap:12px;align-items:center">${emblemeEnseigne(ens, 52)}<div><h3>${ens.nom}</h3><p>${ens.devise}</p></div></div>
+        <div style="display:flex;gap:12px;align-items:center">${embleme(ens, 52)}<div><h3>${ens.nom}</h3><p>${ens.devise}</p></div></div>
         <p>Cinq cartes de l’enseigne du jour, avec une <b>Épique ou mieux garantie</b>.</p>
         ${dispo ? '<button class="btn jaune" id="b-jour">🎁 Ouvrir le pack du jour</button>'
           : `<button class="btn" disabled>Déjà ouvert · prochain dans <span data-minuteur="jour"></span></button>`}
@@ -118,14 +140,16 @@ const VUES = {
     </div>
     <div class="etapes">
       <div class="etape"><b>1</b><p><strong>Ouvrez des boosters.</strong> Des gratuits se rechargent toute la journée, et la boutique en vend contre des frites d’or.</p></div>
-      <div class="etape"><b>2</b><p><strong>Complétez les albums.</strong> Une enseigne, douze cartes, de la Commune à la Mythique. Un album complet rapporte 1 000 🍟.</p></div>
+      <div class="etape"><b>2</b><p><strong>Complétez les albums.</strong> Une enseigne, vingt cartes, de la Commune à la Mythique. Un album complet rapporte 1 000 🍟.</p></div>
       <div class="etape"><b>3</b><p><strong>Recyclez les doublons</strong> en frites d’or, et découvrez la fiche de chaque carte obtenue.</p></div>
-    </div>`;
+    </div>
+    <p class="mentions">Jeu de fan gratuit et non officiel, sans lien avec les enseignes citées. Les marques et logos appartiennent à leurs propriétaires.
+      Photos : Wikimedia Commons, l’auteur et la licence de chaque photo sont dans la fiche de la carte. Calories et prix indicatifs.</p>`;
   },
   albums() {
     if (albumOuvert) {
       const e = ENSEIGNES[albumOuvert], a = J.album(etat, albumOuvert);
-      return `<div class="entete-album"><button class="btn" id="b-albums">←</button>${emblemeEnseigne(e, 46)}<div><h2>${e.nom}</h2><p class="sous" style="margin:0">${a.possedees} / ${a.total} cartes · « ${e.devise} »</p></div></div>
+      return `<div class="entete-album"><button class="btn" id="b-albums">←</button>${embleme(e, 46)}<div><h2>${e.nom}</h2><p class="sous" style="margin:0">${a.possedees} / ${a.total} cartes · « ${e.devise} »</p></div></div>
         ${a.complet && !a.recompensePrise ? `<p style="margin:12px 0"><button class="btn jaune" id="b-recompense" data-ens="${albumOuvert}">🏆 Album complet : prendre ${J.REGLES.albumComplet} 🍟</button></p>` : ''}
         ${a.recompensePrise ? '<p class="sous" style="margin:10px 0">🏆 Album complété : récompense déjà prise.</p>' : ''}
         <div class="grille" style="margin-top:14px">${a.cartes.map(c => carteHTML(c, { compte: etat.collection[c.id] || 0, manquante: !etat.collection[c.id] })).join('')}</div>`;
@@ -133,7 +157,7 @@ const VUES = {
     return `<h2>Les albums</h2><p class="sous">Une enseigne par album. Touchez une carte pour voir sa fiche.</p>
       <div class="albums">${ORDRE_ENSEIGNES.map(k => {
         const e = ENSEIGNES[k], a = J.album(etat, k);
-        return `<button class="album" data-album="${k}" style="--c1:${e.couleurs[0]}">${emblemeEnseigne(e, 48)}
+        return `<button class="album" data-album="${k}" style="--c1:${e.couleurs[0]}">${embleme(e, 48)}
           <span class="infos"><b>${e.nom}</b><small>${a.possedees} / ${a.total}${a.recompensePrise ? ' · 🏆' : a.complet ? ' · récompense à prendre !' : ''}</small><span class="jauge"><i style="width:${a.possedees / a.total * 100}%"></i></span></span></button>`;
       }).join('')}</div>`;
   },
@@ -291,6 +315,7 @@ function montrerFiche(id) {
       <div class="actions">${n > 1 ? `<button class="btn" id="b-recycler-carte">♻️ Recycler ${n - 1} doublon${n > 2 ? 's' : ''} : +${(n - 1) * RARETES[c.rarete].recyclage} 🍟</button>` : ''}</div>`
         : '<p class="desc">Vous n’avez pas encore cette carte. Sa fiche s’ouvrira quand elle sortira d’un booster.</p>'}
       <p class="meta" style="margin-top:12px">« ${e.devise} »</p>
+      ${n && c.image ? `<p class="credit">${credit(id)}</p>` : ''}
     </div>
   </div>`;
   m.hidden = false;
@@ -323,14 +348,14 @@ document.addEventListener('click', ev => {
     if (!r.ok) { son.jouer('refus'); toast('Pas assez de frites d’or.'); return; }
     son.jouer('achat');
     const e = ens ? ENSEIGNES[ens] : null;
-    ouvrir(r.tirage, sorte === 'prestige' ? { sous: 'prestige', couleurs: ['#ff4f9a', '#ffb52e'] } : e ? { titre: e.court, sous: 'booster d’enseigne', couleurs: e.couleurs, embleme: emblemeEnseigne(e, 64) } : {});
+    ouvrir(r.tirage, sorte === 'prestige' ? { sous: 'prestige', couleurs: ['#ff4f9a', '#ffb52e'] } : e ? { titre: e.court, sous: 'booster d’enseigne', couleurs: e.couleurs, embleme: embleme(e, 64) } : {});
     return;
   }
   switch (el.id) {
     case 'b-gratuit': ouvrirGratuit(); break;
     case 'b-jour': {
       const r = J.ouvrirPackDuJour(etat, nouveauRng(), maintenant());
-      if (r.ok) { const e = ENSEIGNES[r.enseigne]; ouvrir(r.tirage, { titre: e.court, sous: 'pack du jour', couleurs: e.couleurs, embleme: emblemeEnseigne(e, 64) }); }
+      if (r.ok) { const e = ENSEIGNES[r.enseigne]; ouvrir(r.tirage, { titre: e.court, sous: 'pack du jour', couleurs: e.couleurs, embleme: embleme(e, 64) }); }
       break;
     }
     case 'b-cadeau': {
