@@ -8,6 +8,7 @@
  */
 
 import { CARTES, RARETES, ORDRE_RARETES, ENSEIGNES, ORDRE_ENSEIGNES, cartesDe } from './cartes.js';
+import { makeRng, melanger } from '../hasard.js';
 
 export const REGLES = {
   stockMax: 10,                 // boosters gratuits en réserve au plus
@@ -101,6 +102,15 @@ export function tirerBooster(etat, rng, { enseigne = null, minimum = 'rare' } = 
 /** Range les cartes tirées dans la collection ; rend, pour chacune, si elle est nouvelle. */
 function ranger(etat, cartes, maintenant) {
   etat.stats.boosters++;
+  const ens = enseigneDuJour(jourDe(maintenant));
+  const rang = r => RARETES[r].rang;
+  noter(etat, maintenant, 'boosters');
+  noter(etat, maintenant, 'cartes', cartes.length);
+  noter(etat, maintenant, 'nouvelles', new Set(cartes.filter(c => !etat.collection[c.id]).map(c => c.id)).size);
+  noter(etat, maintenant, 'rares', cartes.filter(c => rang(c.rarete) >= 1).length);
+  noter(etat, maintenant, 'epiques', cartes.filter(c => rang(c.rarete) >= 2).length);
+  noter(etat, maintenant, 'legendaires', cartes.filter(c => rang(c.rarete) >= 3).length);
+  noter(etat, maintenant, 'enseigneJour', cartes.filter(c => c.enseigne === ens).length);
   return cartes.map(c => {
     const nouvelle = !etat.collection[c.id];
     etat.collection[c.id] = (etat.collection[c.id] || 0) + 1;
@@ -136,6 +146,7 @@ export function ouvrirPackDuJour(etat, rng, maintenant) {
   if (!packDuJourDispo(etat, maintenant)) return { ok: false, raison: 'deja' };
   const jour = jourDe(maintenant);
   etat.packDuJour = jour;
+  noter(etat, maintenant, 'packJour');
   const enseigne = enseigneDuJour(jour);
   return { ok: true, enseigne, tirage: ranger(etat, tirerBooster(etat, rng, { enseigne, minimum: 'epique' }), maintenant) };
 }
@@ -165,6 +176,7 @@ export function acheter(etat, rng, maintenant, sorte, enseigne = null) {
   if (sorte === 'enseigne' && !ENSEIGNES[enseigne]) return { ok: false, raison: 'enseigne' };
   if (etat.frites < offre.prix) return { ok: false, raison: 'frites' };
   etat.frites -= offre.prix;
+  noter(etat, maintenant, 'achats');
   const opts = sorte === 'prestige' ? { minimum: 'legendaire' } : sorte === 'enseigne' ? { enseigne } : {};
   return { ok: true, tirage: ranger(etat, tirerBooster(etat, rng, opts), maintenant) };
 }
@@ -177,7 +189,7 @@ export function ouvrirCadeauSerie(etat, rng, maintenant) {
 /* ------------------------------------------------------------ doublons */
 
 /** Recycle les doublons d'une carte (on en garde toujours une), ou de toutes. */
-export function recycler(etat, id = null) {
+export function recycler(etat, id = null, maintenant = Date.now()) {
   let gain = 0, n = 0;
   for (const [cid, nb] of Object.entries(etat.collection)) {
     if (id && cid !== id) continue;
@@ -189,6 +201,7 @@ export function recycler(etat, id = null) {
   }
   etat.frites += gain;
   etat.stats.recyclees += n;
+  noter(etat, maintenant, 'recyclees', n);
   return { gain, n };
 }
 
@@ -224,4 +237,73 @@ export function recompenseAlbum(etat, enseigne) {
 export function progression(etat) {
   const possedees = CARTES.filter(c => etat.collection[c.id]).length;
   return { possedees, total: CARTES.length };
+}
+
+/* ------------------------------------------------------------ missions du jour */
+
+/** Les missions possibles : chaque jour, on en tire quelques-unes (une par sorte de compteur). */
+export const MISSIONS = [
+  { id: 'boosters3', texte: 'Ouvrir 3 boosters', cle: 'boosters', but: 3, gain: 60 },
+  { id: 'boosters10', texte: 'Ouvrir 10 boosters', cle: 'boosters', but: 10, gain: 160 },
+  { id: 'cartes25', texte: 'Tirer 25 cartes', cle: 'cartes', but: 25, gain: 90 },
+  { id: 'nouvelles3', texte: 'Obtenir 3 nouvelles cartes', cle: 'nouvelles', but: 3, gain: 80 },
+  { id: 'nouvelles8', texte: 'Obtenir 8 nouvelles cartes', cle: 'nouvelles', but: 8, gain: 180 },
+  { id: 'rares5', texte: 'Tirer 5 Rares ou mieux', cle: 'rares', but: 5, gain: 70 },
+  { id: 'epique', texte: 'Tirer une Épique ou mieux', cle: 'epiques', but: 1, gain: 100 },
+  { id: 'legendaire', texte: 'Tirer une Légendaire ou mieux', cle: 'legendaires', but: 1, gain: 300 },
+  { id: 'recycler10', texte: 'Recycler 10 doublons', cle: 'recyclees', but: 10, gain: 60 },
+  { id: 'jour', texte: 'Ouvrir le pack du jour', cle: 'packJour', but: 1, gain: 50 },
+  { id: 'enseigne3', texte: 'Tirer 3 cartes de l’enseigne du jour', cle: 'enseigneJour', but: 3, gain: 80 },
+  { id: 'boutique', texte: 'Acheter un booster à la boutique', cle: 'achats', but: 1, gain: 60 },
+];
+export const MISSIONS_PAR_JOUR = 4;
+/** Toutes les missions du jour faites et prises : un bonus en plus. */
+export const BONUS_MISSIONS = 150;
+
+/** Les missions d'un jour donné (le même pour tout le monde). */
+export function missionsDuJour(jour) {
+  const choix = [], cles = new Set();
+  for (const m of melanger(MISSIONS.slice(), makeRng(jour * 7919 + 13))) {
+    if (cles.has(m.cle)) continue;
+    choix.push(m); cles.add(m.cle);
+    if (choix.length === MISSIONS_PAR_JOUR) break;
+  }
+  return choix;
+}
+
+/** Le carnet de missions du jour (remis à zéro chaque jour). */
+function carnet(etat, maintenant) {
+  const jour = jourDe(maintenant);
+  if (!etat.missions || etat.missions.jour !== jour) etat.missions = { jour, compte: {}, prises: [], bonus: false };
+  return etat.missions;
+}
+function noter(etat, maintenant, cle, n = 1) {
+  if (!(n > 0)) return;
+  const m = carnet(etat, maintenant);
+  m.compte[cle] = (m.compte[cle] || 0) + n;
+}
+
+/** Les missions du jour avec leur avancée. */
+export function missions(etat, maintenant) {
+  const m = carnet(etat, maintenant);
+  const liste = missionsDuJour(m.jour).map(x => {
+    const fait = Math.min(x.but, m.compte[x.cle] || 0);
+    return { ...x, fait, finie: fait >= x.but, prise: m.prises.includes(x.id) };
+  });
+  return { liste, bonusDispo: !m.bonus && liste.every(x => x.prise), bonusPris: m.bonus };
+}
+
+/** Encaisse une mission finie. */
+export function prendreMission(etat, id, maintenant) {
+  const x = missions(etat, maintenant).liste.find(y => y.id === id);
+  if (!x || !x.finie || x.prise) return { ok: false };
+  carnet(etat, maintenant).prises.push(id);
+  etat.frites += x.gain;
+  return { ok: true, gain: x.gain };
+}
+export function prendreBonusMissions(etat, maintenant) {
+  if (!missions(etat, maintenant).bonusDispo) return { ok: false };
+  carnet(etat, maintenant).bonus = true;
+  etat.frites += BONUS_MISSIONS;
+  return { ok: true, gain: BONUS_MISSIONS };
 }

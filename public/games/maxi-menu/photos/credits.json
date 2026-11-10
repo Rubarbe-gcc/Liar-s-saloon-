@@ -940,5 +940,125 @@
   "licence": "CC BY-SA 3.0",
   "lienLicence": "https://creativecommons.org/licenses/by-sa/3.0",
   "source": "https://commons.wikimedia.org/wiki/File%3ATaco_Bell_Mexican_Pizza%2C_Framingham_MA.jpg"
+ },
+ "arches-sauce": {
+  "fichier": "arches-sauce.jpg",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
+ },
+ "roi-long": {
+  "fichier": "roi-long.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
+ },
+ "roi-feu": {
+  "fichier": "roi-feu.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
+ },
+ "capitaine-krushers": {
+  "fichier": "capitaine-krushers.jpg",
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
+ },
+ "metro-wrap": {
+  "fichier": "metro-wrap.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
+ },
+ "metro-tresse": {
+  "fichier": "metro-tresse.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
+ },
+ "metro-meatball": {
+  "fichier": "metro-meatball.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
+ },
+ "metro-chef": {
+  "fichier": "metro-chef.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
+ },
+ "domino-ail": {
+  "fichier": "domino-ail.jpg",
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
+ },
+ "domino-cannelle": {
+  "fichier": "domino-cannelle.jpg",
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
+ },
+ "domino-ailes": {
+  "fichier": "domino-ailes.jpg",
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
+ },
+ "rapido-magic": {
+  "fichier": "rapido-magic.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "cousins-shakebacon": {
+  "fichier": "cousins-shakebacon.jpg",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "taco-churros": {
+  "fichier": "taco-churros.jpg",
+  "auteur": "Janet Hudson",
+  "licence": "CC BY 2.0",
+  "lienLicence": "https://creativecommons.org/licenses/by/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3ACinnamon_Twists_detail.jpg"
+ },
+ "taco-lave": {
+  "fichier": "taco-lave.jpg",
+  "auteur": "Seeker of parmesan",
+  "licence": "CC BY-SA 4.0",
+  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3ATaco_bell_diablo_hot_sauce.jpg"
+ },
+ "capitaine-capitaine": {
+  "fichier": "capitaine-capitaine.jpg",
+  "auteur": "Edgy01/Dan Lindsay",
+  "licence": "CC BY-SA 3.0",
+  "lienLicence": "https://creativecommons.org/licenses/by-sa/3.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3AColonel_Harland_Sanders_in_character_(cropped).jpg"
+ },
+ "taco-minuit": {
+  "fichier": "taco-minuit.jpg",
+  "auteur": "Candeadly",
+  "licence": "CC BY 4.0",
+  "lienLicence": "https://creativecommons.org/licenses/by/4.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3ATaco_Bell_restaurant_in_Clemmons%2C_NC%2C_at_night.jpg"
+ },
+ "taco-geant": {
+  "fichier": "taco-geant.jpg",
+  "auteur": "Willis Lam",
+  "licence": "CC BY-SA 2.0",
+  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3ATaco_Bell_Beefy_Fritos_Burrito_(15401861800).jpg"
+ },
+ "taco-gordita": {
+  "fichier": "taco-gordita.jpg",
+  "auteur": "theimpulsivebuy",
+  "licence": "CC BY-SA 2.0",
+  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3ATaco_Bell_Naked_Chicken_Chalupa_3_(32500553626).jpg"
  }
 }

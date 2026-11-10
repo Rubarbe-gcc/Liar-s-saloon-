@@ -229,3 +229,44 @@ h2{font-family:var(--f-titre);font-size:1.3rem;margin:4px 0 12px;color:var(--mou
 .paquet.lum-mythique{box-shadow:0 0 22px 6px #ff4f9a,0 0 70px 22px #ffb52e,0 0 120px 30px #3a9bff;}
 @keyframes lueur{from{filter:brightness(1);}to{filter:brightness(1.25) saturate(1.2);}}
 .raccourcis .btn{flex:1 1 220px;}
+/* Missions du jour */
+.tuile.missions{grid-column:1/-1;}
+.missions ul{list-style:none;margin:6px 0 10px;padding:0;display:grid;gap:8px;}
+.missions li{display:grid;grid-template-columns:1fr 120px auto;gap:10px;align-items:center;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.04);}
+.missions li.finie{background:rgba(255,199,44,.12);}
+.missions li.prise{opacity:.55;}
+.missions .m-texte{display:flex;flex-direction:column;font-weight:700;}
+.missions .m-texte small{font-weight:400;color:var(--pale);}
+.missions .jauge{margin:0;}
+.missions .m-ok{font-size:1.3rem;color:#7ee08a;padding:0 12px;}
+@media (max-width:600px){.missions li{grid-template-columns:1fr auto;}.missions li .jauge{grid-column:1/-1;grid-row:2;}}
+/* Caisse : la carte de la Banque du Velours et le terminal (comme au casino) */
+.tuile.caisse .fictif{font-size:.8rem;color:var(--pale);}
+.tuile.caisse .rouge{color:#ff6b6b;}
+.packs-frites{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:10px 0;}
+.pack-frites{position:relative;display:flex;flex-direction:column;align-items:center;gap:4px;padding:16px 10px 12px;border-radius:16px;background:rgba(255,255,255,.05);border:2px solid var(--ligne);color:inherit;cursor:pointer;transition:transform .15s,border-color .15s;}
+.pack-frites:hover{transform:translateY(-2px);}
+.pack-frites.is-on{border-color:#ffc72c;background:rgba(255,199,44,.12);}
+.pack-frites b{font-family:var(--f-titre);font-size:1.15rem;}
+.pack-frites span{font-size:.8rem;color:var(--pale);}
+.pack-frites em{font-style:normal;font-weight:800;color:#ffc72c;}
+.pack-badge{position:absolute;top:-9px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:.65rem!important;font-weight:800;color:#3a140e!important;background:#ffc72c;padding:2px 8px;border-radius:999px;}
+.paiement{display:grid;grid-template-columns:1fr auto;gap:14px;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--ligne);}
+.paiement #mm-payer{grid-column:1/-1;justify-self:center;min-width:200px;}
+.carte-bancaire{position:relative;aspect-ratio:1.586;width:min(100%,300px);border-radius:14px;padding:14px;color:#f3dc9a;overflow:hidden;background:linear-gradient(135deg,#1c1626,#3a2340 55%,#14101c);box-shadow:0 12px 28px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.12);transition:transform .5s cubic-bezier(.2,.8,.2,1);}
+.carte-bancaire::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,transparent 0 18px,rgba(243,220,154,.05) 18px 19px);}
+.carte-bancaire.inseree{transform:translateX(30%) rotate(-4deg) scale(.92);}
+.cb-puce{position:absolute;left:16px;top:38%;width:40px;height:30px;border-radius:6px;background:linear-gradient(135deg,#f3dc9a,#b8913c);box-shadow:inset 0 0 0 1px #8a6a24;}
+.cb-logo{position:absolute;right:16px;top:12px;font:italic 700 1.4rem var(--f-titre);}
+.cb-numero{position:absolute;left:16px;bottom:34%;font-weight:700;letter-spacing:.14em;}
+.cb-nom{position:absolute;left:16px;bottom:12px;font-weight:600;font-size:.78rem;letter-spacing:.1em;max-width:60%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.cb-exp{position:absolute;right:16px;bottom:12px;font-weight:600;font-size:.78rem;}
+.cb-demo{position:absolute;right:-32px;top:22px;transform:rotate(35deg);padding:2px 34px;background:rgba(90,180,232,.85);color:#071420;font-weight:800;font-size:.5rem;letter-spacing:.08em;}
+.terminal{width:128px;padding:10px;border-radius:16px 16px 22px 22px;background:linear-gradient(180deg,#2b2b31,#141418);box-shadow:0 12px 24px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.1);}
+.terminal.secoue{animation:tremble .12s 4;}
+.ecran-tpe{min-height:56px;padding:6px;border-radius:6px;background:#b8d8a8;color:#16301a;font:600 .72rem/1.3 ui-monospace,Consolas,monospace;display:grid;place-items:center;text-align:center;box-shadow:inset 0 2px 6px rgba(0,0,0,.35);}
+.ecran-tpe.ok{background:#8fe0a0;font-weight:800;}
+.ecran-tpe.refuse{background:#e8a0a0;color:#4a0c17;font-weight:800;}
+.touches-tpe{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-top:8px;}
+.touches-tpe i{height:12px;border-radius:4px;background:#3c3c44;box-shadow:0 2px 0 #0a0a0c;}
+.touches-tpe i.v{background:#2f8a4a;}.touches-tpe i.r{background:#b3243a;}

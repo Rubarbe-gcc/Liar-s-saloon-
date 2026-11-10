@@ -8,6 +8,9 @@ import * as J from '../../../shared/maximenu/jeu.js';
 import { makeRng } from '../../../shared/hasard.js';
 import { dessinCarte, emblemeEnseigne } from './dessins.js';
 import * as son from './sons.js';
+import * as B from '../../../shared/casino/banque.js';
+import * as C from '../../../shared/casino/compte.js';
+import * as succes from '../../../shared/succes.js';
 
 /*
  * Photos des produits et logos des enseignes (Wikimedia Commons) : ../photos/credits.json
@@ -138,6 +141,7 @@ const VUES = {
         <p>${d.n ? `${d.n} doublon${d.n > 1 ? 's' : ''} à recycler pour <b>${fmtFrites(d.gain)} 🍟</b>.` : 'Aucun doublon pour l’instant.'}</p>
         <button class="btn" id="b-recycler" ${d.n ? '' : 'disabled'}>♻️ Recycler les doublons</button>
       </section>
+      ${tuileMissions(t)}
     </div>
     <div class="etapes">
       <div class="etape"><b>1</b><p><strong>Ouvrez des boosters.</strong> Des gratuits se rechargent toute la journée, et la boutique en vend contre des frites d’or.</p></div>
@@ -145,7 +149,7 @@ const VUES = {
       <div class="etape"><b>3</b><p><strong>Recyclez les doublons</strong> en frites d’or, et découvrez la fiche de chaque carte obtenue.</p></div>
     </div>
     <p class="mentions">Jeu de fan gratuit et non officiel, sans lien avec les enseignes citées. Les marques et logos appartiennent à leurs propriétaires.
-      Photos : Wikimedia Commons, l’auteur et la licence de chaque photo sont dans la fiche de la carte. Calories et prix indicatifs.</p>`;
+      Photos : sites des enseignes et Wikimedia Commons, la source de chaque photo est dans la fiche de la carte. Argent et carte bancaire fictifs. Calories et prix indicatifs.</p>`;
   },
   albums() {
     if (albumOuvert) {
@@ -180,6 +184,7 @@ const VUES = {
         <div class="offre">${paquetHTML('MAXI', 'prestige', ['#ff4f9a', '#ffb52e'])}<b>${o.prestige.nom}</b><p>${o.prestige.desc}</p>
           ${achats('prestige', 'jaune')}</div>
       </div>
+      ${tuileCaisse()}
       <div class="tuile doublons"><h3>♻️ Recyclage</h3>
         <p>On garde toujours un exemplaire de chaque carte. Chaque doublon rapporte : Commune ${RARETES.commune.recyclage} · Rare ${RARETES.rare.recyclage} · Épique ${RARETES.epique.recyclage} · Légendaire ${RARETES.legendaire.recyclage} · Mythique ${RARETES.mythique.recyclage} 🍟.</p>
         <button class="btn" id="b-recycler" ${d.n ? '' : 'disabled'}>Recycler ${d.n} doublon${d.n > 1 ? 's' : ''} : +${fmtFrites(d.gain)} 🍟</button></div>`;
@@ -195,6 +200,108 @@ const VUES = {
       <div class="liste">${lignes || '<p class="vide">Vos cartes Épiques, Légendaires et Mythiques apparaîtront ici.</p>'}</div>`;
   },
 };
+
+/*
+ * La caisse : des frites d'or payées avec la carte de la Banque du Velours, c'est-à-dire
+ * le même compte fictif que le casino (shared/casino : clé velours.banque). La carte est
+ * déjà remplie et ne se modifie pas : aucun champ de vraie carte, rien ne quitte la page.
+ * Les prix sont en centimes d'euros fictifs.
+ */
+const PACKS_FRITES = [
+  { frites: 500, prix: 299, nom: 'Petit cornet' },
+  { frites: 1500, prix: 799, nom: 'Moyen cornet' },
+  { frites: 5000, prix: 1999, nom: 'Grand cornet', badge: 'Populaire' },
+  { frites: 15000, prix: 4999, nom: 'Seau de frites', badge: 'Meilleure offre' },
+];
+let packChoisi = null, paiementEnCours = false;
+const banque = () => B.lire(localStorage);
+
+function tuileCaisse() {
+  const solde = banque().compte.solde;
+  return `<div class="tuile caisse"><h3>💳 Acheter des frites d’or</h3>
+    <p class="fictif">🎭 Banque et argent fictifs : c’est ton compte de la Banque du Velours, le même qu’au casino. Aucun vrai paiement.</p>
+    <p>Ton compte : <b id="mm-solde" class="${solde < 0 ? 'rouge' : ''}">${C.euros(solde)}</b></p>
+    <div class="packs-frites">${PACKS_FRITES.map((p, k) => `<button class="pack-frites${packChoisi === k ? ' is-on' : ''}" data-frites="${k}">
+      ${p.badge ? `<span class="pack-badge">${p.badge}</span>` : ''}<b>${fmtFrites(p.frites)} 🍟</b><span>${p.nom}</span><em>${C.euros(p.prix)}</em></button>`).join('')}</div>
+    <div class="paiement" id="mm-paiement" ${packChoisi === null ? 'hidden' : ''}>
+      <div class="carte-bancaire" aria-label="Carte de démonstration du casino">
+        <span class="cb-puce"></span><span class="cb-logo">VN</span>
+        <span class="cb-numero">4970 •••• •••• 1926</span>
+        <span class="cb-nom">${echapper((succes.pseudo?.() || 'Joueur').toUpperCase())}</span>
+        <span class="cb-exp">12/99</span><span class="cb-demo">CARTE DE DÉMONSTRATION</span>
+      </div>
+      <div class="terminal" id="mm-terminal">
+        <div class="ecran-tpe" id="mm-ecran">${packChoisi === null ? '' : `Montant : <b>${C.euros(PACKS_FRITES[packChoisi].prix)}</b>`}</div>
+        <div class="touches-tpe" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i class="v"></i><i></i><i class="r"></i></div>
+      </div>
+      <button class="btn jaune" id="mm-payer">${packChoisi === null ? 'Payer' : `Payer ${C.euros(PACKS_FRITES[packChoisi].prix)}`}</button>
+    </div>
+  </div>`;
+}
+
+function choisirPackFrites(k) {
+  if (paiementEnCours) return;
+  packChoisi = k;
+  son.jouer('clic');
+  afficher();
+  $('#mm-paiement')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+const attendre = ms => new Promise(r => setTimeout(r, ms));
+async function payerFrites() {
+  if (packChoisi === null || paiementEnCours) return;
+  const p = PACKS_FRITES[packChoisi];
+  paiementEnCours = true;
+  const bouton = $('#mm-payer'), ecran = $('#mm-ecran'), carte = document.querySelector('.carte-bancaire');
+  bouton.disabled = true;
+  carte.classList.add('inseree');
+  for (const e of ['Lecture de la carte…', 'Connexion à la Banque du Velours…', 'Autorisation…']) {
+    ecran.textContent = e;
+    son.jouer('clic');
+    await attendre(750);
+  }
+  carte.classList.remove('inseree');
+  const b = banque(); // relu au dernier moment : le casino a pu le changer
+  if (!C.payer(b.compte, p.prix, `Maxi Menu – ${fmtFrites(p.frites)} frites d’or`)) {
+    ecran.className = 'ecran-tpe refuse';
+    ecran.innerHTML = 'Paiement refusé<br>Solde insuffisant';
+    son.jouer('refus');
+    $('#mm-terminal').classList.add('secoue');
+    bouton.textContent = 'Paiement refusé';
+    paiementEnCours = false;
+    return;
+  }
+  B.ecrire(localStorage, b);
+  etat.frites += p.frites;
+  sauver();
+  ecran.className = 'ecran-tpe ok';
+  ecran.innerHTML = 'Paiement accepté ✓';
+  son.jouer('pieces');
+  toast(`+${fmtFrites(p.frites)} 🍟 de frites d’or !`);
+  majCompteurs();
+  $('#mm-solde').textContent = C.euros(b.compte.solde);
+  $('#mm-solde').classList.toggle('rouge', b.compte.solde < 0);
+  bouton.textContent = 'Merci !';
+  await attendre(1400);
+  paiementEnCours = false;
+  packChoisi = null;
+  if (vue === 'boutique' && $('#ouverture').hidden) afficher();
+}
+
+/** Les missions du jour : de quoi gagner des frites d'or en jouant. */
+function tuileMissions(t) {
+  const { liste, bonusDispo, bonusPris } = J.missions(etat, t);
+  return `<section class="tuile missions">
+    <h3>🎯 Missions du jour</h3>
+    <ul>${liste.map(m => `<li class="${m.prise ? 'prise' : m.finie ? 'finie' : ''}">
+      <span class="m-texte">${m.texte}<small>${m.fait} / ${m.but}</small></span>
+      <span class="jauge"><i style="width:${m.fait / m.but * 100}%"></i></span>
+      ${m.prise ? '<span class="m-ok">✓</span>' : `<button class="btn ${m.finie ? 'jaune' : ''}" data-mission="${m.id}" ${m.finie ? '' : 'disabled'}>+${m.gain} 🍟</button>`}
+    </li>`).join('')}</ul>
+    <p>${bonusPris ? 'Toutes les missions sont faites : à demain pour de nouvelles !' : `Toutes faites : <b>+${J.BONUS_MISSIONS} 🍟</b> en bonus. Nouvelles missions chaque jour.`}</p>
+    ${bonusDispo ? `<button class="btn jaune" id="b-bonus-missions">🏆 Prendre le bonus : +${J.BONUS_MISSIONS} 🍟</button>` : ''}
+  </section>`;
+}
 
 function majMinuteurs() {
   const t = maintenant();
@@ -397,7 +504,7 @@ function montrerFiche(id) {
   m.onclick = ev => { if (ev.target === m) m.hidden = true; };
   const rc = $('#b-recycler-carte');
   if (rc) rc.onclick = () => {
-    const r = J.recycler(etat, id);
+    const r = J.recycler(etat, id, maintenant());
     sauver();
     son.jouer('pieces');
     toast(`+${r.gain} 🍟`);
@@ -415,6 +522,16 @@ document.addEventListener('click', ev => {
   if (el.dataset.album) { son.jouer('clic'); albumOuvert = el.dataset.album; afficher('albums'); window.scrollTo(0, 0); return; }
   if (el.dataset.carte && !el.closest('.mini')) { son.jouer('clic'); montrerFiche(el.dataset.carte); return; }
   if (el.closest('.ligne')) { montrerFiche(el.closest('.ligne').dataset.carte); return; }
+  if (el.dataset.mission || el.id === 'b-bonus-missions') {
+    const r = el.dataset.mission ? J.prendreMission(etat, el.dataset.mission, maintenant()) : J.prendreBonusMissions(etat, maintenant());
+    if (!r.ok) return;
+    sauver();
+    son.jouer('pieces');
+    toast(`+${fmtFrites(r.gain)} 🍟 de frites d’or !`);
+    afficher();
+    return;
+  }
+  if (el.dataset.frites) { choisirPackFrites(+el.dataset.frites); return; }
   if (el.dataset.acheter) {
     const sorte = el.dataset.acheter, n = +(el.dataset.n || 1);
     const ens = sorte === 'enseigne' ? $('#choix-enseigne').value : null;
@@ -442,7 +559,7 @@ document.addEventListener('click', ev => {
       break;
     }
     case 'b-recycler': {
-      const r = J.recycler(etat);
+      const r = J.recycler(etat, null, maintenant());
       sauver();
       son.jouer('pieces');
       toast(`♻️ ${r.n} doublon${r.n > 1 ? 's' : ''} recyclé${r.n > 1 ? 's' : ''} : +${fmtFrites(r.gain)} 🍟`);
@@ -456,6 +573,7 @@ document.addEventListener('click', ev => {
       break;
     }
     case 'b-son': son.basculerSon(); majCompteurs(); break;
+    case 'mm-payer': payerFrites(); break;
   }
 });
 

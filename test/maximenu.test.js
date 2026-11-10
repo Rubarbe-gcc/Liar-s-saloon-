@@ -132,3 +132,33 @@ test('déterministe : même graine, même tirage', () => {
   const b = J.tirerBooster(J.creerEtat(T0), makeRng(77)).map(c => c.id);
   assert.deepEqual(a, b);
 });
+
+test('les missions du jour : 4 missions différentes, on les remplit en jouant, on encaisse une seule fois, puis le bonus', () => {
+  const etat = J.creerEtat(T0);
+  const rng = makeRng(5);
+  const { liste } = J.missions(etat, T0);
+  assert.equal(liste.length, J.MISSIONS_PAR_JOUR);
+  assert.equal(new Set(liste.map(m => m.cle)).size, liste.length);
+  assert.deepEqual(J.missionsDuJour(J.jourDe(T0)), J.missionsDuJour(J.jourDe(T0)));
+  // On joue beaucoup : tout se remplit.
+  J.ouvrirPackDuJour(etat, rng, T0);
+  for (let i = 0; i < 10; i++) J.ouvrirGratuit(etat, rng, T0);
+  etat.frites = 1e6;
+  for (let i = 0; i < 40; i++) J.acheter(etat, rng, T0, i < 10 ? 'prestige' : 'classique');
+  J.recycler(etat, null, T0);
+  const avant = etat.frites;
+  let gagne = 0;
+  for (const m of J.missions(etat, T0).liste) {
+    assert.ok(m.finie, m.id);
+    const r = J.prendreMission(etat, m.id, T0);
+    assert.ok(r.ok);
+    gagne += r.gain;
+    assert.equal(J.prendreMission(etat, m.id, T0).ok, false);
+  }
+  assert.equal(etat.frites, avant + gagne);
+  assert.ok(J.prendreBonusMissions(etat, T0).ok);
+  assert.equal(J.prendreBonusMissions(etat, T0).ok, false);
+  // Le lendemain, tout repart à zéro.
+  const demain = J.missions(etat, T0 + 24 * H);
+  assert.ok(demain.liste.every(m => m.fait === 0 && !m.prise));
+});
