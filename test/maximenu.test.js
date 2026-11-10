@@ -13,14 +13,14 @@ import { makeRng } from '../public/shared/hasard.js';
 const H = 3600 * 1000;
 const T0 = Date.UTC(2026, 10, 10, 12, 0, 0);
 
-test('les cartes : 12 enseignes de 35 cartes, 17 C / 8 R / 6 É / 3 L / 1 M, ids uniques', () => {
-  assert.equal(ORDRE_ENSEIGNES.length, 12);
+test('les cartes : 15 enseignes de 50 cartes, 23 C / 12 R / 8 É / 4 L / 3 M, ids uniques', () => {
+  assert.equal(ORDRE_ENSEIGNES.length, 15);
   assert.equal(new Set(CARTES.map(c => c.id)).size, CARTES.length);
   for (const e of ORDRE_ENSEIGNES) {
     const cs = cartesDe(e);
-    assert.equal(cs.length, 35, e);
+    assert.equal(cs.length, 50, e);
     const n = r => cs.filter(c => c.rarete === r).length;
-    assert.deepEqual(ORDRE_RARETES.map(n), [17, 8, 6, 3, 1], e);
+    assert.deepEqual(ORDRE_RARETES.map(n), [23, 12, 8, 4, 3], e);
     assert.ok(ENSEIGNES[e].nom);
   }
   for (const c of CARTES) {
