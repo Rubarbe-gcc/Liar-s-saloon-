@@ -147,6 +147,9 @@ export function emblemeEnseigne(enseigne, taille = 40) {
     cloche: `<path d="M30 68 q0 -40 20 -42 q20 2 20 42z" fill="${blanc}"/><rect x="26" y="66" width="48" height="7" rx="3" fill="${blanc}"/><circle cx="50" cy="78" r="5" fill="${blanc}"/>`,
     eclair: `<path d="M56 16 L32 54 h16 L42 84 L70 44 h-17z" fill="${blanc}"/>`,
     six: `<text x="50" y="70" text-anchor="middle" font-size="56" font-weight="900" font-family="Arial Black, sans-serif" fill="${blanc}">6</text>`,
+    lettres: `<text x="50" y="68" text-anchor="middle" font-size="${(enseigne.lettres || '').length > 1 ? 40 : 52}" font-weight="900" font-family="Arial Black, sans-serif" fill="${blanc}">${enseigne.lettres || ''}</text>`,
+    tasse: `<path d="M30 38 h34 l-4 36 q-1 6 -7 6 h-12 q-6 0 -7 -6z" fill="${blanc}"/><path d="M64 46 q12 0 10 12 q-2 8 -12 8" stroke="${blanc}" stroke-width="5" fill="none"/><path d="M40 20 q4 6 0 12 M50 18 q4 7 0 14" stroke="${blanc}" stroke-width="3" fill="none" stroke-linecap="round"/>`,
+    bol: `<path d="M22 50 h56 q-2 28 -28 30 q-26 -2 -28 -30z" fill="${blanc}"/><path d="M40 16 L56 46 M54 14 L64 46" stroke="${blanc}" stroke-width="4" stroke-linecap="round"/>`,
   };
   return `<svg viewBox="0 0 100 100" width="${taille}" height="${taille}" aria-hidden="true"><circle cx="50" cy="50" r="48" fill="${c1}" stroke="${blanc}" stroke-width="4"/>${motifs[enseigne.embleme] || ''}</svg>`;
 }
