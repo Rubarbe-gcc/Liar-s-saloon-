@@ -160,39 +160,34 @@
   "source": "https://commons.wikimedia.org/wiki/File%3AMcRibTransparent.png"
  },
  "roi-frites": {
-  "fichier": "roi-frites.jpg",
-  "auteur": "Evan-Amos",
-  "licence": "CC0",
-  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-  "source": "https://commons.wikimedia.org/wiki/File%3ABK-French-Fries.jpg"
+  "fichier": "roi-frites.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
  },
  "roi-onion": {
-  "fichier": "roi-onion.jpg",
-  "auteur": "Willis Lam",
-  "licence": "CC BY-SA 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ABurger_King_Onion_Rings_(15908411475).jpg"
+  "fichier": "roi-onion.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
  },
  "roi-cheese": {
-  "fichier": "roi-cheese.jpg",
-  "auteur": "Willis Lam",
-  "licence": "CC BY-SA 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ABurger_King_Double_Cheeseburger_(21262495578).jpg"
+  "fichier": "roi-cheese.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
  },
  "roi-nuggets": {
-  "fichier": "roi-nuggets.jpg",
-  "auteur": "Willis Lam",
-  "licence": "CC BY-SA 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ABurger_King_Chicken_Nuggets_(15423233415).jpg"
+  "fichier": "roi-nuggets.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
  },
  "roi-chicken": {
-  "fichier": "roi-chicken.jpg",
-  "auteur": "BrokenSphere",
-  "licence": "CC BY-SA 3.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/3.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ABK_Original_Chicken_Sandwich.JPG"
+  "fichier": "roi-chicken.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
  },
  "roi-whopperjr": {
   "fichier": "roi-whopperjr.jpg",
@@ -202,53 +197,46 @@
   "source": "https://commons.wikimedia.org/wiki/File%3AWhopper_Jr_-_1.jpg"
  },
  "roi-sundae": {
-  "fichier": "roi-sundae.jpg",
-  "auteur": "ウィ貴公子",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3A%E3%82%8F%E3%81%9F%E3%81%8F%E3%81%97%E3%81%AE%E3%83%93%E3%82%B9%E3%82%B3%E3%83%95%E3%82%B5%E3%83%B3%E3%83%87%E3%83%BC_%E3%83%90%E3%83%BC%E3%82%AC%E3%83%BC%E3%82%AD%E3%83%B3%E3%82%B0%E6%B8%8B%E8%B0%B7%E3%82%BB%E3%83%B3%E3%82%BF%E3%83%BC%E8%A1%97%E5%BA%97_2024%E5%B9%B411%E6%9C%8824%E6%97%A5%E3%81%AE%E6%B8%8B%E8%B0%B7_202411241616_IMG_1119.jpg"
+  "fichier": "roi-sundae.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
  },
  "roi-shake": {
-  "fichier": "roi-shake.jpg",
-  "auteur": "Willis Lam",
-  "licence": "CC BY-SA 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ABurger_King_Chocolate_Milkshake_(43925151774).jpg"
+  "fichier": "roi-shake.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
  },
  "roi-fume": {
-  "fichier": "roi-fume.jpg",
-  "auteur": "www.snack-nieuws.nl",
-  "licence": "CC BY 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ASteakhouse_-_Burger_King_(26895278607).jpg"
+  "fichier": "roi-fume.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
  },
  "roi-veggie": {
-  "fichier": "roi-veggie.jpg",
-  "auteur": "Mx. Granger",
-  "licence": "CC0",
-  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-  "source": "https://commons.wikimedia.org/wiki/File%3AImpossible_Whopper_1.jpg"
+  "fichier": "roi-veggie.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
  },
  "roi-grand": {
-  "fichier": "roi-grand.jpg",
-  "auteur": "user Siqbal",
-  "licence": "Public domain",
-  "lienLicence": "",
-  "source": "https://commons.wikimedia.org/wiki/File%3ABurger_king_whopper.jpg"
+  "fichier": "roi-grand.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
  },
  "roi-double": {
-  "fichier": "roi-double.jpg",
-  "auteur": "Beau96080 at English Wikipedia",
-  "licence": "Public domain",
-  "lienLicence": "",
-  "source": "https://commons.wikimedia.org/wiki/File%3ABurger_King_Triple_Whopper_with_cheese.jpg"
+  "fichier": "roi-double.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
  },
  "roi-baconking": {
-  "fichier": "roi-baconking.jpg",
-  "auteur": "Willis Lam",
-  "licence": "CC BY-SA 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ABurger_King_Double_Bacon_Cheeseburger_close_up_(30596371153).jpg"
+  "fichier": "roi-baconking.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
  },
  "roi-roi": {
   "fichier": "roi-roi.jpg",
@@ -258,11 +246,10 @@
   "source": "https://commons.wikimedia.org/wiki/File%3AThe_King%2C_Burger_King's_mascot_-_bobblehead.jpg"
  },
  "roi-fusion": {
-  "fichier": "roi-fusion.jpg",
-  "auteur": "Philip Mallis from Melbourne",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3A'Mini_King_Fusion'_ice_cream_sundae_from_Burger_King_in_Lisbon%2C_Portugal_(55137658479).jpg"
+  "fichier": "roi-fusion.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
  },
  "roi-couronne": {
   "fichier": "roi-couronne.jpg",
@@ -280,10 +267,9 @@
  },
  "capitaine-ailes": {
   "fichier": "capitaine-ailes.jpg",
-  "auteur": "Willis Lam",
-  "licence": "CC BY-SA 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AThree_KFC_Hot_Wings_(19942802170).jpg"
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
  },
  "capitaine-popcorn": {
   "fichier": "capitaine-popcorn.jpg",
@@ -315,10 +301,9 @@
  },
  "capitaine-soda": {
   "fichier": "capitaine-soda.jpg",
-  "auteur": "Tony Webster",
-  "licence": "CC BY 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3APepsi_Cup_-_Soda_at_Restaurant_(53741517769).jpg"
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
  },
  "capitaine-burger": {
   "fichier": "capitaine-burger.jpg",
@@ -329,24 +314,21 @@
  },
  "capitaine-twister": {
   "fichier": "capitaine-twister.jpg",
-  "auteur": "N509FZ",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ADragon_Twister_from_KFC_Delivery_(20201213202030).jpg"
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
  },
  "capitaine-seau": {
   "fichier": "capitaine-seau.jpg",
-  "auteur": "Missvain",
-  "licence": "CC0",
-  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-  "source": "https://commons.wikimedia.org/wiki/File%3AKFC_Bucket_-_March_2026_-_Sarah_Stierch.jpg"
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
  },
  "capitaine-mega": {
   "fichier": "capitaine-mega.jpg",
-  "auteur": "Willis Lam",
-  "licence": "CC BY-SA 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ALooking_down_into_KFC_bucket_of_fried_chicken_(34956588243).jpg"
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
  },
  "capitaine-epices": {
   "fichier": "capitaine-epices.jpg",
@@ -363,39 +345,34 @@
   "source": "https://commons.wikimedia.org/wiki/File%3AKFC_Original_Recipe_chicken_in_bucket.jpg"
  },
  "metro-thon": {
-  "fichier": "metro-thon.jpg",
-  "auteur": "BrokenSphere",
-  "licence": "CC BY-SA 3.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/3.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ASubway_foot_long_tuna_sandwich.JPG"
+  "fichier": "metro-thon.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
  },
  "metro-jambon": {
-  "fichier": "metro-jambon.jpg",
-  "auteur": "SoHome Jacaranda Lilau",
-  "licence": "CC BY-SA 3.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/3.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ASubway_6-inch_Ham_Submarine_Sandwich.jpg"
+  "fichier": "metro-jambon.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
  },
  "metro-bol": {
-  "fichier": "metro-bol.jpg",
-  "auteur": "Lillottama",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ASubway_salad.jpg"
+  "fichier": "metro-bol.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
  },
  "metro-cookie": {
-  "fichier": "metro-cookie.jpg",
-  "auteur": "Bahnfrend",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AChocolate_Chip_Cookies%2C_Subway_Northbridge%2C_2026_(01).jpg"
+  "fichier": "metro-cookie.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
  },
  "metro-bmt": {
-  "fichier": "metro-bmt.jpg",
-  "auteur": "Bahnfrend",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AFootlong_Italian_B.M.T._Sub%2C_Subway_Hay_Street_West%2C_2026_(01).jpg"
+  "fichier": "metro-bmt.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
  },
  "metro-meatball": {
   "fichier": "metro-meatball.jpg",
@@ -405,18 +382,16 @@
   "source": "https://commons.wikimedia.org/wiki/File%3AMeatball_Sub.jpg"
  },
  "metro-soda": {
-  "fichier": "metro-soda.jpg",
-  "auteur": "JIP",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ASubway_roll_and_drink_at_Subway_at_Tampere_railway_station.jpg"
+  "fichier": "metro-soda.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
  },
  "metro-teriyaki": {
-  "fichier": "metro-teriyaki.jpg",
-  "auteur": "JIP",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ASubway_Chicken_Teriyaki.jpg"
+  "fichier": "metro-teriyaki.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
  },
  "metro-spicy": {
   "fichier": "metro-spicy.jpg",
@@ -440,11 +415,10 @@
   "source": "https://commons.wikimedia.org/wiki/File%3ASubwaysandwich.jpg"
  },
  "metro-mois": {
-  "fichier": "metro-mois.jpg",
-  "auteur": "Missvain",
-  "licence": "CC BY 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3A6_inch_Subway_turkey_sandwich_-_September_2022_-_Sarah_Stierch.jpg"
+  "fichier": "metro-mois.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
  },
  "metro-infini": {
   "fichier": "metro-infini.jpg",
@@ -455,24 +429,21 @@
  },
  "domino-marg": {
   "fichier": "domino-marg.jpg",
-  "auteur": "Owais Al Qarni",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3APurchased_a_regular-sized_Margherita_pizza_from_Domino's_Bali_Arcade.jpg"
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
  },
  "domino-pepperoni": {
   "fichier": "domino-pepperoni.jpg",
-  "auteur": "Famartin",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3A2026-03-14_17_13_53_A_medium_Domino's_pizza_with_half_pepperoni_on_Pi_Day_2026_in_the_Mountainview_section_of_Ewing_Township%2C_Mercer_County%2C_New_Jersey.jpg"
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
  },
  "domino-reine": {
   "fichier": "domino-reine.jpg",
-  "auteur": "Phil Whitehouse from London, United Kingdom",
-  "licence": "CC BY 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3APizza_capricciosa.jpg"
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
  },
  "domino-chorizo": {
   "fichier": "domino-chorizo.jpg",
@@ -518,45 +489,39 @@
  },
  "domino-fromages": {
   "fichier": "domino-fromages.jpg",
-  "auteur": "Andy Li",
-  "licence": "CC0",
-  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-  "source": "https://commons.wikimedia.org/wiki/File%3AFour_Cheese_-_Pizza_500_2023-11-10.jpg"
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
  },
  "domino-hawai": {
   "fichier": "domino-hawai.jpg",
-  "auteur": "@joefoodie from USA",
-  "licence": "CC BY 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AHawaiian_pizza_1.jpg"
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
  },
  "domino-bbq": {
   "fichier": "domino-bbq.jpg",
-  "auteur": "Prayitno / Thank you for (12 millions +) view from Los Angeles, USA",
-  "licence": "CC BY 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AB.B.Q._Chicken_Pizza_(26679384893).jpg"
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
  },
  "domino-six": {
   "fichier": "domino-six.jpg",
-  "auteur": "Bahnfrend",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ABBQ_Meatlovers_Pizza%2C_Domino's_Pizza_Karawara%2C_2026_(01).jpg"
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
  },
  "domino-geante": {
   "fichier": "domino-geante.jpg",
-  "auteur": "Sherwin",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ADomino's_Pizza_box_from_South_Africa.jpg"
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
  },
  "domino-bord": {
   "fichier": "domino-bord.jpg",
-  "auteur": "jeffreyw",
-  "licence": "CC BY 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ACheese_stuffed_crust.jpg"
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
  },
  "domino-lava": {
   "fichier": "domino-lava.jpg",
@@ -571,6 +536,340 @@
   "licence": "CC BY-SA 4.0",
   "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
   "source": "https://commons.wikimedia.org/wiki/File%3ADomino's_Pizza_delivery_motorcycles%2C_Hoogezand_(2019).jpg"
+ },
+ "taco-quesarito": {
+  "fichier": "taco-quesarito.jpg",
+  "auteur": "Willis Lam",
+  "licence": "CC BY-SA 2.0",
+  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3ATaco_Bell_Quesarito_(14735584857).jpg"
+ },
+ "taco-cloche": {
+  "fichier": "taco-cloche.jpg",
+  "auteur": "Jeramey Jannene from Milwaukee, WI, United States of America",
+  "licence": "CC BY 2.0",
+  "lienLicence": "https://creativecommons.org/licenses/by/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3ATaco_Bell_Drive_Thru_Sign_-_Flickr_-_compujeramey.jpg"
+ },
+ "rapido-colosse": {
+  "fichier": "rapido-colosse.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-fondant": {
+  "fichier": "rapido-fondant.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-cheese": {
+  "fichier": "rapido-cheese.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-frites": {
+  "fichier": "rapido-frites.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-supreme": {
+  "fichier": "rapido-supreme.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-shake": {
+  "fichier": "rapido-shake.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-sauce": {
+  "fichier": "rapido-sauce.jpg",
+  "auteur": "anders pearson from new york, ny",
+  "licence": "CC BY-SA 2.0",
+  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3ABelgian_frites_with_andalouse_sauce.jpg"
+ },
+ "rapido-wrap": {
+  "fichier": "rapido-wrap.jpg",
+  "auteur": "Mack Male from Edmonton, AB, Canada",
+  "licence": "CC BY-SA 2.0",
+  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3AButter_Chicken_Wrap_from_Remedy.jpg"
+ },
+ "rapido-salade": {
+  "fichier": "rapido-salade.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-sundae": {
+  "fichier": "rapido-sundae.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-brownie": {
+  "fichier": "rapido-brownie.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-soda": {
+  "fichier": "rapido-soda.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-fish": {
+  "fichier": "rapido-fish.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-belge": {
+  "fichier": "rapido-belge.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-pilote": {
+  "fichier": "rapido-pilote.jpg",
+  "auteur": "Jean-noël Lafargue (Jean-no)",
+  "licence": "Public domain",
+  "lienLicence": "",
+  "source": "https://commons.wikimedia.org/wiki/File%3AQuick_drive_takeway_montigny.jpg"
+ },
+ "rapido-turbo": {
+  "fichier": "rapido-turbo.jpg",
+  "auteur": "Björn Láczay",
+  "licence": "CC BY 2.0",
+  "lienLicence": "https://creativecommons.org/licenses/by/2.0",
+  "source": "https://commons.wikimedia.org/wiki/File%3AQuick_Brussels.jpg"
+ },
+ "cousins-hotdog": {
+  "fichier": "cousins-hotdog.jpg",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "cousins-cheesedog": {
+  "fichier": "cousins-cheesedog.jpg",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "cousins-cacahuetes": {
+  "fichier": "cousins-cacahuetes.jpg",
+  "auteur": "Ser Amantio di Nicolao",
+  "licence": "CC0",
+  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File%3APeanuts_at_Five_Guys.jpg"
+ },
+ "cousins-soda": {
+  "fichier": "cousins-soda.png",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "cousins-veggie": {
+  "fichier": "cousins-veggie.jpg",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "cousins-cheese": {
+  "fichier": "cousins-cheese.jpg",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "cousins-bacon": {
+  "fichier": "cousins-bacon.jpg",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "cousins-baconcheese": {
+  "fichier": "cousins-baconcheese.jpg",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "cousins-shake": {
+  "fichier": "cousins-shake.jpg",
+  "auteur": "Industrialerror",
+  "licence": "CC0",
+  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File%3AFive_Guys_Milkshake.jpg"
+ },
+ "cousins-garni": {
+  "fichier": "cousins-garni.jpg",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "cousins-cousin": {
+  "fichier": "cousins-cousin.jpg",
+  "auteur": "Wisi eu",
+  "licence": "CC0",
+  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File%3AFive_guys_aix_en_provence_2022.jpg"
+ },
+ "cousins-quinze": {
+  "fichier": "cousins-quinze.jpg",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "arches-sauce": {
+  "fichier": "arches-sauce.jpg",
+  "auteur": "Ser Amantio di Nicolao",
+  "licence": "CC0",
+  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
+  "source": "https://commons.wikimedia.org/wiki/File%3AMambo_dipping_sauce_at_McDonalds.jpg"
+ },
+ "arches-joyeux": {
+  "fichier": "arches-joyeux.png",
+  "auteur": "McDonald's",
+  "licence": "photo officielle",
+  "source": "https://www.mcdonalds.fr/nos-produits"
+ },
+ "capitaine-tenders": {
+  "fichier": "capitaine-tenders.jpg",
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
+ },
+ "capitaine-mais": {
+  "fichier": "capitaine-mais.jpg",
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
+ },
+ "capitaine-frites": {
+  "fichier": "capitaine-frites.jpg",
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
+ },
+ "rapido-nuggets": {
+  "fichier": "rapido-nuggets.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "cousins-blt": {
+  "fichier": "cousins-blt.jpg",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "roi-cheesebites": {
+  "fichier": "roi-cheesebites.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
+ },
+ "roi-soda": {
+  "fichier": "roi-soda.webp",
+  "auteur": "Burger King",
+  "licence": "photo officielle",
+  "source": "https://www.burgerking.fr/carte"
+ },
+ "capitaine-boxmaster": {
+  "fichier": "capitaine-boxmaster.jpg",
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
+ },
+ "capitaine-tower": {
+  "fichier": "capitaine-tower.jpg",
+  "auteur": "KFC",
+  "licence": "photo officielle",
+  "source": "https://www.kfc.fr/notre-carte"
+ },
+ "metro-tikka": {
+  "fichier": "metro-tikka.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
+ },
+ "metro-vege": {
+  "fichier": "metro-vege.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
+ },
+ "metro-chips": {
+  "fichier": "metro-chips.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
+ },
+ "metro-steak": {
+  "fichier": "metro-steak.png",
+  "auteur": "Subway",
+  "licence": "photo officielle",
+  "source": "https://subwayfrance.fr/menu"
+ },
+ "domino-savoyarde": {
+  "fichier": "domino-savoyarde.jpg",
+  "auteur": "Domino's Pizza",
+  "licence": "photo officielle",
+  "source": "https://www.dominos.fr/la-carte"
+ },
+ "rapido-potatoes": {
+  "fichier": "rapido-potatoes.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "rapido-long": {
+  "fichier": "rapido-long.jpg",
+  "auteur": "Quick",
+  "licence": "photo officielle",
+  "source": "https://www.quick.fr/produits"
+ },
+ "cousins-maison": {
+  "fichier": "cousins-maison.jpg",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "cousins-little": {
+  "fichier": "cousins-little.jpg",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "cousins-grille": {
+  "fichier": "cousins-grille.jpg",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "cousins-frites": {
+  "fichier": "cousins-frites.jpg",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "cousins-cajun": {
+  "fichier": "cousins-cajun.jpg",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
+ },
+ "cousins-seau": {
+  "fichier": "cousins-seau.jpg",
+  "auteur": "Five Guys",
+  "licence": "photo officielle",
+  "source": "https://www.fiveguys.fr/menu/"
  },
  "taco-croustillant": {
   "fichier": "taco-croustillant.jpg",
@@ -649,13 +948,6 @@
   "lienLicence": "https://creativecommons.org/licenses/by/2.0",
   "source": "https://commons.wikimedia.org/wiki/File%3ATaco_Bell_Chalupa_Supreme_(54363913328).jpg"
  },
- "taco-quesarito": {
-  "fichier": "taco-quesarito.jpg",
-  "auteur": "Willis Lam",
-  "licence": "CC BY-SA 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ATaco_Bell_Quesarito_(14735584857).jpg"
- },
  "taco-delights": {
   "fichier": "taco-delights.jpg",
   "auteur": "Phillip Pessar",
@@ -676,256 +968,5 @@
   "licence": "CC BY-SA 3.0",
   "lienLicence": "https://creativecommons.org/licenses/by-sa/3.0",
   "source": "https://commons.wikimedia.org/wiki/File%3ATaco_Bell_Mexican_Pizza%2C_Framingham_MA.jpg"
- },
- "taco-cloche": {
-  "fichier": "taco-cloche.jpg",
-  "auteur": "Jeramey Jannene from Milwaukee, WI, United States of America",
-  "licence": "CC BY 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ATaco_Bell_Drive_Thru_Sign_-_Flickr_-_compujeramey.jpg"
- },
- "rapido-colosse": {
-  "fichier": "rapido-colosse.jpg",
-  "auteur": "Lionel Allorge",
-  "licence": "CC BY-SA 3.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/3.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ABurger_Giant_au_Restaurant_Quick_%C3%A0_Massy_le_9_avril_2017_-_3.jpg"
- },
- "rapido-fondant": {
-  "fichier": "rapido-fondant.jpg",
-  "auteur": "Lionel Allorge",
-  "licence": "CC BY-SA 3.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/3.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ABurger_Giant_au_Restaurant_Quick_%C3%A0_Massy_le_9_avril_2017_-_1.jpg"
- },
- "rapido-cheese": {
-  "fichier": "rapido-cheese.jpg",
-  "auteur": "Lionel Allorge",
-  "licence": "CC BY-SA 3.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/3.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ACheeseburger_au_restaurant_Quick_%C3%A0_Coigni%C3%A8res_le_12_avril_2017_-_2.jpg"
- },
- "rapido-frites": {
-  "fichier": "rapido-frites.jpg",
-  "auteur": "Arnaud 25",
-  "licence": "Public domain",
-  "lienLicence": "",
-  "source": "https://commons.wikimedia.org/wiki/File%3AQuick_Burger_hamburgers_and_fries.jpg"
- },
- "rapido-supreme": {
-  "fichier": "rapido-supreme.jpg",
-  "auteur": "L. W. Yang",
-  "licence": "CC BY 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AThe_Giant_hamburger%2C_fries_and_soda_-_Quick.jpg"
- },
- "rapido-shake": {
-  "fichier": "rapido-shake.jpg",
-  "auteur": "jencu from bay area, usa",
-  "licence": "CC BY 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AVanilla_milkshake_at_Lunchbox_Laboratories.jpg"
- },
- "rapido-sauce": {
-  "fichier": "rapido-sauce.jpg",
-  "auteur": "anders pearson from new york, ny",
-  "licence": "CC BY-SA 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ABelgian_frites_with_andalouse_sauce.jpg"
- },
- "rapido-wrap": {
-  "fichier": "rapido-wrap.jpg",
-  "auteur": "Mack Male from Edmonton, AB, Canada",
-  "licence": "CC BY-SA 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AButter_Chicken_Wrap_from_Remedy.jpg"
- },
- "rapido-salade": {
-  "fichier": "rapido-salade.jpg",
-  "auteur": "Kgbo",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ASelection_of_salads_in_fast_food_outlet_in_Warsaw%2C_2019.jpg"
- },
- "rapido-sundae": {
-  "fichier": "rapido-sundae.jpg",
-  "auteur": "FASTILY (TALK)",
-  "licence": "CC BY-SA 3.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/3.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AIce_Cream_Sundae_1_2013-03-28.jpg"
- },
- "rapido-brownie": {
-  "fichier": "rapido-brownie.jpg",
-  "auteur": "Miansari66",
-  "licence": "CC0",
-  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-  "source": "https://commons.wikimedia.org/wiki/File%3ABrownie_Dessert.jpg"
- },
- "rapido-soda": {
-  "fichier": "rapido-soda.jpg",
-  "auteur": "Summi from German Wikipedia",
-  "licence": "Public domain",
-  "lienLicence": "",
-  "source": "https://commons.wikimedia.org/wiki/File%3ACoca-Cola_Glas_mit_Eis.jpg"
- },
- "rapido-fish": {
-  "fichier": "rapido-fish.jpg",
-  "auteur": "ProjectManhattan",
-  "licence": "CC BY-SA 3.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/3.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AFish_burger.jpg"
- },
- "rapido-belge": {
-  "fichier": "rapido-belge.jpg",
-  "auteur": "Andy Li",
-  "licence": "CC0",
-  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-  "source": "https://commons.wikimedia.org/wiki/File%3AHam_%26_Cheese_Toastie_-_Costa_Coffee_2023-10-04.jpg"
- },
- "rapido-pilote": {
-  "fichier": "rapido-pilote.jpg",
-  "auteur": "Jean-noël Lafargue (Jean-no)",
-  "licence": "Public domain",
-  "lienLicence": "",
-  "source": "https://commons.wikimedia.org/wiki/File%3AQuick_drive_takeway_montigny.jpg"
- },
- "rapido-turbo": {
-  "fichier": "rapido-turbo.jpg",
-  "auteur": "Björn Láczay",
-  "licence": "CC BY 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AQuick_Brussels.jpg"
- },
- "cousins-hotdog": {
-  "fichier": "cousins-hotdog.jpg",
-  "auteur": "Misaochan",
-  "licence": "CC BY-SA 3.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/3.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AHot_dog_2.jpg"
- },
- "cousins-cheesedog": {
-  "fichier": "cousins-cheesedog.jpg",
-  "auteur": "Andy Li",
-  "licence": "CC0",
-  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-  "source": "https://commons.wikimedia.org/wiki/File%3ACheese_Dog_-_Five_Guys_2023-10-21.jpg"
- },
- "cousins-cacahuetes": {
-  "fichier": "cousins-cacahuetes.jpg",
-  "auteur": "Ser Amantio di Nicolao",
-  "licence": "CC0",
-  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-  "source": "https://commons.wikimedia.org/wiki/File%3APeanuts_at_Five_Guys.jpg"
- },
- "cousins-soda": {
-  "fichier": "cousins-soda.jpg",
-  "auteur": "Mbrstooge (talk)",
-  "licence": "CC0",
-  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-  "source": "https://commons.wikimedia.org/wiki/File%3ACoca_Cola_Freestyle.JPG"
- },
- "cousins-veggie": {
-  "fichier": "cousins-veggie.jpg",
-  "auteur": "Andy Li",
-  "licence": "CC0",
-  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-  "source": "https://commons.wikimedia.org/wiki/File%3AVeggie_Sandwich_with_Cheese_-_Five_Guys_2023-10-21.jpg"
- },
- "cousins-cheese": {
-  "fichier": "cousins-cheese.jpg",
-  "auteur": "Bobak Ha'Eri",
-  "licence": "CC BY 3.0",
-  "lienLicence": "https://creativecommons.org/licenses/by/3.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AFive_Guys_cheeseburger.jpg"
- },
- "cousins-bacon": {
-  "fichier": "cousins-bacon.jpg",
-  "auteur": "Kevin Jarrett",
-  "licence": "CC BY 2.0",
-  "lienLicence": "https://creativecommons.org/licenses/by/2.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AFive_Guys_Triple_Bacon_Cheeseburger.jpg"
- },
- "cousins-baconcheese": {
-  "fichier": "cousins-baconcheese.jpg",
-  "auteur": "Ser Amantio di Nicolao",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ARegular_bacon_cheeseburger_from_Five_Guys.jpg"
- },
- "cousins-shake": {
-  "fichier": "cousins-shake.jpg",
-  "auteur": "Industrialerror",
-  "licence": "CC0",
-  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-  "source": "https://commons.wikimedia.org/wiki/File%3AFive_Guys_Milkshake.jpg"
- },
- "cousins-garni": {
-  "fichier": "cousins-garni.jpg",
-  "auteur": "Ser Amantio di Nicolao",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ARegular_bacon_cheeseburger_from_Five_Guys_3.jpg"
- },
- "cousins-cousin": {
-  "fichier": "cousins-cousin.jpg",
-  "auteur": "Wisi eu",
-  "licence": "CC0",
-  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-  "source": "https://commons.wikimedia.org/wiki/File%3AFive_guys_aix_en_provence_2022.jpg"
- },
- "cousins-quinze": {
-  "fichier": "cousins-quinze.jpg",
-  "auteur": "ウィ貴公子",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3ACheeseburger_Five_Guys_QV_Melbourne_CBD_May_17%2C_2025_202505172000_IMG_8967.jpg"
- },
- "arches-sauce": {
-  "fichier": "arches-sauce.jpg",
-  "auteur": "Ser Amantio di Nicolao",
-  "licence": "CC0",
-  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-  "source": "https://commons.wikimedia.org/wiki/File%3AMambo_dipping_sauce_at_McDonalds.jpg"
- },
- "arches-joyeux": {
-  "fichier": "arches-joyeux.png",
-  "auteur": "McDonald's",
-  "licence": "photo officielle",
-  "source": "https://www.mcdonalds.fr/nos-produits"
- },
- "capitaine-tenders": {
-  "fichier": "capitaine-tenders.jpg",
-  "auteur": "Cbhavani02",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AFried_strips.jpg"
- },
- "capitaine-mais": {
-  "fichier": "capitaine-mais.jpg",
-  "auteur": "NeoBatfreak",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AAir_fried_corn-on-the-cob_(United_States).jpg"
- },
- "capitaine-frites": {
-  "fichier": "capitaine-frites.jpg",
-  "auteur": "B.Korlah",
-  "licence": "CC BY-SA 4.0",
-  "lienLicence": "https://creativecommons.org/licenses/by-sa/4.0",
-  "source": "https://commons.wikimedia.org/wiki/File%3AKFC_Chicken_and_chips.jpg"
- },
- "rapido-nuggets": {
-  "fichier": "rapido-nuggets.png",
-  "auteur": "gnokii at openclipart.org",
-  "licence": "CC0",
-  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-  "source": "https://commons.wikimedia.org/wiki/File%3AChicken-nuggets.svg"
- },
- "cousins-blt": {
-  "fichier": "cousins-blt.jpg",
-  "auteur": "Evelyn-rose",
-  "licence": "CC0",
-  "lienLicence": "http://creativecommons.org/publicdomain/zero/1.0/deed.en",
-  "source": "https://commons.wikimedia.org/wiki/File%3ABLT-sandwich-1.jpg"
  }
 }
