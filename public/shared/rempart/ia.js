@@ -17,7 +17,8 @@ export function couverture(carte, emp, portee = 3) {
     let n = 0;
     for (let d = 0; d < ch.total; d += 0.25) {
       const q = surChemin(ch, d);
-      if ((q.x - emp.x) ** 2 + (q.z - emp.z) ** 2 <= r2) n++;
+      // Sur une carte à murs, seuls comptent les bouts de chemin que l'emplacement voit.
+      if ((q.x - emp.x) ** 2 + (q.z - emp.z) ** 2 <= r2 && (!carte.murs || carte.voitDe(emp.x, emp.z, Math.floor(q.x) + 0.5, Math.floor(q.z) + 0.5))) n++;
     }
     return n;
   };
@@ -26,7 +27,7 @@ export function couverture(carte, emp, portee = 3) {
   return { sol, air };
 }
 
-const PLAN = ['rafale', 'mortier', 'givre', 'perce', 'rafale', 'foudre', 'braise', 'harpon', 'mortier', 'piegeur', 'perce', 'foudre', 'givre', 'harpon', 'rafale', 'braise', 'piegeur', 'mortier', 'perce', 'foudre'];
+const PLAN = ['rafale', 'mortier', 'givre', 'perce', 'garnison', 'rafale', 'foudre', 'braise', 'harpon', 'rayon', 'mortier', 'piegeur', 'aimant', 'perce', 'foudre', 'givre', 'harpon', 'rafale', 'braise', 'garnison', 'piegeur', 'rayon', 'mortier', 'perce', 'foudre'];
 
 /**
  * @param {object} p  la partie
@@ -93,7 +94,10 @@ export function jouerIA(p, ia) {
   if (construireMaintenant) {
     let type = ia.plan[ia.n % ia.plan.length];
     // Des volants arrivent et peu de tours visent le ciel : il en ajoute une.
-    const proch = apercuVague(p, Math.max(0, p.vague - (p.ennemis.length ? 1 : 0))) || {};
+    // La vague en cours et la suivante : il prépare ses défenses à l'avance.
+    const cur = Math.max(0, p.vague - (p.ennemis.length ? 1 : 0));
+    const proch = {};
+    for (const i of [cur, cur + 1]) for (const [ty, n] of Object.entries(apercuVague(p, i) || {})) proch[ty] = (proch[ty] || 0) + n;
     const volants = Object.entries(proch).reduce((s, [ty, n]) => s + (ENNEMIS[ty].vole ? n : 0), 0);
     const total = Object.values(proch).reduce((s, n) => s + n, 0) || 1;
     const air = p.tours.filter(t => TOURS[t.type].air).length;

@@ -203,6 +203,46 @@ const TETES = {
     piece(boule(0.06, 6, 4), lueur('#ff3a1a', 2), 0, 0.14, 0.33, canons);
     return { canons };
   },
+  aimant(n, t, b) {
+    // Un grand aimant en fer à cheval sur un pilier.
+    piece(cyl(0.1, 0.16, 0.4, 8), METAL_SOMBRE, 0, 0.2, 0, t);
+    const aimant = new THREE.Group();
+    aimant.position.y = 0.62;
+    t.add(aimant);
+    const rouge = b === 0 ? lueur('#5ab8ff', 0.6) : mat('aimantRouge', { color: '#d03a3a', metalness: 0.4 });
+    const fer = piece(geo('ferCheval', () => new THREE.TorusGeometry(0.2 + n * 0.02, 0.07, 8, 16, Math.PI)), rouge, 0, 0, 0, aimant);
+    fer.rotation.z = Math.PI;
+    for (const s of [-1, 1]) piece(boite(0.15, 0.12, 0.15), mat('aimantBout', { color: '#d8dce4', metalness: 0.8 }), s * (0.2 + n * 0.02), 0.04, 0, aimant);
+    if (n >= 2) piece(tore(0.12, 0.02), n === 3 ? OR : CUIVRE, 0, -0.32, 0, t).rotation.x = Math.PI / 2;
+    return { aimant, fixe: true };
+  },
+  garnison(n, t) {
+    // Un petit poste de garde : murs, toit, et un étendard.
+    const pierre = mat('poste', { color: n === 1 ? '#8a6a4a' : '#9a9aa8' });
+    piece(boite(0.5, 0.3, 0.5), pierre, 0, 0.15, 0, t);
+    for (const [x, z] of [[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2]]) piece(boite(0.1, 0.1, 0.1), pierre, x, 0.35, z, t);
+    const toit = piece(cone(0.32, 0.3, 4), n === 3 ? OR : mat('toit', { color: '#7a3a2a' }), 0, 0.5, 0, t);
+    toit.rotation.y = Math.PI / 4;
+    piece(cyl(0.015, 0.015, 0.5, 4), METAL, 0.22, 0.55, 0.22, t);
+    const etendard = piece(geo('etendard', () => new THREE.PlaneGeometry(0.22, 0.14)), mat('etendardMat', { color: '#3a5aa8', side: THREE.DoubleSide }), 0.33, 0.72, 0.22, t);
+    etendard.castShadow = false;
+    return { etendard, fixe: true };
+  },
+  rayon(n, t, b) {
+    // Un trépied et une lentille de cristal d'ambre.
+    for (let i = 0; i < 3; i++) {
+      const a = i * Math.PI * 2 / 3;
+      const pied = piece(cyl(0.02, 0.03, 0.4, 4), n === 3 ? OR : METAL, Math.cos(a) * 0.12, 0.18, Math.sin(a) * 0.12, t);
+      pied.rotation.z = Math.cos(a) * 0.3; pied.rotation.x = -Math.sin(a) * 0.3;
+    }
+    const canons = new THREE.Group();
+    canons.position.y = 0.42;
+    t.add(canons);
+    const lentille = piece(octa(0.12 + n * 0.02), lueur(b === 0 ? '#ff8af0' : '#ffc83a', 1.6), 0, 0.05, 0.08, canons);
+    lentille.scale.set(1, 1, 0.6);
+    piece(tore(0.13 + n * 0.02, 0.02), n >= 2 ? OR : CUIVRE, 0, 0.05, 0.08, canons);
+    return { canons, lentille };
+  },
   foudre(n, t) {
     piece(cyl(0.09, 0.15, 0.62, 8), CUIVRE, 0, 0.31, 0, t);
     for (let i = 0; i <= n; i++) piece(tore(0.19 - i * 0.025, 0.035), i % 2 ? METAL : CUIVRE, 0, 0.14 + i * 0.15, 0, t).rotation.x = Math.PI / 2;
@@ -263,6 +303,9 @@ export function animerTour(m, t, dt, angle) {
   if (p.flamme) { p.flamme.scale.set(1, 1 + m.recul * 2.5 + Math.sin(t * 30) * 0.15, 1); p.flamme.position.z = 0.44 + m.recul * 0.18; }
   if (p.faisceau) p.faisceau.rotation.y += dt * 1.4;
   if (p.lampe) p.lampe.scale.setScalar(1 + Math.sin(t * 4) * 0.06);
+  if (p.aimant) p.aimant.scale.setScalar(1 + m.recul * 0.25);
+  if (p.etendard) p.etendard.rotation.y = Math.sin(t * 3) * 0.3;
+  if (p.lentille) p.lentille.rotation.z += dt * 2;
   if (p.couronne) { p.couronne.rotation.y += dt * 1.6; p.couronne.position.y = m.hauteur / 1.22 + 0.5 + Math.sin(t * 2) * 0.05; }
   // Apparition : la tour sort de terre avec un petit rebond.
   if (m.apparition < 1) {
@@ -574,6 +617,81 @@ const ENNEMIS3D = {
     });
     return { brasDouble: bras, haut: 2.5, rythme: 2 };
   },
+  brouilleur(g, m) {
+    // Une antenne parabolique sur quatre pattes.
+    piece(boite(0.36, 0.18, 0.36), m('#4a4a5a', { metalness: 0.5 }), 0, 0.3, 0, g);
+    const parabole = piece(geo('parabole', () => new THREE.SphereGeometry(0.2, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2)), m('#9a9ab0', { metalness: 0.6, side: THREE.DoubleSide }), 0, 0.5, 0.05, g);
+    parabole.rotation.x = -2.2;
+    const antenne = piece(boule(0.05, 6, 4), lueur('#c86aff', 2.2), 0, 0.62, 0.18, g);
+    antenne.castShadow = false;
+    yeux(g, '#c86aff', 0.08, 0.34, 0.19, 0.03);
+    return { pattes: pattes(g, 4, m(FER), 0.16, 0.24, 0.22, 0.04), haut: 0.8, rythme: 7, antenne };
+  },
+  galopin(g, m) {
+    // Un rat de ferraille, long et nerveux.
+    const corps = piece(boule(0.15, 8, 6), m('#7a6a5a'), 0, 0.2, 0, g);
+    corps.scale.set(0.9, 0.8, 1.6);
+    piece(boule(0.1, 8, 6), m('#6a5a4a'), 0, 0.24, 0.24, g);
+    for (const s of [-1, 1]) piece(boule(0.05, 6, 4), m('#9a7a6a'), s * 0.07, 0.33, 0.2, g);
+    yeux(g, '#ff5a3a', 0.045, 0.27, 0.32, 0.025);
+    const queue = piece(cyl(0.01, 0.025, 0.36, 4), m(FER), 0, 0.22, -0.32, g);
+    queue.rotation.x = -1.3;
+    return { pattes: pattes(g, 4, m(FER), 0.09, 0.2, 0.14, 0.03), haut: 0.5, rythme: 20, queue };
+  },
+  givrin(g, m) {
+    // Une carapace prise dans le givre, hérissée de cristaux.
+    const corps = piece(boule(0.27, 10, 8), m('#b8d8ec', { metalness: 0.3, roughness: 0.3 }), 0, 0.32, 0, g);
+    corps.scale.set(1, 0.85, 1.1);
+    for (let i = 0; i < 6; i++) {
+      const a = i * Math.PI / 3;
+      const pic = piece(cone(0.05, 0.22, 4), GLACE, Math.cos(a) * 0.18, 0.48, Math.sin(a) * 0.18, g);
+      pic.rotation.z = -Math.cos(a) * 0.5; pic.rotation.x = Math.sin(a) * 0.5;
+    }
+    yeux(g, '#9af0ff', 0.08, 0.36, 0.26, 0.035);
+    return { pattes: pattes(g, 4, m('#6a8aa0'), 0.2, 0.26, 0.2), haut: 0.8, rythme: 7 };
+  },
+  ruche(g, m) {
+    // Une ruche de fer qui vole, des trous sombres et deux paires d'ailes.
+    const corps = piece(boule(0.32, 10, 8), m('#a8783a', { metalness: 0.3 }), 0, 0, 0, g);
+    corps.scale.set(1, 1.15, 1);
+    for (const y of [-0.15, 0, 0.15]) piece(cyl(0.33 - Math.abs(y) * 0.4, 0.33 - Math.abs(y) * 0.4, 0.04, 12), m(ROUILLE_SOMBRE), 0, y, 0, g);
+    for (let i = 0; i < 4; i++) {
+      const a = i * Math.PI / 2 + 0.4;
+      piece(boule(0.05, 6, 4), m('#1a120a'), Math.cos(a) * 0.3, 0.05, Math.sin(a) * 0.3, g);
+    }
+    const aile = geo('aileRuche', () => new THREE.PlaneGeometry(0.4, 0.18));
+    const matAile = mat('aileRuche', { color: '#f0e8c8', transparent: true, opacity: 0.5, side: THREE.DoubleSide, roughness: 0.2 });
+    const ailes = [];
+    for (const z of [0.1, -0.12]) for (const s of [-1, 1]) {
+      const pivot = new THREE.Group();
+      pivot.position.set(s * 0.2, 0.25, z);
+      const a = piece(aile, matAile, s * 0.2, 0, 0, pivot);
+      a.rotation.x = -Math.PI / 2;
+      a.castShadow = false;
+      g.add(pivot);
+      ailes.push({ pivot, s });
+    }
+    return { ailes, haut: 0.9, vol: true };
+  },
+  golem(g, m) {
+    // Un géant d'obsidienne aux fissures violettes.
+    const obs = m('#1a1620', { metalness: 0.7, roughness: 0.2 }), fissure = lueur('#a04aff', 1.8);
+    for (const s of [-1, 1]) piece(boite(0.38, 0.8, 0.42), obs, s * 0.38, 0.4, 0, g);
+    piece(boite(1.15, 1.0, 0.75), obs, 0, 1.3, 0, g);
+    piece(boite(0.06, 0.8, 0.02), fissure, -0.2, 1.3, 0.38, g).rotation.z = 0.3;
+    piece(boite(0.06, 0.6, 0.02), fissure, 0.25, 1.25, 0.38, g).rotation.z = -0.4;
+    piece(boite(0.5, 0.45, 0.45), obs, 0, 2.0, 0.05, g);
+    yeux(g, '#c86aff', 0.12, 2.05, 0.28, 0.06);
+    const bras = [-1, 1].map(s => {
+      const b = new THREE.Group();
+      b.position.set(s * 0.75, 1.7, 0);
+      piece(boite(0.32, 1.0, 0.32), obs, 0, -0.5, 0, b);
+      piece(boite(0.06, 0.6, 0.02), fissure, 0, -0.5, 0.17, b);
+      g.add(b);
+      return b;
+    });
+    return { brasDouble: bras, haut: 2.4, rythme: 2 };
+  },
   broyeur(g, m) {
     for (const s of [-1, 1]) piece(boite(0.24, 0.34, 1.2), m('#262626'), s * 0.5, 0.17, 0, g);
     piece(boite(0.86, 0.6, 1.0), m('#5a4a3e', { metalness: 0.45 }), 0, 0.6, -0.05, g);
@@ -623,7 +741,7 @@ export function creerEnnemi(type, taille) {
   groupe.add(corps);
   const { liste, m } = matsPropres();
   const anim = ENNEMIS3D[type](corps, m);
-  const echelle = ['broyeur', 'nuee', 'hydre', 'seigneur', 'dirigeable', 'colosse', 'bastion'].includes(type) ? 1 : taille / 0.45;
+  const echelle = ['broyeur', 'nuee', 'hydre', 'seigneur', 'dirigeable', 'colosse', 'bastion', 'golem', 'ruche'].includes(type) ? 1 : taille / 0.45;
   corps.scale.setScalar(echelle);
   return { groupe, corps, anim, mats: liste, haut: anim.haut * echelle, echelle, flash: 0, phase: Math.random() * 10 };
 }
@@ -632,8 +750,20 @@ const BLEU = new THREE.Color('#4aa8ff'), BLANC = new THREE.Color('#ffffff'), NOI
 
 /** Anime un Rouilleux : pattes, ailes, rebonds ; teinte d'un coup reçu ou du gel. */
 const BULLE = new THREE.MeshBasicMaterial({ color: '#6ab8ff', transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending });
+const OBSIDIENNE = new THREE.MeshBasicMaterial({ color: '#b06aff', transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending });
 
-export function animerEnnemi(m, t, dt, { vitesse = 1, ralenti = 0, cache = false, sous = false, bouclier = 0 } = {}) {
+/** Un garde de Garnison : armure, bouclier, lance. */
+export function creerGarde() {
+  const g = new THREE.Group();
+  piece(geo('capsGarde', () => new THREE.CapsuleGeometry(0.09, 0.18, 4, 8)), METAL, 0, 0.2, 0, g);
+  piece(boule(0.08, 8, 6), mat('casque', { color: '#c8ccd8', metalness: 0.8 }), 0, 0.42, 0, g);
+  piece(boite(0.16, 0.2, 0.03), mat('ecu', { color: '#3a5aa8' }), 0, 0.22, 0.11, g);
+  const lance = piece(cyl(0.012, 0.012, 0.6, 4), BOIS, 0.12, 0.3, 0.05, g);
+  lance.rotation.x = 0.3;
+  return g;
+}
+
+export function animerEnnemi(m, t, dt, { vitesse = 1, ralenti = 0, cache = false, sous = false, bouclier = 0, carapace = false } = {}) {
   const a = m.anim, tt = t + m.phase;
   // Le Furtif : presque invisible tant qu'aucun Phare ne l'éclaire.
   if (a.furtif) for (const x of m.mats) x.opacity = cache ? 0.28 : 0.9;
@@ -642,13 +772,14 @@ export function animerEnnemi(m, t, dt, { vitesse = 1, ralenti = 0, cache = false
   m.groupe.position.y -= m.enfoui * 0.6;
   if (a.foret) a.foret.rotation.z += dt * (12 + m.enfoui * 20);
   // La bulle d'un bouclier de Pavois.
-  if (bouclier > 0 && !m.bulle) {
+  if (a.antenne) a.antenne.scale.setScalar(1 + Math.sin(t * 6) * 0.3);
+  if ((bouclier > 0 || carapace) && !m.bulle) {
     m.bulle = new THREE.Mesh(geo('bulle', () => new THREE.IcosahedronGeometry(1, 1)), BULLE);
     m.bulle.position.y = m.haut * 0.45;
     m.bulle.scale.setScalar(Math.max(0.4, m.haut * 0.6));
     m.groupe.add(m.bulle);
   }
-  if (m.bulle) { m.bulle.visible = bouclier > 0; m.bulle.rotation.y += dt; }
+  if (m.bulle) { m.bulle.visible = bouclier > 0 || carapace; m.bulle.material = carapace ? OBSIDIENNE : BULLE; m.bulle.rotation.y += dt; }
   const r = a.rythme || 8;
   if (a.pattes) for (const p of a.pattes) p.pivot.rotation.x = Math.sin(tt * r * vitesse + p.phase) * 0.6;
   if (a.ailes) for (const w of a.ailes) w.pivot.rotation.z = w.s * Math.sin(tt * (a.vol && m.echelle > 1.5 ? 20 : 42)) * 0.6;

@@ -17,8 +17,8 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const mobile = matchMedia('(pointer: coarse)').matches;
 
-export const ICONES = { rodeur: '🪲', filou: '💨', cuirasse: '🛡️', bourdon: '🐝', grappe: '🫧', grappillon: '🫧', tisseur: '💚', furtif: '👻', fouisseur: '🪱', pavois: '🔰', bondisseur: '🦗', dirigeable: '🎈', mue: '🦀', broyeur: '⚙️', nuee: '👑', hydre: '🐉', tete: '🐍', seigneur: '💀', cliquet: '🔩', bastion: '🧱', reparateur: '🔧', scarabee: '🐞', colosse: '🗿' };
-const COULEUR_ENNEMI = { rodeur: '#a0522d', filou: '#c0703a', cuirasse: '#5b5f66', bourdon: '#d9a53a', grappe: '#5f9a6e', grappillon: '#6fb07e', tisseur: '#5b3a5a', furtif: '#2a2440', fouisseur: '#7a5a3a', pavois: '#4a5a7a', bondisseur: '#8a9a3a', dirigeable: '#a87a4a', mue: '#4f8a6a', broyeur: '#5a4a3e', nuee: '#3a2350', hydre: '#3a5a4a', tete: '#3a5a4a', seigneur: '#7a2a1a', cliquet: '#b0884a', bastion: '#6a6a72', reparateur: '#c89a4a', scarabee: '#c8a040', colosse: '#8a4a24' };
+export const ICONES = { rodeur: '🪲', filou: '💨', cuirasse: '🛡️', bourdon: '🐝', grappe: '🫧', grappillon: '🫧', tisseur: '💚', furtif: '👻', fouisseur: '🪱', pavois: '🔰', bondisseur: '🦗', dirigeable: '🎈', mue: '🦀', broyeur: '⚙️', nuee: '👑', hydre: '🐉', tete: '🐍', seigneur: '💀', cliquet: '🔩', bastion: '🧱', reparateur: '🔧', scarabee: '🐞', colosse: '🗿', brouilleur: '📡', galopin: '🐀', givrin: '🧊', ruche: '🪺', golem: '🌑' };
+const COULEUR_ENNEMI = { rodeur: '#a0522d', filou: '#c0703a', cuirasse: '#5b5f66', bourdon: '#d9a53a', grappe: '#5f9a6e', grappillon: '#6fb07e', tisseur: '#5b3a5a', furtif: '#2a2440', fouisseur: '#7a5a3a', pavois: '#4a5a7a', bondisseur: '#8a9a3a', dirigeable: '#a87a4a', mue: '#4f8a6a', broyeur: '#5a4a3e', nuee: '#3a2350', hydre: '#3a5a4a', tete: '#3a5a4a', seigneur: '#7a2a1a', cliquet: '#b0884a', bastion: '#6a6a72', reparateur: '#c89a4a', scarabee: '#c8a040', colosse: '#8a4a24', brouilleur: '#4a4a5a', galopin: '#7a6a5a', givrin: '#b8d8ec', ruche: '#a8783a', golem: '#1a1620' };
 const NOMS_SPECIAUX = { canons: 'Deux canons', zone: 'Gel en zone', brise: 'Brise-armure' };
 
 /* ------------------------------------------------------------ état */
@@ -36,7 +36,7 @@ let bossEnVie = null;
 let ecran = 'menu';
 
 const progression = (() => {
-  try { return { etoiles: {}, ...JSON.parse(localStorage.getItem('rempart.progression') || '{}') }; } catch { return { etoiles: {} }; }
+  try { return { etoiles: {}, records: {}, ...JSON.parse(localStorage.getItem('rempart.progression') || '{}') }; } catch { return { etoiles: {}, records: {} }; }
 })();
 const vus = new Set((() => { try { return JSON.parse(localStorage.getItem('rempart.vus') || '[]'); } catch { return []; } })());
 const sauver = () => {
@@ -72,13 +72,19 @@ function allerMenu() {
   fermerPanneau();
   if (!demo) demarrerDemo();
   $('#campagne-info').textContent = `⭐ ${totalEtoiles()} / ${NIVEAUX.length * 3} étoiles`;
+  const meilleur = Math.max(0, ...Object.values(progression.records || {}));
+  $('#sansfin-info').textContent = meilleur ? `Record : ${meilleur} vagues` : 'Des vagues sans fin, un boss toutes les 10';
   montrer('s-menu');
 }
 
-function allerCarte() {
+let modeCarte = 'campagne';
+function allerCarte(mode = modeCarte) {
+  modeCarte = mode === 'sansfin' ? 'sansfin' : 'campagne';
+  const sansFin = modeCarte === 'sansfin';
   fermerModales();
   fermerPanneau();
   if (!demo) demarrerDemo();
+  $('#titre-carte').textContent = sansFin ? 'Mode sans fin : choisissez un lieu' : 'La vallée d’Ambrelune';
   const liste = $('#liste-niveaux');
   liste.innerHTML = '';
   for (const n of NIVEAUX) {
@@ -88,14 +94,20 @@ function allerCarte() {
     b.style.setProperty('--art', `linear-gradient(160deg, ${a.horizon}, ${a.herbe} 45%, ${a.ciel} 100%)`);
     const e = progression.etoiles[n.id] || 0;
     const boss = [...new Set(n.vagues.flat().filter(g => ENNEMIS[g.type].boss).map(g => ENNEMIS[g.type].nom))];
-    b.innerHTML = `<span class="num">${n.id}</span>
+    const rec = (progression.records || {})[n.id];
+    b.innerHTML = sansFin
+      ? `<span class="num">${n.id}</span>
+      <span class="etoiles-mini record">${rec ? `🏆 ${rec}` : '♾️'}</span>
+      <span class="nom">${n.nom}</span>
+      <span class="details">${rec ? `Record : ${rec} vagues` : 'Pas encore de record'} · toutes les tours${n.murs ? ' · les montagnes cachent la vue' : ''}</span>`
+      : `<span class="num">${n.id}</span>
       <span class="etoiles-mini">${[1, 2, 3].map(i => `<span class="${i <= e ? 'on' : ''}">★</span>`).join('')}</span>
       <span class="nom">${n.nom}</span>
       <span class="details">${n.vagues.length} vagues · ${n.tours.map(t => TOURS[t].icone).join(' ')}${boss.length ? ` · ${boss.join(', ')}` : ''}</span>`;
-    b.addEventListener('click', () => { son.jouer('clic'); lancerNiveau(n.id); });
+    b.addEventListener('click', () => { son.jouer('clic'); lancerNiveau(n.id, sansFin); });
     liste.append(b);
   }
-  $('#total-etoiles').textContent = `⭐ ${totalEtoiles()} / ${NIVEAUX.length * 3}`;
+  $('#total-etoiles').textContent = sansFin ? `🏆 ${Math.max(0, ...Object.values(progression.records || {}))} vagues` : `⭐ ${totalEtoiles()} / ${NIVEAUX.length * 3}`;
   montrer('s-carte');
 }
 
@@ -130,12 +142,12 @@ function remplirCodex(onglet = 'tours') {
 }
 
 /* ------------------------------------------------------------ partie */
-function lancerNiveau(id) {
+function lancerNiveau(id, sansFin = false) {
   fermerModales();
   fermerPanneau();
   demo = false;
   son.rendreMuet(false);
-  partie = P.creerPartie(id, { graine: (Date.now() % 1e9) | 0 });
+  partie = P.creerPartie(id, { graine: (Date.now() % 1e9) | 0, sansFin });
   ia = null;
   monde.charger(partie);
   monde.camera.tourner(0);
@@ -149,9 +161,16 @@ function lancerNiveau(id) {
   majHUD(true);
   // La présentation du lieu.
   const def = partie.def, avant = defNiveau(id - 1);
-  $('#intro-num').textContent = `Lieu ${id} sur ${NIVEAUX.length}`;
+  $('#intro-num').textContent = sansFin ? `Mode sans fin · lieu ${id}` : `Lieu ${id} sur ${NIVEAUX.length}`;
   $('#intro-nom').textContent = def.nom;
   $('#intro-texte').textContent = def.intro;
+  if (sansFin) {
+    const rec = (progression.records || {})[id];
+    $('#intro-texte').textContent = `Les Rouilleux ne s’arrêtent jamais : chaque vague est plus forte que la précédente, et un boss arrive toutes les 10 vagues. Toutes les tours sont disponibles. Tenez le plus longtemps possible${rec ? ` : votre record ici est de ${rec} vagues` : ''}.`;
+    $('#intro-infos').innerHTML = `<div class="ligne"><span>Vos tours</span>${def.tours.map(t => `<span class="pastille">${TOURS[t].icone} ${TOURS[t].nom}</span>`).join('')}</div>`;
+    $('#m-intro').hidden = false;
+    return;
+  }
   const types = [...new Set(def.vagues.flat().map(g => g.type))];
   const avantTypes = new Set(avant ? avant.vagues.flat().map(g => g.type) : []);
   $('#intro-infos').innerHTML = `
@@ -161,6 +180,23 @@ function lancerNiveau(id) {
 }
 
 function finir() {
+  if (partie.sansFin) {
+    const tenu = Math.max(0, partie.vague - 1);
+    const id = partie.niveau;
+    progression.records = progression.records || {};
+    const ancien = progression.records[id] || 0;
+    const record = tenu > ancien;
+    if (record) { progression.records[id] = tenu; sauver(); }
+    fermerPanneau();
+    $('#fin-titre').textContent = record ? 'Nouveau record !' : 'Le Cœur s’est éteint…';
+    $('#fin-etoiles').hidden = true;
+    $('#fin-texte').innerHTML = `Vous avez tenu <b>${tenu} vague${tenu > 1 ? 's' : ''}</b>.<br>${record ? (ancien ? `L’ancien record était de ${ancien}.` : 'C’est votre premier record sur ce lieu.') : `Record sur ce lieu : ${ancien} vagues.`}<br>${partie.stats.tues} Rouilleux détruits.`;
+    $('#b-suivant').hidden = true;
+    $('#b-rejouer').querySelector('b').textContent = '↻ Rejouer';
+    if (record) son.jouer('victoire');
+    setTimeout(() => { $('#m-fin').hidden = false; }, 1400);
+    return;
+  }
   const gagne = partie.phase === 'victoire';
   const e = P.etoiles(partie);
   if (gagne) {
@@ -202,7 +238,7 @@ let dernierHUD = {};
 function majHUD(force = false) {
   if (!partie || demo) return;
   const p = partie;
-  const h = { vies: p.vies, or: p.or, vague: `${p.vague}/${p.totalVagues}` };
+  const h = { vies: p.vies, or: p.or, vague: p.sansFin ? `${p.vague} ♾️` : `${p.vague}/${p.totalVagues}` };
   if (force || h.vies !== dernierHUD.vies) $('#h-vies').textContent = h.vies;
   if (force || h.or !== dernierHUD.or) {
     $('#h-or').textContent = h.or;
@@ -332,8 +368,14 @@ function statsHTML(t) {
     lignes.push(['Portée', s.portee, plus('portee')]);
     lignes.push(['Révèle', 'les Furtifs', '']);
   } else {
-    lignes.push([s.aura ? 'Dégâts/s' : 'Dégâts', s.degats, plus('degats')]);
-    if (!s.aura) lignes.push(['Tirs/s', s.cadence, plus('cadence')]);
+    const continu = s.aura || def.continu;
+    lignes.push([continu ? 'Dégâts/s' : 'Dégâts', s.degats, plus('degats')]);
+    if (!continu) lignes.push(['Tirs/s', s.cadence, plus('cadence')]);
+    if (s.recul) lignes.push(['Recul', `${s.recul} cases`, plus('recul', v => `${v} cases`)]);
+    if (s.cloue) lignes.push(['Volants cloués', `${s.cloue} s`, '']);
+    if (s.gardes) lignes.push(['Gardes', s.gardes, plus('gardes')], ['PV garde', s.pvGarde, plus('pvGarde')]);
+    if (s.max) lignes.push(['Chauffe', `×${s.max}`, plus('max', v => `×${v}`)]);
+    if (s.cibles > 1) lignes.push(['Cibles', s.cibles, '']);
     lignes.push(['Portée', s.portee, plus('portee')]);
     if (s.rayon) lignes.push(['Souffle', s.rayon, plus('rayon')]);
     if (s.brulure) lignes.push(['Brûlure', `${s.brulure}/s`, plus('brulure', v => `${v}/s`)]);
@@ -448,6 +490,11 @@ function traiter(evts) {
       case 'traverse': son.jouer('impactLourd'); break;
       case 'bouclier': son.jouer('bouclier'); break;
       case 'fouit': son.jouer('fouit'); break;
+      case 'aimant': son.jouer('aimant'); break;
+      case 'brouille': son.jouer('brouille'); break;
+      case 'rayon': son.jouer('rayon'); break;
+      case 'gardeTombe': son.jouer('garde'); break;
+      case 'carapace': son.jouer('bouclier'); break;
       case 'saut': son.jouer('saut'); break;
       case 'mine': son.jouer('mine'); break;
       case 'rage': son.jouer('boss'); annoncer(`${ENNEMIS[e.type].nom} enrage !`, 'Plus rapide, plus solide', true); break;
@@ -471,7 +518,7 @@ function traiter(evts) {
         son.jouer('vague');
         if (e.boss.length) {
           setTimeout(() => son.jouer('boss'), 400);
-          annoncer(`${ENNEMIS[e.boss[0]].nom} approche !`, `Vague ${e.n} / ${e.total}`, true);
+          annoncer(`${ENNEMIS[e.boss[0]].nom} approche !`, `Vague ${e.n}${Number.isFinite(e.total) ? ` / ${e.total}` : ``}`, true);
         } else annoncer(`Vague ${e.n}`, e.n === e.total ? 'La dernière !' : e.bonus ? `+${e.bonus} 🪙 d’avance` : '');
         break;
       case 'apparait':
@@ -521,7 +568,8 @@ function boucle(maintenant) {
 
 /* ------------------------------------------------------------ boutons et touches */
 function bouton(sel, f) { $(sel).addEventListener('click', e => { son.debloquer(); son.jouer('clic'); f(e); }); }
-bouton('#b-campagne', allerCarte);
+bouton('#b-campagne', () => allerCarte('campagne'));
+bouton('#b-sansfin', () => allerCarte('sansfin'));
 bouton('#b-codex', () => { remplirCodex('tours'); montrer('s-codex'); });
 bouton('#b-aide', () => montrer('s-aide'));
 for (const b of $$('[data-retour]')) b.addEventListener('click', () => { son.jouer('clic'); allerMenu(); });
@@ -529,11 +577,11 @@ for (const o of $$('.onglet')) o.addEventListener('click', () => { son.jouer('cl
 bouton('#b-postes', () => { $('#m-intro').hidden = true; });
 bouton('#b-pause', () => basculerPause());
 bouton('#b-reprendre', () => basculerPause(false));
-bouton('#b-recommencer', () => lancerNiveau(partie.niveau));
-bouton('#b-quitter', allerCarte);
+bouton('#b-recommencer', () => lancerNiveau(partie.niveau, partie.sansFin));
+bouton('#b-quitter', () => allerCarte(partie.sansFin ? 'sansfin' : 'campagne'));
 bouton('#b-suivant', () => lancerNiveau(partie.niveau + 1));
-bouton('#b-rejouer', () => lancerNiveau(partie.niveau));
-bouton('#b-carte', allerCarte);
+bouton('#b-rejouer', () => lancerNiveau(partie.niveau, partie.sansFin));
+bouton('#b-carte', () => allerCarte(partie.sansFin ? 'sansfin' : 'campagne'));
 $('#b-vague').addEventListener('click', lancerVague);
 function basculerVitesse() {
   vitesse = vitesse === 1 ? 2 : 1;

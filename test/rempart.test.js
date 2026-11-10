@@ -436,3 +436,118 @@ test('le Colosse de Rouille ne lâche des Cliquets qu’une fois blessé', () =>
   P.pas(p);
   assert.ok(c.enrage);
 });
+
+test('la campagne garde un troisième départ (Q) au Cimetière des Machines', () => {
+  const c = P.analyserCarte(NIVEAUX.find(n => n.id === 16).carte);
+  assert.equal(c.chemins.length, 3);
+});
+
+test('l’Aimant repousse, la Garnison bloque, le Rayon chauffe', () => {
+  // Aimant : le Rôdeur recule sur le chemin.
+  let p = bac(14);
+  const r = ajouter(p, 'rodeur', 8);
+  P.pas(p);
+  const t = P.construire(p, pres(p, r).id, 'aimant').tour;
+  t.recharge = 0;
+  const d0 = r.d;
+  P.pas(p);
+  assert.ok(r.d < d0 - 0.3, `recul ${d0} → ${r.d}`);
+  // Garnison : un garde arrête le Rôdeur.
+  p = bac(14);
+  const e = ajouter(p, 'cuirasse', 0.5);
+  e.pv = e.pvMax = 1e6;
+  const g = P.construire(p, p.carte.emplacements[0].id, 'garnison').tour;
+  let arrete = false;
+  for (let i = 0; i < 30 * 40 && !arrete; i++) { P.pas(p); arrete = !!e.bloquePar; }
+  assert.ok(arrete, 'le Cuirassé est arrêté par un garde');
+  const d1 = e.d;
+  for (let i = 0; i < 10; i++) P.pas(p);
+  assert.equal(e.d, d1, 'il ne bouge plus');
+  assert.ok(g.gardes.length >= 2);
+  // Rayon : les dégâts montent en restant sur la même cible.
+  p = bac(14);
+  const c = ajouter(p, 'bastion', 6);
+  c.pv = c.pvMax = 1e6; c.bouclier = 0;
+  P.pas(p);
+  const ry = P.construire(p, pres(p, c).id, 'rayon').tour;
+  const mesure = () => { const a = c.pv; for (let i = 0; i < 15; i++) { c.d = 6; P.pas(p); } return a - c.pv; };
+  const debut = mesure();
+  for (let i = 0; i < 60; i++) { c.d = 6; P.pas(p); }
+  assert.ok(mesure() > debut * 1.5, 'le rayon a chauffé');
+  assert.ok(ry.chauffe > 0.5);
+});
+
+test('le Brouilleur coupe les tours, le Givrin ne ralentit pas, la Ruche lâche des Rôdeurs, le Golem se couvre', () => {
+  let p = bac(14);
+  const b = ajouter(p, 'brouilleur', 6);
+  P.pas(p);
+  const t = P.construire(p, pres(p, b).id, 'rafale').tour;
+  b.brouilleT = 0.01;
+  b.x = t.x; b.z = t.z; // juste à côté de la tour
+  P.pas(p);
+  assert.ok(t.brouilleT > 0, 'la tour est brouillée');
+  const tirs = t.tirs;
+  for (let i = 0; i < 30; i++) { b.d = 6; P.pas(p); }
+  assert.equal(t.tirs, tirs, 'brouillée, elle ne tire plus');
+  // Givrin
+  p = bac(14);
+  const gv = ajouter(p, 'givrin', 3);
+  P.pas(p);
+  gv.ralenti = 0; gv.etourdiT = 0;
+  const tg = P.construire(p, pres(p, gv).id, 'givre').tour;
+  for (let i = 0; i < 60; i++) P.pas(p);
+  assert.ok(tg.tirs > 0);
+  assert.equal(gv.ralenti, 0);
+  // Ruche
+  p = bac(17);
+  const ru = ajouter(p, 'ruche', 3);
+  for (let i = 0; i < 30 * (ENNEMIS.ruche.ponte.toutes + 0.5); i++) P.pas(p);
+  assert.ok(p.ennemis.some(e => e.type === 'rodeur' && !e.def.vole));
+  void ru;
+  // Golem
+  p = bac(18);
+  const go = ajouter(p, 'golem', 3);
+  go.carapaceCycle = 0.01;
+  P.pas(p);
+  assert.ok(go.carapaceT > 0);
+  const pv = go.pv;
+  go.bruleT = 1; go.brule = 1000;
+  P.pas(p);
+  assert.equal(go.pv, pv, 'sous l’obsidienne, rien ne le blesse');
+});
+
+test('aux Gorges de Cuivre, les montagnes cachent la vue (sauf au Mortier et pour les volants)', () => {
+  const p = P.creerPartie(11);
+  assert.equal(p.carte.murs, true);
+  const c = p.carte;
+  // Depuis l'emplacement (6,3), on voit le chemin juste au-dessus, pas celui qui est derrière une paroi.
+  assert.equal(c.voitDe(6.5, 3.5, 6.5, 2.5), true);
+  assert.equal(c.voitDe(6.5, 3.5, 1.5, 2.5), false);
+  // Une Rafale ne vise pas un Rouilleux caché ; un Mortier, si.
+  const q = bac(11);
+  q.carte.murs = true;
+  const e = ajouter(q, 'cuirasse', 28.5); // sur le chemin du bas, en (6, 5), derrière la paroi (6, 4)
+  e.pv = e.pvMax = 1e6;
+  const emp = q.carte.emplacements.find(m => m.c === 6 && m.r === 3);
+  const t = P.construire(q, emp.id, 'rafale').tour;
+  for (let i = 0; i < 10; i++) { e.d = 28.5; P.pas(q); }
+  assert.equal(t.tirs, 0, 'caché derrière la paroi');
+  P.vendre(q, t.id);
+  const m = P.construire(q, emp.id, 'mortier').tour;
+  for (let i = 0; i < 10; i++) { e.d = 28.5; P.pas(q); }
+  assert.ok(m.tirs > 0, 'le Mortier tire par-dessus');
+});
+
+test('mode sans fin : des vagues sans fin, de plus en plus fortes, un boss toutes les 10', () => {
+  const p = P.creerPartie(4, { graine: 5, sansFin: true });
+  assert.equal(p.totalVagues, Infinity);
+  assert.equal(p.def.tours.length, ORDRE_TOURS.length, 'toutes les tours');
+  assert.deepEqual(P.vagueSansFin(p, 3), P.vagueSansFin(P.creerPartie(4, { graine: 5, sansFin: true }), 3), 'même graine, même vague');
+  assert.ok(P.vagueSansFin(p, 9).some(g => ENNEMIS[g.type].boss), 'boss à la vague 10');
+  assert.ok(!P.vagueSansFin(p, 8).some(g => ENNEMIS[g.type].boss));
+  // L'ordinateur tient un moment, puis tombe : la partie finit toujours.
+  const ia = creerIA(p);
+  for (let i = 0; i < 30 * 60 * 120 && p.phase !== 'defaite'; i++) { jouerIA(p, ia); P.pas(p); p.evts.length = 0; }
+  assert.equal(p.phase, 'defaite');
+  assert.ok(p.vague > 10, `il tient au moins 10 vagues (${p.vague})`);
+});

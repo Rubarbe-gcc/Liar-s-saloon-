@@ -21,7 +21,7 @@ export const FACTEUR_DEGATS = 0.8;
 export const FACTEUR_PV = 2;
 
 /** Réglage global de l'or rapporté par chaque ennemi détruit (appliqué au chargement). */
-export const FACTEUR_OR_ENNEMIS = 2;
+export const FACTEUR_OR_ENNEMIS = 1;
 
 /** Réglage global de l'or de départ de chaque lieu (appliqué au début de la partie). */
 export const FACTEUR_OR_DEPART = 0.9;
@@ -46,7 +46,7 @@ export const TOURS = {
     nom: 'Mortier', icone: '💣', couleur: '#d2553a',
     role: 'Dégâts de zone',
     desc: 'Un obus qui éclate au sol et touche tout un groupe. Ne vise pas les volants.',
-    air: false, sol: true, projectile: 'obus',
+    air: false, sol: true, projectile: 'obus', indirect: true,
     niveaux: [
       { cout: 90, degats: 27, cadence: 0.55, portee: 3.4, rayon: 1.0 },
       { cout: 105, degats: 46, cadence: 0.62, portee: 3.8, rayon: 1.2 },
@@ -162,6 +162,51 @@ export const TOURS = {
       { id: 'charge', nom: 'Charge d’ambre', couleur: '#ff9a1a', desc: 'Des mines énormes qui sonnent tout autour.', cout: 280, degats: 320, cadence: 0.6, portee: 3.2, rayon: 1.6, mines: 4, etourdit: 1 },
     ],
   },
+  aimant: {
+    nom: 'Aimant', icone: '🧲', couleur: '#e04a4a',
+    role: 'Repousse',
+    desc: 'Une impulsion magnétique qui repousse les Rouilleux en arrière sur le chemin. Les boss résistent.',
+    air: false, sol: true, projectile: 'impulsion',
+    niveaux: [
+      { cout: 100, degats: 6, cadence: 0.3, portee: 2.3, recul: 0.7 },
+      { cout: 110, degats: 10, cadence: 0.35, portee: 2.6, recul: 1.0 },
+      { cout: 170, degats: 16, cadence: 0.4, portee: 2.9, recul: 1.3, special: 'Grande poussée' },
+    ],
+    branches: [
+      { id: 'electro', nom: 'Électro-aimant', couleur: '#5ab8ff', desc: 'Il attire aussi les volants au sol : pendant 3 s, toutes les tours peuvent les viser.', cout: 260, degats: 22, cadence: 0.4, portee: 3.2, recul: 1.0, cloue: 3, air: true },
+      { id: 'repulseur', nom: 'Répulseur', couleur: '#ff6a6a', desc: 'Une poussée énorme qui renvoie les Rouilleux loin en arrière.', cout: 280, degats: 30, cadence: 0.45, portee: 3.2, recul: 2.4 },
+    ],
+  },
+  garnison: {
+    nom: 'Garnison', icone: '🛡️', couleur: '#9aa8c8',
+    role: 'Bloque',
+    desc: 'Des gardes qui se postent sur le chemin, arrêtent les Rouilleux et se battent au corps à corps. Ils reviennent s’ils tombent.',
+    air: false, sol: true, projectile: 'gardes', continu: true,
+    niveaux: [
+      { cout: 90, degats: 10, portee: 2.5, gardes: 2, pvGarde: 140, renfort: 9 },
+      { cout: 100, degats: 15, portee: 2.8, gardes: 3, pvGarde: 200, renfort: 8 },
+      { cout: 160, degats: 24, portee: 3.1, gardes: 3, pvGarde: 320, renfort: 7, special: 'Armures de fer' },
+    ],
+    branches: [
+      { id: 'chevaliers', nom: 'Chevaliers', couleur: '#c8d8ff', desc: 'Trois chevaliers en armure lourde, presque impossibles à faire tomber.', cout: 270, degats: 32, portee: 3.1, gardes: 3, pvGarde: 700, renfort: 7 },
+      { id: 'lanciers', nom: 'Lanciers', couleur: '#ffd27a', desc: 'Quatre lanciers qui frappent fort et reviennent vite.', cout: 260, degats: 50, portee: 3.1, gardes: 4, pvGarde: 300, renfort: 5 },
+    ],
+  },
+  rayon: {
+    nom: 'Rayon d’Ambre', icone: '🔆', couleur: '#ffc83a',
+    role: 'Faisceau',
+    desc: 'Un faisceau continu qui chauffe : plus il reste sur la même cible, plus il fait mal. Idéal contre les boss.',
+    air: true, sol: true, projectile: 'rayon', continu: true,
+    niveaux: [
+      { cout: 120, degats: 14, portee: 2.8, rampe: 0.5, max: 2.5 },
+      { cout: 130, degats: 22, portee: 3.1, rampe: 0.6, max: 3 },
+      { cout: 200, degats: 34, portee: 3.4, rampe: 0.7, max: 3.5, special: 'Cristal pur' },
+    ],
+    branches: [
+      { id: 'prisme', nom: 'Prisme', couleur: '#ff8af0', desc: 'Le faisceau se divise sur trois cibles à la fois.', cout: 280, degats: 30, portee: 3.6, rampe: 0.6, max: 3, cibles: 3 },
+      { id: 'soleil', nom: 'Soleil captif', couleur: '#fff2a8', desc: 'Un faisceau qui chauffe jusqu’à sept fois sa force.', cout: 300, degats: 45, portee: 3.8, rampe: 1.0, max: 7 },
+    ],
+  },
 };
 
 // Application du facteur de dégâts, niveaux 1 à 3 et spécialisations.
@@ -173,7 +218,7 @@ for (const t of Object.values(TOURS)) {
   }
 }
 
-export const ORDRE_TOURS = ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur'];
+export const ORDRE_TOURS = ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur', 'aimant', 'garnison', 'rayon'];
 
 /** Part du prix rendue à la vente. */
 export const REVENTE = 0.7;
@@ -292,6 +337,29 @@ export const ENNEMIS = {
     boss: true, resisteRalenti: 0.6,
     ponte: { type: 'cliquet', n: 4, toutes: 5, seuil: 0.75 }, rage: { seuil: 0.4, vitesse: 1.6, armure: 3 },
   },
+  brouilleur: {
+    nom: 'Brouilleur', desc: 'Une antenne sur pattes : par moments, il brouille les tours autour de lui, qui cessent de tirer.',
+    pv: 80, vitesse: 1.2, armure: 1, or: 12, vies: 1, taille: 0.48,
+    brouille: { rayon: 2.2, toutes: 6, duree: 2.5 },
+  },
+  galopin: {
+    nom: 'Galopin', desc: 'Plus il est blessé, plus il court vite. Achevez-le d’un coup.',
+    pv: 60, vitesse: 1.4, armure: 0, or: 8, vies: 1, taille: 0.4, affole: 1.5,
+  },
+  givrin: {
+    nom: 'Givrin', desc: 'Couvert de givre : rien ne le ralentit, rien ne le sonne.',
+    pv: 130, vitesse: 1.1, armure: 3, or: 12, vies: 1, taille: 0.52, insensible: true,
+  },
+  ruche: {
+    nom: 'Ruche volante', desc: 'Une ruche de fer qui vole lentement et lâche des Rôdeurs sur le chemin.',
+    pv: 240, vitesse: 0.7, armure: 2, or: 20, vies: 2, taille: 0.7, vole: true,
+    ponte: { type: 'rodeur', n: 2, toutes: 5 },
+  },
+  golem: {
+    nom: 'Le Golem d’Obsidienne', desc: 'Toutes les 10 secondes, il se couvre d’obsidienne : plus rien ne le blesse pendant 3 secondes. Il brouille aussi les tours qu’il frôle.',
+    pv: 4600, vitesse: 0.4, armure: 8, or: 300, vies: 12, taille: 1.4,
+    boss: true, resisteRalenti: 0.6, carapace: { toutes: 10, duree: 3 }, brouille: { rayon: 2.5, toutes: 8, duree: 3 },
+  },
 };
 
 // Application du facteur de PV, ennemis et boss.
@@ -300,7 +368,7 @@ for (const e of Object.values(ENNEMIS)) {
   e.or = Math.round(e.or * FACTEUR_OR_ENNEMIS);
 }
 
-export const ORDRE_ENNEMIS = ['rodeur', 'filou', 'cuirasse', 'bourdon', 'grappe', 'grappillon', 'tisseur', 'furtif', 'fouisseur', 'pavois', 'bondisseur', 'dirigeable', 'mue', 'broyeur', 'nuee', 'hydre', 'tete', 'seigneur', 'cliquet', 'bastion', 'reparateur', 'scarabee', 'colosse'];
+export const ORDRE_ENNEMIS = ['rodeur', 'filou', 'cuirasse', 'bourdon', 'grappe', 'grappillon', 'tisseur', 'furtif', 'fouisseur', 'pavois', 'bondisseur', 'dirigeable', 'mue', 'broyeur', 'nuee', 'hydre', 'tete', 'seigneur', 'cliquet', 'bastion', 'reparateur', 'scarabee', 'colosse', 'brouilleur', 'galopin', 'givrin', 'ruche', 'golem'];
 
 /** Hauteur de vol (en cases). */
 export const ALTITUDE = 1.6;

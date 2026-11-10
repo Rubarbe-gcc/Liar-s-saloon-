@@ -7,7 +7,7 @@
 import * as THREE from '../../../vendor/three/three.module.min.js';
 import { TOURS, ALTITUDE } from '../../../shared/rempart/donnees.js';
 import { makeRng } from '../../../shared/hasard.js';
-import { creerTour, animerTour, creerEnnemi, animerEnnemi, libererEnnemi, piece, cyl, boite, octa, boule, cone, mat, lueur, OR, GLACE } from './modeles3d.js';
+import { creerGarde, creerTour, animerTour, creerEnnemi, animerEnnemi, libererEnnemi, piece, cyl, boite, octa, boule, cone, mat, lueur, OR, GLACE } from './modeles3d.js';
 import { creerEffets } from './effets3d.js';
 import { creerCamera } from './camera.js';
 
@@ -76,6 +76,31 @@ export const AMBIANCES = {
     ciel: '#6a5a8a', horizon: '#ffb07a', herbe: '#5a7a4a', herbe2: '#7a8a5a', chemin: '#a89070', colline: '#6a6a5a', roche: '#9a9080',
     eau: '#4a7a9a', fond: '#2a3a4a', feuillage: ['#4a6a3a', '#6a5a3a', '#3a5a3a'], fleurs: ['#ffd84d', '#ff8ab0'],
     soleil: '#ffc890', intens: 2.1, hemi: 0.75, pins: 0.2, particules: 'pollen',
+  },
+  jungle: {
+    ciel: '#3f8fd0', horizon: '#d8f0c0', herbe: '#2f7a3a', herbe2: '#4a9a3a', chemin: '#8a6a40', colline: '#2a6a3a', roche: '#5a6a4a',
+    eau: '#2a8a7a', fond: '#14402a', feuillage: ['#1f6a2a', '#2f8a2a', '#3aa040', '#1a5a3a'], fleurs: ['#ff4a8a', '#ffd84d', '#ff8a3a'],
+    soleil: '#fff4d0', intens: 2.2, hemi: 0.9, pins: 0.05, particules: 'pollen', brouillard: [35, 95],
+  },
+  cristaux: {
+    ciel: '#1a1a3a', horizon: '#5a6aff', herbe: '#3a3a5a', herbe2: '#4a4a6a', chemin: '#6a6a8a', colline: '#2a2a4a', roche: '#7ad8ff',
+    eau: '#3a6aff', fond: '#101030', feuillage: ['#5a4a8a', '#7a5aaa'], fleurs: ['#8ad8ff', '#d8a0ff'],
+    soleil: '#b8c8ff', intens: 1.7, hemi: 0.8, pins: 0.3, particules: 'lucioles', arbresCollines: 0.03,
+  },
+  casse: {
+    ciel: '#7a8a9a', horizon: '#d8c8a8', herbe: '#6a6a50', herbe2: '#7a7058', chemin: '#5a5048', colline: '#5a4a3a', roche: '#7a5a40',
+    eau: '#4a6a5a', fond: '#2a2a24', feuillage: ['#5a5a3a', '#6a6a40'], fleurs: ['#ffb347'],
+    soleil: '#ffe8c0', intens: 2.2, hemi: 0.8, pins: 0.2, particules: 'sable', mort: true,
+  },
+  marees: {
+    ciel: '#4ab0f0', horizon: '#f0f8ff', herbe: '#d8c890', herbe2: '#e8d8a0', chemin: '#a89070', colline: '#c8b880', roche: '#9a9488',
+    eau: '#2ab8d8', fond: '#1a6a8a', feuillage: ['#3a9a5a', '#4aaa6a'], fleurs: ['#ff8ab0', '#ffffff'],
+    soleil: '#ffffff', intens: 2.6, hemi: 0.9, pins: 0.8, particules: 'pollen',
+  },
+  citadelle: {
+    ciel: '#101838', horizon: '#ff9a4a', herbe: '#3a4a3a', herbe2: '#4a5a44', chemin: '#c8b088', colline: '#4a4a50', roche: '#b8a888',
+    eau: '#3a5a8a', fond: '#1a2030', feuillage: ['#2a4a3a', '#3a5a3a'], fleurs: ['#ffd27a'],
+    soleil: '#ffc890', intens: 1.9, hemi: 0.75, pins: 0.4, particules: 'lucioles',
   },
 };
 
@@ -176,7 +201,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
       let h, col, amp;
       const couleur = new THREE.Color();
       switch (ch) {
-        case '#': case 'S': case 'R': case 'B':
+        case '#': case 'S': case 'R': case 'Q': case 'B':
           h = 0; amp = 0.01; couleur.copy(pal.chemin).offsetHSL(0, 0, (n - 0.5) * 0.08); break;
         case '~':
           h = -0.7; amp = 0.05; couleur.copy(pal.fond); break;
@@ -536,7 +561,12 @@ export function creerMonde(canvas, { mobile = false } = {}) {
 
   const lerp = (a, b, u) => a + (b - a) * u;
 
+  const gFaisceau = new THREE.CylinderGeometry(0.03, 0.03, 1, 6, 1, true);
+  const HAUT = new THREE.Vector3(0, 1, 0), a3 = new THREE.Vector3(), b3 = new THREE.Vector3();
+  const enVolAffiche = e => e.def.vole && !(e.cloueT > 0);
+
   function synchroniser(p, alpha, dt, demo) {
+    const ennemiParId = new Map(p.ennemis.map(e => [e.id, e]));
     // Tours
     const vues = new Set();
     for (const t of p.tours) {
@@ -550,12 +580,49 @@ export function creerMonde(canvas, { mobile = false } = {}) {
         m.groupe.position.set(t.x, s.y, t.z);
         if (ancien) { niveau.remove(ancien.m.groupe); m.apparition = 0.55; m.tete.rotation.y = ancien.m.tete.rotation.y; }
         niveau.add(m.groupe);
-        v = { m, niveau: t.niveau };
+        v = { m, niveau: t.niveau, gardes: ancien?.gardes || new Map(), faisceaux: ancien?.faisceaux || [] };
         vuesTours.set(t.id, v);
       }
       animerTour(v.m, temps, dt, t.cible != null ? t.angle : null);
+      if (t.brouilleT > 0 && Math.random() < dt * 10) effets.gerbe(t.x + (Math.random() - 0.5) * 0.5, v.m.groupe.position.y + v.m.hauteur + 0.3, t.z + (Math.random() - 0.5) * 0.5, { n: 1, couleurs: ['#c86aff', '#ffffff'], vitesse: 1.2, vie: 0.25, taille: 0.08 });
+      // Les gardes de la Garnison.
+      if (t.gardes) for (const g of t.gardes) {
+        let gm = v.gardes.get(g.id);
+        if (!gm) { gm = creerGarde(); niveau.add(gm); v.gardes.set(g.id, gm); }
+        gm.visible = g.pv > 0;
+        if (!gm.visible) continue;
+        gm.position.set(g.x, g.cible ? Math.abs(Math.sin(temps * 10 + g.id)) * 0.05 : 0, g.z);
+        if (g.cible) gm.rotation.y = Math.atan2(g.cible.x - g.x, g.cible.z - g.z);
+      }
+      // Le faisceau du Rayon d'Ambre.
+      const nb = t.faisceau ? t.faisceau.length : 0;
+      while (v.faisceaux.length < nb) {
+        const f = new THREE.Mesh(gFaisceau, new THREE.MeshBasicMaterial({ color: TOURS[t.type].couleur, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending, depthWrite: false }));
+        f.renderOrder = 6;
+        niveau.add(f);
+        v.faisceaux.push(f);
+      }
+      v.faisceaux.forEach((f, i) => {
+        const e = i < nb ? ennemiParId.get(t.faisceau[i]) : null;
+        f.visible = !!e;
+        if (!e) return;
+        a3.set(t.x, v.m.groupe.position.y + v.m.hauteur + 0.45, t.z);
+        b3.set(lerp(e.px, e.x, alpha), (enVolAffiche(e) ? ALTITUDE : 0) + 0.4, lerp(e.pz, e.z, alpha));
+        const long = a3.distanceTo(b3);
+        f.position.copy(a3).lerp(b3, 0.5);
+        f.quaternion.setFromUnitVectors(HAUT, b3.clone().sub(a3).normalize());
+        const ep = 0.5 + (t.chauffe || 0) * 0.6 + Math.sin(temps * 40) * 0.1;
+        f.scale.set(ep, long, ep);
+        f.material.opacity = 0.55 + Math.min(0.4, (t.chauffe || 0) * 0.15);
+        if (Math.random() < dt * 20) effets.gerbe(b3.x, b3.y, b3.z, { n: 1, couleurs: ['#fff2a8', TOURS[t.type].couleur], vitesse: 1.2, vie: 0.2, taille: 0.1 });
+      });
     }
-    for (const [id, v] of vuesTours) if (!vues.has(id)) { niveau.remove(v.m.groupe); vuesTours.delete(id); }
+    for (const [id, v] of vuesTours) if (!vues.has(id)) {
+      niveau.remove(v.m.groupe);
+      for (const gm of v.gardes.values()) niveau.remove(gm);
+      for (const f of v.faisceaux) niveau.remove(f);
+      vuesTours.delete(id);
+    }
 
     // Rouilleux
     vues.clear();
@@ -574,7 +641,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
         vuesEnnemis.set(e.id, v);
       }
       const x = lerp(e.px, e.x, alpha), z = lerp(e.pz, e.z, alpha);
-      const y = e.def.vole ? ALTITUDE : e.saute > 0 ? Math.sin((1 - e.saute / 0.4) * Math.PI) * 0.9 : 0; // le chemin est au niveau 0
+      const y = e.def.vole ? (e.cloueT > 0 ? 0.45 : ALTITUDE) : e.saute > 0 ? Math.sin((1 - e.saute / 0.4) * Math.PI) * 0.9 : 0; // le chemin est au niveau 0
       v.m.groupe.position.set(x, y, z);
       let d = e.angle - v.m.groupe.rotation.y;
       d = Math.atan2(Math.sin(d), Math.cos(d));
@@ -583,7 +650,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
       v.pv = e.pv;
       const frein = e.ralenti * (1 - (e.def.resisteRalenti || 0));
       const cache = !e.revele;
-      animerEnnemi(v.m, temps, dt, { vitesse: e.etourdiT > 0 ? 0 : (1 - frein) * (e.def.vitesse / 1.5), ralenti: e.ralentiT > 0 ? e.ralenti : 0, cache, sous: e.sous, bouclier: e.bouclier });
+      animerEnnemi(v.m, temps, dt, { vitesse: e.etourdiT > 0 ? 0 : (1 - frein) * (e.def.vitesse / 1.5), ralenti: e.ralentiT > 0 ? e.ralenti : 0, cache, sous: e.sous, bouclier: e.bouclier, carapace: e.carapaceT > 0 });
       const r = e.pv / e.pvMax;
       v.barre.visible = r < 0.999 && !demo && !cache && !e.sous;
       if (v.barre.visible) {
@@ -703,6 +770,22 @@ export function creerMonde(canvas, { mobile = false } = {}) {
           effets.lueur(e.x, 0.6, e.z, '#ff7a2a', 3, 0.15);
           break;
         }
+        case 'aimant':
+          effets.onde(e.x, 0.15, e.z, { couleur: e.cloue ? '#5ab8ff' : '#ff5a5a', r0: 0.3, r1: e.rayon, vie: 0.45 });
+          effets.gerbe(e.x, 0.9, e.z, { n: 10, couleurs: e.cloue ? ['#5ab8ff', '#ffffff'] : ['#ff6a6a', '#ffffff'], vitesse: 2.5, vie: 0.3, taille: 0.09 });
+          { const v = vuesTours.get(e.tour); if (v) v.m.recul = 1; }
+          break;
+        case 'brouille':
+          effets.onde(e.x, 0.2, e.z, { couleur: '#c86aff', r0: 0.2, r1: e.rayon, vie: 0.6, opacite: 0.7 });
+          for (const id of e.tours) { const t = p.tours.find(x => x.id === id); if (t) effets.gerbe(t.x, 1.2, t.z, { n: 8, couleurs: ['#c86aff', '#ffffff'], vitesse: 2, vie: 0.35, taille: 0.1 }); }
+          break;
+        case 'carapace':
+          effets.onde(e.x, 0.2, e.z, { couleur: '#b06aff', r0: 0.5, r1: 2.2, vie: 0.6 });
+          effets.gerbe(e.x, 1.6, e.z, { n: 20, couleurs: ['#b06aff', '#ffffff', '#1a1620'], vitesse: 2.5, vie: 0.6, taille: 0.15 });
+          break;
+        case 'gardeTombe':
+          effets.gerbe(e.x, 0.3, e.z, { n: 10, couleurs: ['#c8ccd8', '#5d6470'], vitesse: 1.8, haut: 1.5, vie: 0.7, taille: 0.08, grav: 8, additif: false, sol: true });
+          break;
         case 'mine':
           effets.gerbe(e.x, 0.1, e.z, { n: 4, couleurs: ['#8a7a68'], vitesse: 0.5, haut: 0.6, vie: 0.5, taille: 0.18, croit: 1.5, additif: false, alpha: 0.5 });
           break;

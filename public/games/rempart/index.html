@@ -27,9 +27,10 @@
   <div class="menu">
     <p class="surtitre">Les gardiens d’Ambrelune</p>
     <h1 class="logo"><span>REM</span><i class="gemme" aria-hidden="true"></i><span>PART</span></h1>
-    <p class="slogan">Tower defense en 3D · treize lieux à défendre</p>
+    <p class="slogan">Tower defense en 3D · dix-huit lieux à défendre</p>
     <div class="boutons">
-      <button class="btn or grand" id="b-campagne"><b>🏰 Campagne</b><small id="campagne-info">Treize lieux, trente-neuf étoiles</small></button>
+      <button class="btn or grand" id="b-campagne"><b>🏰 Campagne</b><small id="campagne-info">Dix-huit lieux, cinquante-quatre étoiles</small></button>
+      <button class="btn grand" id="b-sansfin"><b>♾️ Mode sans fin</b><small id="sansfin-info">Des vagues sans fin, un boss toutes les 10</small></button>
       <button class="btn grand" id="b-codex"><b>📖 Le Codex</b><small>Les tours et les Rouilleux</small></button>
       <button class="btn grand" id="b-aide"><b>❔ Comment jouer</b><small>Souris, clavier ou doigts</small></button>
     </div>
@@ -45,7 +46,7 @@
 <section class="ecran fond" id="s-carte">
   <header class="entete">
     <button class="btn fin" data-retour aria-label="Retour">←</button>
-    <h2>La vallée d’Ambrelune</h2>
+    <h2 id="titre-carte">La vallée d’Ambrelune</h2>
     <span class="compteur" id="total-etoiles">⭐ 0 / 18</span>
   </header>
   <div class="niveaux" id="liste-niveaux"></div>
@@ -84,6 +85,8 @@
       <h3>🌊 Les vagues</h3>
       <p>Rien ne bouge avant la première vague : prenez le temps de bâtir, puis touchez <b>▶</b>. Ensuite, les vagues s’enchaînent. Appeler la suivante en avance rapporte de l’or : une pièce par seconde gagnée.</p>
       <p>Étoiles : trois en perdant au plus deux vies, deux en gardant la moitié.</p>
+      <p><b>Mode sans fin</b> : sur un lieu déjà débloqué, toutes les tours, des vagues de plus en plus fortes et un boss toutes les 10 vagues. Battez votre record !</p>
+      <p>Aux <b>Gorges de Cuivre</b>, les parois cachent la vue : une tour ne voit que ce qui est en face d’elle. Le Mortier tire par-dessus, et les volants restent visibles.</p>
     </article>
     <article>
       <h3>🎥 La caméra</h3>

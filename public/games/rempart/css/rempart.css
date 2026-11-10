@@ -104,6 +104,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;}
 .niveau .nom{font-family:var(--f-titre);font-size:1.2rem;font-weight:700;}
 .niveau .details{font-size:.8rem;color:var(--pale);}
 .niveau .etoiles-mini{position:absolute;top:14px;right:14px;font-size:1.1rem;letter-spacing:2px;color:rgba(255,255,255,.25);}
+.niveau .etoiles-mini.record{color:var(--or);font-size:.95rem;letter-spacing:0;font-weight:800;}
 .niveau .etoiles-mini .on{color:var(--or);text-shadow:0 0 8px rgba(255,210,122,.7);}
 .niveau.verrou{filter:grayscale(.85) brightness(.6);pointer-events:none;}
 .niveau.verrou .nom::after{content:" 🔒";}
@@ -195,7 +196,7 @@ kbd{display:inline-block;padding:1px 6px;border-radius:6px;background:rgba(255,2
 .panneau header h3{font-family:var(--f-titre);font-size:1.1rem;flex:1;}
 .panneau header .niv{font-size:.8rem;color:var(--or);}
 .fermer{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.08);font-size:1rem;}
-.choix-tours{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;}
+.choix-tours{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;}
 .carte-tour{
   display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;border-radius:12px;background:rgba(255,255,255,.05);
   border:1px solid rgba(255,255,255,.08);transition:transform .1s,background .1s;position:relative;
@@ -262,6 +263,7 @@ kbd{display:inline-block;padding:1px 6px;border-radius:6px;background:rgba(255,2
   .jauge{padding:5px 9px;font-size:.85rem;}
   .rond{width:40px;height:40px;}
   .panneau{left:calc(6px + var(--gauche));right:calc(6px + var(--droite));width:auto;bottom:calc(6px + var(--bas));}
+  .choix-tours{grid-template-columns:repeat(4,1fr);}
   .hud.panneau-ouvert .bas-droite{display:none;}
   .lancer{min-width:120px;padding:8px 14px;}
   .apercu{max-width:180px;}

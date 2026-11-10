@@ -8,7 +8,7 @@
  * Repère : x = colonne, z = ligne (le centre d'une case est à +0,5), y = hauteur.
  */
 
-import { TOURS, ENNEMIS, REVENTE, ALTITUDE, FACTEUR_OR_DEPART } from './donnees.js';
+import { TOURS, ENNEMIS, REVENTE, ALTITUDE, FACTEUR_OR_DEPART, ORDRE_TOURS, ORDRE_ENNEMIS } from './donnees.js';
 import { niveau as trouverNiveau } from './niveaux.js';
 import { makeRng } from '../hasard.js';
 
@@ -22,7 +22,7 @@ export const NOMS_MODES = { premier: 'Le plus avancé', fort: 'Le plus solide', 
 
 /* ------------------------------------------------------------------ carte */
 
-const CHEMIN = new Set(['#', 'S', 'R', 'B']);
+const CHEMIN = new Set(['#', 'S', 'R', 'Q', 'B']);
 
 /** Lit une carte texte : emplacements, départs, Cœur et chemins. */
 export function analyserCarte(carte) {
@@ -37,6 +37,7 @@ export function analyserCarte(carte) {
       if (ch === 'T') emplacements.push({ id: emplacements.length, c, r, x: c + 0.5, z: r + 0.5 });
       else if (ch === 'S') departs[0] = { c, r };
       else if (ch === 'R') departs[1] = { c, r };
+      else if (ch === 'Q') departs[2] = { c, r };
       else if (ch === 'B') base = { c, r, x: c + 0.5, z: r + 0.5 };
     }
   }
@@ -87,7 +88,17 @@ export function analyserCarte(carte) {
   for (let r = 0; r < H; r++) for (let c = 0; c < W; c++) {
     if (CHEMIN.has(carte[r][c]) && !casesChemin.has(cle(c, r))) throw new Error(`case de chemin orpheline en (${c}, ${r})`);
   }
-  return { W, H, emplacements, base, chemins, vols, estChemin: (c, r) => casesChemin.has(cle(c, r)) };
+  /** Vrai si rien ne cache B depuis A : aucune colline (^) sur le segment, hors de la case de départ. */
+  const voitDe = (ax, az, bx, bz) => {
+    const n = Math.ceil(Math.hypot(bx - ax, bz - az) / 0.2);
+    const c0 = Math.floor(ax), r0 = Math.floor(az);
+    for (let i = 1; i < n; i++) {
+      const c = Math.floor(ax + (bx - ax) * i / n), r = Math.floor(az + (bz - az) * i / n);
+      if ((c !== c0 || r !== r0) && at(c, r) === '^') return false;
+    }
+    return true;
+  };
+  return { W, H, emplacements, base, chemins, vols, voitDe, murs: false, estChemin: (c, r) => casesChemin.has(cle(c, r)) };
 }
 
 function simplifier(pts) {
@@ -123,19 +134,70 @@ export function surChemin(ch, d, decal = 0) {
 
 /* ---------------------------------------------------------------- partie */
 
-export function creerPartie(id, { graine = 1 } = {}) {
-  const def = trouverNiveau(id);
+/**
+ * @param {number} id  le lieu
+ * @param {object} [o]
+ * @param {number}  [o.graine]
+ * @param {boolean} [o.sansFin]  mode sans fin : toutes les tours, des vagues générées à l'infini
+ */
+export function creerPartie(id, { graine = 1, sansFin = false } = {}) {
+  let def = trouverNiveau(id);
   if (!def) throw new Error(`niveau inconnu : ${id}`);
+  if (sansFin) def = { ...def, tours: ORDRE_TOURS.slice(), force: def.force * SANS_FIN.force };
+  const carte = analyserCarte(def.carte);
+  carte.murs = !!def.murs;
   return {
-    niveau: id, def, carte: analyserCarte(def.carte), rng: makeRng(graine),
+    niveau: id, def, carte, rng: makeRng(graine), graine, sansFin,
     t: 0, or: Math.round(def.or * FACTEUR_OR_DEPART), vies: def.vies, viesMax: def.vies,
-    vague: 0, totalVagues: def.vagues.length,
+    vague: 0, totalVagues: sansFin ? Infinity : def.vagues.length,
     file: [], compte: null, phase: 'preparation',
     ennemis: [], tours: [], projectiles: [],
     prochainId: 1, evts: [], phares: [], mines: [],
     stats: { tues: 0, fuites: 0, orGagne: 0, bonus: 0, tirs: 0, degats: 0 },
   };
 }
+
+/* ------------------------------------------------------------ sans fin */
+
+/** Réglages du mode sans fin. */
+export const SANS_FIN = {
+  force: 0.8,          // part de la force du lieu au départ
+  croissance: 1.07,    // les PV des Rouilleux grimpent de 7 % par vague
+  croissanceBoss: 1.04,
+  tousLesBoss: 10,     // un boss toutes les 10 vagues
+  boss: ['broyeur', 'nuee', 'hydre', 'colosse', 'golem', 'seigneur'],
+};
+
+/** Les Rouilleux qu'on peut croiser à la vague i (de plus en plus variés). */
+function bestiaire(i) {
+  const tous = ORDRE_ENNEMIS.filter(t => !ENNEMIS[t].boss && !ENNEMIS[t].enfant);
+  return tous.slice(0, Math.min(tous.length, 3 + Math.floor(i / 2)));
+}
+
+/** La vague i du mode sans fin, toujours la même pour une même graine. */
+export function vagueSansFin(p, i) {
+  const rng = makeRng((p.graine || 1) * 7919 + i * 104729);
+  const pris = bestiaire(i);
+  const departs = p.carte.chemins.length;
+  const groupes = [];
+  const nb = 2 + Math.min(3, Math.floor(i / 6));
+  const total = Math.round(10 + i * 1.6);
+  for (let k = 0; k < nb; k++) {
+    const type = pris[Math.floor(rng() * pris.length)];
+    const def = ENNEMIS[type];
+    const poids = def.pv > 150 ? 0.35 : def.pv > 80 ? 0.6 : 1;
+    const n = Math.max(2, Math.round(total / nb * poids));
+    groupes.push({ type, n, ecart: Math.max(0.2, 1.1 - i * 0.02) * (def.pv > 150 ? 2 : 1), debut: k * 3, depart: Math.floor(rng() * departs) });
+  }
+  if ((i + 1) % SANS_FIN.tousLesBoss === 0) {
+    const tour = (i + 1) / SANS_FIN.tousLesBoss - 1;
+    const boss = SANS_FIN.boss[tour % SANS_FIN.boss.length];
+    groupes.push({ type: boss, n: 1 + Math.floor(tour / SANS_FIN.boss.length), ecart: 10, debut: 2, depart: Math.floor(rng() * departs) });
+  }
+  return groupes;
+}
+
+const vaguesDe = (p, index) => (p.sansFin ? vagueSansFin(p, index) : p.def.vagues[index]);
 
 const evt = (p, e) => {
   p.evts.push(e);
@@ -192,6 +254,7 @@ export function vendre(p, tourId) {
   p.or += gain;
   p.tours.splice(i, 1);
   p.mines = p.mines.filter(m => m.tour !== t.id);
+  for (const g of t.gardes || []) { g.pv = 0; g.cible = null; }
   evt(p, { k: 'vendu', tour: t.id, type: t.type, x: t.x, z: t.z, or: gain });
   return { ok: true, or: gain };
 }
@@ -205,7 +268,7 @@ export function changerCible(p, tourId) {
 
 /** Ce qui arrive à la prochaine vague : { type: nombre }. */
 export function apercuVague(p, index = p.vague) {
-  const v = p.def.vagues[index];
+  const v = index < p.totalVagues ? vaguesDe(p, index) : null;
   if (!v) return null;
   const out = {};
   for (const gr of v) out[gr.type] = (out[gr.type] || 0) + gr.n;
@@ -226,7 +289,8 @@ export function lancerVague(p) {
   const bonus = bonusAppel(p);
   if (bonus) { p.or += bonus; p.stats.bonus += bonus; }
   const index = p.vague;
-  for (const gr of p.def.vagues[index]) {
+  const groupes = vaguesDe(p, index);
+  for (const gr of groupes) {
     for (let i = 0; i < gr.n; i++) {
       p.file.push({ t: p.t + gr.debut + i * gr.ecart, type: gr.type, depart: Math.min(gr.depart, p.carte.chemins.length - 1), vague: index });
     }
@@ -235,7 +299,7 @@ export function lancerVague(p) {
   p.vague++;
   p.compte = null;
   p.phase = 'jeu';
-  const boss = p.def.vagues[index].filter(gr => ENNEMIS[gr.type].boss).map(gr => gr.type);
+  const boss = groupes.filter(gr => ENNEMIS[gr.type].boss).map(gr => gr.type);
   evt(p, { k: 'vague', n: p.vague, total: p.totalVagues, bonus, boss });
   return { ok: true, bonus };
 }
@@ -245,7 +309,9 @@ export function lancerVague(p) {
 function apparaitre(p, type, depart, vague, d = 0, decal = null) {
   const def = ENNEMIS[type];
   const ch = def.vole ? p.carte.vols[depart] : p.carte.chemins[depart];
-  const echelle = p.def.force * (def.boss ? 1 : 1 + 0.045 * vague);
+  const echelle = p.sansFin
+    ? p.def.force * (def.boss ? SANS_FIN.croissanceBoss : SANS_FIN.croissance) ** vague
+    : p.def.force * (def.boss ? 1 : 1 + 0.045 * vague);
   const pvMax = Math.round(def.pv * echelle);
   const pos = surChemin(ch, d, 0);
   const e = {
@@ -257,6 +323,8 @@ function apparaitre(p, type, depart, vague, d = 0, decal = null) {
     etourdiT: 0, brule: 0, bruleT: 0, bruleSrc: null, bouclier: 0, bouclierT: 1, sous: false,
     fouitT: def.fouit ? def.fouit.toutes * (0.5 + p.rng() * 0.5) : 0, revele: !def.furtif,
     sautT: def.saut ? def.saut.toutes * (0.4 + p.rng() * 0.6) : 0, saute: 0, calme: 99, enrage: false,
+    brouilleT: def.brouille ? def.brouille.toutes * 0.5 : 0, carapaceT: 0, carapaceCycle: def.carapace ? def.carapace.toutes : 0,
+    cloueT: 0, bloquePar: null,
   };
   if (def.bouclierInitial) e.bouclier = def.bouclierInitial * echelle;
   const p2 = surChemin(ch, d, e.decal);
@@ -267,10 +335,12 @@ function apparaitre(p, type, depart, vague, d = 0, decal = null) {
 }
 
 const reste = e => e.ch.total - e.d;
+/** Vole-t-il vraiment ? (un volant cloué par l'Électro-aimant compte comme au sol) */
+const enVol = e => e.def.vole && !(e.cloueT > 0);
 const distance2 = (a, b) => (a.x - b.x) ** 2 + (a.z - b.z) ** 2;
 
 function infliger(p, e, degats, { perce = false, demi = false, source = null } = {}) {
-  if (e.mort || e.sous) return 0;
+  if (e.mort || e.sous || e.carapaceT > 0) return 0;
   const armure = perce ? 0 : (demi ? e.armure / 2 : e.armure);
   let eff = Math.max(degats * 0.25, degats - armure);
   e.calme = 0;
@@ -316,6 +386,22 @@ function bougerEnnemis(p) {
     if (e.mort) continue;
     e.px = e.x; e.pz = e.z;
     if (e.ralentiT > 0) { e.ralentiT -= DT; if (e.ralentiT <= 0) e.ralenti = 0; }
+    if (e.cloueT > 0) e.cloueT -= DT;
+    // Le Golem se couvre d'obsidienne à intervalles réguliers.
+    if (e.carapaceT > 0) e.carapaceT -= DT;
+    if (e.def.carapace && (e.carapaceCycle -= DT) <= 0) {
+      e.carapaceCycle = e.def.carapace.toutes;
+      e.carapaceT = e.def.carapace.duree;
+      evt(p, { k: 'carapace', id: e.id, x: e.x, z: e.z });
+    }
+    // Le Brouilleur (et le Golem) coupent les tours autour d'eux.
+    if (e.def.brouille && (e.brouilleT -= DT) <= 0) {
+      const b = e.def.brouille;
+      e.brouilleT = b.toutes;
+      const touchees = p.tours.filter(t => distance2(t, e) <= b.rayon ** 2);
+      for (const t of touchees) t.brouilleT = Math.max(t.brouilleT || 0, b.duree);
+      evt(p, { k: 'brouille', id: e.id, x: e.x, z: e.z, rayon: b.rayon, tours: touchees.map(t => t.id) });
+    }
     // Le feu continue de brûler, et passe sous l'armure.
     if (e.bruleT > 0) {
       e.bruleT -= DT;
@@ -349,6 +435,11 @@ function bougerEnnemis(p) {
         evt(p, { k: 'saut', id: e.id, x: e.x, z: e.z });
       }
     }
+    if (e.def.affole) v *= 1 + e.def.affole * (1 - e.pv / e.pvMax);
+    // Arrêté par un garde de Garnison (sauf pendant un bond).
+    const g = e.bloquePar;
+    if (g && g.pv > 0 && g.cible === e && !(e.saute > 0)) v = 0;
+    else e.bloquePar = null;
     if (e.etourdiT > 0) { e.etourdiT -= DT; v = 0; }
     e.d += v * DT;
     if (e.d >= e.ch.total) {
@@ -394,7 +485,9 @@ function bougerEnnemis(p) {
     // La Grande Nuée (et d'autres) pondent en chemin ; le Colosse seulement une fois blessé.
     if (e.def.ponte && (!e.def.ponte.seuil || e.pv < e.pvMax * e.def.ponte.seuil) && (e.ponteT -= DT) <= 0) {
       e.ponteT += e.def.ponte.toutes;
-      for (let i = 0; i < e.def.ponte.n; i++) apparaitre(p, e.def.ponte.type, e.depart, e.vague, e.d, (i - 0.5) * 0.6);
+      const auSol = e.def.vole && !ENNEMIS[e.def.ponte.type].vole;
+      const d = auSol ? e.d / e.ch.total * p.carte.chemins[e.depart].total : e.d;
+      for (let i = 0; i < e.def.ponte.n; i++) apparaitre(p, e.def.ponte.type, e.depart, e.vague, d, (i - 0.5) * 0.6);
       evt(p, { k: 'ponte', id: e.id, x: e.x, z: e.z });
     }
   }
@@ -402,15 +495,25 @@ function bougerEnnemis(p) {
 
 /* ---------------------------------------------------------------- tours */
 
+/** La tour voit-elle cet ennemi ? (les volants passent au-dessus des collines) */
+function voit(p, t, e, def) {
+  if (!p.carte.murs || def.indirect || enVol(e)) return true;
+  const cle = Math.floor(e.x) * 1000 + Math.floor(e.z);
+  t.vue = t.vue || new Map();
+  if (!t.vue.has(cle)) t.vue.set(cle, p.carte.voitDe(t.x, t.z, Math.floor(e.x) + 0.5, Math.floor(e.z) + 0.5));
+  return t.vue.get(cle);
+}
+
 function choisirCible(p, t, s, def) {
   const r2 = s.portee ** 2;
   const air = s.air ?? def.air;
   let meilleure = null, score = -Infinity;
   for (const e of p.ennemis) {
     if (e.mort || e.d < 0.4 || e.sous || !e.revele) continue;
-    if (e.def.vole ? !air : !def.sol) continue;
+    if (enVol(e) ? !air : !def.sol) continue;
     const d2 = distance2(e, t);
     if (d2 > r2) continue;
+    if (!voit(p, t, e, def)) continue;
     let v;
     switch (t.mode) {
       case 'fort': v = e.pv * 1000 - reste(e); break;
@@ -423,7 +526,8 @@ function choisirCible(p, t, s, def) {
   return meilleure;
 }
 
-const etourdir = (o, d) => { if (!o.mort) o.etourdiT = Math.max(o.etourdiT, d * (o.def.boss ? 0.35 : 1)); };
+const etourdir = (o, d) => { if (!o.mort && !o.def.insensible) o.etourdiT = Math.max(o.etourdiT, d * (o.def.boss ? 0.35 : 1)); };
+const ralentir = (o, r, d) => { if (o.def.insensible || !r) return; if (r >= o.ralenti) { o.ralenti = r; o.ralentiT = Math.max(o.ralentiT, d); } };
 
 function tirer(p, t, e, s, def) {
   t.tirs++;
@@ -433,18 +537,18 @@ function tirer(p, t, e, s, def) {
     // Un jet de flammes : touche tout autour de la cible et y met le feu.
     const air = s.air ?? def.air, r2 = s.rayon ** 2;
     for (const o of p.ennemis.slice()) {
-      if (o.mort || o.sous || (o.def.vole && !air) || distance2(o, e) > r2) continue;
+      if (o.mort || o.sous || (enVol(o) && !air) || distance2(o, e) > r2) continue;
       infliger(p, o, s.degats, { source: t });
       if (!o.mort && s.brulure >= o.brule) { o.brule = s.brulure; o.bruleT = Math.max(o.bruleT, s.duree); o.bruleSrc = t; }
     }
-    evt(p, { k: 'flamme', tour: t.id, x0: depart.x, y0: depart.y, z0: depart.z, x: e.x, y: e.y + 0.3, z: e.z, rayon: s.rayon, air: !!e.def.vole });
+    evt(p, { k: 'flamme', tour: t.id, x0: depart.x, y0: depart.y, z0: depart.z, x: e.x, y: e.y + 0.3, z: e.z, rayon: s.rayon, air: enVol(e) });
     return;
   }
   if (s.traverse) {
     // La Baliste : un carreau qui traverse toute la file.
     const ux = Math.sin(t.angle), uz = Math.cos(t.angle), L = s.portee + 0.6;
     for (const o of p.ennemis.slice()) {
-      if (o.mort || o.sous || o.def.vole) continue;
+      if (o.mort || o.sous || enVol(o)) continue;
       const rx = o.x - t.x, rz = o.z - t.z, proj = rx * ux + rz * uz;
       if (proj < 0 || proj > L || rx * rx + rz * rz - proj * proj > 0.42 ** 2) continue;
       infliger(p, o, s.degats, { perce: true, source: t });
@@ -541,17 +645,137 @@ function majMines(p) {
   const tourDe = id => p.tours.find(t => t.id === id) || null;
   for (const m of p.mines) {
     if ((m.arme -= DT) > 0) continue;
-    if (!p.ennemis.some(e => !e.mort && !e.sous && !e.def.vole && (e.x - m.x) ** 2 + (e.z - m.z) ** 2 < 0.4 ** 2)) continue;
+    if (!p.ennemis.some(e => !e.mort && !e.sous && !enVol(e) && (e.x - m.x) ** 2 + (e.z - m.z) ** 2 < 0.4 ** 2)) continue;
     m.saute = true;
     const r2 = m.rayon ** 2, src = tourDe(m.tour);
     for (const e of p.ennemis.slice()) {
-      if (e.mort || e.def.vole || (e.x - m.x) ** 2 + (e.z - m.z) ** 2 > r2) continue;
+      if (e.mort || enVol(e) || (e.x - m.x) ** 2 + (e.z - m.z) ** 2 > r2) continue;
       infliger(p, e, m.degats, { source: src });
       if (m.etourdit) etourdir(e, m.etourdit);
     }
     evt(p, { k: 'explosion', x: m.x, z: m.z, rayon: m.rayon, mine: m.id });
   }
   p.mines = p.mines.filter(m => !m.saute);
+}
+
+/** Dégâts continus (par seconde) : l'armure en retire une part, jamais plus de 60 %. */
+function brulerContinu(p, e, dps, t) {
+  infliger(p, e, Math.max(dps * 0.4, dps - e.armure) * DT, { perce: true, source: t });
+}
+
+/** L'Aimant : une impulsion qui repousse tout ce qui est à portée (les boss bougent à peine). */
+function impulsion(p, t, s, b) {
+  t.recharge -= DT;
+  const r2 = s.portee ** 2;
+  const cibles = p.ennemis.filter(e => !e.mort && !e.sous && distance2(e, t) <= r2 && (e.def.vole ? !!s.air : true) && voit(p, t, e, TOURS[t.type]));
+  t.cible = cibles.length ? -1 : null;
+  if (t.recharge > 0 || !cibles.length) { if (t.recharge < 0) t.recharge = 0; return; }
+  for (const e of cibles) {
+    if (e.def.vole && s.cloue) e.cloueT = Math.max(e.cloueT, s.cloue);
+    e.d = Math.max(0, e.d - s.recul * (e.def.boss ? 0.25 : 1));
+    e.bloquePar = null;
+    const q = surChemin(e.ch, e.d, e.decal);
+    e.x = q.x; e.z = q.z;
+    infliger(p, e, s.degats * (1 + b.d), { source: t });
+  }
+  t.tirs++;
+  t.recharge += 1 / (s.cadence * (1 + b.c));
+  evt(p, { k: 'aimant', tour: t.id, x: t.x, z: t.z, rayon: s.portee, cloue: !!s.cloue });
+}
+
+/** La Garnison : des gardes postés sur le chemin, qui bloquent et frappent. */
+function majGarnison(p, t, s, b) {
+  const cle = `${t.niveau}-${t.branche}`;
+  if (t.ralliement?.cle !== cle) {
+    // Le point du chemin le plus proche de la tour, à sa portée.
+    let best = null, d2min = s.portee ** 2;
+    for (const ch of p.carte.chemins) for (let d = 1; d < ch.total - 1; d += 0.25) {
+      const q = surChemin(ch, d);
+      const d2 = (q.x - t.x) ** 2 + (q.z - t.z) ** 2;
+      if (d2 < d2min) { d2min = d2; best = q; }
+    }
+    t.ralliement = { cle, x: best ? best.x : t.x, z: best ? best.z : t.z };
+    t.gardes = t.gardes || [];
+    for (const g of t.gardes) { g.pvMax = s.pvGarde; if (g.pv > 0) g.pv = s.pvGarde; }
+  }
+  const ral = t.ralliement;
+  while (t.gardes.length < s.gardes) {
+    const i = t.gardes.length;
+    t.gardes.push({ id: p.prochainId++, pv: s.pvGarde, pvMax: s.pvGarde, mortT: 0, cible: null, x: ral.x, z: ral.z, poste: i });
+  }
+  const n = t.gardes.length;
+  let actifs = 0;
+  for (const g of t.gardes) {
+    const a = (g.poste / n) * Math.PI * 2;
+    const px = ral.x + Math.cos(a) * 0.3, pz = ral.z + Math.sin(a) * 0.3;
+    if (g.pv <= 0) {
+      if ((g.mortT -= DT) <= 0) { g.pv = g.pvMax; g.x = px; g.z = pz; g.cible = null; }
+      continue;
+    }
+    let e = g.cible;
+    if (e && (e.mort || e.sous || enVol(e) || e.saute > 0 || (e.x - ral.x) ** 2 + (e.z - ral.z) ** 2 > 1.5 ** 2)) {
+      if (e.bloquePar === g) e.bloquePar = null;
+      e = g.cible = null;
+    }
+    if (!e) {
+      // Un Rouilleux à attraper près du poste, de préférence pas encore arrêté.
+      let best = null, v = Infinity;
+      for (const o of p.ennemis) {
+        if (o.mort || o.sous || enVol(o) || !o.revele) continue;
+        const d2 = (o.x - ral.x) ** 2 + (o.z - ral.z) ** 2;
+        if (d2 > 1.1 ** 2) continue;
+        const score = d2 + (o.bloquePar ? 4 : 0);
+        if (score < v) { v = score; best = o; }
+      }
+      if (best) {
+        e = g.cible = best;
+        if (!best.def.boss && !best.bloquePar) best.bloquePar = g;
+      }
+    }
+    if (e) {
+      actifs++;
+      // Il va au contact, frappe, et encaisse les coups de celui qu'il arrête.
+      const dx = e.x - g.x, dz = e.z - g.z, d = Math.hypot(dx, dz);
+      if (d > 0.35) { g.x += dx / d * Math.min(d - 0.35, 3 * DT); g.z += dz / d * Math.min(d - 0.35, 3 * DT); }
+      brulerContinu(p, e, s.degats * (1 + b.d), t);
+      if (!e.mort && (e.bloquePar === g || d < 0.6)) {
+        const frappe = (e.def.boss ? 40 : 6 + 4 * e.def.vies + e.def.armure) * p.def.force;
+        g.pv -= frappe * DT;
+        if (g.pv <= 0) {
+          g.mortT = s.renfort;
+          if (e.bloquePar === g) e.bloquePar = null;
+          g.cible = null;
+          evt(p, { k: 'gardeTombe', tour: t.id, x: g.x, z: g.z });
+        }
+      }
+    } else {
+      // Retour au poste.
+      const dx = px - g.x, dz = pz - g.z, d = Math.hypot(dx, dz);
+      if (d > 0.02) { g.x += dx / d * Math.min(d, 2 * DT); g.z += dz / d * Math.min(d, 2 * DT); }
+    }
+  }
+  t.cible = actifs ? -1 : null;
+}
+
+/** Le Rayon d'Ambre : un faisceau continu qui chauffe tant qu'il garde sa cible. */
+function majRayon(p, t, s, b) {
+  const r2 = s.portee ** 2, n = s.cibles || 1;
+  const visable = e => !e.mort && !e.sous && e.revele && distance2(e, t) <= r2 && voit(p, t, e, TOURS[t.type]);
+  const parId = id => p.ennemis.find(e => e.id === id);
+  let cibles = (t.faisceau || []).map(parId).filter(e => e && visable(e));
+  if (cibles.length < n) {
+    const autres = p.ennemis.filter(e => visable(e) && !cibles.includes(e)).sort((a, c) => reste(a) - reste(c));
+    cibles = cibles.concat(autres.slice(0, n - cibles.length));
+  }
+  if (!cibles.length) { t.faisceau = []; t.cible = null; t.chauffe = 0; return; }
+  if (!t.faisceau || t.faisceau[0] !== cibles[0].id) t.chauffe = 0;
+  t.chauffe = Math.min(s.max - 1, (t.chauffe || 0) + s.rampe * DT);
+  const dps = s.degats * (1 + b.d) * (1 + t.chauffe);
+  for (const e of cibles) brulerContinu(p, e, dps, t);
+  t.faisceau = cibles.map(e => e.id);
+  t.cible = cibles[0].id;
+  t.angle = Math.atan2(cibles[0].x - t.x, cibles[0].z - t.z);
+  if ((t.recharge -= DT) <= 0) { t.recharge = 0.5; t.tirs++; evt(p, { k: 'rayon', tour: t.id }); }
 }
 
 /** Le meilleur renfort des Phares voisins : { d: bonus de dégâts, c: bonus de cadence }. */
@@ -575,8 +799,12 @@ function majTours(p) {
   }
   for (const t of p.tours) {
     const def = TOURS[t.type], s = statsDe(t);
+    if (t.brouilleT > 0) { t.brouilleT -= DT; t.cible = null; continue; }
     if (def.soutien) { t.cible = null; continue; }
     const b = renfort(p, t);
+    if (def.projectile === 'impulsion') { impulsion(p, t, s, b); continue; }
+    if (def.projectile === 'gardes') { majGarnison(p, t, s, b); continue; }
+    if (def.projectile === 'rayon') { majRayon(p, t, s, b); continue; }
     t.renfort = b.d;
     if (s.aura) {
       // Le Blizzard : tout ce qui passe autour est ralenti et gèle peu à peu.
@@ -584,7 +812,7 @@ function majTours(p) {
       let n = 0;
       for (const e of p.ennemis) {
         if (e.mort || e.sous || distance2(e, t) > r2) continue;
-        if (s.ralenti >= e.ralenti) { e.ralenti = s.ralenti; e.ralentiT = Math.max(e.ralentiT, s.duree); }
+        ralentir(e, s.ralenti, s.duree);
         infliger(p, e, s.degats * (1 + b.d) * DT, { perce: true, source: t });
         n++;
       }
@@ -622,7 +850,7 @@ function majProjectiles(p) {
         const r2 = pr.rayon ** 2, src = tourDe(pr.tour);
         let n = 0;
         for (const e of p.ennemis.slice()) {
-          if (e.mort || e.def.vole) continue;
+          if (e.mort || enVol(e)) continue;
           const d2 = distance2(e, pr);
           if (d2 > r2) continue;
           infliger(p, e, pr.degats * (d2 < r2 / 4 ? 1 : 0.6), { source: src });
@@ -648,16 +876,16 @@ function majProjectiles(p) {
     if (pr.k === 'eclat') {
       const cibles = pr.zone ? p.ennemis.filter(o => !o.mort && distance2(o, e) <= pr.zone ** 2) : [e];
       for (const o of cibles) {
-        if (pr.ralenti >= o.ralenti) { o.ralenti = pr.ralenti; o.ralentiT = Math.max(o.ralentiT, pr.duree); }
+        ralentir(o, pr.ralenti, pr.duree);
         infliger(p, o, pr.degats, { source: src });
         if (pr.etourdit) etourdir(o, pr.etourdit);
       }
       evt(p, { k: 'gel', x: e.x, y: e.y, z: e.z, zone: pr.zone || 0 });
     } else if (pr.k === 'harpon') {
       // Le harpon accroche ; le Lance-filet cloue tous les volants autour.
-      const cibles = pr.zone ? p.ennemis.filter(o => !o.mort && o.def.vole && distance2(o, e) <= pr.zone ** 2) : [e];
+      const cibles = pr.zone ? p.ennemis.filter(o => !o.mort && enVol(o) && distance2(o, e) <= pr.zone ** 2) : [e];
       for (const o of cibles) {
-        if (pr.ralenti && pr.ralenti >= o.ralenti) { o.ralenti = pr.ralenti; o.ralentiT = Math.max(o.ralentiT, pr.duree); }
+        ralentir(o, pr.ralenti, pr.duree);
         infliger(p, o, pr.degats, { perce: !!pr.perce, source: src });
         if (pr.etourdit) etourdir(o, pr.etourdit);
       }
