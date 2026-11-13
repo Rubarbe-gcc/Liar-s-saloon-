@@ -8,7 +8,7 @@ import { pathToFileURL } from 'node:url';
 import { WebSocketServer } from 'ws';
 
 export const TOUR_MS = 150;
-const FACTIONS = ['fer', 'bosquet', 'echos'], ORDRES = ['move', 'att', 'am', 'rec', 'prod', 'bat', 'up', 'pouv', 'stop'];
+const FACTIONS = ['fer', 'bosquet', 'echos', 'cendres'], ORDRES = ['move', 'att', 'am', 'rec', 'prod', 'bat', 'up', 'pouv', 'stop'];
 const salles = new Map();
 const num = v => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
 const mot = v => (typeof v === 'string' && /^[a-z]{1,12}$/.test(v) ? v : undefined);

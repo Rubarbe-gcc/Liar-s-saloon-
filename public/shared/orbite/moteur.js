@@ -47,10 +47,28 @@ export const FA = {
   bosquet:{ qg: 'coeur', ouv: 'semeur',  bat: ['ruche', 'serre', 'ronce'], u: ['rejeton', 'epine', 'colosse'] },
   echos:  { qg: 'nexus', ouv: 'tisseur', bat: ['foyer', 'forge', 'phare'], u: ['eclat', 'pulse', 'sentinelle'] },
 };
-function hit(s, c, d, k) { c.last = k.eq; d = Math.max(1, Math.floor(d * 10 / (10 + s.up[c.eq].arm))); if (c.bc > 0) { const a = Math.min(c.bc, d); c.bc -= a; d -= a; } c.pv -= d; c.rg = 0; }
+// Cendres : Brûlure (les coups enflamment : 2 dégâts toutes les 0,5 s pendant 3 s) + Braise (une unité qui meurt explose : 12 dégâts à 1,5 case)
+Object.assign(UN, {
+  porteur:  { pv: 42,  v: 70, pt: 1000, deg: 0,  cd: 10, cout: 50,  tp: 160, vue: 6000 },
+  tison:    { pv: 105, v: 90, pt: 1200, deg: 10, cd: 9,  cout: 75,  tp: 180, vue: 6000, brule: 1, braise: 1 },
+  lanceur:  { pv: 78,  v: 72, pt: 5000, deg: 8,  cd: 12, cout: 100, tp: 240, vue: 7000, brule: 1, braise: 1 },
+  brasero:  { pv: 310, v: 50, pt: 2500, deg: 19, cd: 16, cout: 230, tp: 400, vue: 6000, brule: 1, braise: 1 },
+  pyrarque: { pv: 650, v: 58, pt: 2600, deg: 26, cd: 14, cout: 300, en: 100, tp: 500, vue: 7000, ch: 1, brule: 1 }, // Champion Cendres
+});
+Object.assign(BA, {
+  fournaise: { pv: 800, cout: 0,   tc: 0,   vue: 8000, prod: ['porteur'], qg: 1 },
+  atre:      { pv: 380, cout: 140, tc: 280, vue: 5000, prod: ['tison', 'lanceur'] },
+  creuset:   { pv: 430, cout: 240, tc: 380, vue: 5000, prod: ['brasero', 'pyrarque'] },
+  geyser:    { pv: 280, cout: 120, tc: 200, vue: 7000, pt: 6000, deg: 11, cd: 10, brule: 1 },
+});
+UN.porteur.ouv = 1;
+FA.cendres = { qg: 'fournaise', ouv: 'porteur', bat: ['atre', 'creuset', 'geyser'], u: ['tison', 'lanceur', 'brasero'] };
+function hit(s, c, d, k) { c.last = k.eq; if ((UN[k.k] || BA[k.k] || {}).brule) c.feu = Math.max(c.feu || 0, 60); d = Math.max(1, Math.floor(d * 10 / (10 + s.up[c.eq].arm))); if (c.bc > 0) { const a = Math.min(c.bc, d); c.bc -= a; d -= a; } c.pv -= d; c.rg = 0; }
 function regen(s, e) {
   const d = UN[e.k] || BA[e.k];
   if (e.bm) { if (e.rg < 60) e.rg++; else if (e.bc < e.bm && s.tick % 2 === 0) e.bc++; }
+  if (e.feu > 0) { e.feu--; if (e.feu % 10 === 0) { if (e.bc > 0) e.bc = Math.max(0, e.bc - 2); else e.pv -= 2; } }
+  if (e.feu > 0) return; // ce qui brûle ne se régénère pas
   if (d.enr && !e.cons && s.tick % 10 === 0 && e.pv < e.max) e.pv++;
   if (d.pra && s.tick % 20 === 0 && e.pv < e.max && s.ent.some(b => b.eq === e.eq && BA[b.k] && BA[b.k].enr && d2(b, e) <= 5000 * 5000)) e.pv = Math.min(e.max, e.pv + 2);
 }
@@ -64,6 +82,14 @@ export const MAPS = [
   { nom: 'Archipel',       base: [6, 41],  mines: [[10, 41], [6, 37], [16, 30]], centre: [[24, 24]],           relais: [[12, 20], [24, 36]] },
   { nom: 'Forteresse',     base: [24, 5],  mines: [[20, 5], [28, 5], [24, 12]],  centre: [[24, 24]],           relais: [[10, 20], [14, 32]], rc: [[24, 28]] },
 ];
+// cartes de l'éditeur : même forme que MAPS ; refusée si une valeur sort des bornes (alors la carte 0 sert)
+const pt = p => Array.isArray(p) && p.length === 2 && p.every(v => Number.isInteger(v) && v >= 2 && v <= 45);
+const pts = (l, max) => Array.isArray(l) && l.length <= max && l.every(pt);
+export function carteValide(d) {
+  if (!d || typeof d !== 'object' || !pt(d.base) || !pts(d.mines, 6) || !pts(d.centre || [], 3) || !pts(d.relais || [], 4) || !pts(d.rc || [], 2)) return false;
+  const [bx, by] = d.base; if (bx < 3 || by < 3 || bx > 44 || by > 44 || Math.hypot(bx - (47 - bx), by - (47 - by)) < 16 || !d.mines.length) return false;
+  return [...d.mines, ...(d.relais || [])].every(([x, y]) => Math.hypot(x - bx, y - by) >= 3);
+}
 // niveaux d'IA : pas = décision tous les N pas ; th/nw = écart de taille de vague / d'ouvriers ; nb = bâtiments max ; bonus = multiplicateur de récolte
 export const NIV = {
   1: { pas: 100, th: 3, nw: -2, nb: 2, bonus: 0.6,  rally: 0, up: 0 },
@@ -82,15 +108,15 @@ export function ajout(s, eq, k, x, y, fait = 1) {
 }
 
 export function creer(graine = 1, f0 = 'fer', f1 = 'fer', carte = 0, n0 = 2, n1 = 2, opt = {}) {
-  const M = MAPS[carte] || MAPS[0], B = [M.base, ...mir([M.base])];
+  const M = carteValide(opt.def) ? opt.def : (MAPS[carte] || MAPS[0]), B = [M.base, ...mir([M.base])];
   const s = { niv: [n0, n1], carte, bonus: [NIV[n0].bonus, NIV[n1].bonus], fac: [f0, f1], en: [0, 0], relais: [], tick: 0, pr: [300, 300], ent: [], n: 1, mines: [], fin: -1, rng: graine | 0, vis: [new Uint8Array(W * H), new Uint8Array(W * H)] };
   for (const [q, [x, y]] of B.entries()) {
     const F = FA[s.fac[q]]; ajout(s, q, F.qg, x * 1000, y * 1000);
     for (let i = 0; i < 3; i++) ajout(s, q, F.ouv, x * 1000 + i * 600 - 600, y * 1000 + 2500 * (q ? -1 : 1));
   }
-  for (const [x, y] of [...M.mines, ...mir(M.mines), ...M.centre])
+  for (const [x, y] of [...M.mines, ...mir(M.mines), ...(M.centre || [])])
     s.mines.push({ x: x * 1000, y: y * 1000, q: 3500 + hasard(s, 1000) });
-  for (const [x, y] of [...M.relais, ...mir(M.relais), ...(M.rc || [])]) {
+  for (const [x, y] of [...(M.relais || []), ...mir(M.relais || []), ...(M.rc || [])]) {
     s.relais.push({ x: x * 1000, y: y * 1000, prog: 0, own: -1 });
     ajout(s, 2, 'gardien', x * 1000 - 800, y * 1000); ajout(s, 2, 'gardien', x * 1000 + 800, y * 1000);
   }
@@ -187,6 +213,7 @@ export function step(s) {
   for (const e of s.ent) if (e.pv <= 0) {
     if (e.eq === 2 && e.last < 2) s.pr[e.last] += 40; // butin des neutres
     if (e.eq < 2 && e.last < 2 && e.last !== e.eq && !BA[e.k]) s.kills[e.last]++;
+    if (UN[e.k] && UN[e.k].braise && !e.boum) { e.boum = 1; for (const o of s.ent) if (o.pv > 0 && o.eq !== e.eq && d2(o, e) <= 1500 * 1500) { let d = 12; if (o.bc > 0) { const b = Math.min(o.bc, d); o.bc -= b; d -= b; } o.pv -= d; o.last = e.eq; } }
   }
   s.ent = s.ent.filter(e => e.pv > 0);
   if (s.tick % 5 === 0) { vue(s); relais(s); }
@@ -215,6 +242,7 @@ function pouvoir(s, e) {
   for (const o of s.ent) {
     if (o.pv <= 0) continue; const d = d2(o, e);
     if (e.k === 'marechal') { if (o.eq !== e.eq && d <= 3000 * 3000) hit(s, o, 100, e); }
+    else if (e.k === 'pyrarque') { if (o.eq !== e.eq && d <= 4000 * 4000) { hit(s, o, 40, e); o.feu = 120; } }
     else if (o.eq === e.eq && !BA[o.k] && d <= 5000 * 5000) { if (e.k === 'ancien') o.pv = Math.min(o.max, o.pv + 90); else { o.bc = o.bm; o.pv = Math.min(o.max, o.pv + 30); } }
   }
 }

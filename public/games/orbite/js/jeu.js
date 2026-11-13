@@ -2,6 +2,7 @@ import { W, H, UN, BA, FA, UPG, creer, step, cmd, ia, jouerTour, hash } from '..
 import { MISSIONS, etat } from '../../../shared/orbite/campagne.js';
 import { Reseau } from './reseau.js';
 import { creerRendu } from './rendu3d.js';
+import { creerEditeur } from './editeur.js';
 import { SERVEUR_JEUX } from '../../../shared/serveur.js';
 // En local : le serveur de dev ; en ligne : le serveur de jeux de l'arcade (Render), chemin /orbite.
 const adresseEnLigne = () => (['localhost', '127.0.0.1'].includes(location.hostname) || !SERVEUR_JEUX)
@@ -11,7 +12,7 @@ const THREE = globalThis.THREE || await import('../../../vendor/three/three.modu
 
 const $ = id => document.getElementById(id);
 const rendu = creerRendu(THREE, $('vue3d'), { W, H, UN, BA }), cv = rendu.canvas, mini2 = $('mini'), gm = mini2.getContext('2d');
-const COL = ['#4cc9f0', '#f25c54', '#d6a84a'], NOMF = { fer: 'Ligue de Fer', bosquet: 'Bosquet', echos: 'Échos' };
+const COL = ['#4cc9f0', '#f25c54', '#d6a84a'], NOMF = { fer: 'Ligue de Fer', bosquet: 'Bosquet', echos: 'Échos', cendres: 'Cendres' };
 const lire = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v === null || v === undefined ? d : v; } catch { return d; } };
 const ecrire = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* stockage plein ou refusé */ } };
 
@@ -33,7 +34,7 @@ function son(t) {
 function majSon() { $('m-son').textContent = 'Son : ' + (muet ? 'non' : 'oui'); $('b-son').textContent = muet ? '🔇' : '🔊'; ecrire('orbite.muet', muet); }
 
 // ---------- écrans ----------
-const ECR = ['principal', 'escarmouche', 'campagne', 'ligne', 'brief', 'fin'];
+const ECR = ['principal', 'escarmouche', 'campagne', 'ligne', 'brief', 'fin', 'editeur'];
 function ecran(n) { for (const e of ECR) $('e-' + e).style.display = e === n ? 'flex' : 'none'; $('menu').style.display = n ? 'flex' : 'none'; $('jeu').style.display = 'block'; $('jeu').classList.toggle('demo', !!n && !s); rs(); }
 function menuCampagne() {
   const fait = lire('orbite.camp', 0); $('camp-liste').innerHTML = MISSIONS.map(m =>
@@ -80,10 +81,15 @@ function connecter(apres) {
   });
 }
 
+const editeur = creerEditeur({ $, lire, ecrire, jouer: def => lancer({ mode: 'solo', graine: graineAlea(), f0: $('sf').value, f1: $('se').value, carte: 0, n0: 2, n1: +$('sn').value, opt: { def } }) });
+/** Les cartes de l'éditeur, ajoutées à la liste de l'escarmouche. */
+function cartesPerso() { const sc = $('sc'); [...sc.querySelectorAll('option[value^="p:"]')].forEach(o => o.remove()); editeur.cartes().forEach((d, i) => { const o = document.createElement('option'); o.value = 'p:' + i; o.textContent = '✎ ' + d.nom; sc.appendChild(o); }); }
+
 document.getElementById('menu').addEventListener('click', ev => {
   const a = ev.target.dataset && ev.target.dataset.a; if (!a) return; const [t, v] = a.split(':');
-  if (t === 'go') { if (v === 'campagne') menuCampagne(); else { if (v === 'ligne') $('lw').value = lire('orbite.ws', adresseEnLigne()); ecran(v); } }
-  else if (t === 'jouer') lancer({ mode: 'solo', graine: graineAlea(), f0: $('sf').value, f1: $('se').value, carte: +$('sc').value, n0: 2, n1: +$('sn').value });
+  if (t.startsWith('ed-') && editeur.action(t, v)) return;
+  if (t === 'go') { if (v === 'campagne') menuCampagne(); else if (v === 'editeur') { editeur.ouvrir(); ecran('editeur'); } else { if (v === 'escarmouche') cartesPerso(); if (v === 'ligne') $('lw').value = lire('orbite.ws', adresseEnLigne()); ecran(v); } }
+  else if (t === 'jouer') { const c = $('sc').value, def = c.startsWith('p:') ? editeur.cartes()[+c.slice(2)] : null; lancer({ mode: 'solo', graine: graineAlea(), f0: $('sf').value, f1: $('se').value, carte: def ? 0 : +c, n0: 2, n1: +$('sn').value, opt: def ? { def } : {} }); }
   else if (t === 'mission') { const m = MISSIONS[+v - 1]; mission = m; $('brief-t').textContent = `${m.id}. ${m.titre}`; $('brief-x').textContent = m.texte; $('brief-o').textContent = `${NOMF[m.f]} contre ${NOMF[m.e]} — IA niveau ${m.niv}`; ecran('brief'); }
   else if (t === 'commencer') lancer({ mode: 'camp', graine: graineAlea(), f0: mission.f, f1: mission.e, carte: mission.carte, n0: 2, n1: mission.niv, opt: mission.opt, mission });
   else if (t === 'suivante') { mission = MISSIONS[mission.id]; $('brief-t').textContent = `${mission.id}. ${mission.titre}`; $('brief-x').textContent = mission.texte; $('brief-o').textContent = `${NOMF[mission.f]} contre ${NOMF[mission.e]} — IA niveau ${mission.niv}`; ecran('brief'); }
@@ -114,9 +120,9 @@ const estOuv = e => UN[e.k] && UN[e.k].ouv;
 const proj = e => rendu.proj(e.x, e.y, BA[e.k] ? 1 : .6);
 
 // ---------- interface (panneaux façon STR) ----------
-const ICO = { ouvrier: '🔧', fantassin: '🪖', tireur: '🎯', blinde: '🚜', marechal: '⭐', semeur: '🌱', rejeton: '🐛', epine: '🌵', colosse: '🦣', ancien: '🌳', tisseur: '🕸️', eclat: '💎', pulse: '🔮', sentinelle: '🗿', oracle: '👁️', gardien: '👾',
+const ICO = { ouvrier: '🔧', fantassin: '🪖', tireur: '🎯', blinde: '🚜', marechal: '⭐', semeur: '🌱', rejeton: '🐛', epine: '🌵', colosse: '🦣', ancien: '🌳', tisseur: '🕸️', eclat: '💎', pulse: '🔮', sentinelle: '🗿', oracle: '👁️', gardien: '👾', porteur: '⛏️', tison: '🔥', lanceur: '☄️', brasero: '🌋', pyrarque: '👹', fournaise: '🏭', atre: '🔥', creuset: '⚗️', geyser: '♨️',
   noyau: '🏭', caserne: '🏛️', atelier: '⚙️', tour: '🗼', coeur: '🌿', ruche: '🐝', serre: '🏡', ronce: '🌹', nexus: '🔷', foyer: '🔥', forge: '🔨', phare: '💡', att: '⚔️', arm: '🛡️', rec: '⛏️' };
-const NOM = { ouvrier: 'Ouvrier', fantassin: 'Fantassin', tireur: 'Tireur', blinde: 'Blindé', marechal: 'Maréchal', semeur: 'Semeur', rejeton: 'Rejeton', epine: 'Épine', colosse: 'Colosse', ancien: 'Ancien', tisseur: 'Tisseur', eclat: 'Éclat', pulse: 'Pulse', sentinelle: 'Sentinelle', oracle: 'Oracle', gardien: 'Gardien',
+const NOM = { ouvrier: 'Ouvrier', fantassin: 'Fantassin', tireur: 'Tireur', blinde: 'Blindé', marechal: 'Maréchal', semeur: 'Semeur', rejeton: 'Rejeton', epine: 'Épine', colosse: 'Colosse', ancien: 'Ancien', tisseur: 'Tisseur', eclat: 'Éclat', pulse: 'Pulse', sentinelle: 'Sentinelle', oracle: 'Oracle', gardien: 'Gardien', porteur: 'Porteur', tison: 'Tison', lanceur: 'Lanceur', brasero: 'Brasero', pyrarque: 'Pyrarque', fournaise: 'Fournaise', atre: 'Âtre', creuset: 'Creuset', geyser: 'Geyser',
   noyau: 'Noyau', caserne: 'Caserne', atelier: 'Atelier', tour: 'Tour', coeur: 'Cœur', ruche: 'Ruche', serre: 'Serre', ronce: 'Ronce', nexus: 'Nexus', foyer: 'Foyer', forge: 'Forge', phare: 'Phare' };
 const CSSC = ['#4cc9f0', '#f25c54', '#d6a84a'], KEYS = 'qweasdzxc';
 const img = (k, eq = ME) => { try { return `<img src="${rendu.portrait(k, eq)}" alt="">`; } catch (err) { return ICO[k] || '?'; } }; // portrait 3D (repli : emoji)
@@ -244,7 +250,7 @@ function avancer() {
 let demo = null, accD = 0;
 function demoFrame(dt) { // fond de menu : bataille IA contre IA, caméra orbitale
   if (!demo || demo.fin >= 0) {
-    const F = ['fer', 'bosquet', 'echos'], a = F[Math.random() * 3 | 0], b = F[Math.random() * 3 | 0];
+    const F = ['fer', 'bosquet', 'echos', 'cendres'], a = F[Math.random() * 4 | 0], b = F[Math.random() * 4 | 0];
     demo = creer(graineAlea(), a, b, 2, 3, 3, { pr: [2500, 2500], depart: [0, 1].flatMap(eq => [{ eq, role: 0, n: 6 }, { eq, role: 1, n: 4 }, { eq, role: 2, n: 3 }]) });
     rendu.init(demo); rendu.menu(true);
   }

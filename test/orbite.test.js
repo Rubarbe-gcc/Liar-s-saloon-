@@ -11,7 +11,7 @@ test('IA contre IA : la partie vit (récolte, bâtiments, unités)', () => {
   assert.ok(s.ent.length > 8 && s.ent.some(e => e.k === 'caserne'));
 });
 test('toutes les factions : duels sans erreur', () => {
-  const F = ['fer', 'bosquet', 'echos'];
+  const F = ['fer', 'bosquet', 'echos', 'cendres'];
   for (const a of F) for (const b of F) { const s = creer(5, a, b); for (let i = 0; i < 6000; i++) { ia(s, 0); ia(s, 1); step(s); } assert.ok(s.ent.length > 6, a + ' vs ' + b); }
 });
 test('relais, neutres et champions', () => {
@@ -62,4 +62,13 @@ test('campagne : une mission de récolte est gagnable (IA joueuse)', () => {
   const m = MISSIONS[0], s = creer(1, m.f, m.e, m.carte, 2, m.niv, m.opt); let r;
   for (let i = 0; i < 20000 && s.fin < 0; i++) { ia(s, 0); ia(s, 1); step(s); r = etat(s, m); if (r.etat !== 'cours') break; }
   assert.equal(r.etat, 'gagne');
+});
+test('Cendres : brûlure, pas de régénération en brûlant, explosion de Braise', async () => {
+  const { creer: cr, step: st, ajout: aj } = await import('../public/shared/orbite/moteur.js');
+  const s = cr(3, 'cendres', 'bosquet', 0);
+  const t = aj(s, 0, 'tison', 20000, 20000), r = aj(s, 1, 'rejeton', 20800, 20000);
+  for (let i = 0; i < 40 && r.pv > 0; i++) st(s);
+  assert.ok(r.feu > 0, 'la cible brûle');
+  const pv = r.pv; r.feu = 30; t.pv = 0; aj(s, 0, 'porteur', 5000, 5000);
+  st(s); assert.ok(r.pv <= pv - 12, 'Braise : 12 dégâts autour du Tison mort');
 });

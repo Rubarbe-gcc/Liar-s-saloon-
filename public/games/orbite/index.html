@@ -44,7 +44,7 @@ button:hover:not(:disabled){background:linear-gradient(#37448a,#1c2450);box-shad
 #res span{padding:3px 10px;background:#0b0f22b0;border:1px solid #2c3566;border-radius:14px}
 .portrait img{width:100%;height:100%;object-fit:contain}#cmd .ic img{width:44px;height:44px}#cmd button:disabled .ic img{opacity:.4;filter:grayscale(.7)}
 /* console de commandement : cadre métallique, bords relevés à gauche (mini-carte) et à droite (commandes), couleur de la faction */
-body{--ac:#6fa8ff;--ac2:#2a4f8a}body[data-fac=bosquet]{--ac:#8be06a;--ac2:#2f6a2a}body[data-fac=echos]{--ac:#b896ff;--ac2:#4a2f8a}
+body{--ac:#6fa8ff;--ac2:#2a4f8a}body[data-fac=cendres]{--ac:#ff8a3a;--ac2:#8a3a10}body[data-fac=bosquet]{--ac:#8be06a;--ac2:#2f6a2a}body[data-fac=echos]{--ac:#b896ff;--ac2:#4a2f8a}
 #vue3d{bottom:158px}
 #bas{height:192px;padding:10px 8px 8px;gap:8px;border-top:0;background:
   linear-gradient(180deg,#3a4150 0,#262b36 6px,#1a1e27 40%,#0e1016 100%),
@@ -70,7 +70,10 @@ body{--ac:#6fa8ff;--ac2:#2a4f8a}body[data-fac=bosquet]{--ac:#8be06a;--ac2:#2f6a2
 #bar button{background:linear-gradient(#323848,#171a22);border-color:#4b5262}
 .barre{border-color:#3a404d;background:#05060a}
 .cel{background:#0b0d14;border-radius:2px}
-.cel span{display:flex;width:100%;height:100%}.cel img{width:100%;height:100%;object-fit:contain}.file span img{width:24px;height:24px;vertical-align:middle}
+.cel span{display:flex;width:100%;height:100%}
+#menu section.ed{max-width:900px}.ed-corps{display:flex;gap:16px;align-items:flex-start;text-align:left}#ed-cv{width:480px;height:480px;border:2px solid #4b5262;border-radius:4px;cursor:crosshair;image-rendering:pixelated}
+.ed-cote{display:flex;flex-direction:column;gap:10px;width:300px}.ed-outils{display:flex;flex-wrap:wrap;gap:6px}.ed-outils button{padding:6px 9px;font-size:13px}.ed-outils button.actif{border-color:#ffe36e;box-shadow:0 0 10px #ffe36e88}
+.ed-l{display:flex;gap:6px;align-items:center}.ed-l span{flex:1}.ed-l button{padding:3px 8px}.cel img{width:100%;height:100%;object-fit:contain}.file span img{width:24px;height:24px;vertical-align:middle}
 </style></head><body>
 <div id="jeu">
 <div id="vue3d"></div><div id="cadre"></div>
@@ -80,22 +83,28 @@ body{--ac:#6fa8ff;--ac2:#2a4f8a}body[data-fac=bosquet]{--ac:#8be06a;--ac2:#2f6a2
 <div id="bas"><div id="mini-w"><canvas id="mini" width="180" height="180"></canvas></div><div id="info"></div><div id="cmd"></div></div>
 </div>
 <div id="menu">
-<section id="e-principal"><h1>ORBITE NOIRE</h1><small>Stratégie en temps réel — Ligue de Fer · Bosquet · Échos</small>
-<button data-a="go:escarmouche">Escarmouche</button><button data-a="go:campagne">Campagne</button><button data-a="go:ligne">En ligne</button><button data-a="rejeu">Revoir la dernière partie</button><button data-a="muet" id="m-son">Son : oui</button>
+<section id="e-principal"><h1>ORBITE NOIRE</h1><small>Stratégie en temps réel — Ligue de Fer · Bosquet · Échos · Cendres</small>
+<button data-a="go:escarmouche">Escarmouche</button><button data-a="go:campagne">Campagne</button><button data-a="go:ligne">En ligne</button><button data-a="go:editeur">Éditeur de cartes</button><button data-a="rejeu">Revoir la dernière partie</button><button data-a="muet" id="m-son">Son : oui</button>
 <small>Clic gauche : sélection · Clic droit : ordre · WASD/flèches : caméra · P : pause · F : vitesse · Q : pouvoir du Champion · Ctrl+chiffre : groupe</small></section>
 <section id="e-escarmouche"><h2>Escarmouche</h2>
-<label>Ta faction <select id="sf"><option value="fer">Ligue de Fer</option><option value="bosquet">Bosquet</option><option value="echos">Échos</option></select></label>
-<label>Adversaire <select id="se"><option value="fer">Ligue de Fer</option><option value="bosquet" selected>Bosquet</option><option value="echos">Échos</option></select></label>
+<label>Ta faction <select id="sf"><option value="fer">Ligue de Fer</option><option value="bosquet">Bosquet</option><option value="echos">Échos</option><option value="cendres">Cendres</option></select></label>
+<label>Adversaire <select id="se"><option value="fer">Ligue de Fer</option><option value="bosquet" selected>Bosquet</option><option value="echos">Échos</option><option value="cendres">Cendres</option></select></label>
 <label>Carte <select id="sc"><option value="0">Croisée</option><option value="1">Diagonale</option><option value="2">Duel au centre</option><option value="3">Couloirs</option><option value="4">Archipel</option><option value="5">Forteresse</option></select></label>
 <label>Niveau de l'IA <select id="sn"><option value="1">Novice</option><option value="2" selected>Normal</option><option value="3">Expert</option><option value="4">Impitoyable</option></select></label>
-<small>Ligue de Fer : solide · Bosquet : bâtiments qui se régénèrent · Échos : boucliers et résonance</small>
+<small>Ligue de Fer : solide · Bosquet : bâtiments qui se régénèrent · Échos : boucliers et résonance · Cendres : leurs coups brûlent, leurs morts explosent</small>
 <button data-a="jouer">Jouer</button><button data-a="go:principal">Retour</button></section>
+<section id="e-editeur" class="ed"><h2>Éditeur de cartes</h2><small>Placez votre base, vos Prismes et vos Relais : le camp adverse est le miroir (en pâle). Ce qui est « au centre » n’est pas recopié.</small>
+<div class="ed-corps"><canvas id="ed-cv" width="480" height="480"></canvas><div class="ed-cote">
+<div class="ed-outils"><button data-a="ed-outil:base">🏰 Base</button><button data-a="ed-outil:mines">💎 Prismes</button><button data-a="ed-outil:centre">💎 Prismes au centre</button><button data-a="ed-outil:relais">⚡ Relais</button><button data-a="ed-outil:rc">⚡ Relais au centre</button><button data-a="ed-outil:gomme">🧽 Gomme</button></div>
+<label>Nom <input id="ed-nom" maxlength="30"></label><div id="ed-etat" class="d"></div>
+<div class="ed-outils"><button data-a="ed-jouer" id="ed-jouer">▶ Jouer</button><button data-a="ed-garder" id="ed-garder">💾 Enregistrer</button><button data-a="ed-neuf">Nouvelle</button><button data-a="ed-code">Partager (code)</button><button data-a="ed-coller">Coller un code</button></div>
+<small>Jouer utilise la faction, l’adversaire et le niveau choisis dans Escarmouche.</small><div id="ed-liste"></div><button data-a="go:principal">Retour</button></div></div></section>
 <section id="e-campagne"><h2>Campagne</h2><div id="camp-liste"></div><button data-a="go:principal">Retour</button></section>
 <section id="e-brief"><h2 id="brief-t"></h2><div id="brief-x"></div><small id="brief-o"></small><button data-a="commencer">Commencer</button><button data-a="go:campagne">Retour</button></section>
 <section id="e-ligne"><h2>En ligne</h2>
 <label>Serveur <input id="lw" size="26"></label><label>Pseudo <input id="ln" value="Joueur" maxlength="16"></label>
 <label>Mode <select id="lm"><option value="1v1">1 contre 1</option><option value="2v2">2 contre 2 (équipiers)</option></select></label>
-<label>Faction <select id="lf"><option value="fer">Ligue de Fer</option><option value="bosquet">Bosquet</option><option value="echos">Échos</option></select></label>
+<label>Faction <select id="lf"><option value="fer">Ligue de Fer</option><option value="bosquet">Bosquet</option><option value="echos">Échos</option><option value="cendres">Cendres</option></select></label>
 <label>Carte <select id="lc"><option value="0">Croisée</option><option value="1">Diagonale</option><option value="2">Duel au centre</option><option value="3">Couloirs</option><option value="4">Archipel</option><option value="5">Forteresse</option></select></label>
 <button data-a="creer">Créer une salle</button><label>Code <input id="lcode" size="6" maxlength="4"></label><button data-a="rejoindre">Rejoindre</button>
 <div id="lstat" class="d"></div><button data-a="demarrer" id="l-go" disabled>Démarrer</button><button data-a="quitter-ligne">Retour</button></section>
