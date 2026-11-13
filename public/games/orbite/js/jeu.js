@@ -185,7 +185,7 @@ cv.oncontextmenu = e => {
   const p = rendu.sol(e.offsetX, e.offsetY); if (!p) return; const X = p.x, Y = p.y;
   const en = s.ent.find(o => o.eq !== ME && o.pv > 0 && vis(o.x, o.y) === 2 && Math.hypot(o.x - X, o.y - Y) < (BA[o.k] ? 1500 : 700));
   if (en) return ordre(sel, { t: 'att', c: en.id });
-  const mi = s.mines.findIndex(m => vis(m.x, m.y) > 0 && Math.hypot(m.x - X, m.y - Y) < 1300);
+  let mi = rendu.mineSous(e.offsetX, e.offsetY); if (mi < 0 || !(s.mines[mi].q > 0)) mi = s.mines.findIndex(m => m.q > 0 && vis(m.x, m.y) > 0 && Math.hypot(m.x - X, m.y - Y) < 2000);
   if (mi >= 0) return ordre(mine().filter(estOuv).map(o => o.id), { t: 'rec', m: mi });
   ordre(sel, { t: 'move', x: Math.max(500, Math.min(W * 1000 - 500, X)), y: Math.max(500, Math.min(H * 1000 - 500, Y)) });
 };

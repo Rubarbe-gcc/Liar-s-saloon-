@@ -238,24 +238,24 @@ export function creerRendu(THREE, hote, { W, H, UN, BA }) {
       for (let k = 0; k < 9; k++) {
         const a = ang + (k / 8 - .5) * 2.3, r = .75 + (k % 2) * .45 + r2() * .2, x = Math.cos(a) * r, z = Math.sin(a) * r, y0 = haut(mx + x, mz + z) - .08;
         const sg = new THREE.Group(); sg.position.set(x, y0, z); g.add(sg); cr.push(sg);
-        add(sg, ROCHE[k % 3], matRoche2, 0, .05, 0, { s: [.42, .3, .42], r: [0, r2() * 6, 0] });
-        const nb = 2 + (r2() * 2 | 0); for (let c = 0; c < nb; c++) { const h = .45 + r2() * .55 - (k % 2) * .12; add(sg, crist, MCr[(k + c) % 3], (r2() - .5) * .3, 0, (r2() - .5) * .3, { s: [.8 + r2() * .3, h, .8 + r2() * .3], r: [(r2() - .5) * .6, r2() * 6, (r2() - .5) * .6] }); }
+        P(sg, ROCHE[k % 3], matRoche2, 0, .05, 0, { s: [.42, .3, .42], r: [0, r2() * 6, 0] });
+        const nb = 2 + (r2() * 2 | 0); for (let c = 0; c < nb; c++) { const h = .45 + r2() * .55 - (k % 2) * .12; P(sg, crist, MCr[(k + c) % 3], (r2() - .5) * .3, 0, (r2() - .5) * .3, { s: [.8 + r2() * .3, h, .8 + r2() * .3], r: [(r2() - .5) * .6, r2() * 6, (r2() - .5) * .6] }); }
       }
       const gl = sprite(0x4aa8ff, 3.6, .3); gl.position.set(Math.cos(ang) * .9, haut(mx, mz) + .6, Math.sin(ang) * .9); g.add(gl);
-      g.userData = { q0: m.q, mine: m, gl, cr }; cartesObjs.add(g);
+      compacter(g, 'mine' + carte + ':' + i); g.userData = { q0: m.q, mine: m, gl, cr, idx: i }; cartesObjs.add(g);
     });
     // Relais d'Énergie : pylône sur une bouche de chaleur
     s.relais.forEach(rl => {
       const x0 = rl.x / 1000, z0 = rl.y / 1000, g = new THREE.Group(); g.position.set(x0, haut(x0, z0), z0);
-      for (let k = 0; k < 9; k++) { const a = k / 9 * 6.283; add(g, ROCHE[k % 3], k % 2 ? matRoche : matRoche2, Math.cos(a) * 1.55, .05, Math.sin(a) * 1.55, { s: [.42, .5 + (k % 3) * .15, .42], r: [0, a * 2, 0] }); }
+      for (let k = 0; k < 9; k++) { const a = k / 9 * 6.283; P(g, ROCHE[k % 3], k % 2 ? matRoche : matRoche2, Math.cos(a) * 1.55, .05, Math.sin(a) * 1.55, { s: [.42, .5 + (k % 3) * .15, .42], r: [0, a * 2, 0] }); }
       add(g, cyl(1.25, 1.25, .04, 24), MT(0x2a1a10, { emissive: 0xff7a2a, emissiveIntensity: .5, roughness: .8 }), 0, -.02, 0, { ns: true });
-      add(g, cyl(.9, 1.1, .25, 8), MT(0x4a4f5a, { roughness: .5, metalness: .7 }), 0, .12, 0); for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + .4; add(g, box(.18, 1.6, .18), MT(0x5c6270, { roughness: .45, metalness: .75 }), Math.cos(a) * .6, .85, Math.sin(a) * .6, { r: [Math.sin(a) * .18, 0, -Math.cos(a) * .18] }); }
-      add(g, cyl(.12, .2, 2.4, 8), MT(0x8a93a3, { metalness: .8, roughness: .35 }), 0, 1.4, 0);
+      P(g, cyl(.9, 1.1, .25, 8), MT(0x4a4f5a, { roughness: .5, metalness: .7 }), 0, .12, 0); for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + .4; P(g, box(.18, 1.6, .18), MT(0x5c6270, { roughness: .45, metalness: .75 }), Math.cos(a) * .6, .85, Math.sin(a) * .6, { r: [Math.sin(a) * .18, 0, -Math.cos(a) * .18] }); }
+      P(g, cyl(.12, .2, 2.4, 8), MT(0x8a93a3, { metalness: .8, roughness: .35 }), 0, 1.4, 0);
       const r1 = add(g, tor(.65, .05), glow(0xffffff, 1), 0, 1.3, 0, { r: [Math.PI / 2, 0, 0] }), r2 = add(g, tor(.45, .04), glow(0xffffff, 1), 0, 1.9, 0, { r: [Math.PI / 2, 0, 0] });
       const orb = add(g, sph(.22), glow(0xffffff, 1.4), 0, 2.75, 0), halo = sprite(0xffffff, 2.2, .7); halo.position.y = 2.75; g.add(halo);
       const vap = []; for (let k = 0; k < 5; k++) { const v = sprite(0xffb070, 1.1, .2); v.position.set(0, .3, 0); g.add(v); vap.push(v); }
       const disc = add(g, cyl(2.4, 2.4, .02, 40), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }), 0, .05, 0, { ns: true });
-      g.userData = { rl, r1, r2, orb, halo, disc, vap }; cartesObjs.add(g);
+      compacter(g, 'relais'); g.userData = { rl, r1, r2, orb, halo, disc, vap }; cartesObjs.add(g);
     });
   }
   function fusion(geos) { // fusionne des géométries non indexées (évite d'importer BufferGeometryUtils)
@@ -287,52 +287,188 @@ export function creerRendu(THREE, hote, { W, H, UN, BA }) {
 
   // ---------- modèles ----------
   const FER = [0x8e98aa, 0x505b6c], BK = 0x4b3a2a, GR = 0x3f8f4a, GL = 0x9dff7a, PU = 0x7a5cff, CY = 0xb8f1ff;
-  const fen = (g, pts) => pts.forEach(([x, y, z]) => add(g, box(.17, .1, .03), glow(0xffe3a0, 1.6), x, y, z, { ns: true }));
+  const fen = (g, pts) => pts.forEach(([x, y, z]) => P(g, box(.17, .1, .03), glow(0xffe3a0, 1.6), x, y, z, { ns: true }));
   function pata(g, u, geo, mat, x, y0, z, h, ph, o = {}) { const pv_ = new THREE.Group(); pv_.position.set(x, y0 + h, z); g.add(pv_); add(pv_, geo, mat, 0, -h / 2, 0, o); (u.pattes = u.pattes || []).push([pv_, ph]); }
-  const Ring = (g, r, eq) => add(g, tor(r, .045, 40), glow(TC[eq], 1.3), 0, .07, 0, { r: [Math.PI / 2, 0, 0], ns: true });
+  const Ring = (g, r, eq) => P(g, tor(r, .045, 40), glow(TC[eq], 1.3), 0, .07, 0, { r: [Math.PI / 2, 0, 0], ns: true });
+  // pièces fixes (P) : fusionnées par matériau à la création de l'unité (quelques appels de dessin par unité, même avec beaucoup de détails)
+  const P = (p, geo, mat, x = 0, y = 0, z = 0, o = {}) => { const m = add(p, geo, mat, x, y, z, o); m.userData.st = 1; return m; };
+  const jambe = (g, u, x, y, z, ph) => { const pv_ = new THREE.Group(); pv_.position.set(x, y, z); g.add(pv_); (u.pattes = u.pattes || []).push([pv_, ph]); return pv_; };
+  const PEINT = eq => MT(TC[eq], { roughness: .42, metalness: .35 });
+  const ACIER = MT(0xa9b1bc, { roughness: .4, metalness: .35 }), ACIER2 = MT(0x5f6876, { roughness: .45, metalness: .4 }), JOINT = MT(0x23272e, { roughness: .6, metalness: .5 }), CAOUT = MT(0x1a1c20, { roughness: .9, metalness: 0 });
+  const BOIS = MT(0x5e4331, { roughness: .9, metalness: 0 }), BOIS2 = MT(0x3b2a1f, { roughness: .92, metalness: 0 }), MOUSSE = MT(0x4f8a3a, { roughness: .85, metalness: 0 }), MOUSSE2 = MT(0x2f6a2c, { roughness: .85, metalness: 0 }), CARAP = MT(0x6b5238, { roughness: .6, metalness: .1 }), OS = MT(0xd8d0b0, { roughness: .55, metalness: 0 }), SEVE = glow(0x9dff7a, 1.6);
+  const CADRE = MT(0x2a2440, { roughness: .3, metalness: .85 }), OR = MT(0xc9a96a, { roughness: .28, metalness: .9 }), CRIS = MT(0xb79cff, { emissive: 0x6a3cff, emissiveIntensity: .6, roughness: .1, metalness: .1, flatShading: true });
+  // un seul matériau pour toutes les pièces fixes : couleur, lueur, rugosité et métal sont portés par les sommets
+  const MATU = new THREE.MeshStandardMaterial({ vertexColors: true });
+  MATU.onBeforeCompile = sh => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute vec3 aEmi; attribute vec2 aRM; varying vec3 vEmi; varying vec2 vRM;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvEmi = aEmi; vRM = aRM;');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nvarying vec3 vEmi; varying vec2 vRM;').replace('#include <roughnessmap_fragment>', 'float roughnessFactor = vRM.x;').replace('#include <metalnessmap_fragment>', 'float metalnessFactor = vRM.y;').replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\ntotalEmissiveRadiance += vEmi;');
+  };
+  const FUS = new Map();
+  function compacter(o, cle) {
+    o.children.filter(c => !c.isMesh && c.children && c.children.length).forEach((c, i) => compacter(c, cle + '/' + i));
+    const st = o.children.filter(c => c.isMesh && c.userData.st && !c.material.transparent); if (st.length < 2) return;
+    let L = FUS.get(cle);
+    if (!L) {
+      const parts = st.map(m => { m.updateMatrix(); const gg = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone(); gg.applyMatrix4(m.matrix); return [gg, m.material]; });
+      const n = parts.reduce((a, [gg]) => a + gg.attributes.position.count, 0), Pp = new Float32Array(n * 3), Nn = new Float32Array(n * 3), Cc = new Float32Array(n * 3), Ee = new Float32Array(n * 3), RM = new Float32Array(n * 2); let k = 0;
+      for (const [gg, mt] of parts) { const c = gg.attributes.position.count, e = mt.emissive ? mt.emissive.clone().multiplyScalar(mt.emissiveIntensity || 0) : null; Pp.set(gg.attributes.position.array, k * 3); Nn.set(gg.attributes.normal.array, k * 3);
+        for (let i = k; i < k + c; i++) { Cc[i * 3] = mt.color.r; Cc[i * 3 + 1] = mt.color.g; Cc[i * 3 + 2] = mt.color.b; if (e) { Ee[i * 3] = e.r; Ee[i * 3 + 1] = e.g; Ee[i * 3 + 2] = e.b; } RM[i * 2] = mt.roughness ?? .5; RM[i * 2 + 1] = mt.metalness ?? 0; } k += c; }
+      L = new THREE.BufferGeometry(); L.setAttribute('position', new THREE.BufferAttribute(Pp, 3)); L.setAttribute('normal', new THREE.BufferAttribute(Nn, 3)); L.setAttribute('color', new THREE.BufferAttribute(Cc, 3)); L.setAttribute('aEmi', new THREE.BufferAttribute(Ee, 3)); L.setAttribute('aRM', new THREE.BufferAttribute(RM, 2));
+      L.computeBoundingSphere(); FUS.set(cle, L);
+    }
+    for (const m of st) o.remove(m);
+    const m = new THREE.Mesh(L, MATU); m.castShadow = true; m.receiveShadow = true; o.add(m);
+  }
   const B = {
-    // --- Ligue de Fer
-    ouvrier(g, eq, u) { add(g, box(.46, .28, .5), MT(FER[0]), 0, .34, 0); add(g, box(.3, .2, .3), MT(FER[1]), 0, .58, .02); add(g, box(.24, .07, .05), glow(TC[eq]), 0, .6, .17); for (const x of [-1, 1]) { pata(g, u, box(.12, .26, .14), MT(FER[1]), x * .14, .01, 0, .26, x); add(g, cyl(.04, .04, .42), MT(FER[0]), x * .3, .44, .14, { r: [1.2, 0, 0] }); } u.hb = .95; },
-    fantassin(g, eq, u) { add(g, box(.34, .42, .24), MT(FER[0]), 0, .66, 0); add(g, sph(.13), MT(FER[1]), 0, 1.02, 0); add(g, box(.18, .05, .04), glow(TC[eq]), 0, 1.04, .12); for (const x of [-1, 1]) { pata(g, u, box(.12, .42, .14), MT(FER[1]), x * .1, 0, 0, .42, x); add(g, box(.15, .13, .17), glow(TC[eq], .7), x * .25, .9, 0); } add(g, box(.07, .07, .55), MT(0x222831), .2, .7, .3); u.hb = 1.3; },
-    tireur(g, eq, u) { add(g, box(.3, .42, .22), MT(FER[0]), 0, .68, 0); add(g, sph(.12), MT(FER[1]), 0, 1.04, 0); add(g, box(.16, .05, .04), glow(TC[eq]), 0, 1.06, .1); for (const x of [-1, 1]) pata(g, u, box(.1, .44, .12), MT(FER[1]), x * .09, 0, 0, .44, x); add(g, box(.08, .08, 1), MT(0x1c2129), .17, .76, .4); add(g, box(.2, .3, .12), MT(FER[1]), 0, .74, -.18); add(g, box(.1, .1, .1), glow(TC[eq], .8), .17, .8, .9); u.hb = 1.35; },
-    blinde(g, eq, u) { add(g, box(.9, .34, 1.5), MT(FER[0]), 0, .42, 0); for (const x of [-1, 1]) add(g, box(.28, .36, 1.62), MT(FER[1]), x * .62, .22, 0); add(g, box(.9, .06, .3), glow(TC[eq], .8), 0, .62, -.62);
-      const t = new THREE.Group(); t.position.set(0, .74, 0); g.add(t); add(t, cyl(.38, .42, .24, 14), MT(FER[0]), 0, 0, 0); add(t, box(.1, .1, 1.1), MT(FER[1]), 0, .04, .75); add(t, box(.2, .12, .22), glow(TC[eq]), 0, .18, -.1); u.tour = t; u.hb = 1.3; },
-    marechal(g, eq, u) { for (const x of [-1, 1]) { pata(g, u, box(.3, 1, .34), MT(FER[1]), x * .38, 0, 0, 1, x); add(g, box(.4, .16, .6), MT(FER[0]), x * .38, .08, .1); add(g, box(.22, .22, .9), MT(0x1c2129), x * .78, 1.45, .35); add(g, box(.34, .34, .34), glow(TC[eq], .9), x * .78, 1.55, -.1); }
-      add(g, box(1, .8, .8), MT(FER[0]), 0, 1.35, 0); add(g, box(.5, .3, .5), MT(FER[1]), 0, 1.95, .05); add(g, box(.42, .08, .06), glow(TC[eq], 1.4), 0, 1.97, .3); add(g, cyl(.04, .04, .7), MT(FER[1]), -.3, 2.3, -.2); g.scale.setScalar(1.15); u.hb = 2.6; },
-    // --- Bosquet
-    semeur(g, eq, u) { add(g, sph(.28), MT(GR, { roughness: .9 }), 0, .38, 0, { s: [1, .85, 1.1] }); add(g, sph(.12), glow(GL, 1), 0, .72, .05); for (let i = 0; i < 4; i++) { const a = i * 1.57 + .8; add(g, cone(.06, .3), MT(BK), Math.cos(a) * .2, .13, Math.sin(a) * .2, { r: [Math.PI, 0, 0] }); } add(g, cone(.06, .22), glow(TC[eq], .9), 0, .92, .05); u.hb = 1; },
-    rejeton(g, eq, u) { add(g, sph(.3), MT(GR, { roughness: .9 }), 0, .45, 0, { s: [1.1, .85, 1.8] }); add(g, sph(.18), MT(0x356f3d), 0, .5, .55); add(g, sph(.04), glow(GL, 2), -.08, .56, .7); add(g, sph(.04), glow(GL, 2), .08, .56, .7); for (const [x, z] of [[-.2, .25], [.2, .25], [-.2, -.25], [.2, -.25]]) pata(g, u, cone(.07, .4), MT(BK), x, 0, z, .4, x * z > 0 ? 1 : -1, { r: [Math.PI, 0, 0] }); for (let i = 0; i < 3; i++) add(g, cone(.06, .3), glow(TC[eq], .9), 0, .78, -.15 + i * .25); u.hb = 1.1; },
-    epine(g, eq, u) { add(g, cone(.34, 1.15, 8), MT(BK, { roughness: .9 }), 0, .58, 0); add(g, sph(.17), glow(GL, 1.3), 0, 1.25, 0); for (let i = 0; i < 6; i++) { const a = i * 1.047; add(g, cone(.05, .38, 5), MT(GR), Math.cos(a) * .28, .55, Math.sin(a) * .28, { r: [Math.sin(a) * 1.1, 0, -Math.cos(a) * 1.1] }); } add(g, tor(.3, .03), glow(TC[eq], 1.2), 0, .3, 0, { r: [Math.PI / 2, 0, 0] }); u.hb = 1.7; },
-    colosse(g, eq, u) { add(g, sph(.7, 18, 12), MT(GR, { roughness: .9 }), 0, .95, 0, { s: [1, .9, 1.25] }); add(g, sph(.35), MT(0x356f3d), 0, 1.05, .95); for (const x of [-1, 1]) { add(g, cone(.1, .6, 6), MT(0xd8d2b0), x * .3, 1.45, 1.05, { r: [-.3, 0, x * .4] }); pata(g, u, cyl(.2, .26, .8), MT(BK), x * .5, 0, .55, .8, x); pata(g, u, cyl(.2, .26, .8), MT(BK), x * .5, 0, -.55, .8, -x); } for (let i = 0; i < 4; i++) add(g, oct(.16), glow(TC[eq], 1.1), (i % 2 ? .3 : -.3), 1.65, -.4 + i * .3, { s: [.7, 1.5, .7] }); add(g, sph(.12), glow(GL, 2), -.12, 1.15, 1.25); add(g, sph(.12), glow(GL, 2), .12, 1.15, 1.25); g.scale.setScalar(1.1); u.hb = 2.1; },
-    ancien(g, eq, u) { add(g, cyl(.35, .55, 2.2, 8), MT(BK, { roughness: .95 }), 0, 1.1, 0); for (let i = 0; i < 5; i++) { const a = i * 1.26; add(g, cone(.14, .8, 5), MT(BK), Math.cos(a) * .6, .25, Math.sin(a) * .6, { r: [Math.sin(a) * 1.0, 0, -Math.cos(a) * 1.0] }); } add(g, sph(.85), MT(GR, { emissive: 0x2c7a38, emissiveIntensity: .45 }), 0, 2.5, 0, { s: [1.1, .9, 1.1] }); add(g, sph(.55), MT(0x56b560, { emissive: 0x3c9a48, emissiveIntensity: .5 }), .55, 2.9, .2); add(g, sph(.2), glow(GL, 2), 0, 2.4, .8);
-      const o = add(g, tor(.9, .04), glow(TC[eq], 1.4), 0, 1.5, 0, { r: [Math.PI / 2, 0, 0] }); u.an.push(t => { o.rotation.z = t * .8; }); g.scale.setScalar(1.05); u.hb = 3.8; },
-    // --- Échos
-    tisseur(g, eq, u) { const f = add(g, oct(.22), glow(CY, .8), 0, .8, 0), r = add(g, tor(.34, .025), glow(TC[eq], 1.2), 0, .8, 0, { r: [Math.PI / 2, 0, 0] }); u.an.push(t => { f.rotation.y = t * 1.5; r.rotation.z = t * 2; }); u.flot = .09; u.hb = 1.3; },
-    eclat(g, eq, u) { const c = add(g, cone(.2, .95, 5), glow(PU, .9), 0, .85, .1, { r: [Math.PI / 2 + .0, 0, 0] }), s1 = add(g, oct(.07), glow(CY, 1.3), .3, .85, 0), s2 = add(g, oct(.07), glow(TC[eq], 1.4), -.3, .85, 0); u.an.push(t => { c.rotation.z = t * 3; s1.position.set(Math.cos(t * 3) * .32, .85 + Math.sin(t * 2) * .08, Math.sin(t * 3) * .32); s2.position.set(-Math.cos(t * 3) * .32, .85, -Math.sin(t * 3) * .32); }); u.flot = .1; u.hb = 1.4; },
-    pulse(g, eq, u) { add(g, sph(.24), glow(CY, 1.2), 0, .85, 0); const r1 = add(g, tor(.38, .03), glow(PU, 1.3), 0, .85, 0), r2 = add(g, tor(.46, .025), glow(TC[eq], 1.3), 0, .85, 0); const h = sprite(0x9fe8ff, 1.2, .26); h.position.y = .85; g.add(h); u.an.push(t => { r1.rotation.set(t * 1.7, t, 0); r2.rotation.set(0, t * 1.3, t * 1.9); }); u.flot = .08; u.hb = 1.5; },
-    sentinelle(g, eq, u) { add(g, oct(.45), glow(PU, .7), 0, 1.15, 0, { s: [.8, 2.2, .8] }); add(g, oct(.2), glow(CY, 1.4), 0, 1.15, 0, { s: [.8, 1.8, .8] }); const r = add(g, tor(.7, .05), glow(TC[eq], 1.4), 0, .45, 0, { r: [Math.PI / 2, 0, 0] }), r2 = add(g, tor(.55, .035), glow(CY, 1.1), 0, 1.5, 0, { r: [Math.PI / 2, 0, 0] }); u.an.push(t => { r.rotation.z = t * 1.2; r2.rotation.z = -t * 1.6; }); u.flot = .06; u.hb = 2.3; },
-    oracle(g, eq, u) { add(g, oct(.55), glow(PU, .8), 0, 1.7, 0, { s: [.9, 1.8, .9] }); add(g, oct(.28), glow(CY, 1.6), 0, 1.7, 0, { s: [.9, 1.5, .9] }); const orb = new THREE.Group(); orb.position.y = 1.7; g.add(orb); for (let i = 0; i < 4; i++) { const a = i * 1.57; add(orb, oct(.14), glow(i % 2 ? CY : TC[eq], 1.5), Math.cos(a) * 1.0, Math.sin(a * 2) * .2, Math.sin(a) * 1.0); } const r = add(g, tor(.9, .05), glow(TC[eq], 1.4), 0, .55, 0, { r: [Math.PI / 2, 0, 0] }); const h = sprite(0xa58bff, 3, .28); h.position.y = 1.7; g.add(h); u.an.push(t => { orb.rotation.y = t * 1.2; r.rotation.z = t * .9; }); u.flot = .12; u.hb = 3.3; },
-    gardien(g, eq, u) { const A = 0xd6a84a; add(g, sph(.4), MT(0x5a4420, { roughness: .8 }), 0, .55, 0, { s: [1, .8, 1.2] }); for (let i = 0; i < 7; i++) { const a = i * .9; add(g, cone(.07, .42, 5), glow(A, .8), Math.cos(a) * .35, .75 + (i % 2) * .15, Math.sin(a) * .35, { r: [Math.sin(a) * 1.0, 0, -Math.cos(a) * 1.0] }); } add(g, sph(.07), glow(0xff5030, 2.5), -.12, .62, .42); add(g, sph(.07), glow(0xff5030, 2.5), .12, .62, .42); for (const [x, z] of [[-.25, .2], [.25, .2], [-.25, -.2], [.25, -.2]]) add(g, cone(.06, .35), MT(0x3a2c14), x, .15, z, { r: [Math.PI, 0, 0] }); u.hb = 1.3; },
+    // --- Ligue de Fer : acier, caoutchouc, peinture à la couleur de l'équipe
+    ouvrier(g, eq, u) {
+      for (const x of [-1, 1]) { P(g, box(.15, .2, .6), CAOUT, x * .25, .12, 0); for (const z of [-.21, 0, .21]) P(g, cyl(.075, .075, .17, 10), ACIER2, x * .25, .11, z, { r: [0, 0, Math.PI / 2] }); P(g, box(.03, .06, .46), PEINT(eq), x * .335, .2, 0); }
+      P(g, box(.4, .16, .52), ACIER2, 0, .28, 0); P(g, box(.34, .27, .3), ACIER, 0, .49, -.05); P(g, box(.27, .08, .04), glow(0x9fe8ff, 1.5), 0, .54, .11, { ns: true }); P(g, box(.36, .05, .32), PEINT(eq), 0, .64, -.05);
+      P(g, cyl(.08, .08, .3, 10), ACIER2, 0, .45, -.28, { r: [0, 0, Math.PI / 2] }); P(g, box(.05, .05, .05), glow(0xffd28a, 1.6), .14, .45, -.36, { ns: true });
+      P(g, cyl(.012, .012, .34, 4), JOINT, .12, .8, -.14); P(g, sph(.028, 6, 4), glow(0xff5a3a, 2), .12, .97, -.14, { ns: true });
+      for (const x of [-1, 1]) { P(g, box(.07, .07, .3), ACIER2, x * .2, .42, .22, { r: [-.45, 0, 0] }); P(g, box(.06, .06, .2), JOINT, x * .2, .32, .4, { r: [.5, 0, 0] }); P(g, box(.11, .04, .07), ACIER, x * .2, .25, .48); }
+      P(g, cone(.04, .14, 6), glow(0xffd28a, 1.4), .2, .25, .56, { r: [Math.PI / 2, 0, 0], ns: true });
+      u.hb = .95;
+    },
+    fantassin(g, eq, u) {
+      for (const x of [-1, 1]) { const j = jambe(g, u, x * .11, .5, 0, x); P(j, box(.13, .24, .15), ACIER2, 0, -.12, 0); P(j, box(.14, .07, .1), PEINT(eq), 0, -.21, .07); P(j, box(.11, .22, .13), JOINT, 0, -.35, 0); P(j, box(.15, .08, .23), ACIER2, 0, -.46, .03); }
+      P(g, box(.3, .12, .2), JOINT, 0, .55, 0); P(g, box(.38, .3, .26), ACIER, 0, .78, 0); P(g, box(.26, .16, .06), ACIER2, 0, .8, .14); P(g, box(.1, .04, .02), glow(TC[eq], 1.3), 0, .86, .175, { ns: true });
+      P(g, box(.3, .32, .14), ACIER2, 0, .78, -.19); P(g, cyl(.05, .05, .26, 8), JOINT, -.09, .8, -.28); P(g, cyl(.05, .05, .26, 8), JOINT, .09, .8, -.28); P(g, cyl(.012, .012, .24, 4), JOINT, .12, 1.02, -.22);
+      for (const x of [-1, 1]) { P(g, sph(.12, 10, 8), PEINT(eq), x * .25, .92, 0, { s: [1, .75, 1.1] }); P(g, box(.1, .24, .11), ACIER2, x * .25, .72, .03); }
+      P(g, box(.2, .2, .22), ACIER, 0, 1.05, .01); P(g, box(.17, .05, .03), glow(0x9fe8ff, 1.7), 0, 1.06, .125, { ns: true }); P(g, box(.23, .05, .25), PEINT(eq), 0, 1.16, 0);
+      P(g, box(.07, .09, .52), JOINT, .2, .7, .28); P(g, box(.04, .13, .08), ACIER2, .2, .61, .22); P(g, cyl(.022, .022, .2, 6), ACIER2, .2, .72, .62, { r: [Math.PI / 2, 0, 0] }); P(g, box(.03, .03, .05), glow(TC[eq], 1.5), .2, .76, .4, { ns: true });
+      u.hb = 1.4;
+    },
+    tireur(g, eq, u) {
+      for (const x of [-1, 1]) { const j = jambe(g, u, x * .1, .52, 0, x); P(j, box(.11, .26, .13), ACIER2, 0, -.13, 0); P(j, box(.1, .24, .11), JOINT, 0, -.37, 0); P(j, box(.13, .07, .2), ACIER2, 0, -.48, .03); }
+      P(g, box(.28, .1, .18), JOINT, 0, .56, 0); P(g, box(.32, .3, .22), ACIER2, 0, .78, 0); P(g, box(.22, .12, .05), ACIER, 0, .82, .12); P(g, box(.34, .5, .04), PEINT(eq), 0, .7, -.14, { r: [.12, 0, 0] });
+      for (const x of [-1, 1]) { P(g, box(.13, .09, .16), ACIER, x * .21, .92, 0); P(g, box(.08, .24, .09), JOINT, x * .21, .74, .05); }
+      P(g, sph(.11, 12, 10), ACIER, 0, 1.03, 0, { s: [1, 1.05, 1.1] }); P(g, sph(.04, 8, 6), glow(0xff6a4a, 2.2), .04, 1.04, .1, { ns: true }); P(g, cyl(.01, .01, .3, 4), JOINT, -.07, 1.2, -.04);
+      P(g, box(.06, .07, 1.05), JOINT, .17, .78, .38); P(g, box(.05, .14, .1), ACIER2, .17, .68, .2); P(g, cyl(.035, .035, .2, 8), ACIER2, .17, .86, .3, { r: [Math.PI / 2, 0, 0] }); P(g, sph(.025, 6, 4), glow(0x9fe8ff, 2), .17, .86, .41, { ns: true }); P(g, box(.08, .08, .1), ACIER2, .17, .78, .92);
+      u.hb = 1.4;
+    },
+    blinde(g, eq, u) {
+      for (const x of [-1, 1]) { P(g, box(.3, .3, 1.55), CAOUT, x * .56, .18, 0); for (let i = 0; i < 5; i++) P(g, cyl(.11, .11, .32, 10), ACIER2, x * .56, .17, -.6 + i * .3, { r: [0, 0, Math.PI / 2] }); P(g, box(.36, .08, 1.62), ACIER2, x * .56, .37, 0); P(g, box(.04, .1, 1.1), PEINT(eq), x * .75, .37, 0); }
+      P(g, box(.84, .3, 1.38), ACIER, 0, .42, -.02); P(g, box(.8, .16, .42), ACIER2, 0, .5, .7, { r: [-.5, 0, 0] }); P(g, box(.72, .16, .3), JOINT, 0, .56, -.66);
+      for (const x of [-.24, .24]) { P(g, cyl(.05, .06, .32, 8), JOINT, x, .76, -.7); P(g, box(.1, .05, .03), glow(0xfff2c8, 2.2), x * 1.25, .5, .86, { ns: true }); }
+      const t = new THREE.Group(); t.position.set(0, .6, -.05); g.add(t);
+      P(t, cyl(.36, .42, .2, 8), ACIER, 0, .1, 0); P(t, box(.58, .2, .62), ACIER, 0, .26, -.02); P(t, box(.52, .05, .5), PEINT(eq), 0, .38, -.06); P(t, cyl(.11, .11, .08, 10), ACIER2, -.15, .4, -.16);
+      for (const x of [-.09, .09]) { P(t, cyl(.045, .05, .95, 8), ACIER2, x, .26, .7, { r: [Math.PI / 2, 0, 0] }); P(t, cyl(.065, .065, .13, 8), JOINT, x, .26, 1.14, { r: [Math.PI / 2, 0, 0] }); }
+      P(t, cyl(.012, .012, .62, 4), JOINT, .2, .64, -.26); P(t, box(.12, .06, .03), glow(TC[eq], 1.4), 0, .28, .3, { ns: true });
+      u.tour = t; u.hb = 1.45;
+    },
+    marechal(g, eq, u) {
+      for (const x of [-1, 1]) { const j = jambe(g, u, x * .4, 1.1, 0, x); P(j, box(.28, .5, .32), ACIER2, 0, -.25, .05, { r: [-.25, 0, 0] }); P(j, sph(.15, 10, 8), JOINT, 0, -.52, .14); P(j, box(.24, .52, .26), ACIER, 0, -.78, .06, { r: [.18, 0, 0] }); P(j, box(.18, .1, .22), PEINT(eq), 0, -.4, .22, { r: [-.25, 0, 0] }); P(j, box(.36, .1, .5), ACIER2, 0, -1.05, .1); }
+      P(g, box(.7, .25, .45), JOINT, 0, 1.12, 0); P(g, box(1.0, .6, .8), ACIER, 0, 1.45, 0); P(g, box(.86, .2, .4), ACIER2, 0, 1.38, .38, { r: [-.4, 0, 0] }); P(g, box(.5, .1, .05), glow(0x9fe8ff, 1.8), 0, 1.55, .42, { ns: true }); P(g, box(.9, .06, .7), PEINT(eq), 0, 1.78, 0);
+      P(g, box(.6, .5, .3), ACIER2, 0, 1.45, -.5); for (const x of [-.18, .18]) P(g, cyl(.08, .1, .5, 8), JOINT, x, 1.85, -.55); P(g, cyl(.015, .015, .7, 4), JOINT, -.35, 2.1, -.3);
+      for (const x of [-1, 1]) { P(g, box(.3, .3, .5), PEINT(eq), x * .68, 1.62, 0); P(g, box(.24, .24, .95), JOINT, x * .8, 1.42, .35); for (const y of [-.06, .06]) P(g, cyl(.05, .05, .4, 8), ACIER2, x * .8, 1.42 + y, .95, { r: [Math.PI / 2, 0, 0] }); P(g, sph(.08, 8, 6), glow(TC[eq], 1.6), x * .8, 1.42, 1.15, { ns: true }); }
+      g.scale.setScalar(1.15); u.hb = 2.6;
+    },
+    // --- Bosquet : écorce, mousse, os et sève lumineuse
+    semeur(g, eq, u) {
+      P(g, sph(.27, 14, 10), BOIS2, 0, .32, 0, { s: [1, .7, 1.25] }); for (let i = 0; i < 3; i++) P(g, sph(.24 - i * .03, 12, 8), MOUSSE, 0, .4 + i * .02, -.15 + i * .14, { s: [1.05, .45, .7] });
+      P(g, sph(.13, 10, 8), BOIS, 0, .3, .32); for (const x of [-1, 1]) { P(g, cone(.025, .16, 5), OS, x * .06, .26, .45, { r: [1.4, x * .4, 0] }); P(g, sph(.028, 6, 4), SEVE, x * .07, .35, .41, { ns: true }); }
+      for (const x of [-1, 1]) for (let i = 0; i < 3; i++) { const j = jambe(g, u, x * .22, .26, -.15 + i * .15, (i % 2 ? 1 : -1) * x); P(j, cyl(.025, .02, .28, 5), BOIS2, x * .08, -.12, 0, { r: [0, 0, x * .7] }); }
+      P(g, sph(.11, 10, 8), glow(TC[eq], 1.1), 0, .58, -.08); for (let i = 0; i < 4; i++) { const a = i * 1.57 + .4; P(g, cone(.06, .22, 4), MOUSSE2, Math.cos(a) * .1, .6, -.08 + Math.sin(a) * .1, { r: [Math.sin(a) * .9, 0, -Math.cos(a) * .9], s: [1, 1, .3] }); }
+      u.hb = .95;
+    },
+    rejeton(g, eq, u) {
+      P(g, sph(.27, 14, 10), BOIS, 0, .52, 0, { s: [1, .82, 1.7] }); P(g, sph(.2, 12, 8), MOUSSE, 0, .66, -.05, { s: [.9, .45, 1.4] });
+      for (let i = 0; i < 5; i++) P(g, cone(.06, .3, 5), MOUSSE2, 0, .78, -.3 + i * .14, { r: [-.5, 0, 0] });
+      for (const x of [-1, 1]) P(g, box(.02, .06, .4), glow(TC[eq], 1.2), x * .25, .52, 0, { ns: true });
+      P(g, sph(.16, 12, 8), BOIS2, 0, .58, .48, { s: [1, .9, 1.2] }); P(g, box(.2, .06, .2), BOIS2, 0, .46, .58); for (const x of [-.06, 0, .06]) P(g, cone(.02, .08, 4), OS, x, .5, .66, { r: [Math.PI, 0, 0] });
+      for (const x of [-1, 1]) { P(g, sph(.035, 6, 4), SEVE, x * .08, .63, .64, { ns: true }); P(g, cone(.03, .2, 5), OS, x * .1, .74, .44, { r: [-.6, 0, x * .5] }); }
+      P(g, cone(.08, .5, 6), BOIS2, 0, .5, -.55, { r: [-1.9, 0, 0] });
+      for (const [x, z] of [[-.17, .26], [.17, .26], [-.17, -.26], [.17, -.26]]) { const j = jambe(g, u, x, .42, z, x * z > 0 ? 1 : -1); P(j, cyl(.06, .045, .26, 6), BOIS, 0, -.13, 0); P(j, cyl(.04, .03, .18, 6), BOIS2, 0, -.32, .03); P(j, cone(.04, .08, 4), OS, 0, -.41, .07, { r: [Math.PI / 2, 0, 0] }); }
+      u.hb = 1.1;
+    },
+    epine(g, eq, u) {
+      for (let i = 0; i < 3; i++) { const a = i * 2.09; const j = jambe(g, u, Math.cos(a) * .12, .3, Math.sin(a) * .12, i % 2 ? 1 : -1); P(j, cone(.07, .4, 5), BOIS2, Math.cos(a) * .12, -.18, Math.sin(a) * .12, { r: [Math.PI + Math.sin(a) * .5, 0, -Math.cos(a) * .5] }); }
+      P(g, cyl(.13, .22, .9, 7), BOIS, 0, .7, 0); P(g, cyl(.15, .13, .2, 7), MOUSSE, 0, .4, 0);
+      for (let i = 0; i < 10; i++) { const a = i * .63, y = .55 + (i % 4) * .14; P(g, cone(.03, .3, 4), OS, Math.cos(a) * .17, y, Math.sin(a) * .17, { r: [Math.sin(a) * 1.2, 0, -Math.cos(a) * 1.2] }); }
+      P(g, sph(.17, 12, 10), SEVE, 0, 1.25, .04); for (let i = 0; i < 6; i++) { const a = i * 1.05; P(g, cone(.09, .3, 4), MOUSSE2, Math.cos(a) * .15, 1.18, .04 + Math.sin(a) * .15, { r: [Math.sin(a) * 1.3, 0, -Math.cos(a) * 1.3], s: [1, 1, .35] }); }
+      P(g, tor(.27, .025, 20), glow(TC[eq], 1.2), 0, .42, 0, { r: [Math.PI / 2, 0, 0], ns: true });
+      u.hb = 1.75;
+    },
+    colosse(g, eq, u) {
+      P(g, sph(.7, 18, 12), BOIS2, 0, .95, 0, { s: [1.05, .82, 1.35] });
+      for (let i = 0; i < 5; i++) { P(g, sph(.5 - Math.abs(i - 2) * .06, 14, 8), i % 2 ? BOIS : CARAP, 0, 1.22 - Math.abs(i - 2) * .06, -.66 + i * .33, { s: [1.25, .42, .62], r: [.25, 0, 0] }); P(g, cone(.06, .32, 5), OS, 0, 1.5 - Math.abs(i - 2) * .07, -.66 + i * .33, { r: [-.35, 0, 0] }); }
+      for (let i = 0; i < 6; i++) { const a = i * 1.05 + .5; P(g, sph(.13, 8, 6), MOUSSE, Math.cos(a) * .62, 1.0 + (i % 2) * .1, Math.sin(a) * .75, { s: [1.2, .55, 1.2] }); }
+      for (let i = 0; i < 4; i++) P(g, oct(.11), glow(TC[eq], 1.1), (i % 2 ? .38 : -.38), 1.3 + (i % 2) * .05, -.5 + i * .25, { s: [.7, 1.7, .7], r: [0, 0, (i % 2 ? -.3 : .3)] });
+      P(g, sph(.34, 12, 10), BOIS, 0, 1.0, .92, { s: [1, .85, 1] }); P(g, box(.36, .1, .25), BOIS2, 0, .8, 1.08);
+      for (const x of [-1, 1]) { P(g, cone(.09, .75, 6), OS, x * .26, .85, 1.25, { r: [1.15, 0, x * .3] }); P(g, sph(.07, 8, 6), SEVE, x * .14, 1.1, 1.2, { ns: true }); }
+      for (const z of [.5, 0, -.5]) for (const x of [-1, 1]) { const j = jambe(g, u, x * .55, .75, z, (z === 0 ? -1 : 1) * x); P(j, cyl(.16, .12, .45, 7), BOIS, x * .05, -.22, 0, { r: [0, 0, x * .3] }); P(j, cyl(.11, .14, .35, 7), BOIS2, x * .12, -.55, 0); }
+      g.scale.setScalar(1.1); u.hb = 2.15;
+    },
+    ancien(g, eq, u) {
+      for (const x of [-1, 1]) { const j = jambe(g, u, x * .28, .7, 0, x); P(j, cyl(.18, .24, .7, 7), BOIS2, 0, -.35, 0); for (let i = 0; i < 3; i++) { const a = i * 1.2 - 1.2; P(j, cone(.07, .35, 5), BOIS2, Math.sin(a) * .2, -.65, Math.cos(a) * .2, { r: [Math.cos(a) * 1.3, 0, -Math.sin(a) * 1.3] }); } }
+      P(g, cyl(.32, .48, 1.5, 8), BOIS, 0, 1.4, 0); P(g, box(.5, .08, .3), BOIS2, 0, 1.2, .3); for (const x of [-.12, .12]) P(g, sph(.06, 8, 6), SEVE, x, 1.65, .36, { ns: true });
+      for (const x of [-1, 1]) { P(g, cyl(.08, .14, 1, 6), BOIS, x * .6, 1.75, .1, { r: [.3, 0, x * 1.0] }); P(g, sph(.3, 10, 8), MOUSSE, x * 1.0, 2.15, .2, { s: [1, .75, 1] }); P(g, sph(.07, 6, 4), SEVE, x * 1.05, 2.0, .45, { ns: true }); }
+      P(g, sph(.85, 16, 12), MOUSSE, 0, 2.45, 0, { s: [1.15, .8, 1.1] }); P(g, sph(.55, 14, 10), MOUSSE2, .5, 2.75, -.25); P(g, sph(.5, 14, 10), MOUSSE2, -.55, 2.7, .2);
+      for (let i = 0; i < 7; i++) { const a = i * .9; P(g, sph(.07, 6, 4), SEVE, Math.cos(a) * .85, 2.35 + (i % 3) * .2, Math.sin(a) * .75, { ns: true }); }
+      const o = add(g, tor(.9, .04), glow(TC[eq], 1.4), 0, 1.0, 0, { r: [Math.PI / 2, 0, 0], ns: true }); u.an.push(t => { o.rotation.z = t * .8; });
+      g.scale.setScalar(1.05); u.hb = 3.6;
+    },
+    // --- Échos : cristal, cadres d'or sombre, énergie ; ils flottent
+    tisseur(g, eq, u) {
+      P(g, oct(.17), CRIS, 0, .8, 0, { s: [1, 1.5, 1] }); P(g, tor(.2, .025, 18), OR, 0, .8, 0, { r: [Math.PI / 2, 0, 0] }); P(g, cyl(.05, .1, .12, 6), CADRE, 0, .58, 0);
+      for (const x of [-1, 1]) { P(g, box(.05, .04, .26), OR, x * .2, .72, .08, { r: [0, x * .3, 0] }); P(g, cone(.04, .12, 6), CADRE, x * .24, .68, .22, { r: [Math.PI / 2, 0, 0] }); P(g, sph(.03, 6, 4), glow(CY, 2), x * .24, .68, .3, { ns: true }); P(g, box(.02, .14, .1), CADRE, x * .22, .86, -.12); }
+      P(g, sph(.05, 8, 6), glow(TC[eq], 1.8), 0, .8, .14, { ns: true });
+      const r = add(g, tor(.3, .018, 24), glow(TC[eq], 1.2), 0, .8, 0, { ns: true }); u.an.push(t => { r.rotation.set(t * 1.3, t * .7, 0); });
+      u.flot = .09; u.hb = 1.3;
+    },
+    eclat(g, eq, u) {
+      P(g, oct(.2), CRIS, 0, .85, .15, { s: [.5, .7, 2.6] }); P(g, tor(.17, .03, 16), OR, 0, .85, -.05); P(g, sph(.07, 8, 6), glow(TC[eq], 1.8), 0, .85, -.05, { ns: true });
+      for (const x of [-1, 1]) { P(g, cone(.12, .6, 4), CRIS, x * .26, .82, .1, { r: [Math.PI / 2, 0, x * .5], s: [1, 1, .3] }); P(g, box(.16, .03, .05), OR, x * .14, .85, -.05); P(g, cone(.05, .25, 4), CADRE, x * .1, .9, -.3, { r: [-Math.PI / 2 - .3, 0, 0] }); }
+      const s1 = add(g, oct(.06), glow(CY, 1.4), .3, .85, 0, { ns: true }), s2 = add(g, oct(.06), glow(TC[eq], 1.4), -.3, .85, 0, { ns: true });
+      u.an.push(t => { s1.position.set(Math.cos(t * 3) * .34, .85 + Math.sin(t * 2) * .08, Math.sin(t * 3) * .34 - .05); s2.position.set(-Math.cos(t * 3) * .34, .85, -Math.sin(t * 3) * .34 - .05); });
+      u.flot = .1; u.hb = 1.35;
+    },
+    pulse(g, eq, u) {
+      P(g, tor(.3, .05, 24), OR, 0, .85, 0, { r: [0, 0, 0] }); P(g, sph(.17, 14, 10), glow(CY, 1.3), 0, .85, 0); P(g, sph(.21, 14, 10), CRIS, 0, .85, -.08, { s: [1, 1, .6] });
+      for (let i = 0; i < 3; i++) { const a = i * 2.09 + Math.PI / 2; P(g, cone(.05, .42, 5), CADRE, Math.cos(a) * .3, .85 + Math.sin(a) * .3, .2, { r: [Math.PI / 2, 0, 0] }); P(g, sph(.03, 6, 4), glow(TC[eq], 2), Math.cos(a) * .3, .85 + Math.sin(a) * .3, .42, { ns: true }); }
+      P(g, cone(.1, .3, 6), CADRE, 0, .5, 0, { r: [Math.PI, 0, 0] });
+      const r1 = add(g, tor(.4, .022, 28), glow(PU, 1.3), 0, .85, 0, { ns: true }), r2 = add(g, tor(.47, .018, 28), glow(TC[eq], 1.3), 0, .85, 0, { ns: true });
+      const h = sprite(0x9fe8ff, 1.1, .25); h.position.y = .85; g.add(h); u.an.push(t => { r1.rotation.set(t * 1.7, t, 0); r2.rotation.set(0, t * 1.3, t * 1.9); });
+      u.flot = .08; u.hb = 1.45;
+    },
+    sentinelle(g, eq, u) {
+      P(g, oct(.42), CRIS, 0, 1.2, 0, { s: [.75, 2.3, .75] }); P(g, oct(.2), glow(CY, 1.4), 0, 1.2, 0, { s: [.8, 1.9, .8] });
+      P(g, cyl(.5, .62, .12, 8), OR, 0, .38, 0); P(g, cyl(.4, .5, .1, 8), CADRE, 0, .48, 0); for (let i = 0; i < 4; i++) { const a = i * 1.57 + .78; P(g, box(.08, .5, .08), OR, Math.cos(a) * .42, .7, Math.sin(a) * .42, { r: [Math.sin(a) * .25, 0, -Math.cos(a) * .25] }); }
+      P(g, tor(.3, .03, 20), OR, 0, 1.55, 0, { r: [Math.PI / 2, 0, 0] }); P(g, sph(.06, 8, 6), glow(TC[eq], 2), 0, 2.2, 0, { ns: true });
+      const pl = new THREE.Group(); pl.position.y = 1.15; g.add(pl); for (let i = 0; i < 3; i++) { const a = i * 2.09; P(pl, box(.32, .55, .05), CRIS, Math.cos(a) * .62, 0, Math.sin(a) * .62, { r: [0, -a + Math.PI / 2, 0] }); P(pl, box(.34, .04, .07), OR, Math.cos(a) * .62, .29, Math.sin(a) * .62, { r: [0, -a + Math.PI / 2, 0] }); }
+      const r = add(g, tor(.72, .04, 30), glow(TC[eq], 1.4), 0, .42, 0, { r: [Math.PI / 2, 0, 0], ns: true }); u.an.push(t => { pl.rotation.y = t * .9; r.rotation.z = t * 1.2; });
+      u.flot = .06; u.hb = 2.4;
+    },
+    oracle(g, eq, u) {
+      P(g, oct(.55), CRIS, 0, 1.7, 0, { s: [.85, 1.9, .85] }); P(g, oct(.28), glow(CY, 1.6), 0, 1.7, 0, { s: [.9, 1.5, .9] });
+      for (let i = 0; i < 4; i++) { const a = i * 1.57 + .78; P(g, box(.07, 1.3, .07), OR, Math.cos(a) * .55, 1.7, Math.sin(a) * .55, { r: [Math.sin(a) * .3, 0, -Math.cos(a) * .3] }); P(g, oct(.08), glow(TC[eq], 1.6), Math.cos(a) * .72, 2.45, Math.sin(a) * .72, { ns: true }); }
+      P(g, tor(.55, .04, 24), OR, 0, 2.45, 0, { r: [Math.PI / 2, 0, 0] }); P(g, tor(.6, .04, 24), OR, 0, .95, 0, { r: [Math.PI / 2, 0, 0] }); P(g, cone(.25, .5, 8), CADRE, 0, .68, 0, { r: [Math.PI, 0, 0] });
+      const orb = new THREE.Group(); orb.position.y = 1.7; g.add(orb); for (let i = 0; i < 6; i++) { const a = i * 1.05; P(orb, oct(.13), i % 2 ? CRIS : glow(TC[eq], 1.4), Math.cos(a) * 1.05, Math.sin(a * 2) * .2, Math.sin(a) * 1.05, { s: [.7, 1.4, .7] }); }
+      const r = add(g, tor(.95, .05, 32), glow(TC[eq], 1.4), 0, .55, 0, { r: [Math.PI / 2, 0, 0], ns: true }); const h = sprite(0xa58bff, 3, .28); h.position.y = 1.7; g.add(h);
+      u.an.push(t => { orb.rotation.y = t * 1.2; r.rotation.z = t * .9; }); u.flot = .12; u.hb = 3.3;
+    },
+    gardien(g, eq, u) { const A = 0xd6a84a; P(g, sph(.4), MT(0x5a4420, { roughness: .8 }), 0, .55, 0, { s: [1, .8, 1.2] }); for (let i = 0; i < 7; i++) { const a = i * .9; P(g, cone(.07, .42, 5), glow(A, .8), Math.cos(a) * .35, .75 + (i % 2) * .15, Math.sin(a) * .35, { r: [Math.sin(a) * 1.0, 0, -Math.cos(a) * 1.0] }); } add(g, sph(.07), glow(0xff5030, 2.5), -.12, .62, .42); P(g, sph(.07), glow(0xff5030, 2.5), .12, .62, .42); for (const [x, z] of [[-.25, .2], [.25, .2], [-.25, -.2], [.25, -.2]]) add(g, cone(.06, .35), MT(0x3a2c14), x, .15, z, { r: [Math.PI, 0, 0] }); u.hb = 1.3; },
     // --- bâtiments Ligue de Fer
-    noyau(g, eq, u) { add(g, box(3.2, .45, 3.2), MT(FER[1]), 0, .22, 0); add(g, box(2.2, .9, 2.2), MT(FER[0]), 0, .9, 0); add(g, box(1.4, 1.1, 1.4), MT(FER[1]), 0, 1.9, 0); add(g, sph(.7, 16, 10), MT(FER[0]), 0, 2.45, 0, { s: [1, .6, 1] });
-      for (const [x, z] of [[-1.4, -1.4], [1.4, -1.4], [-1.4, 1.4], [1.4, 1.4]]) { add(g, cyl(.22, .26, 1.3, 8), MT(FER[0]), x, .85, z); add(g, sph(.2), glow(TC[eq], 1.4), x, 1.6, z); }
-      add(g, box(2.3, .1, .22), glow(TC[eq], 1.2), 0, 1.3, 1.12); add(g, cyl(.04, .04, 1.6), MT(FER[1]), .4, 3.1, 0); const d = add(g, cyl(.45, .1, .12, 12), MT(0xaab2c2), 0, 3.0, 0, { r: [.6, 0, 0] }); const rd = new THREE.Group(); rd.position.set(.4, 3.5, 0); g.add(rd); add(rd, box(.9, .06, .35), MT(0xaab2c2), 0, 0, 0); add(rd, sph(.08), glow(0xff4040, 2), .4, 0, 0); u.an.push(t => { rd.rotation.y = t * 1.5; }); g.remove(d); fen(g, [[-.6, .95, 1.12], [-.2, .95, 1.12], [.2, .95, 1.12], [.6, .95, 1.12], [-.4, 1.9, .72], [0, 1.9, .72], [.4, 1.9, .72]]); Ring(g, 2.2, eq); u.hb = 3.8; u.bw = 3; },
-    caserne(g, eq, u) { add(g, box(2.2, .2, 2.2), MT(FER[1]), 0, .1, 0); add(g, box(2, .95, 1.8), MT(FER[0]), 0, .65, 0); add(g, cyl(1, 1, 2.1, 18, 0, Math.PI), MT(FER[1]), 0, 1.12, 0, { r: [0, 0, Math.PI / 2], s: [.5, 1, .92] }); add(g, box(.9, .75, .1), MT(0x12161d), 0, .55, .92); add(g, box(.9, .06, .12), glow(TC[eq], 1.3), 0, 1.02, .93); add(g, cyl(.03, .03, 1.3), MT(0xaaa), -.9, 1.85, -.7); add(g, box(.45, .3, .03), glow(TC[eq], 1), -.68, 2.35, -.7); fen(g, [[-.7, .9, .91], [.7, .9, .91], [-.7, .55, .91], [.7, .55, .91]]); Ring(g, 1.45, eq); u.hb = 2.7; u.bw = 2.1; },
-    atelier(g, eq, u) { add(g, box(2.4, .2, 2.4), MT(FER[1]), 0, .1, 0); add(g, box(2.2, 1.05, 2), MT(FER[0]), 0, .72, 0); add(g, box(1.4, .5, 1.2), MT(FER[1]), -.3, 1.5, -.2); for (const x of [-.7, .6]) { add(g, cyl(.14, .18, 1.3, 8), MT(FER[1]), x, 1.7, -.7); add(g, sph(.15), glow(0xff8a3a, 1.6), x, 2.4, -.7); } add(g, box(1.1, .8, .1), MT(0x12161d), .3, .55, 1.01); add(g, box(.12, .12, 1.5), MT(FER[0]), 1.0, 1.9, .2); const gr = add(g, cyl(.35, .35, .1, 10), MT(0xaab2c2), -.9, 1.3, 1.02, { r: [Math.PI / 2, 0, 0] }); u.an.push(t => { gr.rotation.y = t * 2; }); add(g, box(2.2, .06, .12), glow(TC[eq], 1.2), 0, 1.22, 1.02); fen(g, [[-.8, .95, 1.01], [-.5, .95, 1.01], [-.2, .95, 1.01], [.8, .95, 1.01]]); Ring(g, 1.6, eq); u.hb = 3; u.bw = 2.3; },
-    tour(g, eq, u) { add(g, cyl(.75, .9, .5, 12), MT(FER[1]), 0, .25, 0); add(g, cyl(.45, .6, .6, 12), MT(FER[0]), 0, .8, 0); const t = new THREE.Group(); t.position.y = 1.25; g.add(t); add(t, box(.7, .4, .8), MT(FER[0]), 0, 0, 0); for (const x of [-.18, .18]) add(t, cyl(.06, .06, 1.1, 8), MT(0x1c2129), x, .02, .7, { r: [Math.PI / 2, 0, 0] }); add(t, sph(.12), glow(TC[eq], 1.6), 0, .28, -.2); u.tour = t; Ring(g, 1, eq); u.hb = 2.2; u.bw = 1.4; },
+    noyau(g, eq, u) { P(g, box(3.2, .45, 3.2), MT(FER[1]), 0, .22, 0); P(g, box(2.2, .9, 2.2), MT(FER[0]), 0, .9, 0); P(g, box(1.4, 1.1, 1.4), MT(FER[1]), 0, 1.9, 0); P(g, sph(.7, 16, 10), MT(FER[0]), 0, 2.45, 0, { s: [1, .6, 1] });
+      for (const [x, z] of [[-1.4, -1.4], [1.4, -1.4], [-1.4, 1.4], [1.4, 1.4]]) { P(g, cyl(.22, .26, 1.3, 8), MT(FER[0]), x, .85, z); P(g, sph(.2), glow(TC[eq], 1.4), x, 1.6, z); }
+      add(g, box(2.3, .1, .22), glow(TC[eq], 1.2), 0, 1.3, 1.12); P(g, cyl(.04, .04, 1.6), MT(FER[1]), .4, 3.1, 0); const d = add(g, cyl(.45, .1, .12, 12), MT(0xaab2c2), 0, 3.0, 0, { r: [.6, 0, 0] }); const rd = new THREE.Group(); rd.position.set(.4, 3.5, 0); g.add(rd); P(rd, box(.9, .06, .35), MT(0xaab2c2), 0, 0, 0); P(rd, sph(.08), glow(0xff4040, 2), .4, 0, 0); u.an.push(t => { rd.rotation.y = t * 1.5; }); g.remove(d); fen(g, [[-.6, .95, 1.12], [-.2, .95, 1.12], [.2, .95, 1.12], [.6, .95, 1.12], [-.4, 1.9, .72], [0, 1.9, .72], [.4, 1.9, .72]]); Ring(g, 2.2, eq); u.hb = 3.8; u.bw = 3; },
+    caserne(g, eq, u) { P(g, box(2.2, .2, 2.2), MT(FER[1]), 0, .1, 0); P(g, box(2, .95, 1.8), MT(FER[0]), 0, .65, 0); P(g, cyl(1, 1, 2.1, 18, 0, Math.PI), MT(FER[1]), 0, 1.12, 0, { r: [0, 0, Math.PI / 2], s: [.5, 1, .92] }); P(g, box(.9, .75, .1), MT(0x12161d), 0, .55, .92); P(g, box(.9, .06, .12), glow(TC[eq], 1.3), 0, 1.02, .93); P(g, cyl(.03, .03, 1.3), MT(0xaaa), -.9, 1.85, -.7); P(g, box(.45, .3, .03), glow(TC[eq], 1), -.68, 2.35, -.7); fen(g, [[-.7, .9, .91], [.7, .9, .91], [-.7, .55, .91], [.7, .55, .91]]); Ring(g, 1.45, eq); u.hb = 2.7; u.bw = 2.1; },
+    atelier(g, eq, u) { P(g, box(2.4, .2, 2.4), MT(FER[1]), 0, .1, 0); P(g, box(2.2, 1.05, 2), MT(FER[0]), 0, .72, 0); P(g, box(1.4, .5, 1.2), MT(FER[1]), -.3, 1.5, -.2); for (const x of [-.7, .6]) { P(g, cyl(.14, .18, 1.3, 8), MT(FER[1]), x, 1.7, -.7); P(g, sph(.15), glow(0xff8a3a, 1.6), x, 2.4, -.7); } add(g, box(1.1, .8, .1), MT(0x12161d), .3, .55, 1.01); P(g, box(.12, .12, 1.5), MT(FER[0]), 1.0, 1.9, .2); const gr = add(g, cyl(.35, .35, .1, 10), MT(0xaab2c2), -.9, 1.3, 1.02, { r: [Math.PI / 2, 0, 0] }); u.an.push(t => { gr.rotation.y = t * 2; }); P(g, box(2.2, .06, .12), glow(TC[eq], 1.2), 0, 1.22, 1.02); fen(g, [[-.8, .95, 1.01], [-.5, .95, 1.01], [-.2, .95, 1.01], [.8, .95, 1.01]]); Ring(g, 1.6, eq); u.hb = 3; u.bw = 2.3; },
+    tour(g, eq, u) { P(g, cyl(.75, .9, .5, 12), MT(FER[1]), 0, .25, 0); P(g, cyl(.45, .6, .6, 12), MT(FER[0]), 0, .8, 0); const t = new THREE.Group(); t.position.y = 1.25; g.add(t); P(t, box(.7, .4, .8), MT(FER[0]), 0, 0, 0); for (const x of [-.18, .18]) add(t, cyl(.06, .06, 1.1, 8), MT(0x1c2129), x, .02, .7, { r: [Math.PI / 2, 0, 0] }); P(t, sph(.12), glow(TC[eq], 1.6), 0, .28, -.2); u.tour = t; Ring(g, 1, eq); u.hb = 2.2; u.bw = 1.4; },
     // --- bâtiments Bosquet
-    coeur(g, eq, u) { for (let i = 0; i < 9; i++) { const a = i * .7; add(g, cone(.3, 2, 6), MT(BK, { roughness: .95 }), Math.cos(a) * 1.7, .35, Math.sin(a) * 1.7, { r: [Math.sin(a) * 1.25, 0, -Math.cos(a) * 1.25] }); }
-      add(g, sph(1.5, 20, 14), MT(GR, { roughness: .85, emissive: 0x1d5a28, emissiveIntensity: .4 }), 0, 1.6, 0, { s: [1, 1.2, 1] }); add(g, sph(.9, 16, 12), glow(GL, 1.2), 0, 1.8, 0); add(g, sph(1.15, 16, 12), verre(0x6fd88a, .3), 0, 1.8, 0);
-      for (let i = 0; i < 6; i++) { const a = i * 1.05; add(g, cone(.16, 1.1, 5), glow(GL, .8), Math.cos(a) * .9, 3.0, Math.sin(a) * .9, { r: [Math.sin(a) * .7, 0, -Math.cos(a) * .7] }); } const o = add(g, tor(1.9, .06), glow(TC[eq], 1.4), 0, .15, 0, { r: [Math.PI / 2, 0, 0] }); const h = sprite(0x9dff7a, 5, .35); h.position.y = 1.8; g.add(h); u.an.push(t => { h.material.opacity = .2 + .08 * Math.sin(t * 2); }); u.hb = 4.4; u.bw = 3; },
-    ruche(g, eq, u) { add(g, sph(1.1, 16, 10), MT(GR, { roughness: .9, emissive: 0x1d5a28, emissiveIntensity: .35 }), 0, .45, 0, { s: [1, .95, 1] }); for (let i = 0; i < 7; i++) { const a = i * .9; add(g, sph(.2), MT(0x16301b), Math.cos(a) * .85, .6 + (i % 3) * .3, Math.sin(a) * .85); add(g, sph(.07), glow(GL, 1.6), Math.cos(a) * .98, .62 + (i % 3) * .3, Math.sin(a) * .98); } for (let i = 0; i < 5; i++) { const a = i * 1.26 + .3; add(g, cone(.12, .8, 5), MT(BK), Math.cos(a) * 1.1, .2, Math.sin(a) * 1.1, { r: [Math.sin(a) * 1.2, 0, -Math.cos(a) * 1.2] }); } add(g, cone(.2, .8, 6), glow(TC[eq], 1.2), 0, 1.7, 0); Ring(g, 1.4, eq); u.hb = 2.4; u.bw = 2.1; },
-    serre(g, eq, u) { add(g, cyl(1.3, 1.4, .3, 16), MT(BK), 0, .15, 0); add(g, sph(1.25, 18, 12, 0), verre(0x8fe6a0, .3), 0, .45, 0, { s: [1, .95, 1] }); for (let i = 0; i < 6; i++) { const a = i * 1.05; add(g, cone(.18, .9 + (i % 2) * .4, 5), MT(GR, { emissive: 0x2c7a38, emissiveIntensity: .5 }), Math.cos(a) * .55, .6, Math.sin(a) * .55); } add(g, sph(.25), glow(GL, 1.6), 0, 1.2, 0); add(g, tor(1.22, .05), MT(BK), 0, .45, 0, { r: [Math.PI / 2, 0, 0] }); Ring(g, 1.55, eq); u.hb = 2.1; u.bw = 2.3; },
-    ronce(g, eq, u) { add(g, cone(.55, 2.2, 7), MT(BK, { roughness: .9 }), 0, 1.1, 0); for (let i = 0; i < 8; i++) { const a = i * .78; add(g, cone(.08, .6, 5), MT(GR), Math.cos(a) * .42, .6 + (i % 3) * .5, Math.sin(a) * .42, { r: [Math.sin(a) * 1.0, 0, -Math.cos(a) * 1.0] }); } add(g, sph(.2), glow(GL, 2), 0, 2.3, 0); const h = sprite(0x9dff7a, 1.8, .6); h.position.y = 2.3; g.add(h); Ring(g, .9, eq); u.hb = 3; u.bw = 1.3; },
+    coeur(g, eq, u) { for (let i = 0; i < 9; i++) { const a = i * .7; P(g, cone(.3, 2, 6), MT(BK, { roughness: .95 }), Math.cos(a) * 1.7, .35, Math.sin(a) * 1.7, { r: [Math.sin(a) * 1.25, 0, -Math.cos(a) * 1.25] }); }
+      add(g, sph(1.5, 20, 14), MT(GR, { roughness: .85, emissive: 0x1d5a28, emissiveIntensity: .4 }), 0, 1.6, 0, { s: [1, 1.2, 1] }); P(g, sph(.9, 16, 12), glow(GL, 1.2), 0, 1.8, 0); P(g, sph(1.15, 16, 12), verre(0x6fd88a, .3), 0, 1.8, 0);
+      for (let i = 0; i < 6; i++) { const a = i * 1.05; P(g, cone(.16, 1.1, 5), glow(GL, .8), Math.cos(a) * .9, 3.0, Math.sin(a) * .9, { r: [Math.sin(a) * .7, 0, -Math.cos(a) * .7] }); } const o = add(g, tor(1.9, .06), glow(TC[eq], 1.4), 0, .15, 0, { r: [Math.PI / 2, 0, 0] }); const h = sprite(0x9dff7a, 5, .35); h.position.y = 1.8; g.add(h); u.an.push(t => { h.material.opacity = .2 + .08 * Math.sin(t * 2); }); u.hb = 4.4; u.bw = 3; },
+    ruche(g, eq, u) { P(g, sph(1.1, 16, 10), MT(GR, { roughness: .9, emissive: 0x1d5a28, emissiveIntensity: .35 }), 0, .45, 0, { s: [1, .95, 1] }); for (let i = 0; i < 7; i++) { const a = i * .9; P(g, sph(.2), MT(0x16301b), Math.cos(a) * .85, .6 + (i % 3) * .3, Math.sin(a) * .85); P(g, sph(.07), glow(GL, 1.6), Math.cos(a) * .98, .62 + (i % 3) * .3, Math.sin(a) * .98); } for (let i = 0; i < 5; i++) { const a = i * 1.26 + .3; P(g, cone(.12, .8, 5), MT(BK), Math.cos(a) * 1.1, .2, Math.sin(a) * 1.1, { r: [Math.sin(a) * 1.2, 0, -Math.cos(a) * 1.2] }); } add(g, cone(.2, .8, 6), glow(TC[eq], 1.2), 0, 1.7, 0); Ring(g, 1.4, eq); u.hb = 2.4; u.bw = 2.1; },
+    serre(g, eq, u) { P(g, cyl(1.3, 1.4, .3, 16), MT(BK), 0, .15, 0); P(g, sph(1.25, 18, 12, 0), verre(0x8fe6a0, .3), 0, .45, 0, { s: [1, .95, 1] }); for (let i = 0; i < 6; i++) { const a = i * 1.05; P(g, cone(.18, .9 + (i % 2) * .4, 5), MT(GR, { emissive: 0x2c7a38, emissiveIntensity: .5 }), Math.cos(a) * .55, .6, Math.sin(a) * .55); } add(g, sph(.25), glow(GL, 1.6), 0, 1.2, 0); P(g, tor(1.22, .05), MT(BK), 0, .45, 0, { r: [Math.PI / 2, 0, 0] }); Ring(g, 1.55, eq); u.hb = 2.1; u.bw = 2.3; },
+    ronce(g, eq, u) { P(g, cone(.55, 2.2, 7), MT(BK, { roughness: .9 }), 0, 1.1, 0); for (let i = 0; i < 8; i++) { const a = i * .78; P(g, cone(.08, .6, 5), MT(GR), Math.cos(a) * .42, .6 + (i % 3) * .5, Math.sin(a) * .42, { r: [Math.sin(a) * 1.0, 0, -Math.cos(a) * 1.0] }); } add(g, sph(.2), glow(GL, 2), 0, 2.3, 0); const h = sprite(0x9dff7a, 1.8, .6); h.position.y = 2.3; g.add(h); Ring(g, .9, eq); u.hb = 3; u.bw = 1.3; },
     // --- bâtiments Échos
-    nexus(g, eq, u) { add(g, cyl(2.1, 2.3, .3, 24), MT(0x1c1838, { metalness: .6 }), 0, .15, 0); const r = add(g, tor(1.7, .08), glow(TC[eq], 1.5), 0, .5, 0, { r: [Math.PI / 2, 0, 0] }); add(g, oct(.9), glow(PU, .8), 0, 2.4, 0, { s: [.8, 2.4, .8] }); add(g, oct(.45), glow(CY, 1.6), 0, 2.4, 0, { s: [.8, 2.1, .8] });
-      const o = new THREE.Group(); o.position.y = 1.4; g.add(o); for (let i = 0; i < 3; i++) { const a = i * 2.09; add(o, oct(.3), glow(i === 0 ? TC[eq] : PU, 1.2), Math.cos(a) * 1.6, 0, Math.sin(a) * 1.6, { s: [.8, 1.7, .8] }); } const r2 = add(g, tor(1.2, .05), glow(CY, 1.2), 0, 1.6, 0, { r: [Math.PI / 2, 0, 0] }); const h = sprite(0xa58bff, 6, .4); h.position.y = 2.4; g.add(h); u.an.push(t => { o.rotation.y = t * .6; r.rotation.z = -t * .5; r2.rotation.z = t * .8; h.material.opacity = .22 + .06 * Math.sin(t * 2); }); u.hb = 5; u.bw = 3; },
-    foyer(g, eq, u) { add(g, cyl(1.5, 1.6, .25, 20), MT(0x1c1838, { metalness: .6 }), 0, .12, 0); for (const x of [-1, 1]) add(g, oct(.45), glow(PU, .8), x * 1.0, 1.1, 0, { s: [.7, 2.2, .7] }); add(g, tor(1.0, .09, 24), glow(CY, 1.2), 0, 1.25, 0, { r: [0, 0, 0], s: [1, 1, 1] }); const c = add(g, oct(.35), glow(TC[eq], 1.8), 0, 1.25, 0); u.an.push(t => { c.rotation.y = t * 2; c.position.y = 1.25 + Math.sin(t * 2) * .1; }); Ring(g, 1.55, eq); u.hb = 2.8; u.bw = 2.1; },
-    forge(g, eq, u) { add(g, cyl(1.6, 1.7, .25, 20), MT(0x1c1838, { metalness: .6 }), 0, .12, 0); const rs = []; for (let i = 0; i < 3; i++) rs.push(add(g, tor(1.0 - i * .22, .07), glow(i === 1 ? TC[eq] : PU, 1.3), 0, .7 + i * .55, 0, { r: [Math.PI / 2, 0, 0] })); add(g, sph(.4), glow(CY, 1.7), 0, 1.3, 0); add(g, cyl(.1, .1, 1.8), glow(PU, .8), 0, 1.2, 0); u.an.push(t => rs.forEach((r, i) => { r.rotation.z = t * (i % 2 ? -1.2 : 1.4); })); Ring(g, 1.7, eq); u.hb = 2.6; u.bw = 2.3; },
-    phare(g, eq, u) { add(g, cyl(.8, .9, .3, 16), MT(0x1c1838, { metalness: .6 }), 0, .15, 0); add(g, cone(.5, 2.6, 4), glow(PU, .7), 0, 1.5, 0, { r: [0, .78, 0] }); const o = add(g, sph(.2), glow(CY, 2.2), 0, 3.0, 0); const r = add(g, tor(.5, .04), glow(TC[eq], 1.5), 0, 2.4, 0, { r: [Math.PI / 2, 0, 0] }); const h = sprite(0x9fe8ff, 2.2, .6); h.position.y = 3.0; g.add(h); u.an.push(t => { r.rotation.z = t * 2; h.material.opacity = .45 + .2 * Math.sin(t * 4); }); Ring(g, .95, eq); u.hb = 3.6; u.bw = 1.4; },
+    nexus(g, eq, u) { P(g, cyl(2.1, 2.3, .3, 24), MT(0x1c1838, { metalness: .6 }), 0, .15, 0); const r = add(g, tor(1.7, .08), glow(TC[eq], 1.5), 0, .5, 0, { r: [Math.PI / 2, 0, 0] }); P(g, oct(.9), glow(PU, .8), 0, 2.4, 0, { s: [.8, 2.4, .8] }); P(g, oct(.45), glow(CY, 1.6), 0, 2.4, 0, { s: [.8, 2.1, .8] });
+      const o = new THREE.Group(); o.position.y = 1.4; g.add(o); for (let i = 0; i < 3; i++) { const a = i * 2.09; P(o, oct(.3), glow(i === 0 ? TC[eq] : PU, 1.2), Math.cos(a) * 1.6, 0, Math.sin(a) * 1.6, { s: [.8, 1.7, .8] }); } const r2 = add(g, tor(1.2, .05), glow(CY, 1.2), 0, 1.6, 0, { r: [Math.PI / 2, 0, 0] }); const h = sprite(0xa58bff, 6, .4); h.position.y = 2.4; g.add(h); u.an.push(t => { o.rotation.y = t * .6; r.rotation.z = -t * .5; r2.rotation.z = t * .8; h.material.opacity = .22 + .06 * Math.sin(t * 2); }); u.hb = 5; u.bw = 3; },
+    foyer(g, eq, u) { P(g, cyl(1.5, 1.6, .25, 20), MT(0x1c1838, { metalness: .6 }), 0, .12, 0); for (const x of [-1, 1]) add(g, oct(.45), glow(PU, .8), x * 1.0, 1.1, 0, { s: [.7, 2.2, .7] }); P(g, tor(1.0, .09, 24), glow(CY, 1.2), 0, 1.25, 0, { r: [0, 0, 0], s: [1, 1, 1] }); const c = add(g, oct(.35), glow(TC[eq], 1.8), 0, 1.25, 0); u.an.push(t => { c.rotation.y = t * 2; c.position.y = 1.25 + Math.sin(t * 2) * .1; }); Ring(g, 1.55, eq); u.hb = 2.8; u.bw = 2.1; },
+    forge(g, eq, u) { P(g, cyl(1.6, 1.7, .25, 20), MT(0x1c1838, { metalness: .6 }), 0, .12, 0); const rs = []; for (let i = 0; i < 3; i++) rs.push(add(g, tor(1.0 - i * .22, .07), glow(i === 1 ? TC[eq] : PU, 1.3), 0, .7 + i * .55, 0, { r: [Math.PI / 2, 0, 0] })); P(g, sph(.4), glow(CY, 1.7), 0, 1.3, 0); P(g, cyl(.1, .1, 1.8), glow(PU, .8), 0, 1.2, 0); u.an.push(t => rs.forEach((r, i) => { r.rotation.z = t * (i % 2 ? -1.2 : 1.4); })); Ring(g, 1.7, eq); u.hb = 2.6; u.bw = 2.3; },
+    phare(g, eq, u) { P(g, cyl(.8, .9, .3, 16), MT(0x1c1838, { metalness: .6 }), 0, .15, 0); P(g, cone(.5, 2.6, 4), glow(PU, .7), 0, 1.5, 0, { r: [0, .78, 0] }); const o = add(g, sph(.2), glow(CY, 2.2), 0, 3.0, 0); const r = add(g, tor(.5, .04), glow(TC[eq], 1.5), 0, 2.4, 0, { r: [Math.PI / 2, 0, 0] }); const h = sprite(0x9fe8ff, 2.2, .6); h.position.y = 3.0; g.add(h); u.an.push(t => { r.rotation.z = t * 2; h.material.opacity = .45 + .2 * Math.sin(t * 4); }); Ring(g, .95, eq); u.hb = 3.6; u.bw = 1.4; },
   };
 
   // ---------- effets ----------
@@ -372,7 +508,8 @@ export function creerRendu(THREE, hote, { W, H, UN, BA }) {
   function creerEnt(e) {
     const g = new THREE.Group(), u = { g, k: e.k, eq: e.eq, an: [], hb: 1.2, flot: 0, tour: null, bw: BA[e.k] ? 2 : .9, px: e.x / 1000, pz: e.y / 1000, lastHt: -1, lastPc: 0, cap: 0 };
     B[e.k](g, e.eq, u);
-    if (!BA[e.k]) { g.rotation.order = 'YXZ'; u.pool = new THREE.Mesh(poolG, new THREE.MeshBasicMaterial({ color: lin(TC[e.eq]), transparent: true, opacity: .22, depthWrite: false, blending: THREE.AdditiveBlending })); u.pool.rotation.x = -Math.PI / 2; u.pool.scale.setScalar(UN[e.k].pv > 200 ? .95 : .55); scene.add(u.pool); }
+    compacter(g, e.k + ':' + e.eq);
+    if (!BA[e.k]) { g.rotation.order = 'YXZ'; u.pool = new THREE.Mesh(poolG, new THREE.MeshBasicMaterial({ color: lin(TC[e.eq]), transparent: true, opacity: .13, depthWrite: false, blending: THREE.AdditiveBlending })); u.pool.rotation.x = -Math.PI / 2; u.pool.scale.setScalar(UN[e.k].pv > 200 ? .8 : .42); scene.add(u.pool); }
     if (UN[e.k] && UN[e.k].ch) { const c = add(g, tor(.55, .035), glow(0xffd84a, 1.6), 0, .06, 0, { r: [Math.PI / 2, 0, 0], ns: true }); u.an.push(t => { c.rotation.z = t; }); }
     if (UN[e.k] && UN[e.k].bm) { u.bulle = new THREE.Mesh(sph(.85, 18, 12), new THREE.MeshBasicMaterial({ color: 0x7fe8ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })); u.bulle.position.y = .85; g.add(u.bulle); }
     u.bg = new THREE.Sprite(hbMat(0x0c1016)); u.fg = new THREE.Sprite(hbMat(0x45ff7a)); u.fg.center.set(0, .5); u.bg.renderOrder = 30; u.fg.renderOrder = 31; u.bg.visible = u.fg.visible = false;
@@ -399,7 +536,7 @@ export function creerRendu(THREE, hote, { W, H, UN, BA }) {
       if (u.pattes) for (const [pg, ph] of u.pattes) pg.rotation.x += ((bouge ? Math.sin(t * 11 + (ph > 0 ? 0 : Math.PI)) * .75 : 0) - pg.rotation.x) * Math.min(1, dt * 14);
       if (isB) u.g.scale.y = e.cons ? .2 + .8 * (1 - e.cons / BA[e.k].tc) : 1;
       if (isB && e.cons && vu) { u.nx = (u.nx || 0) - dt; if (u.nx <= 0) { u.nx = .12; etincelles(new V3(x + (Math.random() - .5) * 1.6, y0 + 2.2 * (1 - e.cons / BA[e.k].tc) + .3, z + (Math.random() - .5) * 1.6), 0xffd080, 2, 2.5); } }
-      if (u.bulle) u.bulle.material.opacity = e.bc > 0 ? .04 + .12 * (e.bc / e.bm) * (e.rg < 4 ? 1.8 : 1) : 0;
+      if (u.bulle) u.bulle.material.opacity = e.bc > 0 && e.rg < 10 ? (.06 + .22 * (e.bc / e.bm)) * (1 - e.rg / 10) : 0; // le bouclier ne se voit que quand il encaisse
       // tirs
       if (e.ht !== undefined && e.ht !== u.lastHt) {
         u.lastHt = e.ht;
@@ -459,6 +596,11 @@ export function creerRendu(THREE, hote, { W, H, UN, BA }) {
     const hit = terrain ? ray.intersectObject(terrain)[0] : null; let p = hit ? hit.point : ray.ray.intersectPlane(plan, new V3());
     return p ? { x: p.x * 1000, y: p.z * 1000 } : null;
   }
+  function mineSous(px, py) { // la mine (indice) dont un cristal est sous la souris, sinon -1
+    const r = renderer.domElement.getBoundingClientRect(); ray.setFromCamera({ x: (px / (r.width || 1)) * 2 - 1, y: -(py / (r.height || 1)) * 2 + 1 }, cam);
+    const ms = cartesObjs.children.filter(o => o.userData.mine && o.visible), h = ray.intersectObjects(ms, true)[0]; if (!h) return -1;
+    let o = h.object; while (o && !o.userData.mine) o = o.parent; return o ? o.userData.idx : -1;
+  }
   function proj(xm, ym, ho = .5) { const v = new V3(xm / 1000, haut(xm / 1000, ym / 1000) + ho, ym / 1000).project(cam), r = renderer.domElement; return { x: (v.x * .5 + .5) * (r.clientWidth || 1), y: (-v.y * .5 + .5) * (r.clientHeight || 1), z: v.z }; }
   function coins() { const r = renderer.domElement, w = r.clientWidth, h = r.clientHeight; return [[0, 0], [w, 0], [w, h], [0, h]].map(([x, y]) => { const p = sol(x, y); return p ? [p.x / 1000, p.y / 1000] : [cible.x, cible.z]; }); }
   // ---------- post-traitement : lueur (bloom), tonalité filmique, aberration chromatique légère, vignette ----------
@@ -482,7 +624,8 @@ export function creerRendu(THREE, hote, { W, H, UN, BA }) {
   const mkRT = (w, h, depth) => new THREE.WebGLRenderTarget(Math.max(2, w | 0), Math.max(2, h | 0), { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, type: HDR ? THREE.HalfFloatType : THREE.UnsignedByteType, depthBuffer: !!depth, stencilBuffer: false });
   let rt = null, rH = null, rH2 = null, rQ = null, rQ2 = null;
   let SSV = renderer.getPixelRatio() >= 1.5 ? 1 : 1.5, W0 = 800, H0 = 500, tt = 0, nf = 0; // qualité adaptative : le sur-échantillonnage baisse si la machine rame
-  function redim(w, h) { W0 = w; H0 = h; const pr = renderer.getPixelRatio(), ss = SSV, X = w * pr * ss, Y = h * pr * ss; for (const r of [rt, rH, rH2, rQ, rQ2]) if (r) r.dispose(); rt = mkRT(X, Y, true); rH = mkRT(X / 2, Y / 2); rH2 = mkRT(X / 2, Y / 2); rQ = mkRT(X / 4, Y / 4); rQ2 = mkRT(X / 4, Y / 4); }
+  function redim(w, h) { W0 = w; H0 = h; const pr = renderer.getPixelRatio(), ss = SSV, X = w * pr * ss, Y = h * pr * ss; const t_ = (r, w_, h_, d) => { w_ = Math.max(2, w_ | 0); h_ = Math.max(2, h_ | 0); if (!r) return mkRT(w_, h_, d); if (r.width !== w_ || r.height !== h_) r.setSize(w_, h_); return r; };
+    renderer.setRenderTarget(null); rt = t_(rt, X, Y, true); rH = t_(rH, X / 2, Y / 2); rH2 = t_(rH2, X / 2, Y / 2); rQ = t_(rQ, X / 4, Y / 4); rQ2 = t_(rQ2, X / 4, Y / 4); }
   function passe(mat, src, dst, d) { quad.material = mat; mat.uniforms.t.value = src.texture; if (d) mat.uniforms.d.value.set(d[0], d[1]); renderer.setRenderTarget(dst); renderer.render(sceneQ, camQ); }
   function rendre() {
     renderer.setRenderTarget(rt); renderer.render(scene, cam);
@@ -495,9 +638,10 @@ export function creerRendu(THREE, hote, { W, H, UN, BA }) {
 
   // ---------- portraits 3D (interface) : un second rendu minuscule, mis en cache ----------
   const portraits = new Map(); let r2 = null;
-  function portrait(k, eq) {
-    const key = k + ':' + eq; if (portraits.has(key)) return portraits.get(key);
-    if (!r2) { r2 = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r2.setPixelRatio(1); r2.setSize(128, 128); if ('outputColorSpace' in r2) r2.outputColorSpace = THREE.SRGBColorSpace; else r2.outputEncoding = THREE.sRGBEncoding; r2.toneMapping = THREE.ACESFilmicToneMapping; r2.toneMappingExposure = .95; r2.setClearColor(0x000000, 0); }
+  function portrait(k, eq, taille = 128) {
+    const key = k + ':' + eq + ':' + taille; if (portraits.has(key)) return portraits.get(key);
+    if (!r2) { r2 = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); r2.setPixelRatio(1); r2.setSize(taille, taille); if ('outputColorSpace' in r2) r2.outputColorSpace = THREE.SRGBColorSpace; else r2.outputEncoding = THREE.sRGBEncoding; r2.toneMapping = THREE.ACESFilmicToneMapping; r2.toneMappingExposure = .95; r2.setClearColor(0x000000, 0); }
+    if (r2.domElement.width !== taille) r2.setSize(taille, taille);
     const sc = new THREE.Scene(), g = new THREE.Group(), u = { an: [], hb: 1, bw: 1 }; B[k](g, eq, u); g.rotation.y = .7; sc.add(g);
     for (const f of u.an) f(1.3);
     sc.add(new THREE.HemisphereLight(0xb8c8ff, 0x2a2038, 1.1 * LK)); const dl = new THREE.DirectionalLight(0xfff0dd, 1.7 * LK); dl.position.set(-3, 5, 4); sc.add(dl); const rm = new THREE.DirectionalLight(0x6a8cff, 1 * LK); rm.position.set(4, 2, -3); sc.add(rm);
@@ -506,7 +650,7 @@ export function creerRendu(THREE, hote, { W, H, UN, BA }) {
     r2.render(sc, c); const url = r2.domElement.toDataURL('image/png'); portraits.set(key, url); return url;
   }
   return {
-    portrait, carteMini: () => carteMini, qualite(v) { SSV = v; redim(W0, H0); }, canvas: renderer.domElement, resize, sol, proj, coins, scene,
+    portrait, carteMini: () => carteMini, qualite(v) { SSV = v; redim(W0, H0); }, canvas: renderer.domElement, resize, sol, mineSous, proj, coins, scene,
     init(s) { for (const [, u] of ents) scene.remove(u.g, u.bg, u.fg, u.pool); ents.clear(); for (const [, m] of anneaux) scene.remove(m); anneaux.clear(); for (const f of fx) scene.remove(f.o); fx.length = 0; dernierFog = -1; fantomeK = null; if (fantome) { scene.remove(fantome); fantome = null; } bati(s); resize(); },
     deplacer(dx, dz) { cible.x += dx; cible.z += dz; }, zoom(d) { dist *= d; }, centrer(x, z) { cible.x = x; cible.z = z + 3; },
     vue: () => ({ x: cible.x, z: cible.z }),
