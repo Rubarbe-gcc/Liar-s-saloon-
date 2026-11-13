@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { isWebSocketUpgrade, upgrade } from './wsproto.js';
 import { handleOpen, handleMessage, handleClose, sweep, stats } from './hub.js';
 import { traiter as traiterSauvegarde } from './sauvegarde.js';
+import { attacher as attacherOrbite } from './orbite.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, '..', 'public');
@@ -115,9 +116,11 @@ function serveStatic(req, res) {
 /* ------------------------------------------------------------------ */
 
 const server = http.createServer(serveStatic);
+attacherOrbite(server, '/orbite');
 
 server.on('upgrade', (req, socket) => {
   const url = (req.url || '').split('?')[0];
+  if (url === '/orbite') return; // ORBITE NOIRE : géré par server/orbite.js
   if (url !== '/ws' && url !== '/api/ws') {
     socket.write('HTTP/1.1 404 Not Found\r\n\r\n');
     return socket.destroy();

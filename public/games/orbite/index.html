@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ORBITE NOIRE</title>
+<style>
+html,body{margin:0;background:#07080f;color:#cfd6ff;font:14px system-ui,sans-serif;overflow:hidden}
+button{background:#1b2140;color:#cfd6ff;border:1px solid #3a4580;border-radius:6px;padding:8px 12px;cursor:pointer;font:inherit}
+button:hover:not(:disabled){background:#27306a}button:disabled{opacity:.4;cursor:default}
+select,input{background:#1b2140;color:#cfd6ff;border:1px solid #3a4580;border-radius:6px;padding:8px;font:inherit}
+#menu{position:fixed;inset:0;background:#07080f;z-index:9;display:flex;align-items:center;justify-content:center;overflow:auto}
+#menu section{display:none;flex-direction:column;align-items:center;gap:12px;text-align:center;max-width:560px;padding:20px}
+h1{letter-spacing:8px;margin:0 0 6px;font-size:34px}h2{margin:0}
+small,.d{color:#8b94c9}label{display:flex;gap:8px;align-items:center;justify-content:space-between;width:280px}
+#camp-liste{display:flex;flex-direction:column;gap:6px;width:420px;max-height:60vh;overflow:auto}#camp-liste button{text-align:left}
+#jeu{display:none;position:fixed;inset:0;background:#000}
+#vue3d{position:absolute;left:0;right:0;top:0;bottom:176px}#vue3d canvas{display:block;width:100%;height:100%}
+#cadre{display:none;position:fixed;border:1px solid #7dff7d;background:rgba(125,255,125,.08);pointer-events:none;z-index:5}
+#haut{position:absolute;top:0;left:0;right:0;height:38px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:linear-gradient(#0b0e1acc,#0b0e1a00);pointer-events:none;z-index:4}
+#haut>*{pointer-events:auto}#res{display:flex;gap:18px;font-weight:600;font-size:16px;text-shadow:0 1px 3px #000}#r-pr{color:#9fd8ff}#r-en{color:#ffe36e}#r-un{color:#cfd6ff}
+#obj{color:#ffe9a8;text-shadow:0 1px 3px #000;font-weight:600}#bar{display:flex;gap:6px}#bar button{padding:5px 10px}
+#msg{display:none;position:absolute;top:52px;left:50%;transform:translateX(-50%);padding:6px 16px;background:#000a;border:1px solid #3a4580;border-radius:4px;color:#ffe9a8;z-index:4}
+#bas{position:absolute;left:0;right:0;bottom:0;height:176px;display:flex;gap:6px;padding:6px;box-sizing:border-box;background:linear-gradient(#171b2e,#0a0c16);border-top:3px solid #4a5590;box-shadow:0 -4px 14px #000a;z-index:4}
+#mini-w{width:186px;height:164px;flex:none;padding:3px;background:#0a0c16;border:2px solid #3a4580;border-radius:3px;box-shadow:inset 0 0 8px #000}#mini{display:block;width:180px;height:158px;image-rendering:pixelated;cursor:pointer}
+#info{flex:1;min-width:0;display:flex;gap:12px;align-items:flex-start;padding:8px 12px;background:radial-gradient(#141a30,#0a0d1a);border:2px solid #2c3566;border-radius:3px;overflow:hidden}
+.portrait{width:78px;height:78px;flex:none;display:flex;align-items:center;justify-content:center;font-size:44px;background:radial-gradient(#252d52,#0c0f1e);border:3px solid;border-radius:6px}
+.fiche{flex:1;min-width:0}.fiche b{font-size:17px}.fiche small{color:#8b94c9;margin-left:6px}.stats{margin:4px 0;color:#cfd6ff}
+.barre{position:relative;height:14px;margin:3px 0;background:#10141f;border:1px solid #333b5c;border-radius:2px;overflow:hidden}.barre i{display:block;height:100%}.barre span{position:absolute;inset:0;text-align:center;font-size:11px;line-height:14px;text-shadow:0 0 3px #000}
+.file{display:flex;gap:4px;margin-top:4px}.file span{background:#1b2140;border:1px solid #3a4580;border-radius:3px;padding:2px 5px}
+.grille{display:flex;flex-wrap:wrap;gap:4px}.cel{position:relative;width:38px;height:38px;display:flex;align-items:center;justify-content:center;background:#10152a;border:2px solid;border-radius:4px;font-size:20px}.cel i{position:absolute;left:2px;bottom:2px;height:3px;background:#3fe06a}
+.vide2{color:#7d86b8;line-height:1.7;align-self:center}
+#cmd{width:210px;flex:none;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:4px;padding:4px;background:#0a0d1a;border:2px solid #2c3566;border-radius:3px}
+#cmd button{position:relative;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(#262e56,#141a36);border:1px solid #4a5590;border-radius:4px;line-height:1.1}
+#cmd button.vide{background:#0e1122;border-color:#1b2140}#cmd .ic{font-size:22px}#cmd .lb{font-size:10px;max-width:60px;overflow:hidden;white-space:nowrap}#cmd .co{font-size:10px;color:#ffe36e}#cmd .ky{position:absolute;right:3px;top:1px;font-size:9px;color:#8b94c9}
+
+#jeu.demo #haut,#jeu.demo #bas,#jeu.demo #msg{display:none}#jeu.demo #vue3d{bottom:0}
+#menu{background:radial-gradient(ellipse at center,#04051088 0%,#02030acc 100%)}
+#menu section{background:linear-gradient(#11162bd0,#080b18d8);border:1px solid #3d4a94;border-radius:16px;box-shadow:0 0 50px #4c6dff33,inset 0 0 40px #0007;backdrop-filter:blur(8px);padding:28px 38px;min-width:340px}
+h1{background:linear-gradient(#fff,#8fb4ff 70%,#5b7bff);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 0 14px #5b7bffaa);font-size:40px}
+button{background:linear-gradient(#2b3569,#161c3c);border:1px solid #5565b8;box-shadow:inset 0 1px 0 #ffffff22;transition:box-shadow .15s,transform .1s}
+button:hover:not(:disabled){background:linear-gradient(#37448a,#1c2450);box-shadow:0 0 16px #6b8bff88,inset 0 1px 0 #ffffff33}button:active:not(:disabled){transform:translateY(1px)}
+#menu section>button{min-width:230px;padding:10px 18px;font-size:15px}
+#bas{background:linear-gradient(#1a2040,#090b18);border-top:2px solid #6070c8;box-shadow:0 -6px 24px #000c,0 -1px 0 #9fb0ff44 inset}
+#info,#cmd,#mini-w{box-shadow:inset 0 0 18px #000a,0 0 0 1px #0008}
+#cmd button{box-shadow:inset 0 1px 0 #ffffff1a,0 2px 4px #0008}#cmd button:hover:not(:disabled){transform:translateY(-1px)}
+#res span{padding:3px 10px;background:#0b0f22b0;border:1px solid #2c3566;border-radius:14px}
+.portrait img{width:100%;height:100%;object-fit:contain}#cmd .ic img{width:44px;height:44px}#cmd button:disabled .ic img{opacity:.4;filter:grayscale(.7)}
+/* console de commandement : cadre métallique, bords relevés à gauche (mini-carte) et à droite (commandes), couleur de la faction */
+body{--ac:#6fa8ff;--ac2:#2a4f8a}body[data-fac=bosquet]{--ac:#8be06a;--ac2:#2f6a2a}body[data-fac=echos]{--ac:#b896ff;--ac2:#4a2f8a}
+#vue3d{bottom:158px}
+#bas{height:192px;padding:10px 8px 8px;gap:8px;border-top:0;background:
+  linear-gradient(180deg,#3a4150 0,#262b36 6px,#1a1e27 40%,#0e1016 100%),
+  repeating-linear-gradient(90deg,#ffffff06 0 2px,transparent 2px 7px);background-blend-mode:overlay;
+  clip-path:polygon(0 0,204px 0,232px 34px,calc(100% - 262px) 34px,calc(100% - 234px) 0,100% 0,100% 100%,0 100%);
+  box-shadow:none;filter:drop-shadow(0 -2px 0 var(--ac2))}
+#bas::before{content:'';position:absolute;inset:0;pointer-events:none;background:
+  linear-gradient(90deg,transparent 0 204px,var(--ac) 204px 206px,transparent 206px),
+  radial-gradient(circle at 10px 10px,#9aa3b5 0 2px,#0000 3px),radial-gradient(circle at calc(100% - 10px) 10px,#9aa3b5 0 2px,#0000 3px),
+  radial-gradient(circle at 10px calc(100% - 10px),#9aa3b5 0 2px,#0000 3px),radial-gradient(circle at calc(100% - 10px) calc(100% - 10px),#9aa3b5 0 2px,#0000 3px);opacity:.9}
+#bas::after{content:'';position:absolute;left:232px;right:262px;top:34px;height:2px;background:linear-gradient(90deg,transparent,var(--ac),transparent);box-shadow:0 0 10px var(--ac)}
+#mini-w{width:186px;height:172px;align-self:flex-start;padding:3px;background:#000;border:3px solid #4b5262;border-radius:2px;box-shadow:inset 0 0 0 1px #000,0 0 0 1px #0008,0 0 12px #0009}
+#mini{height:166px;width:180px}
+#info{margin-top:30px;border:2px solid #3a404d;border-radius:2px;background:radial-gradient(ellipse at 50% 0,#1e2433,#0a0c12 80%);box-shadow:inset 0 0 22px #000,inset 0 1px 0 #ffffff14}
+.portrait{border-width:2px;border-radius:2px;background:radial-gradient(#26304a,#06070c);box-shadow:inset 0 0 14px #000,0 0 10px color-mix(in srgb,var(--ac) 30%,transparent)}
+#cmd{width:236px;align-self:flex-start;height:172px;box-sizing:border-box;gap:5px;padding:6px;background:#07080c;border:3px solid #4b5262;border-radius:2px}
+#cmd button{border-radius:3px;background:linear-gradient(160deg,#2c3242,#151922 60%,#0c0e14);border:1px solid #5a6274;box-shadow:inset 0 1px 0 #ffffff1c,inset 0 -2px 4px #0009}
+#cmd button:hover:not(:disabled){border-color:var(--ac);box-shadow:0 0 10px color-mix(in srgb,var(--ac) 60%,transparent),inset 0 0 10px color-mix(in srgb,var(--ac) 25%,transparent)}
+#cmd button.vide{background:#0b0d12;border-color:#1a1e27;box-shadow:inset 0 0 6px #000}
+#cmd .ky{color:var(--ac);font-weight:700}
+#res span{background:linear-gradient(#262b36,#12151c);border:1px solid #4b5262;border-radius:3px;box-shadow:inset 0 1px 0 #ffffff14,0 2px 6px #0008}
+#haut{background:linear-gradient(#000c,#0000)}
+#bar button{background:linear-gradient(#323848,#171a22);border-color:#4b5262}
+.barre{border-color:#3a404d;background:#05060a}
+.cel{background:#0b0d14;border-radius:2px}
+.cel span{display:flex;width:100%;height:100%}.cel img{width:100%;height:100%;object-fit:contain}.file span img{width:24px;height:24px;vertical-align:middle}
+</style></head><body>
+<div id="jeu">
+<div id="vue3d"></div><div id="cadre"></div>
+<div id="haut"><div id="res"><span id="r-pr">💎 0</span><span id="r-en">⚡ 0</span><span id="r-un">👤 0</span></div><div id="obj"></div>
+<div id="bar"><button id="b-pause" title="Pause (P)">⏸</button><button id="b-vit" title="Vitesse (F)">×1</button><button id="b-son" title="Son (M)">🔊</button><button id="b-menu">☰</button></div></div>
+<div id="msg"></div>
+<div id="bas"><div id="mini-w"><canvas id="mini" width="180" height="180"></canvas></div><div id="info"></div><div id="cmd"></div></div>
+</div>
+<div id="menu">
+<section id="e-principal"><h1>ORBITE NOIRE</h1><small>Stratégie en temps réel — Ligue de Fer · Bosquet · Échos</small>
+<button data-a="go:escarmouche">Escarmouche</button><button data-a="go:campagne">Campagne</button><button data-a="go:ligne">En ligne</button><button data-a="rejeu">Revoir la dernière partie</button><button data-a="muet" id="m-son">Son : oui</button>
+<small>Clic gauche : sélection · Clic droit : ordre · WASD/flèches : caméra · P : pause · F : vitesse · Q : pouvoir du Champion · Ctrl+chiffre : groupe</small></section>
+<section id="e-escarmouche"><h2>Escarmouche</h2>
+<label>Ta faction <select id="sf"><option value="fer">Ligue de Fer</option><option value="bosquet">Bosquet</option><option value="echos">Échos</option></select></label>
+<label>Adversaire <select id="se"><option value="fer">Ligue de Fer</option><option value="bosquet" selected>Bosquet</option><option value="echos">Échos</option></select></label>
+<label>Carte <select id="sc"><option value="0">Croisée</option><option value="1">Diagonale</option><option value="2">Duel au centre</option><option value="3">Couloirs</option><option value="4">Archipel</option><option value="5">Forteresse</option></select></label>
+<label>Niveau de l'IA <select id="sn"><option value="1">Novice</option><option value="2" selected>Normal</option><option value="3">Expert</option><option value="4">Impitoyable</option></select></label>
+<small>Ligue de Fer : solide · Bosquet : bâtiments qui se régénèrent · Échos : boucliers et résonance</small>
+<button data-a="jouer">Jouer</button><button data-a="go:principal">Retour</button></section>
+<section id="e-campagne"><h2>Campagne</h2><div id="camp-liste"></div><button data-a="go:principal">Retour</button></section>
+<section id="e-brief"><h2 id="brief-t"></h2><div id="brief-x"></div><small id="brief-o"></small><button data-a="commencer">Commencer</button><button data-a="go:campagne">Retour</button></section>
+<section id="e-ligne"><h2>En ligne</h2>
+<label>Serveur <input id="lw" size="26"></label><label>Pseudo <input id="ln" value="Joueur" maxlength="16"></label>
+<label>Mode <select id="lm"><option value="1v1">1 contre 1</option><option value="2v2">2 contre 2 (équipiers)</option></select></label>
+<label>Faction <select id="lf"><option value="fer">Ligue de Fer</option><option value="bosquet">Bosquet</option><option value="echos">Échos</option></select></label>
+<label>Carte <select id="lc"><option value="0">Croisée</option><option value="1">Diagonale</option><option value="2">Duel au centre</option><option value="3">Couloirs</option><option value="4">Archipel</option><option value="5">Forteresse</option></select></label>
+<button data-a="creer">Créer une salle</button><label>Code <input id="lcode" size="6" maxlength="4"></label><button data-a="rejoindre">Rejoindre</button>
+<div id="lstat" class="d"></div><button data-a="demarrer" id="l-go" disabled>Démarrer</button><button data-a="quitter-ligne">Retour</button></section>
+<section id="e-fin"><h1 id="fin-t"></h1><div id="fin-x"></div><div id="fin-b" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center"></div></section>
+</div>
+<script type="module" src="js/jeu.js"></script>
+</body></html>
