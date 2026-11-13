@@ -51,8 +51,8 @@ export const EQUIPES = [
     exterieur: kit('#f0dcae', 'uni', '#7a4a26', '#7a4a26', '#7a4a26'),
     ecusson: { forme: 'bouclier', fond: '#7a4a26', fond2: '#2a1a0c', motif: 'chevron', symbole: 'enclume', symboleC: '#f0dcae', bord: '#f0dcae' },
     style: 'avants',
-    joueurs: [j('Gaétan Rouffiac', 1, [58, 90, 58, 38, 80]), j('Lucas Pelvoux', 2, [64, 86, 66, 42, 80], true), j('Brice Carmaux', 3, [56, 88, 56, 36, 79]),
-      j('Hugo Saintonge', 9, [78, 60, 84, 72, 68]), j('Matthieu Larrigue', 10, [75, 62, 80, 82, 68]), j('Florent Bazas', 12, [79, 80, 72, 60, 80]), j('Kévin Ostabat', 11, [88, 66, 66, 56, 66])],
+    joueurs: [j('Gaétan Rouffiac', 1, [58, 89, 58, 38, 80]), j('Lucas Pelvoux', 2, [64, 86, 66, 42, 80], true), j('Brice Carmaux', 3, [56, 87, 56, 36, 79]),
+      j('Hugo Saintonge', 9, [78, 60, 84, 72, 68]), j('Matthieu Larrigue', 10, [75, 62, 80, 82, 68]), j('Florent Bazas', 12, [78, 80, 72, 60, 80]), j('Kévin Ostabat', 11, [88, 66, 66, 56, 66])],
   },
   {
     id: 'sablemer', nom: 'Mouettes de Sablemer', court: 'Sablemer', abr: 'SAB', ville: 'Sablemer',
@@ -61,8 +61,8 @@ export const EQUIPES = [
     exterieur: kit('#1b3f66', 'uni', '#e9f6ff', '#1b3f66', '#e9f6ff'),
     ecusson: { forme: 'rond', fond: '#3aa0e8', fond2: '#e9f6ff', motif: 'bande', symbole: 'mouette', symboleC: '#ffffff', bord: '#1b3f66' },
     style: 'large',
-    joueurs: [j('Noam Arcangues', 1, [62, 84, 64, 38, 78]), j('Théo Lescure', 2, [68, 81, 72, 44, 77]), j('Yann Picaud', 3, [60, 84, 62, 36, 77]),
-      j('Simon Escarra', 9, [83, 56, 90, 72, 67]), j('Rémy Castagnède', 10, [78, 58, 88, 80, 66]), j('Antoine Lagrave', 12, [82, 74, 80, 62, 77]), j('Ilan Morlanne', 14, [96, 62, 70, 56, 64], true)],
+    joueurs: [j('Noam Arcangues', 1, [62, 84, 64, 38, 78]), j('Théo Lescure', 2, [68, 81, 72, 44, 77]), j('Yann Picaud', 3, [60, 85, 62, 36, 78]),
+      j('Simon Escarra', 9, [83, 56, 90, 72, 67]), j('Rémy Castagnède', 10, [78, 58, 88, 80, 66]), j('Antoine Lagrave', 12, [82, 74, 80, 62, 77]), j('Ilan Morlanne', 14, [97, 62, 70, 56, 64], true)],
   },
   {
     id: 'givrelac', nom: 'Loups de Givrelac', court: 'Givrelac', abr: 'GIV', ville: 'Givrelac',
@@ -91,8 +91,8 @@ export const EQUIPES = [
     exterieur: kit('#ffffff', 'uni', '#151515', '#151515', '#151515'),
     ecusson: { forme: 'bouclier', fond: '#151515', fond2: '#3a3a3a', motif: 'croix', symbole: 'aile', symboleC: '#c4202f', bord: '#c4202f' },
     style: 'pied',
-    joueurs: [j('Quentin Lormont', 1, [58, 88, 58, 42, 80]), j('Raphaël Cénac', 2, [64, 85, 66, 48, 81]), j('Sébastien Arsac', 3, [56, 88, 56, 40, 79]),
-      j('Thibaut Margaux', 9, [80, 58, 84, 82, 68]), j('Ugo Pessac', 10, [74, 60, 82, 95, 68], true), j('Valentin Blaye', 12, [80, 78, 72, 72, 80]), j('William Bourg', 11, [92, 62, 66, 66, 66])],
+    joueurs: [j('Quentin Lormont', 1, [58, 89, 58, 42, 82]), j('Raphaël Cénac', 2, [64, 86, 66, 48, 82]), j('Sébastien Arsac', 3, [56, 89, 56, 40, 81]),
+      j('Thibaut Margaux', 9, [81, 58, 84, 82, 69]), j('Ugo Pessac', 10, [76, 61, 82, 95, 68], true), j('Valentin Blaye', 12, [81, 79, 72, 72, 81]), j('William Bourg', 11, [93, 62, 66, 66, 66])],
   },
   {
     id: 'pic-gris', nom: 'Grizzlis de Pic-Gris', court: 'Pic-Gris', abr: 'PIC', ville: 'Pic-Gris',
@@ -122,7 +122,7 @@ export const EQUIPES = [
     ecusson: { forme: 'blason', fond: '#7a1f33', fond2: '#3a0e18', motif: 'demi', symbole: 'tour', symboleC: '#d9d0c2', bord: '#d9d0c2' },
     style: 'avants',
     joueurs: [j('Léo Ventabren', 1, [58, 88, 58, 38, 80]), j('Marc Rognac', 2, [64, 86, 66, 42, 80]), j('Nathan Lambesc', 3, [56, 88, 56, 36, 79]),
-      j('Oscar Trets', 9, [78, 60, 84, 72, 68]), j('Paul Gardanne', 10, [74, 62, 80, 82, 68]), j('Robin Peynier', 12, [78, 84, 72, 60, 82], true), j('Samuel Fuveau', 11, [88, 66, 66, 56, 66])],
+      j('Oscar Trets', 9, [78, 60, 84, 72, 68]), j('Paul Gardanne', 10, [74, 62, 80, 82, 68]), j('Robin Peynier', 12, [77, 83, 72, 60, 82], true), j('Samuel Fuveau', 11, [87, 66, 66, 56, 66])],
   },
   {
     id: 'bois-noir', nom: 'Sangliers de Bois-Noir', court: 'Bois-Noir', abr: 'BNO', ville: 'Bois-Noir',
@@ -162,7 +162,7 @@ export const EQUIPES = [
     ecusson: { forme: 'rond', fond: '#14284a', fond2: '#ffffff', motif: 'cerceaux', symbole: 'ancre', symboleC: '#ffffff', bord: '#9ac0ff' },
     style: 'pied',
     joueurs: [j('Thomas Kerlouan', 1, [58, 88, 58, 42, 82]), j('Valère Plouguerneau', 2, [64, 86, 66, 48, 82]), j('Aymeric Landéda', 3, [56, 88, 56, 40, 81]),
-      j('Bruno Portsall', 9, [80, 58, 84, 84, 68]), j('Corentin Aber', 10, [76, 60, 82, 92, 68]), j('Denis Brignogan', 12, [80, 78, 72, 74, 80]), j('Erwan Guissény', 15, [94, 62, 68, 82, 70], true)],
+      j('Bruno Portsall', 9, [80, 58, 84, 84, 68]), j('Corentin Aber', 10, [75, 60, 82, 92, 68]), j('Denis Brignogan', 12, [80, 78, 72, 74, 80]), j('Erwan Guissény', 15, [93, 62, 68, 82, 70], true)],
   },
   {
     id: 'haut-pierre', nom: 'Ours de Haut-Pierre', court: 'Haut-Pierre', abr: 'HPI', ville: 'Haut-Pierre',
@@ -172,7 +172,7 @@ export const EQUIPES = [
     ecusson: { forme: 'blason', fond: '#1f4fa8', fond2: '#10285a', motif: 'chevron', symbole: 'etoile', symboleC: '#f2c14e', bord: '#f2c14e' },
     style: 'vedette',
     joueurs: [j('François Morvan', 1, [56, 84, 56, 36, 78]), j('Guillaume Avallon', 2, [62, 82, 64, 42, 78]), j('Hervé Saulieu', 3, [55, 84, 55, 34, 77]),
-      j('Ivan Vézelay', 9, [76, 56, 82, 70, 66]), j('Jean Semur', 10, [90, 74, 88, 86, 74], true), j('Kylian Arnay', 12, [76, 76, 70, 58, 78]), j('Ludovic Précy', 11, [86, 62, 64, 54, 64])],
+      j('Ivan Vézelay', 9, [76, 56, 82, 70, 66]), j('Jean Semur', 10, [89, 73, 87, 86, 73], true), j('Kylian Arnay', 12, [76, 76, 70, 58, 78]), j('Ludovic Précy', 11, [86, 62, 64, 54, 64])],
   },
   {
     id: 'crete-rouge', nom: 'Vautours de Crête-Rouge', court: 'Crête-Rouge', abr: 'CRR', ville: 'Crête-Rouge',

@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v196';
+const VERSION = 'v197';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -331,6 +331,7 @@ const SHELL = [
   '/games/plein-stade/rugby/js/touches.js',
   '/games/plein-stade/rugby/js/commentaires.js',
   '/games/plein-stade/rugby/js/cinematiques.js',
+  '/games/plein-stade/rugby/js/enligne.js',
   '/games/plein-stade/rugby/js/trois/rendu3d.js',
   '/games/plein-stade/rugby/js/trois/stade3d.js',
   '/shared/rugby/terrain.js',

@@ -107,7 +107,7 @@ export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['hum
       m.joueurs.push({
         id: e * N + i, e, i, n: notesJoueur(eq, i), vedette: !!eq.joueurs[i].vedette,
         x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, dx: 1, dy: 0, etat: 'normal', t: 0, cible: -1,
-        charge: 0, chargeCible: 0, visee: 0, viser: null, verrou: 0, lache: 0, surpris: 0, raffut: 0, frappe: 0, endu: 1,
+        charge: 0, chargeCible: 0, visee: 0, viser: null, verrou: 0, lache: 0, surpris: 0, raffut: 0, geste: null, tg: 0, recup: 0, frappe: 0, endu: 1,
         recu: 0, passeDe: -1, passeF: -1000, dec: 0, absent: false, ordre: null,
       });
     }
@@ -140,7 +140,7 @@ export function reglerEntrainement(m, o) {
 /* ------------------------------------------------------------------ */
 
 function remettre(p, x, y, dx, dy = 0) {
-  Object.assign(p, { x, y, z: 0, vx: 0, vy: 0, vz: 0, dx, dy, etat: 'normal', t: 0, cible: -1, charge: 0, chargeCible: 0, viser: null, verrou: 0, lache: 0, surpris: 0, raffut: 0, frappe: 0, dec: 0 });
+  Object.assign(p, { x, y, z: 0, vx: 0, vy: 0, vz: 0, dx, dy, etat: 'normal', t: 0, cible: -1, charge: 0, chargeCible: 0, viser: null, verrou: 0, lache: 0, surpris: 0, raffut: 0, geste: null, tg: 0, recup: 0, frappe: 0, dec: 0 });
 }
 function garer(m) {
   for (const p of m.joueurs) if (p.absent) remettre(p, -24 + p.id * 3.4, -(DEMI_W + 60), 1);
@@ -379,6 +379,8 @@ function jouer(m, k, ap, rel, evs) {
     if (p.lache > 0) p.lache -= 1;
     if (p.surpris > 0) p.surpris -= 1;
     if (p.raffut > 0) p.raffut -= 1;
+    if (p.recup > 0) p.recup -= 1;
+    if (p.tg > 0 && --p.tg <= 0) p.geste = null;
     if (p.dec > 0) p.dec -= 1;
     if (b.porteur === p.id) p.recu += 1;
   }
@@ -582,6 +584,11 @@ function humain(m, e, k, ap, rel, cons, evs) {
       if (ap & T.B) c.action = { type: 'armer' };
       else if (ap & (T.A | T.R)) c.action = { type: 'passe', cible: choisirReceveur(m, p, my, !!(ap & T.R)) };
       else if (ap & T.X) c.action = { type: 'raffut' };
+      else if (ap & T.G) {
+        // Le geste technique : avec le sprint, la roulette ; le stick vers l'arrière, la feinte de passe ; sinon, le crochet.
+        const s = m.equipes[e].sens;
+        c.action = { type: 'geste', geste: k & T.S ? 'roulette' : mx * s < -0.3 ? 'feinte' : 'crochet', dy: my };
+      }
     }
   } else if (ap & T.B) c.action = { type: 'plaquer' };
   else if (ap & (T.X | T.A)) c.action = { type: 'gratter' };
@@ -613,6 +620,9 @@ function agir(m, p, a, evs) {
       break;
     case 'raffut':
       if (aLaBalle && p.etat === 'normal' && p.raffut <= 0 && p.verrou <= 0) raffut(m, p, evs);
+      break;
+    case 'geste':
+      if (aLaBalle && p.etat === 'normal' && !b.bloque && p.recup <= 0 && !p.geste) geste(m, p, a.geste, a.dy || 0, evs);
       break;
     case 'plaquer':
       if (!aLaBalle && p.etat === 'normal' && p.verrou <= 0 && !m.equipes[p.e].immobile) plonger(m, p, evs);
@@ -732,6 +742,52 @@ function raffut(m, p, evs) {
   evs.push({ type: 'raffut', joueur: p.id, reussi, sur: o ? o.id : -1 });
 }
 
+/**
+ * Les gestes techniques du porteur, pour esquiver les plaquages :
+ *   crochet  : le cadrage-débordement, un pas de côté sec (dy : le côté ; sinon, à l'opposé du défenseur
+ *              le plus proche) ; le plaqueur qui plonge déjà sur lui peut se faire prendre dans le vent ;
+ *   roulette : il tourne sur lui-même en avançant, plus lent, mais il casse les plaquages ;
+ *   feinte   : la feinte de passe ; les défenseurs proches mordent et perdent un instant.
+ */
+export const GESTES = {
+  crochet: { duree: 16, recup: 55 },
+  roulette: { duree: 26, recup: 75 },
+  feinte: { duree: 18, recup: 70 },
+};
+
+function geste(m, p, type, dy, evs) {
+  const G2 = GESTES[type];
+  if (!G2) return;
+  const s = m.equipes[p.e].sens;
+  p.geste = type;
+  p.tg = G2.duree;
+  p.recup = G2.recup;
+  let reussi = 0;
+  const proches = m.joueurs.filter((o) => o.e !== p.e && !o.absent && o.etat !== 'sol' && dist(o.x, o.y, p.x, p.y) < 6);
+  if (type === 'crochet') {
+    let cote = dy > 0.2 ? 1 : dy < -0.2 ? -1 : 0;
+    if (!cote) {
+      let o = null, od = 1e9;
+      for (const q of proches) { const d = dist(q.x, q.y, p.x, p.y); if (d < od) { od = d; o = q; } }
+      cote = o ? (o.y > p.y ? -1 : 1) : (hasard(m) < 0.5 ? -1 : 1);
+    }
+    if (Math.abs(p.y) > DEMI_W - 2.5) cote = p.y > 0 ? -1 : 1;
+    const v = vitesseMax(p);
+    p.vx = s * v * 0.75; p.vy = cote * v * 1.3;
+    // Le plaqueur déjà en vol, tout près : il plonge dans le vide.
+    for (const o of proches) {
+      if (o.etat !== 'plonge' || o.cible !== p.id || dist(o.x, o.y, p.x, p.y) > 2.6) continue;
+      if (hasard(m) < clamp(0.55 + (p.n.vitesse - o.n.defense) / 90, 0.25, 0.85)) { o.cible = -1; reussi += 1; }
+    }
+  } else if (type === 'feinte') {
+    for (const o of proches) {
+      if (dist(o.x, o.y, p.x, p.y) > 5 || o.etat !== 'normal') continue;
+      if (hasard(m) < clamp(0.5 + (p.n.passe - o.n.defense) / 100, 0.2, 0.8)) { o.surpris = Math.max(o.surpris, 26); o.verrou = Math.max(o.verrou, 22); reussi += 1; }
+    }
+  } else reussi = proches.some((o) => dist(o.x, o.y, p.x, p.y) < 2.5) ? 1 : 0;
+  evs.push({ type: 'geste', joueur: p.id, geste: type, reussi: reussi > 0 });
+}
+
 /** Le plongeon du plaqueur, vers là où sera le porteur. */
 function plonger(m, p, evs) {
   const b = m.ballon;
@@ -761,6 +817,9 @@ function resoudrePlaquage(m, p, c, evs) {
   const deDos = (p.x - c.x) * c.dx + (p.y - c.y) * c.dy < 0;
   let chance = 0.7 + (p.n.defense - c.n.force) * 0.0085 + (deDos ? 0.08 : 0) - (c.surpris > 0 ? -0.1 : 0);
   if (c.raffut > 0) chance -= 0.26 * (c.n.force / 85);
+  // Les gestes techniques : le crochet (les appuis), la roulette (la force).
+  if (c.geste === 'crochet') chance -= 0.28 * (c.n.vitesse / 85);
+  else if (c.geste === 'roulette') chance -= 0.3 * (c.n.force / 85);
   if (eqp.ctrl === 'humain' && eqp.actif === p.id) chance += 0.12;
   else if (eqp.ctrl === 'ia') chance += niveauDe(eqp).plaquage;
   const eqc = m.equipes[c.e];
@@ -1090,8 +1149,14 @@ function deplacer(m, p, c, evs = null) {
   }
   if (p.etat === 'plonge') {
     p.vx *= 0.96; p.vy *= 0.96;
-    p.x += p.vx * DT; p.y += p.vy * DT;
     const c2 = p.cible >= 0 ? m.joueurs[p.cible] : null;
+    // En vol, il corrige un peu sa trajectoire vers le porteur (sauf s'il s'est fait prendre par un crochet).
+    if (c2) {
+      const ex = c2.x - p.x, ey = c2.y - p.y, l = Math.sqrt(ex * ex + ey * ey) || 1;
+      const v = Math.sqrt(p.vx * p.vx + p.vy * p.vy);
+      p.vx += ((ex / l) * v - p.vx) * 0.12; p.vy += ((ey / l) * v - p.vy) * 0.12;
+    }
+    p.x += p.vx * DT; p.y += p.vy * DT;
     if (c2 && b.porteur === c2.id && dist(p.x, p.y, c2.x, c2.y) < 0.95 && m.phase === 'jeu') { resoudrePlaquage(m, p, c2, evs || []); return; }
     if (--p.t <= 0) { p.etat = 'sol'; p.t = 28; p.cible = -1; }
     borner(m, p);
@@ -1099,10 +1164,18 @@ function deplacer(m, p, c, evs = null) {
   }
   const porte = b.porteur === p.id;
   if (porte && b.bloque) { p.vx = 0; p.vy = 0; return; }
+  if (p.geste === 'crochet') {
+    // Le pas de côté : il garde son élan, sans se diriger.
+    p.x += p.vx * DT; p.y += p.vy * DT;
+    viser(p, c);
+    borner(m, p);
+    return;
+  }
   const sprint = c.sprint && p.endu > 0.12 && (c.mx || c.my);
   let vm = vitesseMax(p) * (porte ? 0.94 : 1) * (sprint ? 1.25 : 1) * (0.76 + 0.24 * p.endu) * (p.etat === 'pied' ? 0.45 : 1);
   if (m.equipes[p.e].ctrl === 'ia') vm *= niveauDe(m.equipes[p.e]).vitesse;
   if (p.surpris > 0) vm *= 0.5;
+  if (p.geste === 'roulette') vm *= 0.68;
   const tx = c.mx * vm, ty = c.my * vm;
   const k = c.mx || c.my ? (porte ? 0.14 : 0.17) : 0.2;
   p.vx += (tx - p.vx) * k;

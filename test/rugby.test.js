@@ -14,6 +14,9 @@ import { EQUIPES, EQUIPE, STYLES, POSTES, notesEquipe } from '../public/shared/r
 import { vitessePied, chute } from '../public/shared/rugby/terrain.js';
 import { ecussonSVG } from '../public/games/plein-stade/commun/ecusson.js';
 import { creerTournoi, matchDuJoueur, stadeDuTour, enregistrer, jouerSansMoi, aJouer, avancer, resumer, noterStats, classement, TOURS } from '../public/shared/rugby/tournoi.js';
+import { creerSession, FENETRE } from '../public/shared/rollback.js';
+import * as serveur from '../server/rugby.js';
+import { delaiSelonPing, REGLAGES } from '../public/games/plein-stade/rugby/js/enligne.js';
 
 /** Un petit hasard reproductible (pour les touches des faux joueurs). */
 function rng(graine) {
@@ -230,6 +233,41 @@ test('le plaquage : le porteur au sol, puis le ruck, puis le ballon sort', () =>
   assert.ok(fin.some((e) => e.type === 'sortie'));
 });
 
+test('les gestes techniques : le crochet et la roulette font rater les plaquages, la feinte fait mordre', () => {
+  /** Un plaqueur plonge sur le porteur ; le porteur répond (ou pas) par un geste. Rend le nombre de plaquages réussis. */
+  const essai = (touchePorteur, n = 40) => {
+    let plaques = 0;
+    for (let g = 1; g <= n; g++) {
+      const m = creerMatch({ equipes: ['volterre', 'ferrac'], graine: g, controles: ['humain', 'humain'] });
+      const p = enJeu(m, 6, 0, 0);
+      p.vx = 6; p.dx = 1;
+      for (const o of m.joueurs) if (o !== p) { o.x = o.e === 0 ? -25 : 25; o.y = -15 + o.i * 4; }
+      const d = m.joueurs[N + 5];
+      Object.assign(d, { x: 2.2, y: 0.3, dx: -1, dy: 0 });
+      m.equipes[1].actif = d.id;
+      const vus = jusqua(m, (mm) => mm.phase !== 'jeu', 50, (mm) => [T.d | (mm.f === 3 ? touchePorteur : 0), mm.f === 2 ? T.B : 0]);
+      if (vus.some((e) => e.type === 'plaquage')) plaques += 1;
+    }
+    return plaques;
+  };
+  const sans = essai(0), crochet = essai(T.G | T.h), roulette = essai(T.G | T.S);
+  if (process.env.VOIR) console.log({ sans, crochet, roulette });
+  assert.ok(sans >= 20, `sans geste, le plaquage passe souvent (${sans}/40)`);
+  assert.ok(crochet < sans - 6, `le crochet fait rater (${crochet} contre ${sans})`);
+  assert.ok(roulette < sans - 4, `la roulette casse des plaquages (${roulette} contre ${sans})`);
+  // La feinte de passe : les défenseurs proches mordent (surpris, ils ne peuvent plus plonger tout de suite).
+  let mordus = 0;
+  for (let g = 1; g <= 10; g++) {
+    const m = creerMatch({ equipes: ['azurine', 'givrelac'], graine: g, controles: ['humain', 'ia'] });
+    const p = enJeu(m, 3, 0, 0);
+    for (const o of m.joueurs) if (o.e === 1) { o.x = 3 + (o.i % 3); o.y = -3 + o.i; }
+    const vus = jusqua(m, (mm, evs) => evs.some((e) => e.type === 'geste'), 5, () => [T.G | T.g, 0]);
+    assert.ok(vus.some((e) => e.type === 'geste' && e.geste === 'feinte'));
+    mordus += m.joueurs.filter((o) => o.e === 1 && o.surpris > 0).length;
+  }
+  assert.ok(mordus >= 10, `la défense mord (${mordus})`);
+});
+
 test('des humains qui tapent au hasard : le match tient debout', () => {
   for (let g = 1; g <= 3; g++) {
     const m = creerMatch({ equipes: [EQUIPES[g].id, EQUIPES[15 - g].id], graine: g, minutes: 1, controles: ['humain', 'humain'] });
@@ -280,6 +318,132 @@ test('le Tournoi : huit clubs, trois tours, un champion', () => {
   const top = classement(c.stats, 'plaquages');
   assert.ok(top.length > 0 && top[0].rang === 1);
   assert.ok(classement(c.stats, 'eval').length > 0);
+});
+
+/* ------------------------------------------------------------------ */
+/* En ligne                                                            */
+/* ------------------------------------------------------------------ */
+
+/** Deux joueurs sur un faux réseau (ping, gigue, pertes), chacun avec sa session de rollback. */
+function enLigne({ ping, gigue, perte, duree = 20000, derive = 0.003, reglages = {}, delai = 2 }) {
+  const R = rng(ping * 13 + 1);
+  const conf = [[], []];
+  const joueurs = [0, 1].map((n) => {
+    const m = creerMatch({ equipes: ['volterre', 'pic-gris'], graine: 777, minutes: 3, controles: ['humain', 'humain'] });
+    const s = creerSession({ n, delai, etat: m, pas: (e, x) => pas(e, x), empreinte, confirme: (f, e) => conf[n].push(e[0] * 1024 + e[1]), ...reglages });
+    return { n, m, s, entrees: joueurHumain(500 + n), periode: (1000 / 60) * (n === 1 ? 1 - derive : 1), prochain: n * 23 };
+  });
+  const enRoute = [];
+  let t = 0;
+  const poster = (de, quoi, data) => {
+    if (R() < perte) return;
+    enRoute.push({ a: 1 - de, quand: t + Math.max(5, ping / 2 + (R() - 0.5) * gigue), quoi, data: JSON.parse(JSON.stringify(data)) });
+  };
+  for (; t < duree; t += 1) {
+    for (let i = enRoute.length - 1; i >= 0; i--) {
+      const x = enRoute[i];
+      if (x.quand > t) continue;
+      enRoute.splice(i, 1);
+      const s = joueurs[x.a].s;
+      if (x.quoi === 'entrees') s.recevoir(x.data);
+      else if (x.quoi === 'empreinte') s.recevoirEmpreinte(x.data);
+      else s.recaler(x.data);
+    }
+    for (const j of joueurs) {
+      if (t < j.prochain) continue;
+      j.prochain += j.periode;
+      const r = j.s.avancer(j.entrees());
+      poster(j.n, 'entrees', r.envoi);
+      if (r.empreinte) poster(j.n, 'empreinte', r.empreinte);
+      if (j.s.desynchro && j.n === 0) { const e = j.s.etatConfirme(); if (e) poster(0, 'etat', e); }
+    }
+  }
+  return { A: joueurs[0].s, B: joueurs[1].s, confA: conf[0], confB: conf[1] };
+}
+
+function rejouer(conf, jusqua) {
+  const m = creerMatch({ equipes: ['volterre', 'pic-gris'], graine: 777, minutes: 3, controles: ['humain', 'humain'] });
+  for (let f = 0; f < jusqua; f++) pas(m, [Math.floor(conf[f] / 1024), conf[f] % 1024]);
+  return m;
+}
+
+for (const [nom, reseau] of [
+  ['ping 40 ms', { ping: 40, gigue: 10, perte: 0 }],
+  ['gros ping (300 ms jusqu’à l’autre), 3 % de pertes, réglages du rugby', { ping: 600, gigue: 120, perte: 0.03, reglages: REGLAGES, delai: delaiSelonPing(300) }],
+]) {
+  test(`en ligne (${nom}) : le même match des deux côtés, sans se figer`, () => {
+    const { A, B, confA, confB } = enLigne(reseau);
+    const n = Math.min(confA.length, confB.length);
+    assert.ok(n > 900, `assez d'images confirmées (${n})`);
+    assert.deepEqual(confA.slice(0, n), confB.slice(0, n));
+    assert.ok(!A.desynchro && !B.desynchro, 'aucune désynchronisation');
+    assert.equal(A.stats.recalages + B.stats.recalages, 0, 'jamais besoin de se recaler');
+    for (const [s, conf] of [[A, confA], [B, confB]]) {
+      const { f, etat } = s.etatConfirme();
+      assert.equal(empreinte(etat), empreinte(rejouer(conf, f)), `état à l'image ${f}`);
+    }
+    assert.ok((A.stats.attentes + B.stats.attentes) / 2 < 30, 'presque jamais figé');
+    assert.ok(A.stats.rejouees / Math.max(1, A.stats.retours) <= (reseau.reglages?.fenetre ?? FENETRE), 'des corrections courtes');
+  });
+}
+
+let idClient = 0;
+function client() {
+  const recu = [];
+  const conn = { id: `r${++idClient}`, send: (m) => recu.push(m), close() {} };
+  serveur.handleOpen(conn);
+  return { conn, recu, dit: (m) => serveur.handleMessage(conn, m), dernier: (t) => [...recu].reverse().find((m) => m.t === t) };
+}
+
+test('le serveur : une salle, les clubs choisis dans la salle (jamais le même), la même graine, il relaie les touches (10 bits)', () => {
+  const a = client(), b = client();
+  a.dit({ t: 'creer', nom: 'Alice', stade: 'falaises' });
+  const { code, stade } = a.dernier('salle');
+  assert.match(code, /^[A-Z2-9]{4}$/);
+  assert.equal(stade, 'falaises');
+  assert.equal(a.dernier('salle').g, 'rugby');
+  // Seul l'hôte change le stade ; un stade inconnu devient le Grand Stade.
+  a.dit({ t: 'stade', stade: 'village' });
+  assert.equal(a.dernier('stade').stade, 'village');
+  b.dit({ t: 'rejoindre', code: code.toLowerCase(), nom: '<i>Bob</i>' });
+  assert.deepEqual(b.dernier('salon').noms, ['Alice', 'iBob/i']);
+  b.dit({ t: 'stade', stade: 'grand' });
+  assert.equal(b.dernier('stade'), undefined, 'l’invité ne choisit pas');
+  assert.equal(b.dernier('salon').stade, 'village');
+  a.dit({ t: 'equipe', equipe: 'ferrac' });
+  b.dit({ t: 'equipe', equipe: 'ferrac' });
+  assert.match(b.dernier('erreur').msg, /déjà pris/);
+  b.dit({ t: 'equipe', equipe: 'lumen' });
+  b.dit({ t: 'pret' });
+  assert.deepEqual(a.dernier('salon').prets, [false, false], 'pas prêt sans club (un club de basket ne compte pas)');
+  b.dit({ t: 'equipe', equipe: 'azurine' });
+  b.dit({ t: 'pret' });
+  a.dit({ t: 'pret' });
+  const da = a.dernier('debut'), db = b.dernier('debut');
+  assert.equal(da.graine, db.graine);
+  assert.deepEqual(da.equipes, ['ferrac', 'azurine']);
+  assert.equal(da.stade, 'village');
+  a.dit({ t: 'stade', stade: 'palais' });
+  assert.equal(b.dernier('stade').stade, 'grand');
+  // Les touches : 10 bits (la passe sautée comprise), relayées à l'autre seulement.
+  a.dit({ t: 'entrees', f: 4, e: [T.R | T.d, T.G | T.S, 0x7ff], fc: 3, vu: 1, av: 0 });
+  assert.deepEqual(b.dernier('entrees').e, [T.R | T.d, T.G | T.S, 0x3ff]);
+  assert.equal(a.dernier('entrees'), undefined);
+  // La coupure : la place est gardée, l'autre est prévenu.
+  assert.equal(serveur.enPartie(a.conn), true);
+  serveur.handleAway(b.conn);
+  assert.equal(a.dernier('absent').nom, 'iBob/i');
+  serveur.handleResume(b.conn);
+  assert.ok(a.dernier('revenu'));
+  // La revanche, le retour au salon, puis le départ.
+  const avant = a.recu.filter((m) => m.t === 'debut').length;
+  a.dit({ t: 'revanche' }); b.dit({ t: 'revanche' });
+  assert.equal(a.recu.filter((m) => m.t === 'debut').length, avant + 1);
+  b.dit({ t: 'retour' });
+  assert.deepEqual(a.dernier('salon').prets, [false, false]);
+  b.dit({ t: 'quitter' });
+  assert.ok(a.dernier('parti'));
+  assert.equal(serveur.stats().rugbySalles, 0);
 });
 
 test('l’équilibre des seize clubs : chacun gagne entre 33 et 67 % de ses matchs (40 matchs chacun)', () => {

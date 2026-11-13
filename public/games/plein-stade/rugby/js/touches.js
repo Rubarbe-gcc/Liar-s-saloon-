@@ -27,7 +27,7 @@ export const ACTIONS = [
   ['sautee', 'Passe sautée', T.R, 'KeyU'],
   ['pied', 'Coup de pied · Plaquage', T.B, 'KeyK'],
   ['raffut', 'Raffut · Gratter', T.X, 'KeyL'],
-  ['changer', 'Changer de joueur', T.G, 'Space'],
+  ['changer', 'Changer · Geste technique', T.G, 'Space'],
 ];
 const DEFAUT = Object.fromEntries(ACTIONS.map(([a, , , c]) => [a, c]));
 const RESERVEES = ['Escape', 'KeyP'];

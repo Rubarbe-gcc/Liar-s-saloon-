@@ -139,9 +139,19 @@ function porteur(m, c, cons) {
   const cons0 = { mx, my, sprint: c.endu > 0.25 && (dmin < 9 || reste < 18 || st.relance > 1.2), action: null };
   cons[c.id] = cons0;
 
-  // Le raffut : un plaqueur qui plonge sur lui.
-  if (proche && proche.etat === 'plonge' && dmin < 2.2 && c.raffut <= 0 && c.verrou <= 0 && hasard(m) < 0.25 + c.n.force / 300) {
-    cons0.action = { type: 'raffut' };
+  // Un plaqueur qui plonge sur lui : le raffut, ou un geste technique (le crochet pour les rapides, la roulette pour les costauds).
+  const libre = c.recup <= 0 && !c.geste;
+  if (proche && proche.etat === 'plonge' && dmin < 2.2 && hasard(m) < 0.25 + Math.max(c.n.force, c.n.vitesse) / 300) {
+    const raffutPret = c.raffut <= 0 && c.verrou <= 0;
+    if (libre && (!raffutPret || hasard(m) < 0.5)) {
+      cons0.action = { type: 'geste', geste: c.n.vitesse >= c.n.force ? 'crochet' : 'roulette', dy: 0 };
+      return;
+    }
+    if (raffutPret) { cons0.action = { type: 'raffut' }; return; }
+  }
+  // Un défenseur qui arrive en face : parfois, un crochet avant le contact.
+  if (libre && proche && proche.etat === 'normal' && dmin < 2.6 && dmin > 1.2 && c.n.vitesse > 75 && hasard(m) < 0.05) {
+    cons0.action = { type: 'geste', geste: 'crochet', dy: 0 };
     return;
   }
   if (c.dec > 0 || c.recu < 6) return;
@@ -180,6 +190,11 @@ function porteur(m, c, cons) {
     return;
   }
 
+  // Pressé, sans passe qui vaille : la feinte de passe, pour faire mordre la défense.
+  if (libre && presse && dmin > 1.2 && hasard(m) < 0.12 && c.n.passe > 70) {
+    cons0.action = { type: 'geste', geste: 'feinte', dy: 0 };
+    return;
+  }
   // Le dégagement : dans son camp, pressé, sans solution.
   if (s * c.x < -5 && dmin < 4 && hasard(m) < 0.06 * st.pied && c.n.pied > 50) {
     const vers22 = Math.abs(c.y) > 5 ? Math.sign(c.y) : (hasard(m) < 0.5 ? -1 : 1);

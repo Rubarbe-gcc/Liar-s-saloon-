@@ -84,6 +84,11 @@ export function creerCommentateur(ctx) {
           if (ev.franchi) return C.dire(ch('franchi', [`${n(ev.porteur)} casse le plaquage ! Il y a de l’espace !`, `${n(ev.porteur)} passe ! Plus personne devant lui !`]), { important: true, emotion: 0.9 });
           if (parfois(0.4)) return C.dire(ch('rate', [`${n(ev.porteur)} échappe au plaquage !`, `Plaquage manqué de ${n(ev.joueur)}.`]), { frais: true, coupe: true, emotion: 0.6 });
           return null;
+        case 'geste':
+          if (!ev.reussi || !parfois(0.6)) return null;
+          if (ev.geste === 'crochet') return C.dire(ch('crochet', [`Le crochet de ${n(ev.joueur)} ! Son vis-à-vis plonge dans le vide !`, `Cadrage-débordement de ${n(ev.joueur)} !`, `${n(ev.joueur)} efface son défenseur d’un appui !`]), { frais: true, emotion: 0.7 });
+          if (ev.geste === 'roulette') return C.dire(ch('roulette', [`${n(ev.joueur)} tourne sur lui-même et repart !`, `Quelle roulette de ${n(ev.joueur)} !`]), { frais: true, emotion: 0.7 });
+          return C.dire(ch('feinte', [`La feinte de passe de ${n(ev.joueur)}… la défense a mordu !`, `${n(ev.joueur)} vend la passe… et la garde !`]), { frais: true, emotion: 0.6 });
         case 'raffut':
           if (ev.reussi && parfois(0.6)) return C.dire(ch('raffut', [`Quel raffut de ${n(ev.joueur)} !`, `${n(ev.joueur)} repousse son vis-à-vis d’une main !`]), { frais: true, emotion: 0.7 });
           return null;

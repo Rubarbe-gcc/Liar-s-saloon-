@@ -106,6 +106,17 @@ function poseRugby(f, p, o, dt) {
   } else if (p.lance) {
     // Le talonneur lance en touche : le ballon au-dessus de la tête.
     Object.assign(P, { epAx: -2.8, epBx: -2.8, epAz: 0.2, epBz: -0.2, coudeA: -1.2, coudeB: -1.2, torse: -0.1 });
+  } else if (p.geste === 'crochet') {
+    // Le crochet : penché sur l'appui, le ballon serré, le bras libre écarté.
+    Object.assign(P, { torseZ: Math.sign(p.vy * p.dx - p.vx * p.dy) * 0.35, by: 0.82, genouA: P.genouA + 0.4, genouB: P.genouB + 0.4, epBz: -1.1, coudeB: -0.2 });
+  } else if (p.geste === 'roulette') {
+    // La roulette : groupé, le ballon contre le ventre, les coudes sortis.
+    Object.assign(P, { by: 0.84, torse: 0.45, epAx: -0.9, epBx: -0.9, epAz: 0.6, epBz: -0.6, coudeA: -1.6, coudeB: -1.6 });
+  } else if (p.geste === 'feinte') {
+    // La feinte de passe : les deux bras partent sur le côté… et le ballon reste.
+    const u = Math.min(1, Math.max(0, (18 - (p.tg || 0)) / 9));
+    const aller = u < 1 ? u : 1;
+    Object.assign(P, { epAx: -1.1, epBx: -1.1, epAz: 0.2 + aller * 0.9, epBz: -0.2 + aller * 0.9, coudeA: -0.5, coudeB: -0.5, torseZ: aller * 0.3 });
   } else if (p.raffut) {
     // Le raffut : un bras tendu devant, la main ouverte.
     Object.assign(P, { epBx: -1.55, epBz: -0.35, coudeB: -0.05 });
@@ -299,6 +310,8 @@ export function creerRendu(hote, o) {
       while (da > Math.PI) da -= Math.PI * 2;
       while (da < -Math.PI) da += Math.PI * 2;
       f.racine.rotation.y += da * Math.min(1, dt * 12);
+      // La roulette : un tour complet sur lui-même, le temps du geste.
+      if (p.geste === 'roulette') f.racine.rotation.y = ang + (1 - (p.tg || 0) / 26) * Math.PI * 2;
       const pose = poseRugby(f, p, { vitesse: vit, sprint: vit > 7, t: temps, humeur: v.humeurs?.[i] || null }, dt);
       poser(f, pose, Math.min(1, dt * (vit > 0.4 || p.etat !== 'normal' ? 18 : 10)));
       f.ombre.position.set(p.x, 0.012, -p.y);
