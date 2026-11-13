@@ -25,3 +25,5 @@ const tournoiTennis = lire('revers.tournoi');
 if (tournoiTennis && tournoiTennis.tours && !tournoiTennis.fini && !tournoiTennis.elimine) document.getElementById('info-tennis').textContent = `Un tournoi en cours (${TOURS[tournoiTennis.tour] || ''})`;
 const tournoiHand = lire('roucoulette.tournoi');
 if (tournoiHand && tournoiHand.tours && !tournoiHand.fini && !tournoiHand.elimine) document.getElementById('info-handball').textContent = `Un tournoi en cours (${TOURS[tournoiHand.tour] || ''})`;
+const tournoiRugby = lire('raffut.tournoi');
+if (tournoiRugby && tournoiRugby.tours && !tournoiRugby.fini && !tournoiRugby.elimine) document.getElementById('info-rugby').textContent = `Un tournoi en cours (${TOURS[tournoiRugby.tour] || ''})`;

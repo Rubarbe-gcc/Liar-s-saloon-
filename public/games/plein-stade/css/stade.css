@@ -41,6 +41,8 @@ html, body { margin: 0; min-height: 100%; background: var(--nuit); color: var(--
 .balle.tennis::before, .balle.tennis::after { content: ""; position: absolute; top: 8%; bottom: 8%; width: 60%; border: 3px solid #f8f8ee; border-radius: 50%; }
 .balle.tennis::before { left: -32%; }
 .balle.tennis::after { right: -32%; }
+.sport.rugby .vignette { background: repeating-linear-gradient(90deg, #2e8b3e 0 20px, #37a04a 20px 40px); }
+.balle.ovale { width: 84px; height: 54px; border-radius: 50%; transform: rotate(-28deg); background: radial-gradient(ellipse at 35% 30%, #fff 0, #efe9dc 55%, #b8ae98 100%); box-shadow: inset 18px 0 0 -9px #d23a2a, inset -18px 0 0 -9px #d23a2a; }
 .sport .vignette::after { content: ''; position: absolute; inset: auto 0 0; height: 50%; background: linear-gradient(transparent, rgba(6, 18, 31, .7)); }
 .balle { width: 92px; height: 92px; border-radius: 50%; position: relative; z-index: 1; box-shadow: 0 12px 18px rgba(0, 0, 0, .4); animation: rebond 1.8s cubic-bezier(.3, 0, .4, 1) infinite; }
 .balle.foot { background: radial-gradient(circle at 35% 30%, #fff 0 30%, #d8dde3 60%, #9aa4ae 100%); }

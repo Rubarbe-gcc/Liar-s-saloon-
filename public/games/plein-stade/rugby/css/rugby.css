@@ -1,0 +1,40 @@
+/* RAFFUT — le rugby à 7. On garde l'habillage télé du foot (foot.css) et les
+   pièces du basket (basket.css : la fiche du club, les touches au choix) ;
+   ici, les couleurs du rugby : le vert de la pelouse, le blanc du ballon, le bordeaux. */
+
+body.rugby {
+  --jaune: #ffd23f;
+  --citron: #fff2a8;
+}
+
+.rugby .fond { background: radial-gradient(120% 80% at 50% 0%, #1f5a2a 0%, #06121f 62%); }
+
+/* Le ballon ovale du logo. */
+.rugby .logo .balle.ovale {
+  width: 1.15em; height: .72em; border-radius: 50%; align-self: center;
+  background: radial-gradient(ellipse at 35% 30%, #ffffff 0, #efe9dc 55%, #b8ae98 100%);
+  transform: rotate(-28deg); position: relative; overflow: hidden;
+}
+.rugby .logo .balle.ovale::before { content: ''; position: absolute; top: 0; bottom: 0; left: 22%; width: 9%; background: #d23a2a; }
+.rugby .logo .balle.ovale::after { content: ''; position: absolute; top: 0; bottom: 0; right: 22%; width: 9%; background: #d23a2a; }
+.rugby .logo .l2 { color: var(--jaune); }
+
+.rugby .btn.vert { background: linear-gradient(180deg, #a8323e, #7a1f2b); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 4px 0 #3a0a12, 0 8px 18px rgba(0, 0, 0, .35); }
+.rugby .btn.vert small { color: #ffd6dc; }
+
+/* La jauge du coup de pied ; pour la transformation, la zone blanche : la bonne force. */
+.jauge.pied { width: 74px; margin-left: -37px; height: 10px; overflow: visible; }
+.jauge.pied i { border-radius: 5px; }
+.jauge.pied .ideal { display: none; position: absolute; top: -4px; bottom: -4px; left: 54%; width: 12%; background: rgba(255, 255, 255, .55); border: 1px solid #fff; border-radius: 2px; box-shadow: 0 0 6px #fff; }
+.jauge.pied.transfo .ideal { display: block; }
+.jauge.pied.parfait { box-shadow: 0 0 0 2px #fff, 0 0 14px #fff2a8; }
+
+/* L'aide de la transformation, en bas au milieu. */
+.aide-transfo { position: absolute; left: 50%; bottom: 18%; transform: translateX(-50%); padding: 8px 14px; border-radius: 8px; background: rgba(6, 18, 31, .78); color: #fff; font-size: .9em; text-align: center; pointer-events: none; white-space: nowrap; }
+.aide-transfo b { color: var(--jaune); }
+
+/* La sirène a retenti : le chrono clignote. */
+.tableau-score.sirene .chrono b { color: #ff6a5a; animation: clignote .8s infinite; }
+
+.bj-b { background: radial-gradient(circle at 40% 30%, #ff6a7a, #a8323e); }
+.bj-x { background: radial-gradient(circle at 40% 30%, #ffd77a, #c48a12); }
