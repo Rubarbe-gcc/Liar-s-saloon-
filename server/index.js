@@ -12,6 +12,7 @@ import { fileURLToPath } from 'node:url';
 import { isWebSocketUpgrade, upgrade } from './wsproto.js';
 import { handleOpen, handleMessage, handleClose, sweep, stats } from './hub.js';
 import { traiter as traiterSauvegarde } from './sauvegarde.js';
+import { traiter as traiterMarche } from './marche.js';
 import { attacher as attacherOrbite } from './orbite.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -78,8 +79,22 @@ function serveSauvegarde(req, res) {
   });
 }
 
+/** Le marché de MAXI MENU : même logique que la Function Vercel. */
+function serveMarche(req, res) {
+  const morceaux = [];
+  req.on('data', (m) => morceaux.push(m));
+  req.on('end', async () => {
+    let corps = null;
+    try { corps = JSON.parse(Buffer.concat(morceaux).toString('utf8') || 'null'); } catch { /* corps illisible */ }
+    const { statut, json } = await traiterMarche({ methode: req.method, corps });
+    res.writeHead(statut, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+    res.end(JSON.stringify(json));
+  });
+}
+
 function serveStatic(req, res) {
   if ((req.url || '').split('?')[0] === '/api/sauvegarde') return serveSauvegarde(req, res);
+  if ((req.url || '').split('?')[0] === '/api/marche') return serveMarche(req, res);
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.writeHead(405, { 'content-type': 'text/plain' });
     return res.end('Méthode non autorisée');

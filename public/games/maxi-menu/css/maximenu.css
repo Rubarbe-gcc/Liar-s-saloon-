@@ -44,7 +44,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;}
 .pastille.son{padding:5px 9px;}
 
 /* ---------- onglets */
-.onglets{position:fixed;bottom:0;left:0;right:0;z-index:5;display:grid;grid-template-columns:repeat(4,1fr);background:rgba(28,8,6,.94);border-top:1px solid var(--ligne);padding-bottom:var(--bas);}
+.onglets{position:fixed;bottom:0;left:0;right:0;z-index:5;display:grid;grid-template-columns:repeat(5,1fr);background:rgba(28,8,6,.94);border-top:1px solid var(--ligne);padding-bottom:var(--bas);}
 .onglets button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 0 10px;font-size:.75rem;color:var(--faible);}
 .onglets button span{font-size:1.3rem;}
 .onglets button.actif{color:var(--moutarde);}
@@ -293,3 +293,38 @@ h2{font-family:var(--f-titre);font-size:1.3rem;margin:4px 0 12px;color:var(--mou
 .rangement .arrivee.cachee:hover{transform:translateY(-4px);}
 .rangement .arrivee.grande:not(.cachee){animation:retourne .5s ease-out;}
 @keyframes retourne{from{transform:rotateY(90deg) scale(.9);}to{transform:none;}}
+
+/* ---------- marché et échanges entre joueurs ---------- */
+.mm-segments{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 14px}
+.mm-segments button{padding:9px 14px;border-radius:999px;border:1px solid var(--ligne);background:rgba(255,255,255,.05);font-weight:800;font-size:.85rem;color:var(--pale)}
+.mm-segments button.actif{background:var(--moutarde);color:#3a1a00;border-color:#fff2b0}
+.mm-filtres{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+.mm-filtres select,.mm-code input,.mm-prix-choix input{background:rgba(0,0,0,.35);color:#fff;border:1px solid var(--ligne);border-radius:10px;padding:8px 10px;font:inherit}
+.mm-annonces{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.mm-annonce{display:flex;flex-direction:column;gap:6px;align-items:stretch;background:rgba(255,255,255,.04);border:1px solid var(--ligne);border-radius:16px;padding:8px}
+.mm-annonce .btn{padding:8px 10px}
+.mm-prix{font-weight:900;font-size:1.1rem;color:var(--moutarde);display:flex;justify-content:space-between;align-items:baseline}
+.mm-prix small{font-size:.7rem;color:var(--pale);font-weight:600}
+.mm-vendeur{color:var(--pale);font-size:.75rem}
+.mm-case{display:flex;flex-direction:column;gap:4px;align-items:center;background:none;border:0;padding:0;color:var(--pale);font-size:.75rem}
+.mm-case[disabled]{opacity:.35}
+.mm-case .carte{width:100%}
+.mm-lot{display:grid;grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px}
+.mm-cotes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:640px){.mm-cotes{grid-template-columns:1fr}}
+.mm-ok{color:#5dff8a;font-size:.8rem;margin-left:6px}
+.mm-equite{margin:14px 0;padding:12px;border-radius:14px;border:1px solid var(--ligne);text-align:center}
+.mm-equite.ok{background:rgba(60,200,100,.15);border-color:#5dff8a88}
+.mm-equite.non{background:rgba(255,80,60,.12);border-color:#ff8a7a88}
+.mm-barres{display:grid;gap:4px;margin-bottom:8px}
+.mm-barres span{display:block;height:10px;border-radius:6px;background:var(--moutarde);min-width:4px}
+.mm-barres span+span{background:#3a9bff}
+.mm-valider{width:100%}
+.mm-selecteur{margin-top:14px}
+.mm-gros-code{font-size:3rem;font-weight:900;letter-spacing:.3em;color:var(--moutarde);text-align:center}
+.mm-attente{text-align:center;align-items:center}
+.mm-code{display:flex;gap:8px}.mm-code input{width:90px;text-transform:uppercase;letter-spacing:.2em;font-weight:900}
+.mm-erreur{background:rgba(255,80,60,.15);border:1px solid #ff8a7a88;border-radius:12px;padding:10px;margin:0 0 12px}
+.mm-ligne{display:flex;align-items:center;gap:10px}.mm-ligne .btn{margin-left:auto;padding:8px 12px}
+.mm-vente .mm-prix-choix{display:flex;gap:8px;align-items:center;margin:10px 0 6px}.mm-vente input[type=range]{width:100%}
+.lien{background:none;border:0;color:var(--moutarde);text-decoration:underline;font:inherit;cursor:pointer;padding:0}

@@ -31,7 +31,7 @@ export const normaliser = (cle) => String(cle || '').toUpperCase().replace(/[^A-
 
 const memoire = new Map();
 
-function base() {
+export function base() {
   const url = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
   const jeton = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
   if (url && jeton) return { url: url.replace(/\/+$/, ''), jeton };
@@ -44,7 +44,7 @@ export function disponible() {
   return !!base() || !process.env.VERCEL;
 }
 
-async function redis(commande) {
+export async function redis(commande) {
   const b = base();
   const r = await fetch(b.url, {
     method: 'POST',

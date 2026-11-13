@@ -251,7 +251,7 @@ export const MISSIONS = [
   { id: 'rares5', texte: 'Tirer 5 Rares ou mieux', cle: 'rares', but: 5, gain: 70 },
   { id: 'epique', texte: 'Tirer une Épique ou mieux', cle: 'epiques', but: 1, gain: 100 },
   { id: 'legendaire', texte: 'Tirer une Légendaire ou mieux', cle: 'legendaires', but: 1, gain: 300 },
-  { id: 'recycler10', texte: 'Recycler 10 doublons', cle: 'recyclees', but: 10, gain: 60 },
+  { id: 'rares12', texte: 'Tirer 12 Rares ou mieux', cle: 'rares', but: 12, gain: 150 },
   { id: 'jour', texte: 'Ouvrir le pack du jour', cle: 'packJour', but: 1, gain: 50 },
   { id: 'enseigne3', texte: 'Tirer 3 cartes de l’enseigne du jour', cle: 'enseigneJour', but: 3, gain: 80 },
   { id: 'boutique', texte: 'Acheter un booster à la boutique', cle: 'achats', but: 1, gain: 60 },

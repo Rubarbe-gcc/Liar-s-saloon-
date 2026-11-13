@@ -11,6 +11,7 @@ import * as son from './sons.js';
 import * as B from '../../../shared/casino/banque.js';
 import * as C from '../../../shared/casino/compte.js';
 import * as succes from '../../../shared/succes.js';
+import { creerMarche } from './marche.js';
 
 /*
  * Photos des produits et logos des enseignes (Wikimedia Commons) : ../photos/credits.json
@@ -104,7 +105,10 @@ function afficher(v = vue) {
   if (vue === 'accueil') majMinuteurs();
 }
 
+const marche = creerMarche({ etat: () => etat, sauver, toast, carteHTML, fmt: fmtFrites, afficher: () => { if (vue === 'marche') afficher(); else majCompteurs(); }, maintenant, pseudo: () => succes.pseudo(), son: k => son.jouer(k) });
+
 const VUES = {
+  marche: () => marche.vue(),
   accueil() {
     const t = maintenant();
     J.recharger(etat, t);
@@ -138,15 +142,15 @@ const VUES = {
         <h3>📒 Ma collection</h3>
         <div class="grand">${p.possedees}<small style="font-size:1rem;color:var(--pale)"> / ${p.total} cartes</small></div>
         <div class="jauge"><i style="width:${p.possedees / p.total * 100}%"></i></div>
-        <p>${d.n ? `${d.n} doublon${d.n > 1 ? 's' : ''} à recycler pour <b>${fmtFrites(d.gain)} 🍟</b>.` : 'Aucun doublon pour l’instant.'}</p>
-        <button class="btn" id="b-recycler" ${d.n ? '' : 'disabled'}>♻️ Recycler les doublons</button>
+        <p>${d.n ? `${d.n} doublon${d.n > 1 ? 's' : ''} : vendez-les au marché ou échangez-les avec un ami.` : 'Aucun doublon pour l’instant.'}</p>
+        <button class="btn" data-vue="marche">🤝 Aller au marché</button>
       </section>
       ${tuileMissions(t)}
     </div>
     <div class="etapes">
       <div class="etape"><b>1</b><p><strong>Ouvrez des boosters.</strong> Des gratuits se rechargent toute la journée, et la boutique en vend contre des frites d’or.</p></div>
       <div class="etape"><b>2</b><p><strong>Complétez les albums.</strong> Une enseigne, cinquante cartes, de la Commune à la Mythique. Un album complet rapporte 1 000 🍟.</p></div>
-      <div class="etape"><b>3</b><p><strong>Recyclez les doublons</strong> en frites d’or, et découvrez la fiche de chaque carte obtenue.</p></div>
+      <div class="etape"><b>3</b><p><strong>Vendez et échangez</strong> vos doublons avec les autres joueurs au marché, et découvrez la fiche de chaque carte obtenue.</p></div>
     </div>
     <p class="mentions">Jeu de fan gratuit et non officiel, sans lien avec les enseignes citées. Les marques et logos appartiennent à leurs propriétaires.
       Photos : sites des enseignes et Wikimedia Commons, la source de chaque photo est dans la fiche de la carte. Argent et carte bancaire fictifs. Calories et prix indicatifs.</p>`;
@@ -167,14 +171,13 @@ const VUES = {
       }).join('')}</div>`;
   },
   boutique() {
-    const d = J.valeurDoublons(etat);
     const o = J.BOUTIQUE;
     // Un, cinq ou dix boosters d'un coup.
     const achats = (sorte, classe) => `<div class="lot-btns">${[1, 5, 10].map(n => {
       const prix = o[sorte].prix * n;
       return `<button class="btn ${classe}" data-acheter="${sorte}" data-n="${n}" ${etat.frites < prix ? 'disabled' : ''}>${n > 1 ? `×${n} · ` : ''}${fmtFrites(prix)} 🍟</button>`;
     }).join('')}</div>`;
-    return `<h2>La boutique</h2><p class="sous">Vos frites d’or : <b>${fmtFrites(etat.frites)} 🍟</b>. Gagnez-en en recyclant vos doublons et en complétant des albums.</p>
+    return `<h2>La boutique</h2><p class="sous">Vos frites d’or : <b>${fmtFrites(etat.frites)} 🍟</b>. Gagnez-en avec les missions, les albums complets et vos ventes au marché.</p>
       <div class="offres">
         <div class="offre">${paquetHTML('MAXI', 'classique', ['#e3262f', '#ffc72c'])}<b>${o.classique.nom}</b><p>${o.classique.desc}</p>
           ${achats('classique', 'rouge')}</div>
@@ -184,10 +187,7 @@ const VUES = {
         <div class="offre">${paquetHTML('MAXI', 'prestige', ['#ff4f9a', '#ffb52e'])}<b>${o.prestige.nom}</b><p>${o.prestige.desc}</p>
           ${achats('prestige', 'jaune')}</div>
       </div>
-      ${tuileCaisse()}
-      <div class="tuile doublons"><h3>♻️ Recyclage</h3>
-        <p>On garde toujours un exemplaire de chaque carte. Chaque doublon rapporte : Commune ${RARETES.commune.recyclage} · Rare ${RARETES.rare.recyclage} · Épique ${RARETES.epique.recyclage} · Légendaire ${RARETES.legendaire.recyclage} · Mythique ${RARETES.mythique.recyclage} 🍟.</p>
-        <button class="btn" id="b-recycler" ${d.n ? '' : 'disabled'}>Recycler ${d.n} doublon${d.n > 1 ? 's' : ''} : +${fmtFrites(d.gain)} 🍟</button></div>`;
+      ${tuileCaisse()}`;
   },
   tirages() {
     const s = etat.stats;
@@ -196,7 +196,7 @@ const VUES = {
       if (!c) return '';
       return `<div class="ligne" data-carte="${c.id}"><span class="mini">${carteHTML(c, { id: false })}</span><span><b>${c.nom}</b><br><small style="color:${RARETES[c.rarete].couleur}">${RARETES[c.rarete].nom}</small> <small>· ${ENSEIGNES[c.enseigne].court} · ${new Date(g.quand).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}</small></span></div>`;
     }).join('');
-    return `<h2>Mes plus beaux tirages</h2><p class="sous">${s.boosters} booster${s.boosters > 1 ? 's' : ''} ouvert${s.boosters > 1 ? 's' : ''} · ${s.cartes} cartes tirées · ${s.recyclees} recyclées</p>
+    return `<h2>Mes plus beaux tirages</h2><p class="sous">${s.boosters} booster${s.boosters > 1 ? 's' : ''} ouvert${s.boosters > 1 ? 's' : ''} · ${s.cartes} cartes tirées · ${s.echanges || 0} échange${(s.echanges || 0) > 1 ? 's' : ''}</p>
       <div class="liste">${lignes || '<p class="vide">Vos cartes Épiques, Légendaires et Mythiques apparaîtront ici.</p>'}</div>`;
   },
 };
@@ -556,7 +556,7 @@ function actionsFin(toutes) {
   const lots = session.paquets.length;
   const nouvelles = toutes.filter(t => t.nouvelle).length;
   const encore = Math.min(dernierLot, etat.stock);
-  $('#ouv-actions').innerHTML = `<p class="sous" style="margin:0;width:100%;text-align:center">${lots > 1 ? `${lots} boosters · ` : ''}${nouvelles ? `${nouvelles} nouvelle${nouvelles > 1 ? 's' : ''} carte${nouvelles > 1 ? 's' : ''} !` : 'Que des doublons… à recycler en frites d’or.'}</p>
+  $('#ouv-actions').innerHTML = `<p class="sous" style="margin:0;width:100%;text-align:center">${lots > 1 ? `${lots} boosters · ` : ''}${nouvelles ? `${nouvelles} nouvelle${nouvelles > 1 ? 's' : ''} carte${nouvelles > 1 ? 's' : ''} !` : 'Que des doublons… à vendre ou échanger au marché.'}</p>
     <button class="btn" id="b-fermer-ouv">Continuer</button>
     ${encore ? `<button class="btn rouge" id="b-encore">Encore ${encore > 1 ? `×${encore}` : 'un'} (${etat.stock} en réserve)</button>` : ''}`;
   $('#b-fermer-ouv').onclick = () => { son.jouer('clic'); fermerOuverture(); };
@@ -600,7 +600,7 @@ function montrerFiche(id) {
         <tr><td>Exemplaires</td><td>${n}</td></tr>
         <tr><td>Obtenue le</td><td>${etat.obtenue[id] ? new Date(etat.obtenue[id]).toLocaleDateString('fr-FR') : '—'}</td></tr>
       </table>
-      <div class="actions">${n > 1 ? `<button class="btn" id="b-recycler-carte">♻️ Recycler ${n - 1} doublon${n > 2 ? 's' : ''} : +${(n - 1) * RARETES[c.rarete].recyclage} 🍟</button>` : ''}</div>`
+      <div class="actions"><button class="btn" id="b-vendre-carte">🏷️ Vendre au marché</button></div>`
         : '<p class="desc">Vous n’avez pas encore cette carte. Sa fiche s’ouvrira quand elle sortira d’un booster.</p>'}
       <p class="meta" style="margin-top:12px">« ${e.devise} »</p>
       ${n && c.image ? `<p class="credit">${credit(id)}</p>` : ''}
@@ -609,22 +609,16 @@ function montrerFiche(id) {
   m.hidden = false;
   m.querySelector('.fermer').onclick = () => { m.hidden = true; };
   m.onclick = ev => { if (ev.target === m) m.hidden = true; };
-  const rc = $('#b-recycler-carte');
-  if (rc) rc.onclick = () => {
-    const r = J.recycler(etat, id, maintenant());
-    sauver();
-    son.jouer('pieces');
-    toast(`+${r.gain} 🍟`);
-    montrerFiche(id);
-    if ($('#ouverture').hidden) afficher();
-  };
+  const vc = $('#b-vendre-carte');
+  if (vc) vc.onclick = () => { m.hidden = true; $('#ouverture').hidden = true; albumOuvert = null; afficher('marche'); marche.clic({ dataset: { m: 'vendre', id } }); };
 }
 
 /* ------------------------------------------------------------ clics */
 document.addEventListener('click', ev => {
-  const el = ev.target.closest('button, [data-carte], [data-album]');
+  const el = ev.target.closest('button, [data-carte], [data-album], [data-m]');
   if (!el || el.closest('#ouverture') || el.closest('#fiche')) return;
   son.debloquer();
+  if (el.dataset.m) { if (!el.disabled) marche.clic(el); return; }
   if (el.dataset.vue) { son.jouer('clic'); albumOuvert = null; afficher(el.dataset.vue); window.scrollTo(0, 0); return; }
   if (el.dataset.album) { son.jouer('clic'); albumOuvert = el.dataset.album; afficher('albums'); window.scrollTo(0, 0); return; }
   if (el.dataset.carte && !el.closest('.mini')) { son.jouer('clic'); montrerFiche(el.dataset.carte); return; }
@@ -665,14 +659,6 @@ document.addEventListener('click', ev => {
       ouvrir(J.ouvrirCadeauSerie(etat, nouveauRng(), maintenant()).tirage, { sous: 'cadeau de la série', couleurs: ['#ff4f9a', '#ffb52e'] });
       break;
     }
-    case 'b-recycler': {
-      const r = J.recycler(etat, null, maintenant());
-      sauver();
-      son.jouer('pieces');
-      toast(`♻️ ${r.n} doublon${r.n > 1 ? 's' : ''} recyclé${r.n > 1 ? 's' : ''} : +${fmtFrites(r.gain)} 🍟`);
-      afficher();
-      break;
-    }
     case 'b-albums': son.jouer('clic'); albumOuvert = null; afficher('albums'); break;
     case 'b-recompense': {
       const r = J.recompenseAlbum(etat, el.dataset.ens);
@@ -687,5 +673,7 @@ document.addEventListener('click', ev => {
 addEventListener('keydown', e => {
   if (e.key === 'Escape') { $('#fiche').hidden = true; }
 });
+
+document.addEventListener('change', ev => { if (ev.target.dataset && ev.target.dataset.mf) marche.changerFiltre(ev.target); });
 
 afficher('accueil');

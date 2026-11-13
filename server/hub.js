@@ -40,8 +40,9 @@ import * as foot from './foot.js';
 import * as basket from './basket.js';
 import * as boxe from './boxe.js';
 import * as tennis from './tennis.js';
+import * as maximenu from './maximenu.js';
 
-const GAMES = { saloon, zenith, echo, brasier, skullking, fiesta, street, velours, foot, basket, boxe, tennis };
+const GAMES = { saloon, zenith, echo, brasier, skullking, fiesta, street, velours, foot, basket, boxe, tennis, maximenu };
 const DEFAULT_GAME = 'saloon';
 
 /** Temps pendant lequel une place attend son joueur après une coupure. */
