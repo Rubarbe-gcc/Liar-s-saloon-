@@ -1,7 +1,7 @@
 /**
  * ROUCOULETTE — le jeu : le menu, le choix des équipes, le match (la boucle à
  * 60 images par seconde, l'interface par-dessus la 3D), la fin du match, le
- * Tournoi et l'Entraînement (le jeu en ligne viendra plus tard).
+ * Tournoi, l'Entraînement et le jeu en ligne.
  *
  * Le match est joué par le moteur partagé (shared/handball/match.js) ; la 3D
  * (trois/rendu3d.js) ne fait que le montrer.
@@ -18,6 +18,8 @@ import { intro, miTemps, hommeDuMatch, trophee, meilleurJoueur } from './cinemat
 import { creerTournoi, matchDuJoueur, salleDuTour, enregistrer, jouerSansMoi, aJouer, avancer, resumer, noterStats, classement, TOURS } from '../../../../shared/handball/tournoi.js';
 import * as saisie from '../../commun/saisie.js';
 import * as touches from './touches.js';
+import * as net from './enligne.js';
+import { creerLissage } from '../../commun/lissage.js';
 import * as son from '../../commun/son.js';
 import * as succes from '../../../../shared/succes.js';
 import { creerCommentateur, reglage as reglageCommentaires, regler as reglerCommentaires, REGLAGES as REGLAGES_COMM } from './commentaires.js';
@@ -209,7 +211,7 @@ function lancerMatch(o) {
   aller('match');
   const rendu = creerRendu($('scene'), { salle: o.salle, equipes: eqs, kits });
   if (!rendu) { alert('La 3D n’est pas disponible sur cet appareil.'); aller('menu'); return; }
-  partie = { o, m, rendu, eqs, kits, local: 0, acc: 0, prec: null, cour: instantane(m), finVue: 0, dernier: performance.now(), excit: 0, scoreAffiche: '' };
+  partie = { o, m, rendu, eqs, kits, local: o.local ?? 0, lisse: o.mode === 'enligne' ? creerLissage(2 * N) : null, acc: 0, prec: null, cour: instantane(m), finVue: 0, dernier: performance.now(), excit: 0, scoreAffiche: '' };
   for (let e = 0; e < 2; e++) {
     $(`hud-ec${e}`).innerHTML = ecussonSVG(eqs[e], 26);
     $(`hud-abr${e}`).textContent = eqs[e].abr;
@@ -222,7 +224,7 @@ function lancerMatch(o) {
   if (!o.entrainement) {
     partie.com = creerCommentateur({ nom: (id) => nomDe(id), equipe: (e) => eqs[e], salle: partie.lieu, el: $('commentaire') });
     partie.com.debut(m);
-    cine.lancer(intro(partie), { passable: true, fin: () => partie?.rendu.camera('tele', true) });
+    cine.lancer(intro(partie), { passable: o.mode !== 'enligne', fin: () => partie?.rendu.camera('tele', true) });
   } else rendu.camera('tele', true);
   enPause = false;
   saisie.siJeuEnCours(() => ecran === 'match' && !enPause);
@@ -232,6 +234,7 @@ function lancerMatch(o) {
 
 function arreterMatch() {
   cancelAnimationFrame(raf);
+  if (partie?.o.mode === 'enligne') net.finirSession();
   $('attente-net').classList.add('cache');
   cine.arreter(false);
   if (partie) { partie.com?.arreter(); partie.rendu.detruire(); partie = null; }
@@ -253,9 +256,9 @@ function boucle(t) {
   const dt = Math.min(0.1, Math.max(0, (t - P.dernier) / 1000));
   P.dernier = t;
   if (cine.actif) { cine.maj(dt); P.acc = 0; }
-  else if (!enPause) {
+  else if (!enPause || P.o.mode === 'enligne') {
     P.acc += dt;
-    P.periode = PAS;
+    P.periode = P.o.mode === 'enligne' ? PAS * (1 + Math.min(0.08, Math.max(0, (net.ecart() - 1) * 0.03))) : PAS;
     let n = 0;
     while (P.acc >= P.periode && n < 6) { uneImage(); P.acc -= P.periode; n += 1; }
     if (n >= 6) P.acc = 0;
@@ -267,6 +270,18 @@ function boucle(t) {
 /** Une image du moteur, avec les touches du joueur. */
 function uneImage() {
   const P = partie;
+  if (P.o.mode === 'enligne') {
+    // En ligne : nos touches partent, celles de l'adversaire sont prédites (et corrigées si besoin).
+    const r = net.pasEnLigne(saisie.lire());
+    if (!r) return;
+    P.gel = r.attente && !r.retenue ? (P.gel || 0) + 1 : 0;
+    if (r.attente) return;
+    P.prec = P.cour;
+    P.cour = instantane(P.m);
+    P.lisse.apres(P.prec, P.cour, Math.max(1, P.cour.f - P.prec.f) * PAS);
+    reagir(r.evs);
+    return;
+  }
   const entrees = [0, 0];
   if (P.o.controles[P.local] === 'humain') entrees[P.local] = saisie.lire();
   P.prec = P.cour;
@@ -320,7 +335,7 @@ function reagir(evs) {
         break;
       }
       case 'mitemps':
-        cine.lancer(miTemps(P), { passable: true, fin: () => { if (partie?.m.phase === 'pause') partie.m.t = Math.min(partie.m.t, 30); partie?.rendu.camera('tele', true); } });
+        if (P.o.mode !== 'enligne') cine.lancer(miTemps(P), { passable: true, fin: () => { if (partie?.m.phase === 'pause') partie.m.t = Math.min(partie.m.t, 30); partie?.rendu.camera('tele', true); } });
         son.acclamation(1); bandeau('Mi-temps', `${P.eqs[0].court} ${m.score[0]} - ${m.score[1]} ${P.eqs[1].court}`, true); break;
       case 'reprise': ecranGeant('2E MI-TEMPS'); break;
       case 'engagement': case 'renvoi': case 'remise': ecranGeant(); break;
@@ -355,6 +370,7 @@ function afficher(dt) {
   const vueCine = cine.actif ? cine.vue() : null;
   if (vueCine) { P.rendu.afficher(vueCine, dt); return; }
   let vue = melanger(P.prec, P.cour, P.acc / (P.periode || PAS));
+  if (P.lisse) vue = P.lisse.appliquer(vue, dt);
   const { h, heros } = humeurs(m);
   if (!cine.actif) P.rendu.camera(m.phase === 'but' && heros >= 0 && m.t < 90 ? 'but' : 'tele');
   const eq = m.equipes[P.local];
@@ -399,10 +415,14 @@ function afficher(dt) {
   // La rumeur du public : elle monte quand le ballon approche d'un but.
   const prox = Math.max(0, 1 - (DEMI_L - Math.abs(b.x)) / 10);
   son.public_(Math.min(1, 0.12 + prox * 0.35 + P.excit * 0.5));
+  if (P.o.mode === 'enligne') attenteReseau(P);
   // La fin : on laisse les joueurs se congratuler, puis le joueur du match, puis le résumé.
   if (m.phase === 'fin' && P.finVue > 0) {
     P.finVue -= dt;
-    if (P.finVue <= 0) {
+    // En ligne, on attend que tout soit confirmé : le résultat ne peut plus changer.
+    if (P.finVue <= 0 && P.o.mode === 'enligne') P.attenteFin ??= performance.now();
+    if (P.finVue <= 0 && P.o.mode === 'enligne' && !net.toutConfirme() && performance.now() - P.attenteFin <= 3000) P.finVue = 0.05;
+    else if (P.finVue <= 0) {
       P.finVue = -1;
       const etapes = [...hommeDuMatch(P), ...(P.o.finale && m.vainqueur === P.local ? trophee(P, P.local) : [])];
       if (etapes.length) cine.lancer(etapes, { passable: true, fin: finDuMatch });
@@ -654,6 +674,191 @@ function montrerStats(stats, moi, retour) {
 }
 
 /* ------------------------------------------------------------------ */
+/* En ligne (un contre un, avec un code : enligne.js, server/handball.js) */
+/* ------------------------------------------------------------------ */
+
+const CLE_NOM = 'roucoulette.nom';
+const STATUTS = { connexion: 'Connexion au serveur…', connecte: 'Connecté ! Crée une salle, ou rejoins celle d’un ami avec son code.', perdu: 'Connexion perdue. Nouvelle tentative…', injoignable: 'Le serveur ne répond pas. On réessaie…' };
+
+function nomEnLigne() {
+  const n = $('enligne-nom').value.trim() || succes.pseudo() || 'Joueur';
+  try { localStorage.setItem(CLE_NOM, n); } catch { /* ignore */ }
+  return n;
+}
+
+/** La connexion lâche, l'adversaire aussi, ou ses touches n'arrivent plus : on le dit (pas d'écran figé muet). */
+function attenteReseau(P) {
+  const nomAdv = P.o.noms?.[1 - P.local] || 'Ton adversaire';
+  const raison = P.netPerdu ? ['Connexion perdue', 'Reconnexion en cours… le match reprend tout seul.']
+    : P.absent ? [`${nomAdv} a perdu la connexion`, 'On l’attend : sa place est gardée quelques minutes.']
+      : (P.gel || 0) > 45 ? ['En attente…', `Les touches de ${nomAdv} n’arrivent plus pour l’instant.`] : null;
+  $('attente-net').classList.toggle('cache', !raison);
+  if (raison) { $('attente-titre').textContent = raison[0]; $('attente-texte').textContent = raison[1]; }
+  if (!$('net-diag').classList.contains('cache')) {
+    const d = net.diagnostic();
+    if (d) $('net-diag').textContent = `ping ${d.ping} ms · délai ${d.delai} · avance ${d.avance} · rejouées ${d.rejouees} · recalages ${d.recalages}`;
+  }
+}
+
+/** Le salon : les deux joueurs dans la salle, chacun choisit son club (celui de l'autre est pris), puis « Prêt ! ». */
+let autoChoix = false;
+function rendreSalon(s) {
+  const moi = s.n, lui = 1 - s.n;
+  const present = !!s.noms[lui];
+  const carte = (n) => {
+    const eq = s.equipes[n] && EQUIPE[s.equipes[n]];
+    const nom = s.noms[n] || '…';
+    return `<div class="salon-joueur${n === moi ? ' moi' : ''}${s.prets[n] ? ' pret' : ''}" style="--c1:${eq ? eq.maillot.fond : '#1a2a3a'}">
+      ${eq ? ecussonSVG(eq, 40) : '<span class="ec-vide">?</span>'}
+      <span><small>${n === moi ? 'Toi' : 'Adversaire'}</small><b>${nom}</b><i>${eq ? eq.court : present || n === moi ? 'choisit son club…' : 'pas encore là'}</i></span>
+      <em>${s.prets[n] ? '✓ Prêt' : ''}</em></div>`;
+  };
+  $('salon-joueurs').innerHTML = carte(moi) + carte(lui);
+  $('salon-equipes').innerHTML = EQUIPES.map((eq) => {
+    const a = s.equipes[moi] === eq.id, b = s.equipes[lui] === eq.id;
+    return `<button class="equipe${a ? ' moi' : ''}${b ? ' lui pris' : ''}" data-id="${eq.id}" style="--c1:${eq.maillot.fond}"${b ? ' disabled' : ''}>
+      ${a ? '<span class="marque">TOI</span>' : b ? `<span class="marque">${s.noms[lui]}</span>` : ''}<span class="note">${noteGenerale(eq)}</span>
+      ${ecussonSVG(eq, 46)}<span class="nom">${eq.nom}</span><span class="style">${STYLES[eq.style].nom}</span></button>`;
+  }).join('');
+  const pret = s.prets[moi];
+  $('salon-pret').innerHTML = pret ? '<b>Pas encore prêt</b><small>Changer d’avis</small>' : '<b>Prêt !</b><small>Le match part quand vous l’êtes tous les deux</small>';
+  $('salon-pret').className = `btn grand ${pret ? '' : 'vert'}`;
+  $('salon-pret').disabled = !s.equipes[moi] || !present;
+  $('salle-attente').textContent = !present ? 'En attente d’un adversaire… Donne-lui ce code.'
+    : s.prets[lui] && !pret ? `${s.noms[lui]} est prêt : à toi !`
+      : pret && !s.prets[lui] ? `En attente de ${s.noms[lui]}…` : 'Choisissez vos clubs (pas le même), puis « Prêt ! ».';
+  if (!autoChoix && !s.equipes[moi] && s.equipes[lui] !== conf.moi) { autoChoix = true; net.choisirEquipe(conf.moi); }
+}
+
+/** La salle du match : c'est l'hôte qui la choisit (le champ « stade » du protocole). */
+function rendreSallesEnLigne() {
+  const hote = net.salle.n === 0;
+  const nomHote = net.salle.salon?.noms?.[0];
+  $('salle-stade-bloc').firstElementChild.textContent = hote ? 'La salle (c’est toi qui choisis)' : `La salle (choisie par ${nomHote || 'l’hôte'})`;
+  $('salle-stades').innerHTML = SALLES.map((x) => `<button data-id="${x.id}" class="${net.salle.stade === x.id ? 'oui' : ''}"${hote ? '' : ' disabled'}>${x.nom}</button>`).join('');
+}
+
+function ouvrirEnLigne() {
+  let nom = '';
+  try { nom = localStorage.getItem(CLE_NOM) || localStorage.getItem('doublepas.nom') || localStorage.getItem('petitpont.nom') || ''; } catch { /* ignore */ }
+  $('enligne-nom').value = nom || succes.pseudo() || '';
+  $('enligne-accueil').classList.toggle('cache', !!net.salle.code);
+  $('enligne-salle').classList.toggle('cache', !net.salle.code);
+  aller('enligne');
+  const retourAccueil = (texte) => {
+    $('enligne-accueil').classList.remove('cache');
+    $('enligne-salle').classList.add('cache');
+    $('enligne-statut').textContent = texte;
+  };
+  net.connecter({
+    statut: (st) => {
+      if (!net.salle.code) $('enligne-statut').textContent = STATUTS[st] || '';
+      if (partie?.o.mode === 'enligne' && (st === 'perdu' || st === 'injoignable' || st === 'connexion')) partie.netPerdu = true;
+    },
+    session: (m) => {
+      if (m.repris) { if (partie) partie.netPerdu = false; return; }
+      if (partie?.o.mode === 'enligne') {
+        arreterMatch();
+        net.quitter();
+        retourAccueil('La connexion a été coupée trop longtemps (ou le serveur a redémarré) : le match est interrompu.');
+        aller('enligne');
+      } else if (net.salle.code) {
+        net.quitter();
+        retourAccueil('La connexion a été coupée : la salle est fermée. Crées-en une autre.');
+      }
+    },
+    absent: (m) => {
+      if (partie?.o.mode === 'enligne') partie.absent = true;
+      else $('salle-attente').textContent = `${m.nom} a perdu la connexion… on l’attend.`;
+    },
+    revenu: (m) => {
+      if (partie) partie.absent = false;
+      else $('salle-attente').textContent = `${m.nom} est de retour.`;
+    },
+    salle: (m) => {
+      $('enligne-accueil').classList.add('cache');
+      $('enligne-salle').classList.remove('cache');
+      $('salle-code').textContent = m.code;
+      $('enligne-statut').textContent = '';
+      autoChoix = false;
+      rendreSalon({ n: 0, noms: [nomEnLigne(), null], equipes: [null, null], prets: [false, false] });
+      rendreSallesEnLigne();
+    },
+    salon: (m) => {
+      $('enligne-accueil').classList.add('cache');
+      $('enligne-salle').classList.remove('cache');
+      if (net.salle.code) $('salle-code').textContent = net.salle.code;
+      if (partie?.o.mode === 'enligne') arreterMatch();
+      if (ecran !== 'enligne') aller('enligne');
+      $('enligne-statut').textContent = '';
+      rendreSalon(m);
+      rendreSallesEnLigne();
+    },
+    stade: () => rendreSallesEnLigne(),
+    debut: (m) => lancerEnLigne(m),
+    revanche: (m) => { if (ecran === 'fin' && m.n !== net.salle.n) $('fin-attente').textContent = 'Ton adversaire veut sa revanche !'; },
+    parti: () => {
+      const enMatch = partie?.o.mode === 'enligne';
+      if (enMatch) arreterMatch();
+      if (enMatch || ecran === 'fin' || ecran === 'enligne') { retourAccueil('Ton adversaire a quitté le match.'); aller('enligne'); }
+    },
+    erreur: (msg) => { $('enligne-statut').textContent = msg; },
+  });
+}
+
+function lancerEnLigne(d) {
+  son.reveiller();
+  $('fin-attente').textContent = '';
+  lancerMatch({
+    equipes: d.equipes, controles: ['humain', 'humain'], niveaux: [1, 1], minutes: 3, salle: SALLE[d.stade] ? d.stade : 'arene', mode: 'enligne',
+    graine: d.graine, local: d.n, noms: d.noms,
+    apres: (res, bouton) => {
+      const moi = d.n;
+      $('fin-titre').textContent = res.vainqueur === moi ? `Victoire contre ${d.noms[1 - moi]} !` : `Défaite contre ${d.noms[1 - moi]}`;
+      const b = bouton('Revanche', 'vert grand', () => { net.revanche(); b.disabled = true; $('fin-attente').textContent = 'En attente de ton adversaire…'; });
+      bouton('Changer d’équipes', '', () => net.retourSalon());
+      bouton('Quitter', '', () => { net.quitter(); aller('menu'); });
+    },
+    abandon: () => { net.quitter(); aller('menu'); },
+  });
+  if (partie) net.demarrerSession({ m: partie.m, n: d.n });
+}
+
+function brancherEnLigne() {
+  $('b-enligne').addEventListener('click', () => { son.reveiller(); ouvrirEnLigne(); });
+  $('enligne-retour').addEventListener('click', () => { if (net.salle.code) net.quitter(); aller('menu'); });
+  $('enligne-creer').addEventListener('click', () => { net.creer(nomEnLigne(), conf.salle); $('enligne-statut').textContent = 'Création de la salle…'; });
+  $('salon-equipes').addEventListener('click', (e) => {
+    const b = e.target.closest('.equipe');
+    if (!b || b.disabled) return;
+    son.bip();
+    conf.moi = b.dataset.id;
+    garder();
+    net.choisirEquipe(b.dataset.id);
+  });
+  $('salon-pret').addEventListener('click', () => {
+    const s = net.salle.salon;
+    if (!s) return;
+    son.reveiller();
+    net.pret(!s.prets[s.n]);
+  });
+  const rejoindre = () => {
+    const code = $('enligne-code').value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (code.length < 4) { $('enligne-statut').textContent = 'Le code de la salle fait 4 caractères.'; return; }
+    autoChoix = false;
+    net.rejoindre(code, nomEnLigne());
+    $('enligne-statut').textContent = 'On rejoint la salle…';
+  };
+  $('enligne-rejoindre').addEventListener('click', rejoindre);
+  $('enligne-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') rejoindre(); });
+  $('salle-quitter').addEventListener('click', () => { net.quitter(); $('enligne-salle').classList.add('cache'); $('enligne-accueil').classList.remove('cache'); $('enligne-statut').textContent = STATUTS.connecte; });
+  $('salle-stades').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b && net.salle.n === 0) { conf.salle = b.dataset.id; garder(); net.choisirStade(b.dataset.id); } });
+  $('attente-quitter').addEventListener('click', () => { arreterMatch(); net.quitter(); enPause = false; aller('menu'); });
+  // Le diagnostic du réseau (F3).
+  addEventListener('keydown', (e) => { if (e.code === 'F3') { e.preventDefault(); $('net-diag').classList.toggle('cache'); } });
+}
+
+/* ------------------------------------------------------------------ */
 /* La pause, les commandes, le menu                                    */
 /* ------------------------------------------------------------------ */
 
@@ -736,6 +941,7 @@ function brancher() {
 }
 
 brancher();
+brancherEnLigne();
 brancherEntrainement();
 infoTournoi();
 

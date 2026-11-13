@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
 <meta name="theme-color" content="#06101e">
-<meta name="description" content="ROUCOULETTE — le handball à sept contre sept en 3D. Seize clubs, des tirs en suspension, des gardiens qui volent et un but en or. Au clavier, à la manette ou au doigt.">
+<meta name="description" content="ROUCOULETTE — le handball à sept contre sept en 3D. Seize clubs, des tirs en suspension, des gardiens qui volent et un but en or. En solo, en tournoi et en ligne, au clavier, à la manette ou au doigt.">
 <title>Roucoulette · Plein Stade</title>
 <link rel="icon" href="/games/plein-stade/icons/icon-192.png">
 <link rel="manifest" href="/games/plein-stade/manifest.webmanifest">
@@ -32,6 +32,7 @@
       <button class="btn vert grand" id="b-solo"><b>🤾 Match amical</b><small>Contre l’ordinateur</small></button>
       <button class="btn or grand" id="b-tournoi"><b>🏆 Le Tournoi</b><small id="tournoi-info">Huit clubs, élimination directe</small></button>
       <button class="btn bleu grand" id="b-entrainement"><b>🎯 Entraînement</b><small>Jeu libre : les réglages sont dans la pause</small></button>
+      <button class="btn grand" id="b-enligne"><b>🌐 En ligne</b><small>Un contre un, avec un code</small></button>
     </div>
     <div class="menu-bas">
       <button class="btn fin" id="b-commandes">🎮 Commandes</button>
@@ -90,6 +91,35 @@
     <h2>Statistiques du tournoi</h2>
   </header>
   <div class="page" id="stats-corps"></div>
+</section>
+
+<!-- ============================ EN LIGNE ============================ -->
+<section class="ecran" id="s-enligne">
+  <header class="barre-haut">
+    <button class="rond retour" id="enligne-retour" aria-label="Retour">‹</button>
+    <h2>En ligne</h2>
+  </header>
+  <div class="page page-enligne">
+    <p class="statut" id="enligne-statut">Connexion…</p>
+    <div class="enligne-bloc" id="enligne-accueil">
+      <label class="champ">Ton nom <input id="enligne-nom" maxlength="12" autocomplete="nickname"></label>
+      <p class="consigne">Les équipes se choisissent dans la salle, une fois que vous y êtes tous les deux.</p>
+      <button class="btn vert grand" id="enligne-creer"><b>Créer une salle</b><small>Tu recevras un code à donner</small></button>
+      <div class="rejoindre">
+        <input id="enligne-code" maxlength="6" placeholder="CODE" autocapitalize="characters" aria-label="Code de la salle">
+        <button class="btn bleu" id="enligne-rejoindre">Rejoindre</button>
+      </div>
+    </div>
+    <div class="enligne-bloc cache" id="enligne-salle">
+      <p class="code-salle">Salle <b id="salle-code"></b></p>
+      <p class="consigne" id="salle-attente">En attente d’un adversaire… Donne-lui ce code.</p>
+      <div class="salon-joueurs" id="salon-joueurs"></div>
+      <div class="grille-equipes petite" id="salon-equipes"></div>
+      <button class="btn vert grand" id="salon-pret" disabled><b>Prêt !</b></button>
+      <div class="option" id="salle-stade-bloc"><span>La salle (c’est toi qui choisis)</span><div class="segments" id="salle-stades"></div></div>
+      <button class="btn fin" id="salle-quitter">Quitter la salle</button>
+    </div>
+  </div>
 </section>
 
 <!-- ============================ LE MATCH ============================ -->
