@@ -23,3 +23,5 @@ const tournoi = lire('doublepas.tournoi');
 if (tournoi && tournoi.tours && !tournoi.fini && !tournoi.elimine) document.getElementById('info-basket').textContent = `Un tournoi en cours (${TOURS[tournoi.tour] || ''})`;
 const tournoiTennis = lire('revers.tournoi');
 if (tournoiTennis && tournoiTennis.tours && !tournoiTennis.fini && !tournoiTennis.elimine) document.getElementById('info-tennis').textContent = `Un tournoi en cours (${TOURS[tournoiTennis.tour] || ''})`;
+const tournoiHand = lire('roucoulette.tournoi');
+if (tournoiHand && tournoiHand.tours && !tournoiHand.fini && !tournoiHand.elimine) document.getElementById('info-handball').textContent = `Un tournoi en cours (${TOURS[tournoiHand.tour] || ''})`;

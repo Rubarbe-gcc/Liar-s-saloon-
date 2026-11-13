@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#06101e">
+<meta name="description" content="ROUCOULETTE — le handball à sept contre sept en 3D. Seize clubs, des tirs en suspension, des gardiens qui volent et un but en or. Au clavier, à la manette ou au doigt.">
+<title>Roucoulette · Plein Stade</title>
+<link rel="icon" href="/games/plein-stade/icons/icon-192.png">
+<link rel="manifest" href="/games/plein-stade/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/games/plein-stade/icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Plein Stade">
+<link rel="stylesheet" href="/games/plein-stade/foot/css/foot.css">
+<link rel="stylesheet" href="/games/plein-stade/basket/css/basket.css">
+<link rel="stylesheet" href="/games/plein-stade/handball/css/handball.css">
+<link rel="stylesheet" href="/games/plein-stade/commun/cinematique.css">
+<script src="/maj.js" defer></script>
+</head>
+<body class="basket handball">
+
+<div class="fond" aria-hidden="true"><div class="fond-gazon"></div><div class="fond-lumiere"></div></div>
+
+<!-- ============================ MENU ============================ -->
+<section class="ecran is-active" id="s-menu">
+  <div class="menu">
+    <h1 class="logo"><span class="l1">ROUCOU</span><span class="balle hand" aria-hidden="true"></span><span class="l2">LETTE</span></h1>
+    <p class="slogan">Le handball à sept · 3D · arcade</p>
+    <div class="boutons-menu">
+      <button class="btn vert grand" id="b-solo"><b>🤾 Match amical</b><small>Contre l’ordinateur</small></button>
+      <button class="btn or grand" id="b-tournoi"><b>🏆 Le Tournoi</b><small id="tournoi-info">Huit clubs, élimination directe</small></button>
+      <button class="btn bleu grand" id="b-entrainement"><b>🎯 Entraînement</b><small>Jeu libre : les réglages sont dans la pause</small></button>
+    </div>
+    <div class="menu-bas">
+      <button class="btn fin" id="b-commandes">🎮 Commandes</button>
+      <button class="btn fin" id="b-son" aria-pressed="false">🔊 Son</button>
+      <label class="btn fin choix-qualite">🎙️ <select id="b-commentaires" aria-label="Commentaires"></select></label>
+      <label class="btn fin choix-qualite">📣 <select id="b-public" aria-label="Ambiance du public"></select></label>
+      <label class="btn fin choix-qualite">✨ <select id="b-qualite" aria-label="Qualité graphique">
+        <option value="haute">Haute</option><option value="moyenne">Moyenne</option><option value="basse">Basse</option>
+      </select></label>
+    </div>
+    <a class="lien-discret" href="/games/plein-stade/">‹ Tous les sports</a>
+  </div>
+</section>
+
+<!-- ============================ CHOIX DES ÉQUIPES ============================ -->
+<section class="ecran" id="s-equipes">
+  <header class="barre-haut">
+    <button class="rond retour" id="equipes-retour" aria-label="Retour">‹</button>
+    <h2 id="equipes-titre">Match amical</h2>
+  </header>
+  <div class="page page-equipes">
+    <div class="duel">
+      <button class="carte-duel moi" id="duel-moi" aria-label="Ton équipe"></button>
+      <span class="vs">VS</span>
+      <button class="carte-duel lui" id="duel-lui" aria-label="L’adversaire"></button>
+    </div>
+    <p class="consigne" id="consigne-equipes">Choisis ton équipe.</p>
+    <div class="grille-equipes" id="grille-equipes"></div>
+    <div class="fiche-club" id="fiche-club"></div>
+    <div class="options" id="options-match">
+      <div class="option"><span>Niveau</span><div class="segments" id="seg-niveau"></div></div>
+      <div class="option"><span>Mi-temps</span><div class="segments" id="seg-duree"></div></div>
+    </div>
+    <h3 class="section">La salle</h3>
+    <div class="grille-stades" id="grille-stades"></div>
+    <button class="btn vert grand coup-envoi" id="b-jouer"><b>Engagement</b></button>
+  </div>
+</section>
+
+<!-- ============================ LE TOURNOI ============================ -->
+<section class="ecran" id="s-tournoi">
+  <header class="barre-haut">
+    <button class="rond retour" id="tournoi-retour" aria-label="Retour">‹</button>
+    <h2>Le Tournoi</h2>
+  </header>
+  <div class="page">
+    <p class="consigne" id="tournoi-texte"></p>
+    <div class="tableau" id="tableau"></div>
+    <div class="coupe-actions" id="tournoi-actions"></div>
+  </div>
+</section>
+
+<section class="ecran" id="s-stats">
+  <header class="barre-haut">
+    <button class="rond retour" id="stats-retour" aria-label="Retour">‹</button>
+    <h2>Statistiques du tournoi</h2>
+  </header>
+  <div class="page" id="stats-corps"></div>
+</section>
+
+<!-- ============================ LE MATCH ============================ -->
+<section class="ecran" id="s-match">
+  <div class="scene-hote" id="scene"></div>
+  <div class="hud">
+    <div class="tableau-score" id="tableau-score">
+      <span class="ec" id="hud-ec0"></span><b class="abr" id="hud-abr0"></b>
+      <b class="score" id="hud-score">0 - 0</b>
+      <b class="abr" id="hud-abr1"></b><span class="ec" id="hud-ec1"></span>
+      <span class="chrono"><i id="hud-mi">1re</i> <b id="hud-chrono">3:00</b></span>
+    </div>
+    <button class="rond pause" id="b-pause" aria-label="Pause">❚❚</button>
+    <div class="bandeau" id="bandeau" aria-live="polite"></div>
+    <div class="jauge tir cache" id="jauge"><i></i><span class="ideal"></span></div>
+    <div class="commentaire" id="commentaire" aria-live="polite"></div>
+    <div class="net-diag cache" id="net-diag"></div>
+    <div class="attente-net cache" id="attente-net" role="status"><b id="attente-titre"></b><span id="attente-texte"></span><button class="btn fin" id="attente-quitter">Quitter le match</button></div>
+    <div class="dirige" id="dirige"><b id="dirige-nom"></b><span class="endu"><i id="dirige-endu"></i></span></div>
+  </div>
+  <div class="tactile" id="tactile">
+    <div class="zone-joy" id="zone-joy"><div class="joy"><div class="joy-bouton"></div></div></div>
+    <div class="boutons-jeu">
+      <button class="bj bj-g" data-t="G"><span id="lab-g">Changer</span></button>
+      <button class="bj bj-s" data-t="S"><span>Sprint</span></button>
+      <button class="bj bj-x" data-t="X"><span id="lab-x">Feinte</span></button>
+      <button class="bj bj-a" data-t="A"><span id="lab-a">Passe</span></button>
+      <button class="bj bj-r"><span id="lab-r">À terre</span></button>
+      <button class="bj bj-b" data-t="B"><span id="lab-b">Tir</span></button>
+    </div>
+  </div>
+  <div class="tourne" id="tourne">↻ Tourne ton téléphone : c’est plus beau en largeur.</div>
+</section>
+
+<!-- ============================ PAUSE ============================ -->
+<div class="voile cache" id="v-pause">
+  <div class="panneau" id="panneau-pause">
+    <h2>Pause</h2>
+    <div class="reglages-entr cache" id="p-entr">
+      <div class="option"><span>Ton équipe</span><div class="segments" id="entr-nous"></div></div>
+      <div class="option"><span>Adversaires</span><div class="segments" id="entr-eux"></div></div>
+      <div class="option"><span>Les gardiens</span><div class="segments" id="entr-gardiens"></div></div>
+      <div class="option" id="entr-bloc-mode"><span>Les adversaires</span><div class="segments" id="entr-mode"></div></div>
+      <div class="option" id="entr-bloc-niveau"><span>Niveau</span><div class="segments" id="entr-niveau"></div></div>
+    </div>
+    <button class="btn vert" id="p-reprendre">Reprendre</button>
+    <button class="btn" id="p-commandes">Commandes</button>
+    <button class="btn rouge" id="p-quitter">Abandonner le match</button>
+  </div>
+</div>
+
+<!-- ============================ COMMANDES ============================ -->
+<div class="voile cache" id="v-commandes">
+  <div class="panneau large">
+    <h2>Les commandes</h2>
+    <table class="commandes">
+      <thead><tr><th></th><th>Clavier</th><th>Manette</th><th>Avec le ballon</th><th>En défense</th></tr></thead>
+      <tbody>
+        <tr><td>Bouger</td><td class="touches-bouger"><button class="touche" data-action="haut" title="Changer la touche"></button><button class="touche" data-action="gauche" title="Changer la touche"></button><button class="touche" data-action="bas" title="Changer la touche"></button><button class="touche" data-action="droite" title="Changer la touche"></button><small>ou les flèches</small></td><td>Stick · croix</td><td>Dribbler dans 8 directions</td><td>Courir</td></tr>
+        <tr><td>Sprint</td><td><button class="touche" data-action="sprint" title="Changer la touche"></button></td><td>Gâchettes</td><td colspan="2">Plus vite, tant qu’il reste du souffle</td></tr>
+        <tr><td>Passe · Vol</td><td><button class="touche" data-action="passe" title="Changer la touche"></button></td><td>A</td><td>Passe vers le coéquipier (celui vers qui l’on pousse, sinon le mieux placé). Quand ton gardien a le ballon : il te le lance</td><td>Tenter de voler le ballon (tout près du porteur)</td></tr>
+        <tr><td>Passe à terre</td><td><button class="touche" data-action="rebond" title="Changer la touche"></button></td><td>LB</td><td>Une passe qui rebondit au sol : plus lente, mais elle passe sous les bras des défenseurs</td><td>—</td></tr>
+        <tr><td>Tir · Contre</td><td><button class="touche" data-action="tir" title="Changer la touche"></button></td><td>B</td><td>Tiens pour sauter (le tir en suspension), lâche en haut du saut (la jauge : le trait blanc). Le stick vise : vers le fond ou vers toi pour le poteau, vers le but pour la lucarne, en arrière à ras de terre</td><td>Sauter, les bras levés : contrer un tir</td></tr>
+        <tr><td>Feinte</td><td><button class="touche" data-action="feinte" title="Changer la touche"></button></td><td>X</td><td>Un changement de direction sec pour éliminer son défenseur</td><td>—</td></tr>
+        <tr><td>Changer</td><td><button class="touche" data-action="changer" title="Changer la touche"></button></td><td>Y</td><td>—</td><td>Diriger le coéquipier le plus proche du ballon</td></tr>
+      </tbody>
+    </table>
+    <p class="astuce touches-aide" id="touches-aide">Clique sur une touche pour la changer, puis appuie sur la nouvelle (Échap pour annuler). <button class="btn fin" id="touches-defaut">Touches par défaut</button></p>
+    <p class="astuce">La <b>zone des 6 m</b> est au gardien : on peut y voler en suspension, mais pas s’y poser avec le ballon. Les gardiens sont dirigés par l’ordinateur. Après un but, l’équipe qui l’a encaissé engage au centre ; un ballon sorti derrière le but revient au gardien.<br>Égalité à la fin : <b>but en or</b>, le premier qui marque gagne.</p>
+    <button class="btn vert" id="c-fermer">Compris</button>
+  </div>
+</div>
+
+<!-- ============================ FIN DU MATCH ============================ -->
+<section class="ecran" id="s-fin">
+  <div class="page page-fin">
+    <p class="fin-titre" id="fin-titre">Fin du match</p>
+    <div class="fin-score" id="fin-score"></div>
+    <div class="fin-buteurs" id="fin-buteurs"></div>
+    <div class="fin-stats" id="fin-stats"></div>
+    <div class="fin-actions" id="fin-actions"></div>
+    <p class="consigne" id="fin-attente"></p>
+  </div>
+</section>
+
+<script type="module" src="/games/plein-stade/handball/js/main.js"></script>
+</body>
+</html>

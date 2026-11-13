@@ -1,0 +1,31 @@
+/* ROUCOULETTE — le handball à sept. On garde l'habillage du basket (basket.css,
+   lui-même posé sur foot.css), avec les couleurs d'une salle de handball :
+   un terrain bleu, des zones orange. */
+
+body.handball {
+  --nuit: #06101e;
+  --nuit2: #0f2036;
+  --jaune: #ff9a3c;
+  --citron: #ffd08a;
+  --doux: #a9bdd2;
+}
+
+.handball .fond { background: radial-gradient(120% 80% at 50% 0%, #14396a 0%, var(--nuit) 62%); }
+.handball .fond-gazon { background: radial-gradient(60% 90% at 0% 50%, #e8742c 0 38%, transparent 39%), radial-gradient(60% 90% at 100% 50%, #e8742c 0 38%, transparent 39%), #1f5fae; opacity: .35; }
+
+/* Le ballon du logo : blanc, des panneaux de couleur. */
+.handball .logo .balle.hand { background: radial-gradient(circle at 35% 30%, #ffffff 0, #e9e9e2 55%, #a8a8a0 100%); overflow: hidden; position: relative; }
+.handball .logo .balle.hand::before, .handball .logo .balle.hand::after { content: ''; position: absolute; border-radius: 50%; border: 0; inset: auto; clip-path: none; transform: none; }
+.handball .logo .balle.hand::before { left: 8%; top: 12%; width: 46%; height: 46%; background: #e8302a; }
+.handball .logo .balle.hand::after { right: 6%; bottom: 8%; width: 44%; height: 44%; background: #1f5fae; }
+.handball .logo .l1 { text-shadow: 0 4px 0 #0a1a30, 0 0 30px rgba(60, 140, 255, .35); }
+.handball .logo .l2 { color: var(--jaune); text-shadow: 0 4px 0 #6a2a00, 0 0 30px rgba(255, 154, 60, .4); }
+
+.handball .btn.vert { background: linear-gradient(180deg, #2a8aff, #1655b8); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 4px 0 #0a2a60, 0 8px 18px rgba(0, 0, 0, .35); }
+.handball .btn.vert small { color: #d8e8ff; }
+
+.handball .bj-b { background: radial-gradient(circle at 40% 30%, #ffa45a, #d9600f); }
+.handball .bj-r { background: radial-gradient(circle at 40% 30%, #6be0c8, #12907a); }
+
+/* La jauge du tir : le trait blanc, c'est le haut du saut. */
+.handball .jauge.tir .ideal { left: 55%; }

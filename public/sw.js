@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v193';
+const VERSION = 'v194';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -311,6 +311,19 @@ const SHELL = [
   '/shared/tennis/ia.js',
   '/shared/tennis/match.js',
   '/shared/tennis/tournoi.js',
+  '/games/plein-stade/handball/',
+  '/games/plein-stade/handball/css/handball.css',
+  '/games/plein-stade/handball/js/main.js',
+  '/games/plein-stade/handball/js/touches.js',
+  '/games/plein-stade/handball/js/commentaires.js',
+  '/games/plein-stade/handball/js/cinematiques.js',
+  '/games/plein-stade/handball/js/trois/rendu3d.js',
+  '/games/plein-stade/handball/js/trois/salle3d.js',
+  '/shared/handball/terrain.js',
+  '/shared/handball/equipes.js',
+  '/shared/handball/ia.js',
+  '/shared/handball/match.js',
+  '/shared/handball/tournoi.js',
   '/games/street-combat/js/trois/rendu3d.js',
   '/games/street-combat/js/trois/decors3d.js',
   '/vendor/three/three.module.min.js',
