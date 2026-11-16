@@ -204,7 +204,7 @@ function porteur(m, c, cons) {
   }
   // Le coup de pied à suivre (les clubs qui jouent au pied) : dans le camp adverse, une défense regroupée.
   if (st.pied > 1.4 && s * c.x > -8 && s * c.x < 14 && dmin < 3.5 && hasard(m) < 0.02 * st.pied && c.n.pied > 70) {
-    cons0.action = { type: 'armer', cible: 16 + Math.floor(hasard(m) * 10), dy: (hasard(m) - 0.5) * 1.2 };
+    cons0.action = { type: 'armer', cible: 16 + Math.floor(hasard(m) * 10), dy: (hasard(m) - 0.5) * 1.2, genre: ['normal', 'normal', 'chandelle', 'rasant'][Math.floor(hasard(m) * 4)] };
     c.dec = 30;
   }
 }

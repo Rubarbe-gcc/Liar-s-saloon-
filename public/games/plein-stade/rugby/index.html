@@ -66,6 +66,7 @@
     <div class="options" id="options-match">
       <div class="option"><span>Niveau</span><div class="segments" id="seg-niveau"></div></div>
       <div class="option"><span>Mi-temps</span><div class="segments" id="seg-duree"></div></div>
+      <div class="option"><span>Météo</span><div class="segments" id="seg-meteo"></div></div>
       <div class="option cache" id="opt-format"><span>Le championnat</span><div class="segments" id="seg-format"></div></div>
     </div>
     <h3 class="section">Le stade</h3>
@@ -150,7 +151,7 @@
     </div>
     <button class="rond pause" id="b-pause" aria-label="Pause">❚❚</button>
     <div class="bandeau" id="bandeau" aria-live="polite"></div>
-    <div class="jauge pied cache" id="jauge"><i></i><span class="ideal"></span></div>
+    <div class="jauge pied cache" id="jauge"><i></i><span class="ideal"></span><b class="genre" id="jauge-genre"></b></div>
     <div class="aide-transfo cache" id="aide-transfo"></div>
     <div class="aide-transfo aide-penalite cache" id="aide-penalite"></div>
     <div class="commentaire" id="commentaire" aria-live="polite"></div>
@@ -199,13 +200,13 @@
         <tr><td>Sprint</td><td><button class="touche" data-action="sprint" title="Changer la touche"></button></td><td>Gâchettes</td><td colspan="2">Plus vite, tant qu’il reste du souffle</td></tr>
         <tr><td>Passe</td><td><button class="touche" data-action="passe" title="Changer la touche"></button></td><td>A</td><td>Passe vers l’arrière, au coéquipier du côté où l’on pousse (haut ou bas), sinon au mieux placé</td><td>Gratter le ballon au ruck</td></tr>
         <tr><td>Passe sautée</td><td><button class="touche" data-action="sautee" title="Changer la touche"></button></td><td>LB</td><td>Une passe qui saute le premier receveur</td><td>—</td></tr>
-        <tr><td>Pied · Plaquage</td><td><button class="touche" data-action="pied" title="Changer la touche"></button></td><td>B</td><td>Tiens pour la force, lâche pour taper (haut, bas : la direction). Entre les poteaux : un drop, 3 points</td><td>Plonger pour plaquer le porteur (tout près)</td></tr>
+        <tr><td>Pied · Plaquage</td><td><button class="touche" data-action="pied" title="Changer la touche"></button></td><td>B</td><td>Tiens pour la force, lâche pour taper (haut, bas : la direction). Le stick vers l’arrière : une <b>chandelle</b> ; U pendant la charge : un coup de pied <b>rasant</b>. Entre les poteaux : un drop, 3 points</td><td>Plonger pour plaquer le porteur (tout près)</td></tr>
         <tr><td>Raffut · Gratter</td><td><button class="touche" data-action="raffut" title="Changer la touche"></button></td><td>X</td><td>Repousser d’une main le plaqueur qui arrive</td><td>Gratter le ballon au ruck</td></tr>
         <tr><td>Geste · Changer</td><td><button class="touche" data-action="changer" title="Changer la touche"></button></td><td>Y</td><td>Un geste pour esquiver le plaquage : le <b>crochet</b> (un pas de côté, vers le haut ou le bas du stick), avec Sprint la <b>roulette</b> (il tourne sur lui-même et casse les plaquages), le stick vers l’arrière la <b>feinte de passe</b> (la défense mord)</td><td>Diriger le coéquipier le plus proche du ballon</td></tr>
       </tbody>
     </table>
     <p class="astuce touches-aide" id="touches-aide">Clique sur une touche pour la changer, puis appuie sur la nouvelle (Échap pour annuler). <button class="btn fin" id="touches-defaut">Touches par défaut</button></p>
-    <p class="astuce">Un <b>essai</b> (le ballon aplati dans l’en-but) vaut 5 points, la <b>transformation</b> 2 (vise avec haut et bas, tiens le pied pour la force, lâche dans la zone blanche), un <b>drop</b> 3.<br>Les passes vont <b>vers l’arrière</b> : une passe en avant ou un ballon échappé vers l’avant (<b>en-avant</b>), c’est une mêlée pour l’adversaire. Plaqué, c’est un ruck : gratter peut rapporter le ballon… ou une <b>pénalité</b> à l’adversaire (jouer vite, taper aux poteaux pour 3 points, ou la pénaltouche). Égalité à la fin : <b>point en or</b>.</p>
+    <p class="astuce">Un <b>essai</b> (le ballon aplati dans l’en-but) vaut 5 points, la <b>transformation</b> 2 (vise avec haut et bas, tiens le pied pour la force, lâche dans la zone blanche), un <b>drop</b> 3.<br>Les passes vont <b>vers l’arrière</b> : une passe en avant ou un ballon échappé vers l’avant (<b>en-avant</b>), c’est une mêlée pour l’adversaire. Plaqué, c’est un ruck : gratter peut rapporter le ballon… ou une <b>pénalité</b> à l’adversaire (jouer vite, taper aux poteaux pour 3 points, ou la pénaltouche) ; à la troisième pénalité d’une équipe, le fautif prend un <b>carton jaune</b> (une minute sur le banc). Égalité à la fin : <b>point en or</b>.</p>
     <button class="btn vert" id="c-fermer">Compris</button>
   </div>
 </div>

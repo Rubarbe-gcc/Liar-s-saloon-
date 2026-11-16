@@ -34,7 +34,7 @@ export function creerCommentateur(ctx) {
 
   return {
     debut() {
-      C.dire(`Bienvenue ${ctx.lieu || ''} pour ce choc entre ${ctx.equipe(0).nom} et ${ctx.equipe(1).nom} !`, { important: true, emotion: 0.5, apres: 'Sept contre sept : il va y avoir de l’espace, et ça va courir.' });
+      C.dire(`Bienvenue ${ctx.lieu || ''} pour ce choc entre ${ctx.equipe(0).nom} et ${ctx.equipe(1).nom} !`, { important: true, emotion: 0.5, apres: ctx.pluie ? 'Et il pleut : le ballon va glisser, attention aux en-avant.' : 'Sept contre sept : il va y avoir de l’espace, et ça va courir.' });
     },
     avancer(dt, m) {
       if (m.phase !== 'jeu' && m.phase !== 'ruck') return;
@@ -118,7 +118,13 @@ export function creerCommentateur(ctx) {
         case 'touche-gagnee':
           if (ev.vol) return C.dire(`Ballon volé en touche par ${n(ev.joueur)} !`, { important: true, emotion: 0.6 });
           return null;
+        case 'carton':
+          return C.dire(`Carton jaune pour ${n(ev.joueur)} ! ${eq(ev.equipe)} va jouer à six pendant une minute.`, { important: true, emotion: 0.7, apres: 'Trop de fautes au sol : l’arbitre a perdu patience.' });
+        case 'retour':
+          return parfois(0.6) ? C.dire(`${n(ev.joueur)} revient sur le terrain : ${eq(ev.equipe)} est de nouveau à sept.`, { frais: true }) : null;
         case 'pied':
+          if (ev.genre === 'chandelle' && parfois(0.6)) return C.dire(ch('chandelle', [`Chandelle de ${n(ev.joueur)} ! Le ballon monte, monte…`, `${n(ev.joueur)} tape haut : qui va le récupérer ?`]), { frais: true, emotion: 0.5 });
+          if (ev.genre === 'rasant' && parfois(0.6)) return C.dire(ch('rasant', [`Petit coup de pied rasant de ${n(ev.joueur)} derrière la défense !`, `${n(ev.joueur)} glisse le ballon au ras du sol…`]), { frais: true, emotion: 0.5 });
           if (!ev.transfo && parfois(0.35)) return C.dire(ch('pied', [`${n(ev.joueur)} tape au pied…`, `Coup de pied de ${n(ev.joueur)}.`, `${n(ev.joueur)} dégage.`]), { frais: true });
           return null;
         case 'mort':

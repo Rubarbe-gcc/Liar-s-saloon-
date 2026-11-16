@@ -14,7 +14,7 @@
  * chacun prend la sienne (pas celle de l'autre), puis se dit prêt ; le match
  * part quand les deux le sont.
  *
- * Messages (le champ `g` vaut 'rugby') ; `stade` y désigne le stade (grand, village, falaises) :
+ * Messages (le champ `g` vaut 'rugby') ; `stade` y désigne le stade (grand, village, falaises), suivi de « -pluie » s'il pleut :
  *   → creer { nom, stade }             ← salle { code, n: 0, stade }
  *   → rejoindre { code, nom }          ← salon { n, code, noms, equipes, prets, stade } (aux deux)
  *   → equipe { equipe }                ← salon (aux deux), ou erreur si l'autre l'a déjà prise
@@ -63,8 +63,12 @@ const nettoyerNom = (s) => String(s ?? '').replace(/[\u0000-\u001f\u007f<>]/g, '
 /** Une vraie équipe, sinon rien. */
 const equipeValide = (id) => (typeof id === 'string' && EQUIPE[id] ? id : null);
 const envoyer = (c, m) => { if (c?.conn) c.conn.send({ g: 'rugby', ...m }); };
-/** Un stade connu, sinon le Grand Stade. */
-const stadeValide = (x) => (typeof x === 'string' && STADES.includes(x) ? x : 'grand');
+/** Un stade connu (avec ou sans la pluie), sinon le Grand Stade. */
+const stadeValide = (x) => {
+  // Le stade, et la météo en suffixe : « village » ou « village-pluie ».
+  const [id, meteo] = typeof x === 'string' ? x.split('-') : [];
+  return STADES.includes(id) ? (meteo === 'pluie' ? `${id}-pluie` : id) : 'grand';
+};
 const entier = (v, min, max, defaut = min) => { const n = Math.trunc(Number(v)); return Number.isFinite(n) ? Math.max(min, Math.min(max, n)) : defaut; };
 /** L'état envoyé par l'hôte pour un recalage : au plus… */
 const ETAT_MAX = 60000;

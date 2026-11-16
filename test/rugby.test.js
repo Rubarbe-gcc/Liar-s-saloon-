@@ -315,6 +315,67 @@ test('la pénalité : gratter sans gagner le ballon est sifflé, puis on joue vi
   assert.ok(v.m.joueurs.filter((o) => o.e === 1).every((o) => o.verrou > 0));
 });
 
+test('le carton jaune : à la troisième pénalité, le fautif sort une minute, puis revient', () => {
+  for (let g = 1; g < 300; g++) {
+    const m = creerMatch({ equipes: ['pre-sale', 'bois-noir'], graine: g, controles: ['humain', 'ia'] });
+    m.stats.penalites[1] = 2;
+    for (const o of m.joueurs) { o.x = o.e === 0 ? -20 : 20; o.y = -15 + o.i * 4; }
+    Object.assign(m.joueurs[6], { x: 8, y: 0, etat: 'sol', t: 60 });
+    const gratteur = m.joueurs[N + 2];
+    Object.assign(gratteur, { x: 8.6, y: 0.3 });
+    Object.assign(m.ballon, { x: 7.4, y: 0, z: 0.14, porteur: -1, ruck: true, bloque: false, pied: null, cible: -1 });
+    m.ruck = { x: 7.4, y: 0, e: 0, t: 1, gratte: [0, 2], plaque: 6 };
+    m.phase = 'ruck'; m.envoi = null;
+    const evs = pas(m, [0, 0]);
+    if (!evs.some((e) => e.type === 'penalite')) continue;
+    const c = evs.find((e) => e.type === 'carton');
+    assert.ok(c, 'carton jaune à la troisième');
+    assert.equal(c.joueur, gratteur.id);
+    assert.equal(gratteur.absent, true);
+    assert.equal(m.stats.cartons[1], 1);
+    // Le banc : une minute de jeu (le chrono qui tourne), puis il revient.
+    m.phase = 'jeu';
+    m.penalite = null;
+    m.ballon.bloque = false;
+    const vus = jusqua(m, (mm, e2) => e2.some((e) => e.type === 'retour'), 60 * 400, () => [0, 0]);
+    assert.ok(vus.some((e) => e.type === 'retour' && e.joueur === gratteur.id));
+    assert.equal(gratteur.absent, false);
+    return;
+  }
+  assert.fail('jamais de pénalité');
+});
+
+test('les coups de pied : la chandelle monte haut et court, le rasant reste au sol, la pluie fait glisser le ballon', () => {
+  /** Le porteur tape (avec ces touches pendant la charge) ; rend le plus haut et le plus loin du ballon avant qu'il touche le sol. */
+  const tape = (touches) => {
+    const m = creerMatch({ equipes: ['noirval', 'sablemer'], graine: 4, controles: ['humain', 'ia'] });
+    const p = enJeu(m, 4, -10, 0);
+    for (const o of m.joueurs) if (o.e === 1) { o.x = 25; o.y = -15 + o.i * 4; }
+    let h = 0, x = -10, genre = null;
+    jusqua(m, (mm, evs) => {
+      const pd = evs.find((e) => e.type === 'pied');
+      if (pd) genre = pd.genre;
+      if (genre) { h = Math.max(h, mm.ballon.z); x = Math.max(x, mm.ballon.x); }
+      return genre && mm.ballon.pied?.sol;
+    }, 400, (mm) => [mm.f <= 30 ? T.B | touches(mm.f) : 0, 0]);
+    return { genre, h, d: x - p.x };
+  };
+  const normal = tape(() => 0), chandelle = tape(() => T.g), rasant = tape((f) => (f === 5 ? T.R : 0));
+  assert.equal(normal.genre, 'normal');
+  assert.equal(chandelle.genre, 'chandelle');
+  assert.equal(rasant.genre, 'rasant');
+  assert.ok(chandelle.h > normal.h, `la chandelle monte plus haut (${chandelle.h.toFixed(1)} m)`);
+  assert.ok(rasant.h < 2, `le rasant reste bas (${rasant.h.toFixed(1)} m)`);
+  // La pluie : plus d'en-avant (sur quelques matchs entre ordinateurs).
+  let sec = 0, mouille = 0;
+  for (let g = 1; g <= 4; g++) {
+    sec += simuler({ equipes: ['azurine', 'volterre'], graine: g, minutes: 2 }).stats.enAvants.reduce((a, b) => a + b);
+    mouille += simuler({ equipes: ['azurine', 'volterre'], graine: g, minutes: 2, meteo: 'pluie' }).stats.enAvants.reduce((a, b) => a + b);
+  }
+  assert.ok(mouille > sec, `la pluie fait glisser le ballon (${mouille} en-avant contre ${sec})`);
+  assert.equal(creerMatch({ equipes: ['azurine', 'volterre'], meteo: 'pluie' }).pluie, true);
+});
+
 test('des humains qui tapent au hasard : le match tient debout', () => {
   for (let g = 1; g <= 3; g++) {
     const m = creerMatch({ equipes: [EQUIPES[g].id, EQUIPES[15 - g].id], graine: g, minutes: 1, controles: ['humain', 'humain'] });
@@ -511,6 +572,11 @@ test('le serveur : une salle, les clubs choisis dans la salle (jamais le même),
   assert.equal(da.stade, 'village');
   a.dit({ t: 'stade', stade: 'palais' });
   assert.equal(b.dernier('stade').stade, 'grand');
+  // La pluie voyage avec le stade ; une météo inconnue est oubliée.
+  a.dit({ t: 'stade', stade: 'falaises-pluie' });
+  assert.equal(b.dernier('stade').stade, 'falaises-pluie');
+  a.dit({ t: 'stade', stade: 'falaises-neige' });
+  assert.equal(b.dernier('stade').stade, 'falaises');
   // Les touches : 10 bits (la passe sautée comprise), relayées à l'autre seulement.
   a.dit({ t: 'entrees', f: 4, e: [T.R | T.d, T.G | T.S, 0x7ff], fc: 3, vu: 1, av: 0 });
   assert.deepEqual(b.dernier('entrees').e, [T.R | T.d, T.G | T.S, 0x3ff]);

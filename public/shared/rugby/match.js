@@ -80,10 +80,11 @@ const nouveauBallon = () => ({
  * @param {[string, string]} [o.controles]  'humain' ou 'ia', pour chaque équipe
  * @param {[number, number]} [o.niveaux]    0 facile, 1 normal, 2 difficile (pour l'ordinateur)
  * @param {{ nous: number, eux: number, immobiles: boolean }} [o.entrainement]  nous : 1 à 7, eux : 0 à 7
+ * @param {'beau' | 'pluie'} [o.meteo]  la pluie : le ballon glisse (plus d'en-avant), les coups de pied portent moins, le ballon fuse au rebond
  */
-export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['humain', 'ia'], niveaux = [1, 1], entrainement = null }) {
+export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['humain', 'ia'], niveaux = [1, 1], entrainement = null, meteo = 'beau' }) {
   const m = {
-    f: 0, alea: (graine >>> 0) || 1,
+    f: 0, alea: (graine >>> 0) || 1, pluie: meteo === 'pluie',
     phase: 'engagement', t: ENGAGEMENT, periode: 1, chrono: 0, duree: Math.round(minutes * 60 * FPS),
     score: [0, 0], enOr: false, sirene: false, apresSirene: 0, premierEnvoi: 0, envoi: null,
     poss: { e: -1, f: 0 },
@@ -96,7 +97,7 @@ export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['hum
       essais: [0, 0], transfos: [0, 0], transfosTentees: [0, 0], drops: [0, 0], pieds: [0, 0], passes: [0, 0],
       plaquages: [0, 0], plaquagesRates: [0, 0], franchissements: [0, 0], enAvants: [0, 0], rucks: [0, 0], grattages: [0, 0],
       melees: [0, 0], touches: [0, 0], possession: [0, 0], territoire: [0, 0], metres: [0, 0],
-      penalites: [0, 0], penalitesTentees: [0, 0], penalitesReussies: [0, 0],
+      penalites: [0, 0], penalitesTentees: [0, 0], penalitesReussies: [0, 0], cartons: [0, 0],
     },
     points: [],
     perso: new Array(2 * N).fill(null).map(() => ({ pts: 0, essais: 0, plaquages: 0, passes: 0, franchis: 0, metres: 0 })),
@@ -108,8 +109,8 @@ export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['hum
       m.joueurs.push({
         id: e * N + i, e, i, n: notesJoueur(eq, i), vedette: !!eq.joueurs[i].vedette,
         x: 0, y: 0, z: 0, vx: 0, vy: 0, vz: 0, dx: 1, dy: 0, etat: 'normal', t: 0, cible: -1,
-        charge: 0, chargeCible: 0, visee: 0, viser: null, verrou: 0, lache: 0, surpris: 0, raffut: 0, geste: null, tg: 0, recup: 0, frappe: 0, endu: 1,
-        recu: 0, passeDe: -1, passeF: -1000, dec: 0, absent: false, ordre: null,
+        charge: 0, chargeCible: 0, visee: 0, viseeX: 0, genre: null, viser: null, verrou: 0, lache: 0, surpris: 0, raffut: 0, geste: null, tg: 0, recup: 0, frappe: 0, endu: 1,
+        recu: 0, passeDe: -1, passeF: -1000, dec: 0, absent: false, exclu: 0, ordre: null,
       });
     }
   }
@@ -403,7 +404,7 @@ function jouer(m, k, ap, rel, evs) {
   for (const p of m.joueurs) {
     if (p.etat !== 'pied' || b.porteur !== p.id) continue;
     p.charge += 1;
-    if ((p.chargeCible && p.charge >= p.chargeCible) || p.charge >= CHARGE_MAX) taper(m, p, evs, p.viser || { dy: p.visee });
+    if ((p.chargeCible && p.charge >= p.chargeCible) || p.charge >= CHARGE_MAX) taper(m, p, evs, p.viser || { dy: p.visee, dx: p.viseeX, genre: p.genre });
   }
   const x0 = b.porteur >= 0 ? b.x : null, e0 = b.porteur >= 0 ? m.joueurs[b.porteur].e : -1;
   for (const p of m.joueurs) if (!p.absent) deplacer(m, p, cons[p.id] || RIEN, evs);
@@ -426,6 +427,7 @@ function jouer(m, k, ap, rel, evs) {
   if (b.porteur >= 0) m.stats.possession[m.joueurs[b.porteur].e] += 1;
   for (let e = 0; e < 2; e++) if (m.equipes[e].sens * b.x > 0) m.stats.territoire[e] += 1;
   if (m.entrainement) return;
+  banc(m, evs);
   if (m.enOr) {
     if (++m.chrono >= OR_MAX) {
       const t = [0, 1].map((e) => m.stats.territoire[e] - (m.territoireOr?.[e] || 0));
@@ -585,8 +587,11 @@ function humain(m, e, k, ap, rel, cons, evs) {
   if (porteur === p) {
     if (b.bloque) { c.mx = 0; c.my = 0; }
     else if (p.etat === 'pied') {
-      p.visee = my;
-      if (rel & T.B) c.action = { type: 'taper', dy: my };
+      // La direction retenue : la dernière poussée pendant la charge (on lâche souvent le stick et le bouton ensemble).
+      if (mx) p.viseeX = mx;
+      if (my) p.visee = my;
+      if (ap & T.R) p.genre = p.genre === 'rasant' ? null : 'rasant';
+      if (rel & T.B) c.action = { type: 'taper', dy: p.visee, dx: p.viseeX, genre: p.genre };
     } else if (p.etat === 'normal') {
       if (ap & T.B) c.action = { type: 'armer' };
       else if (ap & (T.A | T.R)) c.action = { type: 'passe', cible: choisirReceveur(m, p, my, !!(ap & T.R)) };
@@ -619,11 +624,13 @@ function agir(m, p, a, evs) {
       p.charge = 0;
       p.chargeCible = a.cible || 0;
       p.visee = a.dy || 0;
+      p.viseeX = a.dx || 0;
+      p.genre = a.genre || null;
       p.viser = a.viser || null;
       evs.push({ type: 'arme', joueur: p.id });
       break;
     case 'taper':
-      if (aLaBalle && p.etat === 'pied') taper(m, p, evs, a.viser || { dy: a.dy });
+      if (aLaBalle && p.etat === 'pied') taper(m, p, evs, a.viser || { dy: a.dy, dx: a.dx, genre: a.genre });
       break;
     case 'raffut':
       if (aLaBalle && p.etat === 'normal' && p.raffut <= 0 && p.verrou <= 0) raffut(m, p, evs);
@@ -657,7 +664,7 @@ function passer(m, p, r, evs, depuis = null) {
     Tv = Math.max(0.16, dist(ox, oy, tx, ty) / vit);
     tx = r.x + r.vx * Tv * 0.9; ty = r.y + r.vy * Tv * 0.9;
   }
-  const err = (0.06 + Tv * 0.25) * (1.5 - p.n.passe / 100) * (p.surpris > 0 ? 1.6 : 1);
+  const err = (0.06 + Tv * 0.25) * (1.5 - p.n.passe / 100) * (p.surpris > 0 ? 1.6 : 1) * (m.pluie ? 1.3 : 1);
   tx += gauss(m) * err; ty += gauss(m) * err;
   const z0 = depuis ? 0.4 : 1.1, z1 = 1.15;
   Object.assign(b, {
@@ -677,40 +684,56 @@ function passer(m, p, r, evs, depuis = null) {
 }
 
 /**
- * Le coup de pied à suivre (un drop, en fait) : la force vient de la charge.
- * v : { dy (la direction : -1 à 1) } ou une cible précise { tx, ty, z1, pente } (l'ordinateur).
+ * Les coups de pied à la main, selon le stick au moment de taper (dans le sens de l'attaque) :
+ *   normal    : le stick neutre (ou haut / bas : la direction) ; entre les poteaux, c'est un drop ;
+ *   chandelle : le stick vers l'arrière ; très haut, assez court, pour aller le reprendre ;
+ *   rasant    : en appuyant sur R pendant qu'on charge ; au ras du sol, il rebondit et roule derrière la défense.
+ */
+export const PIEDS = {
+  normal: { portee: [9, 41], pente: 0.95 },
+  chandelle: { portee: [8, 20], pente: 2.4 },
+  rasant: { portee: [7, 16], pente: 0.14 },
+};
+
+/**
+ * Le coup de pied : la force vient de la charge.
+ * v : { dy (la direction : -1 à 1), dx (le stick dans la longueur : le genre de coup) } ou une cible précise { tx, ty, z1, pente } (l'ordinateur).
  */
 function taper(m, p, evs, v = {}) {
   const b = m.ballon;
   const s = m.equipes[p.e].sens;
   const u = clamp(p.charge / CHARGE_MAX, 0.12, 1);
   const x0 = p.x + s * 0.35, y0 = p.y, z0 = 0.45;
-  const prec = 1.45 - p.n.pied / 100;
+  const prec = (1.45 - p.n.pied / 100) * (m.pluie ? 1.25 : 1);
   let tx, ty, z1, pente;
+  let genre = 'normal';
   if (v.tx !== undefined) {
     ({ tx, ty } = v);
     const d = dist(x0, y0, tx, ty);
     tx += gauss(m) * d * 0.035 * prec; ty += gauss(m) * d * 0.035 * prec;
     z1 = v.z1 ?? BALLE_R; pente = v.pente ?? 0.9;
   } else {
-    const D = (9 + 41 * u) * (0.72 + p.n.pied / 360);
+    const avant = s * (v.dx || 0);
+    genre = v.genre || (avant < -0.3 ? 'chandelle' : 'normal');
+    const P = PIEDS[genre];
+    const D = (P.portee[0] + P.portee[1] * u) * (0.72 + p.n.pied / 360) * (m.pluie ? 0.9 : 1);
     let ux = s, uy = clamp(v.dy || 0, -1, 1) * 0.6;
     const l = Math.sqrt(ux * ux + uy * uy);
     ux /= l; uy /= l;
     tx = x0 + ux * D + gauss(m) * D * 0.05 * prec;
     ty = y0 + uy * D + gauss(m) * D * 0.05 * prec;
-    z1 = BALLE_R; pente = 0.95;
+    z1 = BALLE_R; pente = P.pente;
   }
   const d = dist(x0, y0, tx, ty);
-  pente = Math.max(pente, (z1 - z0) / (d || 1) + 0.3);
-  const w = vitessePied(x0, y0, z0, tx, ty, z1, pente);
-  Object.assign(b, { x: x0, y: y0, z: z0, vx: w.vx, vy: w.vy, vz: w.vz, porteur: -1, dernier: p.id, passeur: -1, cible: -1, essais: 0, bloque: false, ruck: false, pied: { e: p.e, j: p.id, drop: true, sol: false } });
+  pente = Math.max(pente, (z1 - z0) / (d || 1) + (genre === 'rasant' ? 0.05 : 0.3));
+  const w = vitessePied(x0, y0, genre === 'rasant' ? 0.25 : z0, tx, ty, z1, pente);
+  Object.assign(b, { x: x0, y: y0, z: genre === 'rasant' ? 0.25 : z0, vx: w.vx, vy: w.vy, vz: w.vz, porteur: -1, dernier: p.id, passeur: -1, cible: -1, essais: 0, bloque: false, ruck: false, pied: { e: p.e, j: p.id, drop: genre !== 'rasant', sol: false, genre } });
   p.etat = 'normal';
-  p.charge = 0; p.chargeCible = 0; p.viser = null;
+  p.charge = 0; p.chargeCible = 0; p.viser = null; p.genre = null;
   p.frappe = 16;
   p.lache = 24;
   m.stats.pieds[p.e] += 1;
-  evs.push({ type: 'pied', joueur: p.id, force: u });
+  evs.push({ type: 'pied', joueur: p.id, force: u, genre });
 }
 
 /** Le coup d'envoi : haut, dans le camp adverse, pour que les deux équipes se le disputent. */
@@ -909,6 +932,8 @@ function finRuck(m, evs) {
     m.stats.penalites[o] += 1;
     evs.push({ type: 'sifflet', n: 2 });
     evs.push({ type: 'penalite', equipe: e, faute: 'ruck', joueur: best ? best.id : -1 });
+    // La faute de trop : à chaque troisième pénalité d'une équipe, le fautif prend un carton jaune.
+    if (!m.entrainement && best && m.stats.penalites[o] % CARTON.toutes === 0) exclure(m, best, evs);
     placerPenalite(m, r.x, r.y, e);
     return;
   }
@@ -1046,6 +1071,30 @@ function placerPenalite(m, x, y, e) {
   m.t = 0;
 }
 
+/** Le carton jaune : une minute de jeu sur le banc (le chrono qui tourne), toutes les trois pénalités d'une équipe. */
+export const CARTON = { toutes: 3, duree: 60 * FPS };
+
+function exclure(m, p, evs) {
+  p.absent = true;
+  p.exclu = CARTON.duree;
+  p.etat = 'normal'; p.t = 0; p.cible = -1;
+  m.stats.cartons[p.e] += 1;
+  garer(m);
+  evs.push({ type: 'carton', joueur: p.id, equipe: p.e });
+}
+
+/** Le temps du banc passe (seulement quand le chrono tourne) ; à la fin, il revient par la touche, dans son camp. */
+function banc(m, evs) {
+  for (const p of m.joueurs) {
+    if (!(p.exclu > 0)) continue;
+    if (--p.exclu > 0) continue;
+    const s = m.equipes[p.e].sens;
+    p.absent = false;
+    remettre(p, -s * 3, -(DEMI_W - 0.5), s, 1);
+    evs.push({ type: 'retour', joueur: p.id, equipe: p.e });
+  }
+}
+
 /** Peut-on taper aux poteaux d'ici ? (assez près, pas trop en coin) */
 export function aPortee(m, pen) {
   const s = m.equipes[pen.e].sens;
@@ -1110,7 +1159,8 @@ function marquerEssai(m, p, evs) {
   const s = m.equipes[e].sens;
   const b = m.ballon;
   Object.assign(b, { porteur: -1, cible: -1, x: clamp(p.x, s > 0 ? DEMI_L + 0.3 : -MORT, s > 0 ? MORT : -DEMI_L - 0.3), y: p.y, z: BALLE_R, vx: p.vx * 0.3, vy: p.vy * 0.3, vz: 0, ruck: false, pied: null });
-  p.etat = 'sol'; p.t = 40;
+  // Il aplatit en plongeant (s'il était encore debout).
+  if (p.etat === 'normal') { p.etat = 'plonge'; p.t = 14; p.cible = -1; p.vx = s * Math.max(4, Math.abs(p.vx)); p.vy *= 0.5; } else { p.etat = 'sol'; p.t = 40; }
   m.ruck = m.faute = null;
   m.marque = { type: 'essai', e, j: p.id, x: p.x, y: p.y };
   m.phase = 'marque';
@@ -1177,6 +1227,7 @@ function frapperTransfo(m, u, evs) {
   const d = dist(tr.bx, tr.by, s * DEMI_L, tr.vise);
   let sigma = (0.5 + d * 0.05) * (1.6 - p.n.pied / 100) * (1 + 1.6 * (1 - q)) * (1 + (Math.abs(tr.by) / 14) * 1.5);
   if (eq.ctrl === 'ia') sigma *= niveauDe(eq).adresse;
+  if (m.pluie) sigma *= 1.15;
   const ay = tr.vise + gauss(m) * sigma;
   const zPoteaux = 1 + 8.5 * u;
   const pente = Math.max(0.7, (zPoteaux - BALLE_R) / d + 0.35);
@@ -1366,9 +1417,11 @@ function physiqueBallon(m, evs, enJeu = true) {
       if (b.vz < -1.2) {
         // Le rebond d'un ballon ovale : on ne sait jamais où il part.
         const f = -b.vz;
-        b.vz = f * (0.3 + hasard(m) * 0.35);
+        // Sous la pluie, il rebondit moins haut et fuse sur l'herbe mouillée.
+        b.vz = f * (0.3 + hasard(m) * 0.35) * (m.pluie ? 0.7 : 1);
         const dev = f * 0.18;
-        b.vx = b.vx * 0.62 + gauss(m) * dev; b.vy = b.vy * 0.62 + gauss(m) * dev;
+        const garde = m.pluie ? 0.78 : 0.62;
+        b.vx = b.vx * garde + gauss(m) * dev; b.vy = b.vy * garde + gauss(m) * dev;
         evs.push({ type: 'rebond', force: f });
       } else b.vz = 0;
       if (b.pied) b.pied.sol = true;
@@ -1404,7 +1457,7 @@ function attraper(m, evs) {
   // L'en-avant : le ballon lui échappe des mains, vers l'avant.
   let gene = 0;
   for (const o of m.joueurs) if (o.e !== p.e && !o.absent && o.etat !== 'sol' && dist(o.x, o.y, p.x, p.y) < 1.3) gene = 1;
-  const rate = enLAir ? 0.05 + (85 - p.n.passe) / 450 + gene * 0.1 : b.z > 0.35 ? 0.012 + (80 - p.n.passe) / 900 + gene * 0.04 : 0;
+  const rate = (enLAir ? 0.05 + (85 - p.n.passe) / 450 + gene * 0.1 : b.z > 0.35 ? 0.012 + (80 - p.n.passe) / 900 + gene * 0.04 : 0) * (m.pluie ? 1.7 : 1);
   if (rate > 0 && hasard(m) < clamp(rate, 0, 0.35)) {
     Object.assign(b, { vx: s * (2.2 + hasard(m) * 1.5), vy: gauss(m) * 1.2, vz: 1.6, dernier: p.id, cible: -1, passeur: -1 });
     if (b.pied) b.pied.sol = true;

@@ -44,12 +44,16 @@ function aller(nom) {
 
 const CLE = 'raffut.config';
 const DUREES = [2, 3, 4, 5, 7];
-const conf = { moi: 'roc-fendu', lui: 'sablemer', niveau: 1, minutes: 3, stade: 'grand' };
+const conf = { moi: 'roc-fendu', lui: 'sablemer', niveau: 1, minutes: 3, stade: 'grand', meteo: 'beau' };
 try { Object.assign(conf, JSON.parse(localStorage.getItem(CLE) || '{}')); } catch { /* ignore */ }
 if (!EQUIPE[conf.moi]) conf.moi = 'roc-fendu';
 if (!EQUIPE[conf.lui] || conf.lui === conf.moi) conf.lui = EQUIPES.find((e) => e.id !== conf.moi).id;
 if (!STADE[conf.stade]) conf.stade = 'grand';
 if (!DUREES.includes(conf.minutes)) conf.minutes = 3;
+const METEOS = [['beau', '☀️ Beau temps'], ['pluie', '🌧️ Pluie'], ['hasard', '🎲 Au hasard']];
+if (!METEOS.some(([v]) => v === conf.meteo)) conf.meteo = 'beau';
+/** La météo d'un match hors ligne : celle choisie, ou tirée au sort (une fois sur trois, la pluie). */
+const meteoDuMatch = () => (conf.meteo === 'hasard' ? (Math.random() < 0.33 ? 'pluie' : 'beau') : conf.meteo);
 const garder = () => { try { localStorage.setItem(CLE, JSON.stringify(conf)); } catch { /* ignore */ } };
 
 const COULEURS_STADE = {
@@ -106,6 +110,7 @@ function rendreEquipes() {
   $('seg-niveau').innerHTML = NIVEAUX.map((n, i) => `<button data-v="${i}" class="${conf.niveau === i ? 'oui' : ''}">${n.nom}</button>`).join('');
   $('seg-duree').parentElement.classList.toggle('cache', choix.mode === 'entrainement');
   $('seg-duree').innerHTML = DUREES.map((d) => `<button data-v="${d}" class="${conf.minutes === d ? 'oui' : ''}">2 × ${d} min</button>`).join('');
+  $('seg-meteo').innerHTML = METEOS.map(([v, l]) => `<button data-v="${v}" class="${conf.meteo === v ? 'oui' : ''}">${l}</button>`).join('');
   $('grille-stades').innerHTML = STADES.map((s) => `<button class="stade${conf.stade === s.id ? ' oui' : ''}" data-id="${s.id}" style="--ciel:${COULEURS_STADE[s.id][0]};--sol:${COULEURS_STADE[s.id][1]}"><div class="vignette"></div><b>${s.nom}</b><small>${s.desc}</small></button>`).join('');
 }
 
@@ -136,6 +141,7 @@ function brancherEquipes() {
   $('duel-lui').addEventListener('click', () => { choix.pour = 'lui'; choix.survol = conf.lui; rendreEquipes(); });
   $('seg-niveau').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.niveau = +b.dataset.v; garder(); rendreEquipes(); } });
   $('seg-duree').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.minutes = +b.dataset.v; garder(); rendreEquipes(); } });
+  $('seg-meteo').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.meteo = b.dataset.v; garder(); rendreEquipes(); } });
   $('grille-stades').addEventListener('click', (e) => { const b = e.target.closest('.stade'); if (b) { conf.stade = b.dataset.id; garder(); rendreEquipes(); } });
   $('equipes-retour').addEventListener('click', () => aller('menu'));
   $('b-jouer').addEventListener('click', () => {
@@ -213,9 +219,10 @@ function lancerMatch(o) {
   arreterMatch();
   const eqs = o.equipes.map((id) => EQUIPE[id]);
   const kits = tenues(eqs[0], eqs[1]);
-  const m = creerMatch({ equipes: o.equipes, graine: o.graine ?? Math.floor(Math.random() * 2 ** 31), minutes: o.minutes, controles: o.controles, niveaux: o.niveaux, entrainement: o.entrainement || null });
+  o.meteo ??= meteoDuMatch();
+  const m = creerMatch({ equipes: o.equipes, graine: o.graine ?? Math.floor(Math.random() * 2 ** 31), minutes: o.minutes, controles: o.controles, niveaux: o.niveaux, entrainement: o.entrainement || null, meteo: o.meteo });
   aller('match');
-  const rendu = creerRendu($('scene'), { stade: o.stade, equipes: eqs, kits });
+  const rendu = creerRendu($('scene'), { stade: o.stade, meteo: o.meteo, equipes: eqs, kits });
   if (!rendu) { alert('La 3D n’est pas disponible sur cet appareil.'); aller('menu'); return; }
   partie = { o, m, rendu, eqs, kits, local: o.local ?? 0, lisse: o.mode === 'enligne' ? creerLissage(2 * N) : null, acc: 0, prec: null, cour: instantane(m), finVue: 0, dernier: performance.now(), excit: 0, scoreAffiche: '' };
   for (let e = 0; e < 2; e++) {
@@ -228,7 +235,7 @@ function lancerMatch(o) {
   partie.lieu = LIEUX[o.stade] || '';
   ecranGeant();
   if (!o.entrainement) {
-    partie.com = creerCommentateur({ nom: (id) => nomDe(id), equipe: (e) => eqs[e], lieu: partie.lieu, el: $('commentaire') });
+    partie.com = creerCommentateur({ nom: (id) => nomDe(id), equipe: (e) => eqs[e], lieu: partie.lieu, pluie: o.meteo === 'pluie', el: $('commentaire') });
     partie.com.debut(m);
     cine.lancer(intro(partie), { passable: o.mode !== 'enligne', fin: () => partie?.rendu.camera('tele', true) });
   } else rendu.camera('tele', true);
@@ -362,6 +369,8 @@ function reagir(evs) {
         else bandeau(ev.penalite ? 'Pénalité manquée' : 'Transformation manquée', nomDe(ev.joueur));
         break;
       case 'penalite': son.sifflet(2); bandeau('Pénalité', `pour ${P.eqs[ev.equipe].court} · mains au sol dans le ruck`); break;
+      case 'carton': son.sifflet(3); bandeau('🟨 Carton jaune', `${nomDe(ev.joueur)} · une minute sur le banc`, true); break;
+      case 'retour': if (m.joueurs[ev.joueur].e === P.local) bandeau('Retour sur le terrain', nomDe(ev.joueur)); break;
       case 'choix': bandeau({ vite: 'Jouée vite !', poteaux: 'Aux poteaux', touche: 'Pénaltouche' }[ev.choix], P.eqs[ev.equipe].court);
         break;
       case 'drop':
@@ -443,6 +452,9 @@ function afficher(dt) {
     elJ.style.left = `${s.x}px`; elJ.style.top = `${s.y}px`;
     elJ.firstElementChild.style.width = `${Math.round(Math.min(1, charge) * 100)}%`;
     elJ.classList.toggle('parfait', !!monTransfo && Math.abs(charge - FORCE_IDEALE) <= 0.06);
+    // Le genre de coup de pied : rasant (R pendant la charge), chandelle (le stick vers l'arrière).
+    const genre = monTransfo ? '' : pj.genre === 'rasant' ? 'RASANT' : pj.viseeX * m.equipes[pj.e].sens < -0.3 ? 'CHANDELLE' : '';
+    $('jauge-genre').textContent = genre;
   }
   $('aide-transfo').classList.toggle('cache', !monTransfo);
   // La pénalité : à nous de choisir.
@@ -526,6 +538,7 @@ function montrerFin(res, o) {
     + ligne('Ballons grattés', st.grattages[0], st.grattages[1])
     + ligne('Pénalités réussies', st.penalitesReussies[0], st.penalitesReussies[1], `${st.penalitesReussies[0]}/${st.penalitesTentees[0]}`, `${st.penalitesReussies[1]}/${st.penalitesTentees[1]}`)
     + ligne('Pénalités concédées', st.penalites[0], st.penalites[1])
+    + ligne('Cartons jaunes', st.cartons[0], st.cartons[1])
     + ligne('En-avant', st.enAvants[0], st.enAvants[1]);
   const act = $('fin-actions');
   act.innerHTML = '';
@@ -887,7 +900,10 @@ function rendreStadesEnLigne() {
   const hote = net.salle.n === 0;
   const nomHote = net.salle.salon?.noms?.[0];
   $('salle-stade-bloc').firstElementChild.textContent = hote ? 'Le stade (c’est toi qui choisis)' : `Le stade (choisi par ${nomHote || 'l’hôte'})`;
-  $('salle-stades').innerHTML = STADES.map((x) => `<button data-id="${x.id}" class="${net.salle.stade === x.id ? 'oui' : ''}"${hote ? '' : ' disabled'}>${x.nom}</button>`).join('');
+  const [st, met] = (net.salle.stade || 'grand').split('-');
+  const dis = hote ? '' : ' disabled';
+  $('salle-stades').innerHTML = STADES.map((x) => `<button data-id="${x.id}" class="${st === x.id ? 'oui' : ''}"${dis}>${x.nom}</button>`).join('')
+    + `<button data-pluie="1" class="${met === 'pluie' ? 'oui' : ''}"${dis}>🌧️ Pluie</button>`;
 }
 
 function ouvrirEnLigne() {
@@ -964,7 +980,7 @@ function lancerEnLigne(d) {
   son.reveiller();
   $('fin-attente').textContent = '';
   lancerMatch({
-    equipes: d.equipes, controles: ['humain', 'humain'], niveaux: [1, 1], minutes: 3, stade: STADE[d.stade] ? d.stade : 'grand', mode: 'enligne',
+    equipes: d.equipes, controles: ['humain', 'humain'], niveaux: [1, 1], minutes: 3, stade: STADE[String(d.stade).split('-')[0]] ? String(d.stade).split('-')[0] : 'grand', meteo: String(d.stade).endsWith('-pluie') ? 'pluie' : 'beau', mode: 'enligne',
     graine: d.graine, local: d.n, noms: d.noms,
     apres: (res, bouton) => {
       const moi = d.n;
@@ -1006,7 +1022,15 @@ function brancherEnLigne() {
   $('enligne-rejoindre').addEventListener('click', rejoindre);
   $('enligne-code').addEventListener('keydown', (e) => { if (e.key === 'Enter') rejoindre(); });
   $('salle-quitter').addEventListener('click', () => { net.quitter(); $('enligne-salle').classList.add('cache'); $('enligne-accueil').classList.remove('cache'); $('enligne-statut').textContent = STATUTS.connecte; });
-  $('salle-stades').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b && net.salle.n === 0) { conf.stade = b.dataset.id; garder(); net.choisirStade(b.dataset.id); } });
+  $('salle-stades').addEventListener('click', (e) => {
+    const b = e.target.closest('button');
+    if (!b || net.salle.n !== 0) return;
+    // Un stade, ou la pluie qu'on met ou qu'on enlève (envoyés ensemble : « village-pluie »).
+    let [st, met] = (net.salle.stade || 'grand').split('-');
+    if (b.dataset.pluie) met = met === 'pluie' ? '' : 'pluie';
+    else { st = b.dataset.id; conf.stade = st; garder(); }
+    net.choisirStade(met === 'pluie' ? `${st}-pluie` : st);
+  });
   $('attente-quitter').addEventListener('click', () => { arreterMatch(); net.quitter(); enPause = false; aller('menu'); });
   // Le diagnostic du réseau (F3).
   addEventListener('keydown', (e) => { if (e.code === 'F3') { e.preventDefault(); $('net-diag').classList.toggle('cache'); } });

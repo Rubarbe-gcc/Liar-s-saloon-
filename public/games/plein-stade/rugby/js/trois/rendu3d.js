@@ -145,7 +145,7 @@ export function creerRendu(hote, o) {
 
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(36, 16 / 9, 0.3, 900);
-  const stade = creerStade(scene, o.stade, { qualite: q, equipes: o.equipes, kits: o.kits });
+  const stade = creerStade(scene, o.stade, { qualite: q, equipes: o.equipes, kits: o.kits, meteo: o.meteo });
 
   // Les joueurs (les avants un peu plus massifs).
   const figs = [];

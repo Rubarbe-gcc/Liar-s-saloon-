@@ -31,7 +31,10 @@ function alea(graine) {
 }
 
 /** Le ciel : une grande sphère en dégradé (haut, horizon, bas). */
+/** Sous la pluie, tous les ciels virent au gris (le décor reste le même). */
+let cielGris = false;
 function ciel(scene, haut, horizon, bas = horizon) {
+  if (cielGris) { haut = '#3d444d'; horizon = '#7d868f'; bas = '#596169'; }
   const g = new THREE.SphereGeometry(450, 24, 12);
   const cols = [];
   const ch = new THREE.Color(haut), co = new THREE.Color(horizon), cb = new THREE.Color(bas);
@@ -235,7 +238,9 @@ function ecranGeant(scene, x, y, z, l, h) {
  * Crée le stade `id` dans la scène.
  * kits : les tenues des deux équipes (dans l'ordre du match) ; l'en-but de gauche est celui de l'équipe 0 (qui attaque vers la droite).
  */
-export function creerStade(scene, id, { qualite, equipes, kits }) {
+export function creerStade(scene, id, { qualite, equipes, kits, meteo = 'beau' }) {
+  const pluie = meteo === 'pluie';
+  cielGris = pluie;
   const R = alea(id.length * 131 + 7);
   const out = { poteaux: [], foule: null };
   const publicCouleurs = couleursPublic(kits);
@@ -340,9 +345,45 @@ export function creerStade(scene, id, { qualite, equipes, kits }) {
     lueur(scene, MORT + 22, 16.8, -36, 10, '#fff0a0');
     for (let k = 0; k < 8; k++) arbre(scene, -MORT - 10 - R() * 14, -24 + k * 7, R);
   }
+  // La pluie : une lumière plus terne, un brouillard gris, et des milliers de gouttes (des traits qui tombent en biais).
+  let gouttes = null;
+  if (pluie) {
+    hemi.intensity *= 0.7; soleil.intensity *= 0.45;
+    scene.fog = new THREE.Fog('#6d757e', 60, 210);
+    const n = qualite === 'basse' ? 900 : qualite === 'moyenne' ? 1800 : 3000;
+    const pos = new Float32Array(n * 6);
+    const R2 = alea(4242);
+    for (let k = 0; k < n; k++) {
+      const x = (R2() - 0.5) * 100, y = R2() * 30, z = (R2() - 0.5) * 70;
+      pos.set([x, y, z, x + 0.12, y + 0.9, z + 0.05], k * 6);
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    gouttes = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: '#c8d4e0', transparent: true, opacity: 0.45, depthWrite: false }));
+    gouttes.frustumCulled = false;
+    scene.add(gouttes);
+    // Des flaques qui brillent un peu sur la pelouse.
+    const flaque = new THREE.MeshBasicMaterial({ color: '#9fb0c0', transparent: true, opacity: 0.18, depthWrite: false });
+    for (let k = 0; k < 14; k++) {
+      const m2 = new THREE.Mesh(new THREE.CircleGeometry(0.8 + R2() * 1.6, 16), flaque);
+      m2.rotation.x = -Math.PI / 2;
+      m2.scale.set(1 + R2(), 1, 1);
+      m2.position.set((R2() - 0.5) * 60, 0.015, (R2() - 0.5) * 32);
+      scene.add(m2);
+    }
+  }
   let t = 0;
   out.maj = (dt, excitation) => {
     t += dt;
+    if (gouttes) {
+      // Elles tombent (environ 16 m/s) et repartent d'en haut.
+      const a = gouttes.geometry.attributes.position, p = a.array, chute = 16 * dt, glisse = 2.1 * dt;
+      for (let k = 0; k < p.length; k += 6) {
+        p[k + 1] -= chute; p[k + 4] -= chute; p[k] -= glisse; p[k + 3] -= glisse;
+        if (p[k + 1] < 0) { p[k + 1] += 30; p[k + 4] += 30; if (p[k] < -50) { p[k] += 100; p[k + 3] += 100; } }
+      }
+      a.needsUpdate = true;
+    }
     if (out.foule) { out.foule.uTemps.value = t; out.foule.uAmp.value = 0.04 + excitation * 0.32; }
     for (const p of out.poteaux) {
       p.tremble = (p.tremble || 0) * Math.pow(0.02, dt);

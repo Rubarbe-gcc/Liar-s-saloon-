@@ -121,8 +121,8 @@ export const EQUIPES = [
     exterieur: kit('#d9d0c2', 'bande', '#7a1f33', '#7a1f33', '#7a1f33'),
     ecusson: { forme: 'blason', fond: '#7a1f33', fond2: '#3a0e18', motif: 'demi', symbole: 'tour', symboleC: '#d9d0c2', bord: '#d9d0c2' },
     style: 'avants',
-    joueurs: [j('Léo Ventabren', 1, [58, 88, 58, 38, 80]), j('Marc Rognac', 2, [64, 86, 66, 42, 80]), j('Nathan Lambesc', 3, [56, 88, 56, 36, 79]),
-      j('Oscar Trets', 9, [78, 60, 84, 72, 68]), j('Paul Gardanne', 10, [74, 62, 80, 82, 68]), j('Robin Peynier', 12, [77, 83, 72, 60, 82], true), j('Samuel Fuveau', 11, [87, 66, 66, 56, 66])],
+    joueurs: [j('Léo Ventabren', 1, [58, 88, 58, 38, 80]), j('Marc Rognac', 2, [64, 85, 66, 42, 80]), j('Nathan Lambesc', 3, [56, 88, 56, 36, 79]),
+      j('Oscar Trets', 9, [78, 60, 84, 72, 68]), j('Paul Gardanne', 10, [74, 62, 80, 82, 68]), j('Robin Peynier', 12, [77, 82, 72, 60, 81], true), j('Samuel Fuveau', 11, [87, 66, 66, 56, 66])],
   },
   {
     id: 'bois-noir', nom: 'Sangliers de Bois-Noir', court: 'Bois-Noir', abr: 'BNO', ville: 'Bois-Noir',
@@ -161,8 +161,8 @@ export const EQUIPES = [
     exterieur: kit('#ffffff', 'uni', '#14284a', '#14284a', '#14284a'),
     ecusson: { forme: 'rond', fond: '#14284a', fond2: '#ffffff', motif: 'cerceaux', symbole: 'ancre', symboleC: '#ffffff', bord: '#9ac0ff' },
     style: 'pied',
-    joueurs: [j('Thomas Kerlouan', 1, [58, 88, 58, 42, 82]), j('Valère Plouguerneau', 2, [64, 86, 66, 48, 82]), j('Aymeric Landéda', 3, [56, 88, 56, 40, 81]),
-      j('Bruno Portsall', 9, [80, 58, 84, 84, 68]), j('Corentin Aber', 10, [75, 60, 82, 92, 68]), j('Denis Brignogan', 12, [80, 78, 72, 74, 80]), j('Erwan Guissény', 15, [93, 62, 68, 82, 70], true)],
+    joueurs: [j('Thomas Kerlouan', 1, [59, 89, 58, 42, 82]), j('Valère Plouguerneau', 2, [64, 86, 66, 48, 82]), j('Aymeric Landéda', 3, [56, 88, 56, 40, 81]),
+      j('Bruno Portsall', 9, [81, 58, 84, 84, 68]), j('Corentin Aber', 10, [75, 60, 82, 92, 68]), j('Denis Brignogan', 12, [81, 79, 72, 74, 80]), j('Erwan Guissény', 15, [93, 62, 68, 82, 70], true)],
   },
   {
     id: 'haut-pierre', nom: 'Ours de Haut-Pierre', court: 'Haut-Pierre', abr: 'HPI', ville: 'Haut-Pierre',

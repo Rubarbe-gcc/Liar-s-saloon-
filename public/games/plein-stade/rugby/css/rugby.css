@@ -45,3 +45,6 @@ body.rugby {
 /* La pénalité : les trois choix ; trop loin des poteaux, le tir est grisé. */
 .aide-penalite span { margin-left: 12px; }
 .aide-penalite.loin .poteaux { opacity: .35; text-decoration: line-through; }
+
+/* Le genre de coup de pied, au-dessus de la jauge. */
+.jauge .genre { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); font-size: .7em; letter-spacing: .1em; color: var(--jaune); text-shadow: 0 1px 2px #000; white-space: nowrap; }
