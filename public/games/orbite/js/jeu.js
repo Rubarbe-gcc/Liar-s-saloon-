@@ -105,6 +105,7 @@ document.getElementById('menu').addEventListener('click', ev => {
 });
 
 // ---------- ordres ----------
+const ordreBase = (ids, c) => ordre(ids, c);
 function ordre(ids, c) {
   if (!ids.length || !s || mode === 'rejeu' || termine) return;
   if (mode === 'ligne') net.ordre(ids, c); else { cmd(s, ME, ids, c); log.push([s.tick, ME, ids, c]); }
@@ -178,6 +179,7 @@ cv.onmousedown = e => {
   if (ciblage) { const p = rendu.sol(e.offsetX, e.offsetY); if (p) ordre(sel, { t: 'am', x: p.x, y: p.y }); ciblage = false; return; }
   drag = { x: e.offsetX, y: e.offsetY };
 };
+let dernierClic = { id: -1, t: 0 }, alerteP = null, alerteMsgT = 0;
 cv.onmouseup = e => {
   if (!s || e.button !== 0 || !drag) return;
   const a = drag, b = { x: e.offsetX, y: e.offsetY }; drag = null; $('cadre').style.display = 'none';
@@ -185,10 +187,17 @@ cv.onmouseup = e => {
   const mes = s.ent.filter(en => en.eq === ME && en.pv > 0); let r;
   if (small) { let best = null, bd = 1e9; for (const en of mes) { const p = proj(en), d = Math.hypot(p.x - b.x, p.y - b.y), rad = BA[en.k] ? 70 : 28; if (d < rad && d < bd) { bd = d; best = en; } } r = best ? [best] : []; }
   else r = mes.filter(en => { const p = proj(en); return p.x >= x0 && p.x <= x1 && p.y >= y0 && p.y <= y1; });
-  const u = r.filter(en => !BA[en.k]); sel = (u.length ? u : r.slice(0, 1)).map(en => en.id); if (sel.length) son('clic');
+  if (small && r.length === 1 && r[0].id === dernierClic.id && performance.now() - dernierClic.t < 500) { // double-clic : tout ce type à l'écran
+    const k = r[0].k, w = cv.clientWidth, h = cv.clientHeight; r = mes.filter(en => en.k === k && (() => { const p = proj(en); return p.x >= 0 && p.x <= w && p.y >= 0 && p.y <= h; })());
+  }
+  dernierClic = { id: small && r.length === 1 ? r[0].id : -1, t: performance.now() };
+  const u = r.filter(en => !BA[en.k]), nouv = (u.length ? u : r.slice(0, 1)).map(en => en.id);
+  if (e.shiftKey) { if (small && nouv.length === 1 && sel.includes(nouv[0])) sel = sel.filter(i => i !== nouv[0]); else sel = [...new Set([...sel, ...nouv])]; } else sel = nouv;
+  if (sel.length) son('clic');
 };
 cv.oncontextmenu = e => {
   e.preventDefault(); if (!s || !mine().length || termine) return;
+  const a = e.shiftKey ? 1 : 0, ordre = (ids, c) => ordreBase(ids, { ...c, a });
   const p = rendu.sol(e.offsetX, e.offsetY); if (!p) return; const X = p.x, Y = p.y;
   const en = s.ent.find(o => o.eq !== ME && o.pv > 0 && vis(o.x, o.y) === 2 && Math.hypot(o.x - X, o.y - Y) < (BA[o.k] ? 1500 : 700));
   if (en) return ordre(sel, { t: 'att', c: en.id });
@@ -219,6 +228,8 @@ onkeydown = e => {
   else if (k === 'p' && mode !== 'ligne') basculePause();
   else if (k === 'f') basculeVit();
   else if (k === 'm') { muet = !muet; majSon(); }
+  else if (k === 'tab') { e.preventDefault(); const o = mine(); if (o.length > 1) { const k0 = o[0].k; sel = [...o.filter(x => x.k !== k0), ...o.filter(x => x.k === k0)].map(x => x.id); sigC = ''; } } // Tab : type suivant de la sélection
+  else if (k === ' ') { e.preventDefault(); if (alerteP) rendu.centrer(alerteP.x / 1000, alerteP.y / 1000); } // Espace : dernière attaque
   else if (k === 'h') { const q = s.ent.find(en => en.eq === ME && BA[en.k] && BA[en.k].qg); if (q) rendu.centrer(q.x / 1000, q.y / 1000); }
   else if (/^[1-9]$/.test(k)) { if (e.ctrlKey) { e.preventDefault(); groupes[k] = [...sel]; } else if (groupes[k]) { sel = [...groupes[k]]; son('clic'); } }
   else if (KEYS.includes(k) && !e.ctrlKey && !e.metaKey) { const c = cartes[KEYS.indexOf(k)]; if (c && c.ok) c.act(); }
@@ -228,7 +239,7 @@ onkeyup = e => { K[e.key.toLowerCase()] = 0; };
 // ---------- affichage ----------
 function sons() {
   const cur = new Map(); let pret = 0, alerte = 0, mort = 0;
-  for (const e of s.ent) if (e.eq === ME) { cur.set(e.id, e.pv); const p = snap.get(e.id); if (p === undefined) { if (snap.size) pret++; } else if (e.pv < p) alerte++; }
+  for (const e of s.ent) if (e.eq === ME) { cur.set(e.id, e.pv); const p = snap.get(e.id); if (p === undefined) { if (snap.size) pret++; } else if (e.pv < p) { alerte++; alerteP = { x: e.x, y: e.y, t: performance.now() }; if (BA[e.k] && performance.now() > alerteMsgT) { alerteMsgT = performance.now() + 12000; msg = 'Votre base est attaquée ! (Espace pour y aller)'; msgT = performance.now() + 4000; } } }
   for (const id of snap.keys()) if (!cur.has(id)) mort++;
   snap = cur; if (alerte) son('alerte'); if (mort) son('mort'); else if (pret) son('pret');
 }
@@ -238,6 +249,7 @@ function mini() {
   for (const m of s.mines) if (vis(m.x, m.y) > 0 && m.q > 0) { gm.fillStyle = '#5fd0ff'; gm.fillRect(m.x / 1000 * c - 2, m.y / 1000 * c - 2, 4, 4); }
   for (const r of s.relais) if (vis(r.x, r.y) > 0) { gm.strokeStyle = r.own < 0 ? '#aaa' : CSSC[r.own]; gm.lineWidth = 2; gm.beginPath(); gm.arc(r.x / 1000 * c, r.y / 1000 * c, 4, 0, 7); gm.stroke(); }
   for (const e of s.ent) if (e.eq === ME || vis(e.x, e.y) === 2) { gm.fillStyle = CSSC[e.eq]; const z = BA[e.k] ? 5 : 3; gm.fillRect(e.x / 1000 * c - z / 2, e.y / 1000 * c - z / 2, z, z); }
+  if (alerteP && performance.now() - alerteP.t < 3000) { const k = ((performance.now() - alerteP.t) % 1000) / 1000; gm.strokeStyle = 'rgba(255,70,50,' + (1 - k) + ')'; gm.lineWidth = 2; gm.beginPath(); gm.arc(alerteP.x / 1000 * c, alerteP.y / 1000 * c, 4 + k * 14, 0, 7); gm.stroke(); } // signal d'attaque
   const P = rendu.coins(); gm.strokeStyle = '#fff'; gm.lineWidth = 1; gm.beginPath(); P.forEach(([x, y], i) => { const X = Math.max(0, Math.min(MS, x * c)), Y = Math.max(0, Math.min(MS, y * c)); i ? gm.lineTo(X, Y) : gm.moveTo(X, Y); }); gm.closePath(); gm.stroke();
 }
 function verif() {

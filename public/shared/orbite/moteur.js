@@ -346,6 +346,7 @@ function rec(s, e, u, o) {
   if (d2(e, m) <= 1200 * 1200) { if (++e.w >= 30) { e.w = 0; e.port = 10 + 2 * s.up[e.eq].rec; m.q -= 10; } } else aller(s, e, m.ax ?? m.x, m.ay ?? m.y, u.v);
 }
 function mob(s, e) {
+  if (!e.ordre && e.q && e.q.length) e.ordre = e.q.shift(); // ordre suivant de la file
   const u = avecCap(e, UN[e.k]), o = e.ordre;
   if (!u.vol && degager(s, e)) return;
   if (o) {
@@ -466,8 +467,8 @@ export function cmd(s, eq, ids, c) {
     } else if (c.t === 'pouv') { pouvoir(s, e);
     } else if (c.t === 'cap') { if (CAP[e.k] && !e.ab) { e.abT = CAP_DUREE; e.ab = CAP_RECHARGE; }
     } else if (c.t === 'ral') { if (BA[e.k] && BA[e.k].prod && nombre(c.x) && nombre(c.y)) e.ral = { x: Math.max(500, Math.min(W * 1000 - 500, Math.trunc(c.x))), y: Math.max(500, Math.min(H * 1000 - 500, Math.trunc(c.y))) };
-    } else if (c.t === 'stop') { if (!BA[e.k]) e.ordre = null;
-    } else if (!BA[e.k]) { const o = ordreNet(s, c); if (o) { e.ordre = o; e.w = 0; } }
+    } else if (c.t === 'stop') { if (!BA[e.k]) { e.ordre = null; e.q = []; }
+    } else if (!BA[e.k]) { const o = ordreNet(s, c); if (o) { if (c.a && e.ordre) { e.q = e.q || []; if (e.q.length < 8) e.q.push(o); } else { e.ordre = o; e.q = []; e.w = 0; } } } // c.a : ordre enchaîné (Maj)
   }
 }
 function chercherPlace(s, k, x, y) {

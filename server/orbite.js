@@ -17,7 +17,7 @@ export function nettoyerOrdre(ids, c) {
   if (!Array.isArray(ids) || !c || typeof c !== 'object' || !ORDRES.includes(c.t)) return null;
   const i = ids.filter(v => Number.isInteger(v)).slice(0, 64);
   if (!i.length) return null;
-  return { ids: i, c: { t: c.t, k: mot(c.k), x: num(c.x), y: num(c.y), c: num(c.c), m: num(c.m) } };
+  return { ids: i, c: { t: c.t, k: mot(c.k), x: num(c.x), y: num(c.y), c: num(c.c), m: num(c.m), ...(c.a ? { a: 1 } : {}) } };
 }
 const envoyer = (j, m) => { try { if (j.ws.readyState === 1) j.ws.send(JSON.stringify(m)); } catch { /* client parti */ } };
 const diffuser = (r, m) => r.joueurs.forEach(j => envoyer(j, m));
