@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v198';
+const VERSION = 'v199';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -325,6 +325,7 @@ const SHELL = [
   '/shared/handball/ia.js',
   '/shared/handball/match.js',
   '/shared/handball/tournoi.js',
+  '/shared/handball/championnat.js',
   '/games/plein-stade/rugby/',
   '/games/plein-stade/rugby/css/rugby.css',
   '/games/plein-stade/rugby/js/main.js',

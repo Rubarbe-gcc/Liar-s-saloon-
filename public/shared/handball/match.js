@@ -7,8 +7,10 @@
  * l'a encaissé réengage. La zone des 6 m n'est qu'au gardien : un joueur de
  * champ peut y voler (le tir en suspension) mais pas s'y poser (le ballon
  * revient alors au gardien). Un ballon qui sort derrière le but revient au
- * gardien. Pas de faute, pas de jet de 7 m, le ballon rebondit sur les lignes
- * de côté : de l'arcade.
+ * gardien. Le ballon rebondit sur les lignes de côté : de l'arcade. Une seule
+ * faute : le vol raté près des 9 m (surtout sur un tireur en suspension), qui
+ * donne un jet de 7 m (le tireur seul face au gardien, tout le monde derrière
+ * les 9 m ; l'humain tire avec B, le stick vise).
  *
  * Les touches de chaque équipe, à chaque image : un nombre (terrain.js, T).
  *   en attaque : A passe, R passe à terre, B tir (on saute en appuyant ; on lâche
@@ -77,7 +79,7 @@ export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['hum
     joueurs: [],
     ballon: { x: 0, y: 0, z: 1.2, vx: 0, vy: 0, vz: 0, porteur: -1, dernier: -1, passeur: -1, cible: -1, essais: 0, tir: null, rebond: null, remise: -1, engage: false, aTerre: false, dansBut: false },
     prec: [0, 0],
-    stats: { tirs: [0, 0], cadres: [0, 0], arrets: [0, 0], passes: [0, 0], decisives: [0, 0], vols: [0, 0], contres: [0, 0], contreAttaques: [0, 0], possession: [0, 0] },
+    stats: { tirs: [0, 0], cadres: [0, 0], arrets: [0, 0], passes: [0, 0], decisives: [0, 0], vols: [0, 0], contres: [0, 0], contreAttaques: [0, 0], septMetres: [0, 0], septReussis: [0, 0], possession: [0, 0] },
     buts: [],
     perso: new Array(2 * N).fill(null).map(() => ({ buts: 0, tirs: 0, passes: 0, arrets: 0, vols: 0, contres: 0 })),
     vainqueur: -1,
@@ -230,6 +232,9 @@ export function pas(m, entrees = [0, 0]) {
         else { placerEngagement(m, m.aEngager); evs.push({ type: 'engagement', equipe: m.aEngager }); }
       }
       break;
+    case 'jet7':
+      jet7(m, k, ap, evs);
+      break;
     case 'pause':
       if (--m.t <= 0) {
         if (m.periode === 1) {
@@ -275,6 +280,7 @@ function jouer(m, k, ap, rel, evs) {
     const c = cons[i];
     if (c && c.action) agir(m, m.joueurs[i], c.action, evs);
   }
+  if (m.phase !== 'jeu') return; // une faute : le jet de 7 m se prépare
   // Le tir en préparation : il monte (le saut), et part tout seul s'il a trop attendu (ou avant de retomber).
   for (const p of m.joueurs) {
     if (p.etat !== 'tir' || b.porteur !== p.id) continue;
@@ -521,7 +527,7 @@ function viser(m, p) {
 }
 
 /** Le tir part : la qualité dépend du moment où l'on lâche (en haut du saut, c'est parfait). */
-function lacherTir(m, p, evs) {
+function lacherTir(m, p, evs, sept = false) {
   const b = m.ballon;
   const s = m.equipes[p.e].sens;
   const { gx, ty: ty0, tz: tz0 } = viser(m, p);
@@ -539,7 +545,7 @@ function lacherTir(m, p, evs) {
   Object.assign(b, {
     x: x0, y: y0, z: z0, porteur: -1, dernier: p.id, passeur: -1, cible: -1, essais: 0, remise: -1, engage: false, dansBut: false, aTerre: false,
     vx: (gx - x0) / Tv, vy: (ty - y0) / Tv, vz: (tz - z0 + 0.5 * G * Tv * Tv) / Tv,
-    tir: { e: p.e, j: p.id, passeur: m.f - p.passeF < 300 ? p.passeDe : -1, d, ty, tz, q, arret: false, fait: false, plonge: false, v, contre: m.poss.contre },
+    tir: { e: p.e, j: p.id, passeur: !sept && m.f - p.passeF < 300 ? p.passeDe : -1, d, ty, tz, q, arret: false, fait: false, plonge: false, v, contre: m.poss.contre, sept },
     rebond: { e: p.e },
   });
   p.etat = 'saut';
@@ -549,7 +555,7 @@ function lacherTir(m, p, evs) {
   m.perso[p.id].tirs += 1;
   const cadre = Math.abs(ty) < DEMI_BUT - BALLE_R && tz < BUT_H - BALLE_R && tz > -0.3;
   if (cadre) m.stats.cadres[p.e] += 1;
-  evs.push({ type: 'tir', joueur: p.id, q, d, aile: Math.abs(p.y) > 5.5 && Math.abs(p.x - gx) < 5 });
+  evs.push({ type: 'tir', joueur: p.id, q, d, sept, aile: !sept && Math.abs(p.y) > 5.5 && Math.abs(p.x - gx) < 5 });
   // Un défenseur devant, les bras levés : il peut contrer.
   if (contrer(m, p, (gx - x0) / L, (ty - y0) / L, evs)) return;
   // Le gardien : l'arrêtera-t-il ? (décidé maintenant, montré quand le ballon arrive)
@@ -656,7 +662,70 @@ function voler(m, p, evs) {
   } else {
     p.surpris = 22;
     evs.push({ type: 'vol-rate', joueur: p.id });
+    // Trop près du but (ou sur un tireur en l'air) : c'est une faute, jet de 7 m.
+    if (distBut(c.x, c.y, butX(m, c.e)) < 9.3 && hasard(m) < (c.etat === 'tir' ? 0.8 : 0.22)) faute7(m, p, c, evs);
   }
+}
+
+/* ------------------------------------------------------------------ */
+/* Le jet de 7 m                                                       */
+/* ------------------------------------------------------------------ */
+
+/** La faute de d sur v : un jet de 7 m pour l'équipe de v (tiré par v si c'est l'humain, sinon par le meilleur tireur). */
+function faute7(m, d, v, evs) {
+  const e = v.e;
+  let t = v;
+  if (m.equipes[e].ctrl !== 'humain') {
+    for (let i = 1; i < N; i++) { const q = m.joueurs[e * N + i]; if (!q.absent && q.n.tir > t.n.tir) t = q; }
+  }
+  m.stats.septMetres[e] += 1;
+  m.phase = 'jet7';
+  m.t = 70;
+  m.jet = { e, j: t.id, attente: 0 };
+  placerJet7(m);
+  evs.push({ type: 'faute', joueur: d.id, victime: v.id }, { type: 'jet7', equipe: e, joueur: t.id });
+}
+
+/** Le tireur sur la ligne des 7 m, le gardien sur sa ligne, tous les autres derrière les 9 m. */
+function placerJet7(m) {
+  const { e, j } = m.jet;
+  const s = m.equipes[e].sens, gx = butX(m, e);
+  const t = m.joueurs[j];
+  for (const p of m.joueurs) {
+    if (p.absent) continue;
+    Object.assign(p, RAZ);
+    if (p === t) { Object.assign(p, { x: gx - s * 7.05, y: 0, dx: s, dy: 0 }); continue; }
+    if (p.i === 0 && p.e !== e) { Object.assign(p, { x: gx - s * 0.6, y: 0, dx: -s, dy: 0 }); continue; }
+    if (p.i === 0) continue;
+    if (distBut(p.x, p.y, gx) < 9.4) { const q = sortirZone(p.x, p.y, gx, 9.5); p.x = q.x; p.y = q.y; }
+    if (Math.abs(p.y) < 1.2 && Math.abs(p.x - t.x) < 3) p.y = p.y >= 0 ? 1.4 : -1.4;
+    p.dx = p.e === e ? s : -s; p.dy = 0;
+  }
+  for (const p of m.joueurs) if (!p.absent) borner(m, p);
+  ballonA(m, t);
+  if (m.equipes[e].ctrl === 'humain') m.equipes[e].actif = t.id;
+}
+
+/** L'attente du jet : le tireur tire (l'humain avec B, le stick vise ; l'ordinateur au bout d'un moment). */
+function jet7(m, k, ap, evs) {
+  if (m.t > 0) { if (--m.t === 0) evs.push({ type: 'sifflet', n: 1 }); return; }
+  const J = m.jet, p = m.joueurs[J.j];
+  J.attente += 1;
+  let tire = false;
+  if (m.equipes[J.e].ctrl === 'humain') {
+    const kk = k[J.e];
+    const mx = (kk & T.d ? 1 : 0) - (kk & T.g ? 1 : 0), my = (kk & T.h ? 1 : 0) - (kk & T.b ? 1 : 0);
+    p.visee = { mx, my };
+    tire = !!(ap[J.e] & T.B) || J.attente > 360;
+  } else tire = J.attente > 50;
+  if (!tire) return;
+  p.etat = 'normal';
+  p.charge = CHARGE_IDEALE;
+  m.phase = 'jeu';
+  m.t = 0;
+  m.jet = null;
+  lacherTir(m, p, evs, true);
+  p.etat = 'normal';
 }
 
 /* ------------------------------------------------------------------ */
@@ -905,13 +974,13 @@ function arreter(m, gk, evs) {
     ballonA(m, gk);
     gk.etat = 'normal'; gk.t = 0; gk.vy = 0;
     m.poss = { e: gk.e, f: m.f, passes: 0, contre: true };
-    evs.push({ type: 'arret', joueur: gk.id, capte: true, tireur: tir.j });
+    evs.push({ type: 'arret', joueur: gk.id, capte: true, tireur: tir.j, sept: !!tir.sept });
     return;
   }
   // Il repousse : vers l'avant, sur un côté.
   Object.assign(b, { vx: -sa * (2 + hasard(m) * 4.5), vy: (hasard(m) - 0.5) * 9, vz: 1.2 + hasard(m) * 3.5, dernier: gk.id, tir: null, cible: -1, passeur: -1 });
   b.rebond = { e: tir.e };
-  evs.push({ type: 'arret', joueur: gk.id, capte: false, tireur: tir.j });
+  evs.push({ type: 'arret', joueur: gk.id, capte: false, tireur: tir.j, sept: !!tir.sept });
 }
 
 /** Le ballon sort derrière le but (côté c) : il revient au gardien de ce but. */
@@ -934,6 +1003,7 @@ function marquer(m, c, evs) {
   m.score[e] += 1;
   if (tir && tir.passeur >= 0) { m.stats.decisives[e] += 1; m.perso[tir.passeur].passes += 1; }
   if (tir && tir.contre) m.stats.contreAttaques[e] += 1;
+  if (tir && tir.sept) m.stats.septReussis[e] += 1;
   if (j >= 0) m.perso[j].buts += 1;
   const passeur = tir ? tir.passeur : -1;
   m.buts.push({ e, j, passeur, periode: m.periode, chrono: m.chrono, enOr: m.enOr, contre: !!tir?.contre });
@@ -943,7 +1013,7 @@ function marquer(m, c, evs) {
   m.phase = 'but';
   m.t = m.entrainement ? 60 : APRES_BUT;
   m.aEngager = 1 - e;
-  evs.push({ type: 'but', equipe: e, joueur: j, passeur, enOr: m.enOr, contre: !!tir?.contre, d: tir ? tir.d : 0, lucarne: !!tir && tir.tz > 1.5 });
+  evs.push({ type: 'but', equipe: e, joueur: j, passeur, enOr: m.enOr, contre: !!tir?.contre, d: tir ? tir.d : 0, lucarne: !!tir && tir.tz > 1.5, sept: !!tir?.sept });
 }
 
 /** Qui attrape le ballon libre (une passe, un ballon repoussé, un ballon qui traîne) ? */

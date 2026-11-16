@@ -72,6 +72,7 @@ export function creerCommentateur(ctx) {
           const qui = ev.joueur >= 0 ? n(ev.joueur) : 'Quelle confusion';
           const passe = ev.passeur >= 0 ? ` Sur une passe de ${n(ev.passeur)}.` : '';
           if (ev.enOr) return C.dire(`${qui} ! Le but en or ! ${ctx.equipe(ev.equipe).nom} l’emporte !`, { important: true, emotion: 1 });
+          if (ev.sept) return C.dire(ch('but7', [`${qui} transforme le jet de 7 mètres !`, `Pas de tremblement : ${qui} ne rate pas son 7 mètres.`]), { important: true, emotion: 0.7 });
           if (ev.contre) return C.dire(ch('ca', [`Contre-attaque éclair, et ${qui} conclut !`, `${qui} file seul au but… et marque !`, `Trop rapide pour tout le monde : but de ${qui} !`]) + passe, { important: true, emotion: 0.9 });
           if (ev.lucarne) return C.dire(ch('lucarne', [`En pleine lucarne ! ${qui} !`, `${qui} sous la barre ! Imparable !`]) + passe, { important: true, emotion: 1, apres: parfois(0.5) ? 'Le gardien n’a rien vu.' : null });
           if (ev.d > 9.5) return C.dire(ch('loin-but', [`Quelle frappe de ${qui} !`, `${qui} de loin… et ça rentre !`]) + passe, { important: true, emotion: 0.9, apres: serie.n >= 3 ? `${serie.n} buts de suite pour ${eq(ev.equipe)} !` : null });
@@ -79,6 +80,7 @@ export function creerCommentateur(ctx) {
           return C.dire(ch('but', [`But de ${qui} !`, `${qui} trouve le filet.`, `${qui} ne tremble pas.`, `Et c’est ${qui} qui marque.`]) + passe, { coupe: true, emotion: 0.6 });
         }
         case 'arret':
+          if (ev.sept) return C.dire(ch('arret7', [`${n(ev.joueur)} arrête le jet de 7 mètres !`, `Le 7 mètres est repoussé par ${n(ev.joueur)} !`]), { important: true, emotion: 0.9 });
           if (ev.capte || parfois(0.6)) return C.dire(ch('arret', [`Quel arrêt de ${n(ev.joueur)} !`, `${n(ev.joueur)} dit non !`, `Parade de ${n(ev.joueur)} !`, `${n(ev.joueur)} sort le grand jeu !`]), { important: true, emotion: 0.8 });
           return null;
         case 'poteau':
@@ -89,6 +91,8 @@ export function creerCommentateur(ctx) {
           return C.dire(ch('vol', [`${n(ev.joueur)} chipe le ballon !`, `${n(ev.joueur)} récupère le ballon dans les mains de ${n(ev.victime)} !`]), { frais: true, coupe: true, emotion: 0.6 });
         case 'interception':
           return C.dire(ch('inter', [`${n(ev.joueur)} coupe la passe !`, `Passe interceptée par ${n(ev.joueur)} !`]), { frais: true, coupe: true, emotion: 0.6 });
+        case 'jet7':
+          return C.dire(ch('jet7', [`Faute ! Jet de 7 mètres pour ${eq(ev.equipe)}, et c’est ${n(ev.joueur)} qui s’avance.`, `L’arbitre siffle : 7 mètres ! ${n(ev.joueur)} prend le ballon.`]), { important: true, emotion: 0.7, apres: parfois(0.5) ? 'Un duel à distance : les nerfs, avant tout.' : null });
         case 'zone':
           return C.dire(ch('zone', [`${n(ev.joueur)} a mis le pied dans la zone : le ballon change de camp.`, 'Pied dans la zone ! Le gardien récupère le ballon.']), { frais: true, emotion: 0.4 });
         case 'feinte':

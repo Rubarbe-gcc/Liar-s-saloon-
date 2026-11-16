@@ -14,6 +14,7 @@ import { distBut, zoneDe, ZONE, chanceBut } from '../public/shared/handball/terr
 import { EQUIPES, EQUIPE, STYLES, notesEquipe, noteGenerale } from '../public/shared/handball/equipes.js';
 import { ecussonSVG } from '../public/games/plein-stade/commun/ecusson.js';
 import { creerTournoi, matchDuJoueur, salleDuTour, enregistrer, jouerSansMoi, aJouer, avancer, resumer, noterStats, classement, TOURS } from '../public/shared/handball/tournoi.js';
+import { calendrier as calendrierChamp, creerChampionnat, classement as classementChamp, simulerLeReste as simulerLeResteChamp } from '../public/shared/handball/championnat.js';
 import { creerSession, FENETRE } from '../public/shared/rollback.js';
 import * as serveur from '../server/handball.js';
 import { delaiSelonPing, REGLAGES } from '../public/games/plein-stade/handball/js/enligne.js';
@@ -167,6 +168,56 @@ test('l’humain : il dirige un joueur de champ, passe, tire en suspension et ma
   assert.ok(tirs > 20, `l’humain tire (${tirs})`);
   assert.ok(passes > 5, 'l’humain passe (ou son gardien lui donne le ballon)');
   assert.ok(buts > 10, `l’humain marque (${buts} buts)`);
+});
+
+test('le Grand Championnat : chacun contre tous, 2 points la victoire, rien la défaite', () => {
+  const cal = calendrierChamp(EQUIPES.map((e) => e.id), 'simple');
+  assert.equal(cal.length, 15);
+  for (const j of cal) assert.equal(new Set(j.flatMap((r) => [r.a, r.b])).size, 16, 'chacun joue une fois par journée');
+  const paires = new Set(cal.flat().map((r) => [r.a, r.b].sort().join('-')));
+  assert.equal(paires.size, 120, 'chacun rencontre tous les autres');
+  assert.equal(calendrierChamp(EQUIPES.map((e) => e.id), 'retour').length, 30);
+  const c = creerChampionnat({ moi: 'corail', graine: 3, minutes: 1 });
+  simulerLeResteChamp(c);
+  assert.ok(c.fini && EQUIPE[c.champion]);
+  const cl = classementChamp(c);
+  assert.equal(cl.length, 16);
+  assert.equal(cl[0].id, c.champion);
+  assert.equal(cl.reduce((s, x) => s + x.pts, 0), 120 * 2, 'deux points par match');
+  assert.ok(cl.every((x) => x.j === 15 && x.pts === 2 * x.v));
+  assert.equal(cl.find((x) => x.id === 'corail').v, 0, 'nos matchs abandonnés sont perdus');
+});
+
+test('le jet de 7 m : un vol raté sur un tireur près du but, le tireur seul face au gardien, l’humain tire avec B', () => {
+  let jets = 0, tires = 0;
+  for (let g = 1; g <= 40; g++) {
+    const m = creerMatch({ equipes: ['pierre-noire', 'braises'], graine: g, minutes: 2, controles: ['humain', 'humain'] });
+    for (let f = 0; f < 60; f++) pas(m, [0, 0]);
+    // Le porteur de l'équipe 1 arme son tir à 8 m du but, notre défenseur est collé à lui.
+    const s1 = m.equipes[1].sens, gx = s1 * DEMI_L;
+    const c = m.joueurs[N + 3], d = m.joueurs[3];
+    for (const p of m.joueurs) if (p !== c && p !== d && p.i > 0) { p.x = -s1 * 12; p.y = (p.id % 7) - 3; }
+    Object.assign(c, { x: gx - s1 * 8, y: 0, etat: 'tir', z: 0.3, vz: 1, charge: 3 });
+    Object.assign(d, { x: gx - s1 * 7.2, y: 0.3, verrou: 0 });
+    Object.assign(m.ballon, { porteur: c.id, remise: -1, engage: false });
+    m.equipes[0].actif = d.id;
+    const evs = pas(m, [T.A, 0]);
+    if (!evs.some((e) => e.type === 'jet7')) continue;
+    jets += 1;
+    assert.equal(m.phase, 'jet7');
+    const t = m.joueurs[m.jet.j];
+    assert.equal(t.e, 1);
+    assert.ok(Math.abs(distBut(t.x, t.y, gx) - 7) < 0.2, 'le tireur sur la ligne des 7 m');
+    for (const p of m.joueurs) if (p !== t && p.i > 0 && !p.absent) assert.ok(distBut(p.x, p.y, gx) >= 9.3, 'les autres derrière les 9 m');
+    // L'humain attend, puis tire en haut à droite.
+    let tir = null;
+    for (let f = 0; f < 200 && !tir; f++) { const ev = pas(m, [0, f > 90 && f < 95 ? T.B | T.h : 0]); tir = ev.find((e) => e.type === 'tir'); }
+    assert.ok(tir && tir.sept, 'le jet de 7 m part');
+    assert.equal(m.phase, 'jeu');
+    tires += 1;
+  }
+  assert.ok(jets >= 10, `des fautes sifflées (${jets})`);
+  assert.equal(tires, jets);
 });
 
 test('des touches au hasard ne cassent rien', () => {

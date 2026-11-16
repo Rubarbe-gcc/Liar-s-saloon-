@@ -16,6 +16,7 @@ import { ecussonSVG, tenues } from '../../commun/ecusson.js';
 import { creerCinematique } from '../../commun/cinematique.js';
 import { intro, miTemps, hommeDuMatch, trophee, meilleurJoueur } from './cinematiques.js';
 import { creerTournoi, matchDuJoueur, salleDuTour, enregistrer, jouerSansMoi, aJouer, avancer, resumer, noterStats, classement, TOURS } from '../../../../shared/handball/tournoi.js';
+import { creerChampionnat, matchDuJoueur as matchDuJoueurChamp, enregistrer as enregistrerChamp, jouerSansMoi as jouerSansMoiChamp, aJouer as aJouerChamp, avancer as avancerChamp, classement as classementChamp, FORMATS as FORMATS_CHAMP } from '../../../../shared/handball/championnat.js';
 import * as saisie from '../../commun/saisie.js';
 import * as touches from './touches.js';
 import * as net from './enligne.js';
@@ -83,13 +84,15 @@ function fiche(id) {
 }
 
 function rendreEquipes() {
-  const solo = choix.mode !== 'tournoi';
+  const solo = choix.mode !== 'tournoi' && choix.mode !== 'championnat';
   carteDuel($('duel-moi'), conf.moi, 'Toi');
   carteDuel($('duel-lui'), conf.lui, 'Adversaire');
   $('duel-lui').classList.toggle('cache', !solo);
   document.querySelector('.duel .vs').classList.toggle('cache', !solo);
-  $('equipes-titre').textContent = { solo: 'Match amical', tournoi: 'Le Tournoi : ton club', entrainement: 'Entraînement : les équipes' }[choix.mode];
-  $('b-jouer').querySelector('b').textContent = { solo: 'Engagement', tournoi: 'Commencer le tournoi', entrainement: 'C’est parti' }[choix.mode];
+  $('equipes-titre').textContent = { solo: 'Match amical', tournoi: 'Le Tournoi : ton club', championnat: 'Le Grand Championnat : ton club', entrainement: 'Entraînement : les équipes' }[choix.mode];
+  $('b-jouer').querySelector('b').textContent = { solo: 'Engagement', tournoi: 'Commencer le tournoi', championnat: 'Commencer le championnat', entrainement: 'C’est parti' }[choix.mode];
+  $('opt-format').classList.toggle('cache', choix.mode !== 'championnat');
+  $('seg-format').innerHTML = [['simple', 15], ['retour', 30]].map(([v, n]) => `<button data-v="${v}" class="${conf.format === v ? 'oui' : ''}">${FORMATS_CHAMP[v]} · ${n} journées</button>`).join('');
   $('duel-moi').classList.toggle('choisit', choix.pour === 'moi');
   $('duel-lui').classList.toggle('choisit', choix.pour === 'lui');
   $('consigne-equipes').textContent = choix.pour === 'moi' ? 'Choisis ton équipe.' : 'Choisis l’adversaire.';
@@ -116,7 +119,7 @@ function brancherEquipes() {
     if (choix.pour === 'moi') {
       if (id === conf.lui) conf.lui = conf.moi;
       conf.moi = id;
-      if (choix.mode !== 'tournoi') choix.pour = 'lui';
+      if (choix.mode !== 'tournoi' && choix.mode !== 'championnat') choix.pour = 'lui';
     } else {
       if (id === conf.moi) conf.moi = conf.lui;
       conf.lui = id;
@@ -321,13 +324,15 @@ function reagir(evs) {
       case 'contre': son.arret(); son.occasion(); bandeau('Contré !', nomDe(ev.joueur)); break;
       case 'vol': case 'interception': son.tacle(); if (m.joueurs[ev.joueur].e === P.local || Math.random() < 0.5) bandeau(ev.type === 'vol' ? 'Volé !' : 'Intercepté !', nomDe(ev.joueur)); break;
       case 'zone': son.sifflet(1); bandeau('Pied dans la zone !', nomDe(ev.joueur)); break;
+      case 'faute': son.sifflet(2); break;
+      case 'jet7': son.occasion(); bandeau('Jet de 7 mètres !', `Faute ! ${nomDe(ev.joueur)} face au gardien${m.equipes[ev.equipe].ctrl === 'humain' && ev.equipe === P.local ? ' · K pour tirer, le stick vise' : ''}`, true); ecranGeant('JET DE 7 M'); break;
       case 'sifflet': son.sifflet(1); break;
       case 'sirene': son.sifflet(2, true); break;
       case 'but': {
         son.filet();
         son.but();
         P.excit = ev.lucarne || ev.contre ? 1.5 : 1;
-        const titre = ev.enOr ? 'But en or !' : ev.contre ? 'Contre-attaque !' : ev.lucarne ? 'Lucarne !' : 'But !';
+        const titre = ev.enOr ? 'But en or !' : ev.sept ? '7 mètres : but !' : ev.contre ? 'Contre-attaque !' : ev.lucarne ? 'Lucarne !' : 'But !';
         const passe = ev.passeur >= 0 ? ` · passe de ${nomCourt(ev.passeur)}` : '';
         bandeau(titre, `${ev.joueur >= 0 ? nomDe(ev.joueur) : ''}${passe}`, ev.lucarne || ev.enOr || ev.contre);
         $('hud-score').classList.remove('flash'); void $('hud-score').offsetWidth; $('hud-score').classList.add('flash');
@@ -359,7 +364,7 @@ function reagir(evs) {
 
 const LIB = {
   att: ['Passe', 'Tir', 'Feinte', '—', 'À terre'], def: ['Vol', 'Contre', '—', 'Changer', '—'], libre: ['—', 'Sauter', '—', 'Changer', '—'],
-  remise: ['Engager', '—', '—', '—', 'À terre'], gardien: ['Appeler', '—', '—', '—', 'À terre'], air: ['Passe', 'Tirer !', '—', '—', 'À terre'],
+  remise: ['Engager', '—', '—', '—', 'À terre'], sept: ['—', 'Tirer', '—', '—', '—'], gardien: ['Appeler', '—', '—', '—', 'À terre'], air: ['Passe', 'Tirer !', '—', '—', 'À terre'],
 };
 let contexte = '';
 
@@ -404,7 +409,7 @@ function afficher(dt) {
   // Les boutons tactiles disent ce qu'ils font maintenant.
   const b = m.ballon;
   const porteur = b.porteur >= 0 ? m.joueurs[b.porteur] : null;
-  const ctx = porteur && porteur.e === P.local
+  const ctx = m.phase === 'jet7' && porteur && porteur.e === P.local ? 'sept' : porteur && porteur.e === P.local
     ? (porteur.i === 0 ? 'gardien' : b.remise >= 0 ? 'remise' : porteur.z > 0 && porteur.etat === 'saut' ? 'air' : 'att')
     : porteur ? 'def' : 'libre';
   if (ctx !== contexte) {
@@ -481,6 +486,7 @@ function montrerFin(res, o) {
     + ligne('Arrêts', st.arrets[0], st.arrets[1])
     + ligne('Passes décisives', st.decisives[0], st.decisives[1])
     + ligne('Buts en contre-attaque', st.contreAttaques[0], st.contreAttaques[1])
+    + ligne('Jets de 7 m', st.septReussis[0], st.septReussis[1], `${st.septReussis[0]}/${st.septMetres[0]}`, `${st.septReussis[1]}/${st.septMetres[1]}`)
     + ligne('Ballons récupérés', st.vols[0], st.vols[1])
     + ligne('Contres', st.contres[0], st.contres[1]);
   const act = $('fin-actions');
@@ -550,6 +556,113 @@ function brancherEntrainement() {
   choisir('entr-mode', (v) => { conf.entr.immobiles = v === 'plots'; });
   choisir('entr-niveau', (v) => { conf.niveau = +v; });
   $('b-entrainement').addEventListener('click', () => { son.reveiller(); ouvrirEquipes('entrainement', lancerEntrainement); });
+}
+
+/* ------------------------------------------------------------------ */
+/* Le Grand Championnat (shared/handball/championnat.js)                 */
+/* ------------------------------------------------------------------ */
+
+const CLE_CHAMP = 'roucoulette.championnat';
+let champ = null;
+let vueChamp = 'classement';
+try { champ = JSON.parse(localStorage.getItem(CLE_CHAMP) || 'null'); } catch { /* ignore */ }
+if (champ && !champ.journees) champ = null;
+const garderChamp = () => { try { if (champ) localStorage.setItem(CLE_CHAMP, JSON.stringify(champ)); else localStorage.removeItem(CLE_CHAMP); } catch { /* ignore */ } };
+if (!FORMATS_CHAMP[conf.format]) conf.format = 'simple';
+
+function infoChampionnat() {
+  $('championnat-info').textContent = champ && !champ.fini ? `En cours : journée ${champ.journee + 1} sur ${champ.journees.length} avec ${EQUIPE[champ.moi].court}` : 'Les seize clubs, chacun contre tous';
+}
+
+function ouvrirChampionnat() {
+  if (champ) { vueChamp = 'classement'; rendreChampionnat(); aller('championnat'); return; }
+  ouvrirEquipes('championnat', () => {
+    champ = creerChampionnat({ moi: conf.moi, graine: Math.floor(Math.random() * 2 ** 31), niveau: conf.niveau, minutes: conf.minutes, salle: conf.salle, format: conf.format });
+    garderChamp();
+    vueChamp = 'classement';
+    rendreChampionnat();
+    aller('championnat');
+  });
+}
+
+/** Les autres matchs de la journée se jouent ; puis la journée suivante. */
+function finirJournee() {
+  for (const i of aJouerChamp(champ)) jouerSansMoiChamp(champ, i);
+  avancerChamp(champ);
+  garderChamp();
+}
+
+const ligneClub = (id) => { const eq = EQUIPE[id]; return `<span>${ecussonSVG(eq, 20)}<b>${eq.court}</b></span>`; };
+
+function htmlClassement(c) {
+  const cl = classementChamp(c);
+  return `<div class="poule grand-classement"><h4>Le classement · 2 points la victoire, aucun la défaite</h4>
+    <table><thead><tr><th></th><th></th><th>J</th><th>V</th><th>D</th><th>+/-</th><th>Pts</th></tr></thead><tbody>${cl.map((x) => `<tr class="${x.rang === 1 ? 'qualifie' : ''}${x.id === c.moi ? ' toi' : ''}"><td>${x.rang}</td><td class="club">${ligneClub(x.id)}</td><td>${x.j}</td><td>${x.v}</td><td>${x.d}</td><td>${x.diff > 0 ? '+' : ''}${x.diff}</td><td class="pts">${x.pts}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function htmlJournee(c, k) {
+  const j = c.journees[k];
+  return `<div class="poule"><h4>Journée ${k + 1} sur ${c.journees.length}</h4><table><tbody>${j.map((r) => {
+    const toi = r.a === c.moi || r.b === c.moi;
+    const sc = r.score ? `${r.score[0]} - ${r.score[1]}${r.enOr ? ' ★' : ''}` : '–';
+    return `<tr class="${toi ? 'toi' : ''}"><td class="club">${ligneClub(r.a)}</td><td class="pts">${sc}</td><td class="club">${ligneClub(r.b)}</td></tr>`;
+  }).join('')}</tbody></table></div>`;
+}
+
+function rendreChampionnat() {
+  const c = champ;
+  const m = matchDuJoueurChamp(c);
+  const adv = m && (m.a === c.moi ? m.b : m.a);
+  const cl = classementChamp(c);
+  const moi = cl.find((x) => x.id === c.moi);
+  $('championnat-texte').textContent = c.fini
+    ? (c.champion === c.moi ? `🏆 ${EQUIPE[c.moi].nom} est champion avec ${moi.pts} points !` : `🏆 ${EQUIPE[c.champion].nom} est champion. ${EQUIPE[c.moi].court} finit ${moi.rang === 1 ? '1er' : `${moi.rang}e`}.`)
+    : `Journée ${c.journee + 1} sur ${c.journees.length} · ${EQUIPE[c.moi].court} est ${moi.rang === 1 ? '1er' : `${moi.rang}e`} avec ${moi.pts} points · ${FORMATS_CHAMP[c.format]}`;
+  // Les onglets : le classement, la journée en cours, la précédente.
+  const onglets = [['classement', 'Le classement'], ['journee', c.fini ? 'La dernière journée' : 'La journée'], ...(c.journee > 0 && !c.fini ? [['avant', 'La précédente']] : [])];
+  $('championnat-onglets').innerHTML = onglets.map(([v, l]) => `<button data-v="${v}" class="${vueChamp === v ? 'oui' : ''}">${l}</button>`).join('');
+  $('championnat-corps').innerHTML = vueChamp === 'journee' ? htmlJournee(c, c.journee) : vueChamp === 'avant' ? htmlJournee(c, c.journee - 1) : htmlClassement(c);
+  const act = $('championnat-actions');
+  act.innerHTML = '';
+  const bouton = (txt, cls, f) => { const el = document.createElement('button'); el.className = `btn ${cls}`; el.innerHTML = txt; el.addEventListener('click', f); act.appendChild(el); };
+  if (m) bouton(`<b>Jouer la journée ${c.journee + 1}</b><small>${m.a === c.moi ? 'à domicile' : 'à l’extérieur'}, contre ${EQUIPE[adv].nom}</small>`, 'vert grand', jouerChampionnat);
+  bouton('<b>Statistiques</b>', 'bleu', () => montrerStats(c.stats, c.moi, () => { rendreChampionnat(); aller('championnat'); }));
+  if (c.fini) bouton('<b>Nouveau championnat</b>', 'vert', () => { champ = null; garderChamp(); ouvrirChampionnat(); });
+  else bouton('Abandonner le championnat', 'fin', () => { if (confirm('Abandonner ce championnat ?')) { champ = null; garderChamp(); infoChampionnat(); aller('menu'); } });
+  infoChampionnat();
+}
+
+function jouerChampionnat() {
+  const c = champ, r = matchDuJoueurChamp(c);
+  if (!r) return;
+  const moiA = r.a === c.moi;
+  const adv = moiA ? r.b : r.a;
+  const derniere = c.journee + 1 >= c.journees.length;
+  const noter = (res) => {
+    enregistrerChamp(c, r.i, { score: moiA ? res.score : [res.score[1], res.score[0]], enOr: res.enOr });
+    noterStats(c, res.resume);
+    finirJournee();
+  };
+  lancerMatch({
+    equipes: [c.moi, adv], controles: ['humain', 'ia'], niveaux: [1, c.niveau], minutes: c.minutes, salle: c.salle,
+    apres: (res, bouton) => {
+      noter(res);
+      const cl = classementChamp(champ), moi = cl.find((x) => x.id === champ.moi);
+      $('fin-titre').textContent = champ.fini && champ.champion === champ.moi ? 'Champion !' : res.vainqueur === 0 ? 'Victoire !' : 'Défaite';
+      $('fin-attente').textContent = `${derniere ? 'Classement final' : `Après la journée ${champ.journee}`} : ${moi.rang === 1 ? '1er' : `${moi.rang}e`} avec ${moi.pts} points.`;
+      bouton('Le classement', 'vert grand', () => { vueChamp = 'classement'; rendreChampionnat(); aller('championnat'); });
+      bouton('Menu', '', () => { infoChampionnat(); aller('menu'); });
+    },
+    // Abandonner un match : défaite 0-10.
+    abandon: () => { noter({ score: [0, 10], enOr: false, vainqueur: 1, resume: [] }); rendreChampionnat(); aller('championnat'); },
+  });
+}
+
+function brancherChampionnat() {
+  $('b-championnat').addEventListener('click', () => { son.reveiller(); ouvrirChampionnat(); });
+  $('championnat-retour').addEventListener('click', () => { infoChampionnat(); aller('menu'); });
+  $('championnat-onglets').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { vueChamp = b.dataset.v; rendreChampionnat(); } });
+  $('seg-format').addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) { conf.format = b.dataset.v; garder(); rendreEquipes(); } });
 }
 
 /* ------------------------------------------------------------------ */
@@ -944,6 +1057,8 @@ brancher();
 brancherEnLigne();
 brancherEntrainement();
 infoTournoi();
+brancherChampionnat();
+infoChampionnat();
 
 // Pour les essais (dans la console) : window.roucoulette.partie()
 // avancer(s) : fait passer s secondes d'un coup (quand la page est cachée, l'animation s'arrête).
