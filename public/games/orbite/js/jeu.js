@@ -3,6 +3,8 @@ import { MISSIONS, etat } from '../../../shared/orbite/campagne.js';
 import { Reseau } from './reseau.js';
 import { creerRendu } from './rendu3d.js';
 import { creerEditeur } from './editeur.js';
+import { creerAudio } from './audio.js';
+const audio = creerAudio();
 import { SERVEUR_JEUX } from '../../../shared/serveur.js';
 // En local : le serveur de dev ; en ligne : le serveur de jeux de l'arcade (Render), chemin /orbite.
 const adresseEnLigne = () => (['localhost', '127.0.0.1'].includes(location.hostname) || !SERVEUR_JEUX)
@@ -11,7 +13,7 @@ const adresseEnLigne = () => (['localhost', '127.0.0.1'].includes(location.hostn
 const THREE = globalThis.THREE || await import('../../../vendor/three/three.module.min.js');
 
 const $ = id => document.getElementById(id);
-const rendu = creerRendu(THREE, $('vue3d'), { W, H, UN, BA, placeLibre, detecte, CAP }), cv = rendu.canvas, mini2 = $('mini'), gm = mini2.getContext('2d');
+const rendu = creerRendu(THREE, $('vue3d'), { W, H, UN, BA, placeLibre, detecte, CAP, onSon: (n, d, p, a) => { if (!muet) audio.monde(n, d, p, a); } }), cv = rendu.canvas, mini2 = $('mini'), gm = mini2.getContext('2d');
 const COL = ['#4cc9f0', '#f25c54', '#d6a84a'], NOMF = { fer: 'Ligue de Fer', bosquet: 'Bosquet', echos: 'Échos', cendres: 'Cendres' };
 const lire = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v === null || v === undefined ? d : v; } catch { return d; } };
 const ecrire = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* stockage plein ou refusé */ } };
@@ -22,7 +24,8 @@ const MS = 180; // taille de la minicarte
 
 // ---------- son ----------
 let ac = null, muet = lire('orbite.muet', false); const dernier = {};
-function son(t) {
+function son(t) { if (!muet) audio.ui(t); }
+function sonAncien(t) {
   if (muet) return; const n = performance.now(); if (dernier[t] && n - dernier[t] < 120) return; dernier[t] = n;
   const P = { clic: [520, .05, 'sine'], ordre: [380, .06, 'triangle'], pret: [880, .14, 'sine'], alerte: [260, .2, 'square'], mort: [110, .18, 'sawtooth'], fin: [660, .5, 'triangle'] }[t]; if (!P) return;
   try {
@@ -31,7 +34,7 @@ function son(t) {
     o.connect(v); v.connect(ac.destination); o.start(); o.stop(ac.currentTime + P[1]);
   } catch { /* pas d'audio */ }
 }
-function majSon() { $('m-son').textContent = 'Son : ' + (muet ? 'non' : 'oui'); $('b-son').textContent = muet ? '🔇' : '🔊'; ecrire('orbite.muet', muet); }
+function majSon() { audio.muet(muet); if (!muet && s) { audio.debloquer(); audio.demarrerMusique(); } $('m-son').textContent = 'Son : ' + (muet ? 'non' : 'oui'); $('b-son').textContent = muet ? '🔇' : '🔊'; ecrire('orbite.muet', muet); }
 
 // ---------- écrans ----------
 const ECR = ['principal', 'escarmouche', 'campagne', 'ligne', 'brief', 'fin', 'editeur'];
@@ -46,6 +49,7 @@ function lancer(c) {
   cfg = c; mode = c.mode; mission = c.mission || null; ME = c.eq || 0; log = []; tours = []; pause = false; vit = 1; termine = false; sel = []; place = null; groupes = {}; snap = new Map(); msg = ''; obj = '';
   s = creer(c.graine, c.f0, c.f1, c.carte, c.n0 || 2, c.n1 || 2, c.opt || {}); rejeu = c.rejeu ? { ...c.rejeu, i: 0 } : null;
   demo = null; rendu.menu(false); ecran(null); $('b-vit').textContent = '×1'; $('b-pause').textContent = '⏸'; ciblage = false; sigC = '';
+  audio.debloquer(); if (!muet) audio.demarrerMusique();
   rendu.init(s); document.body.dataset.fac = s.fac[ME]; const q = s.ent.find(e => BA[e.k] && BA[e.k].qg && e.eq === ME); rendu.centrer(q.x / 1000, q.y / 1000);
 }
 function config() { return { graine: cfg.graine, f0: cfg.f0, f1: cfg.f1, carte: cfg.carte, n0: cfg.n0, n1: cfg.n1, opt: cfg.opt }; }

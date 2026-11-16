@@ -1,6 +1,6 @@
 // ORBITE NOIRE — rendu 3D (Three.js). THREE est passé en paramètre : global r128 (aperçu) ou module r170 (jeu).
 // Le rendu ne fait que LIRE l'état du moteur (aucune règle de jeu ici).
-export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre, detecte, CAP: CAPS = {} }) {
+export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre, detecte, CAP: CAPS = {}, onSon = null }) {
   const REV = parseInt(THREE.REVISION, 10) || 128, LK = REV >= 155 ? Math.PI : 1, V3 = THREE.Vector3;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lisse = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
   const TC = [0x4cc9f0, 0xf25c54, 0xd6a84a];
@@ -765,7 +765,7 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre, detecte, CAP
 
   /** Une explosion : boule de feu, fumée, lumière, débris, onde, trace au sol. Le style suit la faction. */
   function explosion(x, y, z, gros, fac = 'fer') {
-    secousse(x, z, gros ? .4 : .07);
+    secousse(x, z, gros ? .4 : .07); sonMonde(fac === 'echos' ? 'cristal' : 'explosion', x, z, gros);
     if (fac === 'echos') { // cristal qui se brise : implosion lumineuse, éclats, pas de fumée
       eclair(x, y + 1, z, 0x9f7aff, gros ? 120 : 40, gros ? .7 : .35); flash(x, y + .6, z, gros ? 3.5 : 1.6, 0xffffff, .2); flash(x, y + .6, z, gros ? 5 : 2.4, 0x8a6aff, .5);
       onde(x, y + .1, z, gros ? 4 : 2, 0x9fe8ff, .45); onde(x, y + .6, z, gros ? 2.5 : 1.2, 0xb79cff, .3);
@@ -796,8 +796,11 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre, detecte, CAP
   }
 
   /** Un tir, selon qui tire : balles et obus (Ligue), épines en cloche (Bosquet), rayons (Échos). */
+  /** Un son placé dans le monde : distance à la caméra et position gauche/droite à l'écran. */
+  function sonMonde(nom, x, z, arg) { if (!onSon) return; const v = new V3(x, 0, z).project(cam); onSon(nom, Math.hypot(x - cible.x, z - cible.z), v.x, arg); }
   function tir(k, eq, A, Bp, lourd, distance) {
-    const fac = facDe(k), d = new V3().subVectors(Bp, A), L = d.length() || .01, dirN = d.clone().normalize();
+    const fac = facDe(k); sonMonde('tir_' + fac, A.x, A.z, lourd);
+    const d = new V3().subVectors(Bp, A), L = d.length() || .01, dirN = d.clone().normalize();
     if (fac === 'fer') {
       const c = 0xffd27a, bouche = A.clone().addScaledVector(dirN, .45);
       flash(bouche.x, bouche.y, bouche.z, lourd ? 1.1 : .45, 0xffe0a0, .08);
@@ -889,7 +892,7 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre, detecte, CAP
       if (isB && vu && !e.cons && e.pv < e.max * .6) { u.nf = (u.nf || 0) - dt; if (u.nf <= 0) { const grave = e.pv < e.max * .3, fac = facDe(e.k), px = x + R() * u.bw * .5, pz = z + R() * u.bw * .5, py = y0 + u.hb * .7; u.nf = grave ? .18 : .4; if (fac === 'echos') etincelles(new V3(px, py, pz), 0x9fe8ff, 2, 1.5); else { fumee(px, py, pz, grave ? 1.6 : 1.1, 2.4, fac === 'bosquet' ? 0x4a4232 : 0x2a2826, 1, .5); if (grave) feu(px, py - .2, pz, fac === 'bosquet' ? .9 : 1.1, .5, fac === 'bosquet' ? 0xc8ff6a : 0xffd070, fac === 'bosquet' ? 0x3a8a10 : 0xff4a10); } } }
       if (e.feu > 0 && vu) { u.nb = (u.nb || 0) - dt; if (u.nb <= 0) { u.nb = .12; feu(x + R() * .4, y0 + .3 + Math.random() * u.hb * .5, z + R() * .4, isB ? 1 : .55, .35, 0xffd070, 0xff3a00); } }
       // capacité active : un éclair au déclenchement, une aura tant qu'elle dure
-      if (e.abT && !u.abT && vu) { const c = { vitesse: 0x7ff3ff, portee: 0xffe36e, cadence: 0xff9a40, garde: 0x9dff7a }[(CAPS[e.k] || [])[1]] || 0xffffff; flash(x, y0 + 1, z, 2.4, c, .4); onde(x, y0 + .1, z, 2, c, .5); if (!u.aura) { u.aura = sprite(c, 1.8, .4); u.aura.position.y = .8; u.g.add(u.aura); } u.aura.material.color.set(lin(c)); }
+      if (e.abT && !u.abT && vu) { const c = { vitesse: 0x7ff3ff, portee: 0xffe36e, cadence: 0xff9a40, garde: 0x9dff7a }[(CAPS[e.k] || [])[1]] || 0xffffff; flash(x, y0 + 1, z, 2.4, c, .4); onde(x, y0 + .1, z, 2, c, .5); sonMonde('capacite', x, z); if (!u.aura) { u.aura = sprite(c, 1.8, .4); u.aura.position.y = .8; u.g.add(u.aura); } u.aura.material.color.set(lin(c)); }
       u.abT = e.abT; if (u.aura) { u.aura.visible = !!e.abT; if (e.abT) u.aura.material.opacity = .25 + .15 * Math.sin(t * 10); }
       if (u.bulle) u.bulle.material.opacity = e.bc > 0 && e.rg < 10 ? (.06 + .22 * (e.bc / e.bm)) * (1 - e.rg / 10) : 0; // le bouclier ne se voit que quand il encaisse
       // tirs
@@ -901,7 +904,7 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre, detecte, CAP
           tir(e.k, e.eq, A, Bp, lourd, Math.hypot(tg.x - e.x, tg.y - e.y) / 1000);
         }
       }
-      if (e.pc !== undefined && e.pc > u.lastPc + 500 && vu) { const c = e.k === 'marechal' || e.k === 'pyrarque' ? 0xff7a40 : e.k === 'ancien' ? 0x9dff7a : 0x7ff3ff; if (e.k === 'pyrarque') for (let i = 0; i < 16; i++) { const a = i / 16 * 6.283; feu(x + Math.cos(a) * 3, y0 + .3, z + Math.sin(a) * 3, 1.6, .8, 0xffe080, 0xff3a00); } onde(x, y0 + .1, z, e.k === 'marechal' ? 6 : 10, c, .8); flash(x, y0 + 1, z, 5, c, .5); }
+      if (e.pc !== undefined && e.pc > u.lastPc + 500 && vu) { const c = e.k === 'marechal' || e.k === 'pyrarque' ? 0xff7a40 : e.k === 'ancien' ? 0x9dff7a : 0x7ff3ff; if (e.k === 'pyrarque') for (let i = 0; i < 16; i++) { const a = i / 16 * 6.283; feu(x + Math.cos(a) * 3, y0 + .3, z + Math.sin(a) * 3, 1.6, .8, 0xffe080, 0xff3a00); } onde(x, y0 + .1, z, e.k === 'marechal' ? 6 : 10, c, .8); flash(x, y0 + 1, z, 5, c, .5); sonMonde('pouvoir', x, z); }
       u.lastPc = e.pc || 0;
       // barres de vie
       const frac = e.pv / e.max, montre = !!(vu && !orb && (frac < .999 || selSet.has(e.id) || e.cons)), by = u.g.position.y + u.hb + (u.flot ? .1 : 0);
