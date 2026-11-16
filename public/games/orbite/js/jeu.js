@@ -1,4 +1,4 @@
-import { W, H, UN, BA, FA, UPG, creer, step, cmd, ia, jouerTour, hash, placeLibre } from '../../../shared/orbite/moteur.js';
+import { W, H, UN, BA, FA, UPG, creer, step, cmd, ia, jouerTour, hash, placeLibre, population, popDe } from '../../../shared/orbite/moteur.js';
 import { MISSIONS, etat } from '../../../shared/orbite/campagne.js';
 import { Reseau } from './reseau.js';
 import { creerRendu } from './rendu3d.js';
@@ -120,17 +120,17 @@ const estOuv = e => UN[e.k] && UN[e.k].ouv;
 const proj = e => rendu.proj(e.x, e.y, BA[e.k] ? 1 : .6);
 
 // ---------- interface (panneaux façon STR) ----------
-const ICO = { ouvrier: '🔧', fantassin: '🪖', tireur: '🎯', blinde: '🚜', marechal: '⭐', semeur: '🌱', rejeton: '🐛', epine: '🌵', colosse: '🦣', ancien: '🌳', tisseur: '🕸️', eclat: '💎', pulse: '🔮', sentinelle: '🗿', oracle: '👁️', gardien: '👾', porteur: '⛏️', tison: '🔥', lanceur: '☄️', brasero: '🌋', pyrarque: '👹', fournaise: '🏭', atre: '🔥', creuset: '⚗️', geyser: '♨️',
+const ICO = { ouvrier: '🔧', fantassin: '🪖', tireur: '🎯', blinde: '🚜', marechal: '⭐', semeur: '🌱', rejeton: '🐛', epine: '🌵', colosse: '🦣', ancien: '🌳', tisseur: '🕸️', eclat: '💎', pulse: '🔮', sentinelle: '🗿', oracle: '👁️', gardien: '👾', entrepot: '📦', terrier: '🕳️', diapason: '🎐', braisier: '🏮', porteur: '⛏️', tison: '🔥', lanceur: '☄️', brasero: '🌋', pyrarque: '👹', fournaise: '🏭', atre: '🔥', creuset: '⚗️', geyser: '♨️',
   noyau: '🏭', caserne: '🏛️', atelier: '⚙️', tour: '🗼', coeur: '🌿', ruche: '🐝', serre: '🏡', ronce: '🌹', nexus: '🔷', foyer: '🔥', forge: '🔨', phare: '💡', att: '⚔️', arm: '🛡️', rec: '⛏️' };
-const NOM = { ouvrier: 'Ouvrier', fantassin: 'Fantassin', tireur: 'Tireur', blinde: 'Blindé', marechal: 'Maréchal', semeur: 'Semeur', rejeton: 'Rejeton', epine: 'Épine', colosse: 'Colosse', ancien: 'Ancien', tisseur: 'Tisseur', eclat: 'Éclat', pulse: 'Pulse', sentinelle: 'Sentinelle', oracle: 'Oracle', gardien: 'Gardien', porteur: 'Porteur', tison: 'Tison', lanceur: 'Lanceur', brasero: 'Brasero', pyrarque: 'Pyrarque', fournaise: 'Fournaise', atre: 'Âtre', creuset: 'Creuset', geyser: 'Geyser',
+const NOM = { ouvrier: 'Ouvrier', fantassin: 'Fantassin', tireur: 'Tireur', blinde: 'Blindé', marechal: 'Maréchal', semeur: 'Semeur', rejeton: 'Rejeton', epine: 'Épine', colosse: 'Colosse', ancien: 'Ancien', tisseur: 'Tisseur', eclat: 'Éclat', pulse: 'Pulse', sentinelle: 'Sentinelle', oracle: 'Oracle', gardien: 'Gardien', entrepot: 'Entrepôt', terrier: 'Terrier', diapason: 'Diapason', braisier: 'Braisier', porteur: 'Porteur', tison: 'Tison', lanceur: 'Lanceur', brasero: 'Brasero', pyrarque: 'Pyrarque', fournaise: 'Fournaise', atre: 'Âtre', creuset: 'Creuset', geyser: 'Geyser',
   noyau: 'Noyau', caserne: 'Caserne', atelier: 'Atelier', tour: 'Tour', coeur: 'Cœur', ruche: 'Ruche', serre: 'Serre', ronce: 'Ronce', nexus: 'Nexus', foyer: 'Foyer', forge: 'Forge', phare: 'Phare' };
 const CSSC = ['#4cc9f0', '#f25c54', '#d6a84a'], KEYS = 'qweasdzxc';
 const img = (k, eq = ME) => { try { return `<img src="${rendu.portrait(k, eq)}" alt="">`; } catch (err) { return ICO[k] || '?'; } }; // portrait 3D (repli : emoji)
 function fabriquerCartes() {
   const o = mine(), L = []; if (!o.length) return L;
   const ouv = o.some(estOuv), b0 = o.find(e => BA[e.k] && BA[e.k].prod && !e.cons), qg = o.find(e => BA[e.k] && BA[e.k].qg), ch = o.find(e => UN[e.k] && UN[e.k].ch), unites = o.filter(e => !BA[e.k]);
-  if (ouv) for (const b of FA[s.fac[ME]].bat) L.push({ ic: img(b), lb: NOM[b], co: BA[b].cout, ok: s.pr[ME] >= BA[b].cout, act: () => { place = b; ciblage = false; } });
-  if (b0) for (const u of BA[b0.k].prod) L.push({ ic: img(u), lb: NOM[u], co: UN[u].cout + (UN[u].en ? '+' + UN[u].en + '⚡' : ''), ok: s.pr[ME] >= UN[u].cout && (!UN[u].en || s.en[ME] >= UN[u].en) && !(UN[u].ch && s.ent.some(x => x.eq === ME && (x.k === u || x.file.includes(u)))), act: () => ordre(o.filter(e => BA[e.k] && BA[e.k].prod && !e.cons).map(e => e.id), { t: 'prod', k: u }) });
+  if (ouv) for (const b of [...FA[s.fac[ME]].bat, FA[s.fac[ME]].ravit]) L.push({ ic: img(b), lb: NOM[b], co: BA[b].cout, ok: s.pr[ME] >= BA[b].cout, act: () => { place = b; ciblage = false; } });
+  if (b0) for (const u of BA[b0.k].prod) L.push({ ic: img(u), lb: NOM[u], co: UN[u].cout + (UN[u].en ? '+' + UN[u].en + '⚡' : ''), ok: s.pr[ME] >= UN[u].cout && (!UN[u].en || s.en[ME] >= UN[u].en) && (() => { const [pu, pm] = population(s, ME); return pu + popDe(u) <= pm; })() && !(UN[u].ch && s.ent.some(x => x.eq === ME && (x.k === u || x.file.includes(u)))), act: () => ordre(o.filter(e => BA[e.k] && BA[e.k].prod && !e.cons).map(e => e.id), { t: 'prod', k: u }) });
   if (qg) for (const u of Object.keys(UPG)) { const l = s.up[ME][u]; L.push({ ic: ICO[u], lb: `${UPG[u].nom} ${l}/3`, co: l < 3 ? `${UPG[u].pr * (l + 1)}+${UPG[u].en * (l + 1)}⚡` : 'max', ok: l < 3 && s.pr[ME] >= UPG[u].pr * (l + 1) && s.en[ME] >= UPG[u].en * (l + 1), act: () => ordre([qg.id], { t: 'up', k: u }) }); }
   if (unites.length && !ouv) L.push({ ic: '⚔️', lb: 'Attaquer', co: 'clic', ok: true, act: () => { ciblage = true; place = null; } });
   if (unites.length) L.push({ ic: '⏹', lb: 'Stop', co: '', ok: true, act: () => ordre(unites.map(e => e.id), { t: 'stop' }) });
@@ -161,7 +161,7 @@ function majInfo() {
 }
 function majHud() {
   const nu = s.ent.filter(e => e.eq === ME && !BA[e.k]).length;
-  $('r-pr').textContent = '💎 ' + s.pr[ME]; $('r-en').textContent = '⚡ ' + s.en[ME]; $('r-un').textContent = '👤 ' + nu;
+  $('r-pr').textContent = '💎 ' + s.pr[ME]; $('r-en').textContent = '⚡ ' + s.en[ME]; { const [pu, pm] = population(s, ME); $('r-un').textContent = '👤 ' + pu + ' / ' + pm; $('r-un').style.color = pu >= pm ? '#ff7a6a' : ''; }
   $('obj').textContent = obj ? (mission ? `Mission ${mission.id} — ` : '') + obj : '';
   let m = ''; if (pause) m = 'PAUSE'; else if (mode === 'rejeu') m = 'REJEU — vision totale'; else if (mode === 'ligne') m = `En ligne — équipe ${ME + 1} (${NOMF[s.fac[ME]]})`;
   if (msg && performance.now() < msgT) m = msg; $('msg').textContent = m; $('msg').style.display = m ? 'block' : 'none';
@@ -192,6 +192,8 @@ cv.oncontextmenu = e => {
   const en = s.ent.find(o => o.eq !== ME && o.pv > 0 && vis(o.x, o.y) === 2 && Math.hypot(o.x - X, o.y - Y) < (BA[o.k] ? 1500 : 700));
   if (en) return ordre(sel, { t: 'att', c: en.id });
   let mi = rendu.mineSous(e.offsetX, e.offsetY); if (mi < 0 || !(s.mines[mi].q > 0)) mi = s.mines.findIndex(m => m.q > 0 && vis(m.x, m.y) > 0 && Math.hypot(m.x - X, m.y - Y) < 2000);
+  const bats = mine().filter(o => BA[o.k] && BA[o.k].prod); // bâtiments seuls : point de ralliement
+  if (bats.length && bats.length === mine().length) { son('ordre'); return ordre(bats.map(o => o.id), { t: 'ral', x: mi >= 0 ? s.mines[mi].x : X, y: mi >= 0 ? s.mines[mi].y : Y }); }
   if (mi >= 0) return ordre(mine().filter(estOuv).map(o => o.id), { t: 'rec', m: mi });
   ordre(sel, { t: 'move', x: Math.max(500, Math.min(W * 1000 - 500, X)), y: Math.max(500, Math.min(H * 1000 - 500, Y)) });
 };

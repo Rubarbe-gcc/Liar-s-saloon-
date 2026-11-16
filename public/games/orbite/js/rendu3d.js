@@ -650,6 +650,36 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre }) {
       const j = sprite(0xffa040, 1.4, .6); j.position.y = 1.7; g.add(j); u.an.push(t => { const k = (t * .8) % 1; j.position.y = 1.6 + k * .9; j.material.opacity = .55 * (1 - k); j.scale.setScalar(.8 + k * 1.2); });
       Ring(g, 1, eq); u.hb = 2.0; u.bw = 1.4;
     },
+    // --- bâtiments de ravitaillement (population)
+    entrepot(g, eq, u) {
+      P(g, box(2.1, .14, 2.1), BETON, 0, .07, 0);
+      for (const [x, z, y, c] of [[-.5, -.45, .3, 0], [.5, -.45, .3, 1], [-.5, .5, .3, 1], [-.5, -.45, .82, 2], [.5, .5, .3, 0]]) { P(g, box(.9, .5, .85), c === 1 ? ACIER : c === 2 ? PEINT(eq) : ACIER2, x, y, z); for (let i = 0; i < 4; i++) P(g, box(.02, .44, .86), JOINT, x - .3 + i * .2, y, z); }
+      P(g, box(.9, .04, .05), JAUNE, .5, .58, .93); P(g, cyl(.03, .03, 1.3, 6), JOINT, .85, .75, -.85); P(g, box(.5, .06, .06), JAUNE, .65, 1.38, -.85); P(g, sph(.05, 6, 4), glow(TC[eq], 1.8), .85, 1.42, -.85, { ns: true });
+      Ring(g, 1.45, eq); u.hb = 1.6; u.bw = 1.8;
+    },
+    terrier(g, eq, u) {
+      P(g, sph(1.0, 14, 10), BOIS2, 0, 0, 0, { s: [1.05, .55, 1.05] }); P(g, sph(.8, 12, 8), MOUSSE, .1, .3, -.1, { s: [1, .45, 1] });
+      P(g, cyl(.32, .4, .2, 12), JOINT, 0, .28, .72, { r: [1.1, 0, 0] }); P(g, cyl(.27, .27, .05, 12), SEVE, 0, .3, .8, { r: [1.1, 0, 0], ns: true });
+      for (let i = 0; i < 6; i++) { const a = i * 1.05 + .4; P(g, cone(.08, .6, 5), BOIS2, Math.cos(a) * .95, .1, Math.sin(a) * .95, { r: [Math.sin(a) * 1.3, 0, -Math.cos(a) * 1.3] }); }
+      for (let i = 0; i < 5; i++) { const a = i * 1.26; P(g, sph(.06, 6, 4), SEVE, Math.cos(a) * .55, .55, Math.sin(a) * .55, { ns: true }); }
+      P(g, cone(.12, .4, 6), glow(TC[eq], 1.2), 0, .78, -.1);
+      Ring(g, 1.3, eq); u.hb = 1.3; u.bw = 1.8;
+    },
+    diapason(g, eq, u) {
+      P(g, cyl(.8, .9, .2, 8), CADRE, 0, .1, 0, { r: [0, Math.PI / 8, 0] }); P(g, cyl(.82, .82, .03, 8), OR, 0, .21, 0, { r: [0, Math.PI / 8, 0] });
+      P(g, box(.9, .16, .3), OR, 0, .5, 0); P(g, box(.2, .4, .25), OR, 0, .3, 0);
+      for (const x of [-1, 1]) { P(g, oct(.2), CRIS, x * .38, 1.3, 0, { s: [.7, 4.2, .7] }); P(g, box(.12, .1, .3), OR, x * .38, .6, 0); }
+      const r = add(g, tor(.55, .03, 24), glow(TC[eq], 1.4), 0, 1.25, 0, { ns: true }), h = sprite(0x9fe8ff, 1.6, .3); h.position.y = 1.3; g.add(h);
+      u.an.push(t => { r.rotation.x = Math.PI / 2 + Math.sin(t * 2) * .2; r.scale.setScalar(1 + .08 * Math.sin(t * 6)); h.material.opacity = .2 + .15 * Math.abs(Math.sin(t * 3)); });
+      Ring(g, 1.1, eq); u.hb = 2.3; u.bw = 1.6;
+    },
+    braisier(g, eq, u) {
+      P(g, cyl(.85, .95, .25, 8), BASALTE, 0, .12, 0); for (let i = 0; i < 4; i++) { const a = i * 1.57 + .78; P(g, box(.22, .7, .22), BASALTE, Math.cos(a) * .5, .55, Math.sin(a) * .5, { r: [Math.sin(a) * .2, 0, -Math.cos(a) * .2] }); }
+      P(g, cyl(.75, .45, .45, 10), CUIVRE, 0, 1.0, 0); P(g, cyl(.68, .68, .05, 14), LAVE, 0, 1.2, 0, { ns: true }); P(g, tor(.72, .05, 16), BASALTE, 0, 1.22, 0, { r: [Math.PI / 2, 0, 0] });
+      P(g, sph(.08, 8, 6), glow(TC[eq], 1.6), 0, .45, .62, { ns: true });
+      const f = sprite(0xff7a2a, 1.8, .5); f.position.y = 1.45; g.add(f); u.an.push(t => { f.material.opacity = .35 + .15 * Math.sin(t * 7) * Math.sin(t * 3.1); });
+      Ring(g, 1.1, eq); u.hb = 1.8; u.bw = 1.6;
+    },
   };
 
   // ---------- effets ----------
@@ -658,10 +688,10 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre }) {
   const plusTard = (delai, f) => addFx(null, delai, () => {}, f);
   const mb = (c, op = 1) => new THREE.MeshBasicMaterial({ color: lin(c), transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false });
   const R = () => Math.random() - .5;
-  const FER_K = new Set(['ouvrier', 'fantassin', 'tireur', 'blinde', 'marechal', 'noyau', 'caserne', 'atelier', 'tour']);
-  const BOS_K = new Set(['semeur', 'rejeton', 'epine', 'colosse', 'ancien', 'coeur', 'ruche', 'serre', 'ronce']);
-  const ECH_K = new Set(['tisseur', 'eclat', 'pulse', 'sentinelle', 'oracle', 'nexus', 'foyer', 'forge', 'phare']);
-  const CEN_K = new Set(['porteur', 'tison', 'lanceur', 'brasero', 'pyrarque', 'fournaise', 'atre', 'creuset', 'geyser']);
+  const FER_K = new Set(['ouvrier', 'fantassin', 'tireur', 'blinde', 'marechal', 'noyau', 'caserne', 'atelier', 'tour', 'entrepot']);
+  const BOS_K = new Set(['semeur', 'rejeton', 'epine', 'colosse', 'ancien', 'coeur', 'ruche', 'serre', 'ronce', 'terrier']);
+  const ECH_K = new Set(['tisseur', 'eclat', 'pulse', 'sentinelle', 'oracle', 'nexus', 'foyer', 'forge', 'phare', 'diapason']);
+  const CEN_K = new Set(['porteur', 'tison', 'lanceur', 'brasero', 'pyrarque', 'fournaise', 'atre', 'creuset', 'geyser', 'braisier']);
   const facDe = k => FER_K.has(k) ? 'fer' : BOS_K.has(k) ? 'bosquet' : ECH_K.has(k) ? 'echos' : CEN_K.has(k) ? 'cendres' : 'neutre';
   const fumeeTex = canvasTex(64, 64, (c, w, h) => { const rnd = alea(77); for (let i = 0; i < 9; i++) { const x = w / 2 + (rnd() - .5) * 22, y = h / 2 + (rnd() - .5) * 22, r = 12 + rnd() * 12, g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, w, h); } });
   const brulTex = canvasTex(128, 128, (c, w, h) => { const rnd = alea(91); const g = c.createRadialGradient(64, 64, 6, 64, 64, 62); g.addColorStop(0, 'rgba(0,0,0,.85)'); g.addColorStop(.55, 'rgba(10,6,4,.6)'); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(0, 0, w, h);
@@ -805,6 +835,8 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre }) {
     scene.add(g, u.bg, u.fg); return u;
   }
   const dir = (a, b) => Math.atan2(b.x - a.x, b.z - a.z);
+  const drapeau = new THREE.Group(); drapeau.visible = false; scene.add(drapeau);
+  add(drapeau, cyl(.03, .03, 1.4, 6), MT(0xdddddd, { metalness: .6 }), 0, .7, 0, { ns: true }); add(drapeau, box(.45, .28, .02), glow(0x7dff7d, 1.2), .24, 1.25, 0, { ns: true }); add(drapeau, tor(.45, .03, 24), glow(0x7dff7d, 1.4), 0, .05, 0, { r: [Math.PI / 2, 0, 0], ns: true });
   function sync(s, C, dt, t) {
     const idx = new Map(); for (const e of s.ent) idx.set(e.id, e);
     const v = s.vis[C.ME], selSet = new Set(C.sel);
@@ -848,6 +880,8 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre }) {
       if (u.vu) { const p = u.g.position, fac = facDe(u.k); if (BA[u.k]) { effondrement(p.x, p.y, p.z, fac, u.bw || 2); onde(p.x, p.y + .1, p.z, 7, 0xffc080, .8); } else explosion(p.x, p.y, p.z, UN[u.k] && UN[u.k].pv > 200, fac); }
       scene.remove(u.g, u.bg, u.fg, u.pool); ents.delete(id);
     }
+    // point de ralliement du bâtiment sélectionné
+    { const b = C.sel.map(id => idx.get(id)).find(e => e && e.ral && e.eq === C.ME); drapeau.visible = !!b; if (b) { const x = b.ral.x / 1000, z = b.ral.y / 1000; drapeau.position.set(x, haut(x, z), z); drapeau.children[2].rotation.y = t * 2; } }
     // anneaux de sélection
     for (const [id, m] of anneaux) if (!selSet.has(id) || !ents.has(id)) { scene.remove(m); anneaux.delete(id); }
     for (const id of selSet) { const u = ents.get(id); if (!u) continue; let m = anneaux.get(id); if (!m) { m = new THREE.Mesh(ringSel, new THREE.MeshBasicMaterial({ color: lin(0x7dff7d), transparent: true, opacity: .95, depthWrite: false, side: THREE.DoubleSide })); m.rotation.x = -Math.PI / 2; m.renderOrder = 5; m.add(new THREE.Mesh(circG, new THREE.MeshBasicMaterial({ color: lin(0x7dff7d), transparent: true, opacity: .14, depthWrite: false, blending: THREE.AdditiveBlending }))); const r = BA[u.k] ? (BA[u.k].qg ? 2.3 : u.bw * .75) : (UN[u.k].pv > 200 ? .85 : .55); m.scale.setScalar(r); scene.add(m); anneaux.set(id, m); } m.position.set(u.g.position.x, haut(u.px, u.pz) + .08, u.g.position.z); m.visible = u.g.visible; }

@@ -63,7 +63,24 @@ Object.assign(BA, {
 });
 UN.porteur.ouv = 1;
 FA.cendres = { qg: 'fournaise', ouv: 'porteur', bat: ['atre', 'creuset', 'geyser'], u: ['tison', 'lanceur', 'brasero'] };
-function hit(s, c, d, k) { c.last = k.eq; if ((UN[k.k] || BA[k.k] || {}).brule) c.feu = Math.max(c.feu || 0, 60); d = Math.max(1, Math.floor(d * 10 / (10 + s.up[c.eq].arm))); if (c.bc > 0) { const a = Math.min(c.bc, d); c.bc -= a; d -= a; } c.pv -= d; c.rg = 0; }
+// population : chaque unité occupe de la place ; le QG en donne 10, chaque bâtiment de ravitaillement 8 (100 au plus)
+Object.assign(BA, {
+  entrepot: { pv: 220, cout: 100, tc: 160, vue: 4000, pop: 8 },   // Ligue de Fer
+  terrier:  { pv: 200, cout: 100, tc: 160, vue: 4000, pop: 8, enr: 1 }, // Bosquet
+  diapason: { pv: 180, cout: 100, tc: 160, vue: 4000, pop: 8 },   // Échos
+  braisier: { pv: 200, cout: 100, tc: 160, vue: 4000, pop: 8 },   // Cendres
+});
+for (const k of ['noyau', 'coeur', 'nexus', 'fournaise']) BA[k].pop = 10;
+FA.fer.ravit = 'entrepot'; FA.bosquet.ravit = 'terrier'; FA.echos.ravit = 'diapason'; FA.cendres.ravit = 'braisier';
+export const POP_MAX = 100;
+export const popDe = k => (UN[k].ch ? 4 : UN[k].pv >= 250 ? 3 : 1);
+/** [population utilisée (files comprises), population disponible] d'une équipe. */
+export function population(s, eq) {
+  let u = 0, m = 0;
+  for (const e of s.ent) if (e.eq === eq && e.pv > 0) { if (UN[e.k]) u += popDe(e.k); else { if (!e.cons) m += BA[e.k].pop || 0; for (const k of e.file) u += popDe(k); } }
+  return [u, Math.min(POP_MAX, m)];
+}
+function hit(s, c, d, k) { c.last = k.eq; if ((UN[k.k] || BA[k.k] || {}).brule) c.feu = Math.max(c.feu || 0, 60); d = Math.max(1, Math.floor(d * 10 / (10 + s.up[c.eq].arm))); if (c.bc > 0) { const perce = FAC_U[k.k] === 'fer' || k.k === 'tour', ds = perce ? Math.floor(d * 3 / 2) : d, a = Math.min(c.bc, ds); c.bc -= a; d = Math.max(0, d - (perce ? Math.ceil(a * 2 / 3) : a)); } c.pv -= d; c.rg = 0; } // Ligue de Fer : munitions perforantes (+50 % sur les boucliers)
 function regen(s, e) {
   const d = UN[e.k] || BA[e.k];
   if (e.bm) { if (e.rg < 60) e.rg++; else if (e.bc < e.bm && s.tick % 2 === 0) e.bc++; }
@@ -212,7 +229,7 @@ function occuper(s, e, v) { for (const i of emprise(e.k, e.x, e.y)) s.g.occ[i] =
 
 
 // réglage d'équilibre : PV des unités par faction (pourcents), mesuré IA contre IA sur les 6 cartes avec le terrain
-export const PV_FAC = { fer: 128, bosquet: 92, echos: 110, cendres: 87 };
+export const PV_FAC = { fer: 128, bosquet: 92, echos: 107, cendres: 87 };
 const FAC_U = {}; for (const [f, d] of Object.entries(FA)) for (const k of [d.ouv, ...d.u]) FAC_U[k] = f;
 FAC_U.marechal = 'fer'; FAC_U.ancien = 'bosquet'; FAC_U.oracle = 'echos'; FAC_U.pyrarque = 'cendres';
 export function ajout(s, eq, k, x, y, fait = 1) {
@@ -312,7 +329,11 @@ function bat(s, e) {
   if (b.deg) { const c = cible(s, e, b.pt); if (c && !e.cd) { hit(s, c, b.deg, e); e.cd = b.cd; e.tg = c.id; e.ht = s.tick; } return; }
   if (e.file.length && ++e.prog >= UN[e.file[0]].tp) {
     e.prog = 0; const k = e.file.shift(), dx = e.eq ? -1 : 1;
-    ajout(s, e.eq, k, e.x + dx * (1800 + (s.n % 5) * 200), e.y + ((s.n % 3) - 1) * 600);
+    const n = ajout(s, e.eq, k, e.x + dx * (1800 + (s.n % 5) * 200), e.y + ((s.n % 3) - 1) * 600);
+    // ralliement : vers le point choisi ; un ouvrier part récolter (la mine du point, sinon la plus proche)
+    const p = e.ral || n, mi = UN[k].ouv ? s.mines.map((m, i) => i).filter(i => s.mines[i].q > 0).sort((a, b) => d2(s.mines[a], p) - d2(s.mines[b], p))[0] : undefined;
+    if (mi !== undefined && (!e.ral || d2(s.mines[mi], e.ral) <= 3000 * 3000 || !e.ral)) n.ordre = { t: 'rec', m: mi };
+    else if (e.ral) n.ordre = { t: 'am', x: e.ral.x, y: e.ral.y };
   }
 }
 function sep(s) {
@@ -397,7 +418,7 @@ export function cmd(s, eq, ids, c) {
     const e = s.ent.find(x => x.id === id && x.eq === eq && x.pv > 0); if (!e) continue;
     if (c.t === 'prod') {
       const u = UN[c.k], b = BA[e.k];
-      if (b && b.prod && b.prod.includes(c.k) && !e.cons && s.pr[eq] >= u.cout && (!u.en || s.en[eq] >= u.en) && e.file.length < 5 && !(u.ch && s.ent.some(x => x.eq === eq && (x.k === c.k || x.file.includes(c.k))))) { s.pr[eq] -= u.cout; s.en[eq] -= u.en || 0; e.file.push(c.k); }
+      if (b && b.prod && b.prod.includes(c.k) && !e.cons && s.pr[eq] >= u.cout && (!u.en || s.en[eq] >= u.en) && e.file.length < 5 && !(u.ch && s.ent.some(x => x.eq === eq && (x.k === c.k || x.file.includes(c.k)))) && (() => { const [pu, pm] = population(s, eq); return pu + popDe(c.k) <= pm; })()) { s.pr[eq] -= u.cout; s.en[eq] -= u.en || 0; e.file.push(c.k); }
     } else if (c.t === 'bat') {
       const b = BA[c.k];
       const x = nombre(c.x) ? Math.round(Math.max(1500, Math.min(46500, c.x)) / 1000) * 1000 : 0, y = nombre(c.y) ? Math.round(Math.max(1500, Math.min(46500, c.y)) / 1000) * 1000 : 0;
@@ -407,6 +428,7 @@ export function cmd(s, eq, ids, c) {
       if (l < 3 && s.pr[eq] >= g.pr * (l + 1) && s.en[eq] >= g.en * (l + 1)) { s.pr[eq] -= g.pr * (l + 1); s.en[eq] -= g.en * (l + 1); s.up[eq][c.k]++; }
       break;
     } else if (c.t === 'pouv') { pouvoir(s, e);
+    } else if (c.t === 'ral') { if (BA[e.k] && BA[e.k].prod && nombre(c.x) && nombre(c.y)) e.ral = { x: Math.max(500, Math.min(47500, Math.trunc(c.x))), y: Math.max(500, Math.min(47500, Math.trunc(c.y))) };
     } else if (c.t === 'stop') { if (!BA[e.k]) e.ordre = null;
     } else if (!BA[e.k]) { const o = ordreNet(s, c); if (o) { e.ordre = o; e.w = 0; } }
   }
@@ -436,6 +458,8 @@ export function ia(s, eq) {
   const nb = mi.filter(e => BA[e.k] && !BA[e.k].qg).length;
   if (nb < L.nb && ou.length >= 4 && !ou.some(o => o.ordre && o.ordre.t === 'bat') && s.pr[eq] >= BA[W2[nb]].cout)
     { const p = chercherPlace(s, W2[nb], noy.x + ux * O[nb][0] * 1000, noy.y + uy * O[nb][1] * 1000); if (p) cmd(s, eq, [ou[0].id], { t: 'bat', k: W2[nb], x: p[0], y: p[1] }); }
+  { const [pu, pm] = population(s, eq), enCours = mi.some(e => e.k === F.ravit && e.cons) || ou.some(o => o.ordre && o.ordre.t === 'bat' && o.ordre.k === F.ravit);
+    if (pm < POP_MAX && pu >= pm - 4 && !enCours && ou.length && s.pr[eq] >= BA[F.ravit].cout) { const n = mi.filter(e => e.k === F.ravit).length, p = chercherPlace(s, F.ravit, noy.x - ux * (3 + (n % 3) * 3) * 1000, noy.y - uy * (3 + ((n / 3) | 0) * 3) * 1000) || chercherPlace(s, F.ravit, noy.x + ux * 9000, noy.y - uy * 2000); const o = ou.find(o => !o.ordre || o.ordre.t === 'rec'); if (p && o) cmd(s, eq, [o.id], { t: 'bat', k: F.ravit, x: p[0], y: p[1] }); } }
   for (const b of mi) {
     if (!BA[b.k] || b.cons || b.file.length > 1 || BA[b.k].qg || !BA[b.k].prod) continue;
     if (hasard(s, 6) === 0) continue; // petite hésitation
