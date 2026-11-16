@@ -4686,5 +4686,3377 @@
   "auteur": "Chick-fil-A",
   "licence": "logo officiel",
   "source": "https://www.chick-fil-a.com/"
+ },
+ "logo-carls": {
+  "fichier": "logo-carls.svg",
+  "auteur": "CKE Restaurants",
+  "licence": "Public domain",
+  "lienLicence": "",
+  "source": "https://commons.wikimedia.org/wiki/File:Carl%27s_Jr._logo_(2022).svg"
+ },
+ "carls-hamburger": {
+  "fichier": "carls-hamburger.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-cheese": {
+  "fichier": "carls-cheese.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-doublecheese": {
+  "fichier": "carls-doublecheese.png",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-fries": {
+  "fichier": "carls-fries.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-waffle": {
+  "fichier": "carls-waffle.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-onion": {
+  "fichier": "carls-onion.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-zucchini": {
+  "fichier": "carls-zucchini.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-hashrounds": {
+  "fichier": "carls-hashrounds.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-tenders3": {
+  "fichier": "carls-tenders3.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-stars": {
+  "fichier": "carls-stars.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-poppers": {
+  "fichier": "carls-poppers.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-spicychicken": {
+  "fichier": "carls-spicychicken.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-cookie": {
+  "fichier": "carls-cookie.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-cake": {
+  "fichier": "carls-cake.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-cheesecake": {
+  "fichier": "carls-cheesecake.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-lemonade": {
+  "fichier": "carls-lemonade.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-strawlemon": {
+  "fichier": "carls-strawlemon.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-frozenlemon": {
+  "fichier": "carls-frozenlemon.png",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-coffee": {
+  "fichier": "carls-coffee.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-icedcoffee": {
+  "fichier": "carls-icedcoffee.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-churrocoffee": {
+  "fichier": "carls-churrocoffee.png",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-orange": {
+  "fichier": "carls-orange.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-frenchtoast": {
+  "fichier": "carls-frenchtoast.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-famousstar": {
+  "fichier": "carls-famousstar.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-bigcarl": {
+  "fichier": "carls-bigcarl.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-western": {
+  "fichier": "carls-western.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-guacbacon": {
+  "fichier": "carls-guacbacon.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-california": {
+  "fichier": "carls-california.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-jalapeno": {
+  "fichier": "carls-jalapeno.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-bbqchicken": {
+  "fichier": "carls-bbqchicken.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-santafe": {
+  "fichier": "carls-santafe.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-club": {
+  "fichier": "carls-club.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-chicken": {
+  "fichier": "carls-chicken.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-croissant": {
+  "fichier": "carls-croissant.png",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-burrito": {
+  "fichier": "carls-burrito.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-angus": {
+  "fichier": "carls-angus.png",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-doublefamous": {
+  "fichier": "carls-doublefamous.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-diablo": {
+  "fichier": "carls-diablo.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-doublewestern": {
+  "fichier": "carls-doublewestern.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-fierymaxx": {
+  "fichier": "carls-fierymaxx.png",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-baconswiss": {
+  "fichier": "carls-baconswiss.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-breakfastburger": {
+  "fichier": "carls-breakfastburger.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-shake": {
+  "fichier": "carls-shake.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-triplebigcarl": {
+  "fichier": "carls-triplebigcarl.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-tripleguac": {
+  "fichier": "carls-tripleguac.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-tenders20": {
+  "fichier": "carls-tenders20.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-spicymaxx": {
+  "fichier": "carls-spicymaxx.png",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-triplediablo": {
+  "fichier": "carls-triplediablo.jpg",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-feast": {
+  "fichier": "carls-feast.png",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "carls-famousfour": {
+  "fichier": "carls-famousfour.png",
+  "auteur": "Carl’s Jr.",
+  "licence": "photo officielle",
+  "source": "https://www.carlsjr.com/menu/featured"
+ },
+ "logo-hardees": {
+  "fichier": "logo-hardees.svg",
+  "auteur": "Hardee’s",
+  "licence": "Public domain",
+  "lienLicence": "",
+  "source": "https://commons.wikimedia.org/wiki/File:Hardee_brand_logo.svg"
+ },
+ "hardees-biscuit": {
+  "fichier": "hardees-biscuit.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-sausagebiscuit": {
+  "fichier": "hardees-sausagebiscuit.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-gravy": {
+  "fichier": "hardees-gravy.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-hashrounds": {
+  "fichier": "hardees-hashrounds.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-grits": {
+  "fichier": "hardees-grits.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-cinnamon": {
+  "fichier": "hardees-cinnamon.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-turnover": {
+  "fichier": "hardees-turnover.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-smorespie": {
+  "fichier": "hardees-smorespie.png",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-chili": {
+  "fichier": "hardees-chili.png",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-chilicheesefries": {
+  "fichier": "hardees-chilicheesefries.png",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-curly": {
+  "fichier": "hardees-curly.png",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-baconfries": {
+  "fichier": "hardees-baconfries.png",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-onion": {
+  "fichier": "hardees-onion.png",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-tenders3": {
+  "fichier": "hardees-tenders3.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-spicytenders3": {
+  "fichier": "hardees-spicytenders3.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-doublecheese": {
+  "fichier": "hardees-doublecheese.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-bacondouble": {
+  "fichier": "hardees-bacondouble.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-hotham": {
+  "fichier": "hardees-hotham.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-roastbeef": {
+  "fichier": "hardees-roastbeef.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-chilidog": {
+  "fichier": "hardees-chilidog.png",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-lemonade": {
+  "fichier": "hardees-lemonade.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-icedcoffee": {
+  "fichier": "hardees-icedcoffee.png",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-coffee": {
+  "fichier": "hardees-coffee.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-famousstar": {
+  "fichier": "hardees-famousstar.png",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-bigcheese": {
+  "fichier": "hardees-bigcheese.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-mushroom": {
+  "fichier": "hardees-mushroom.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-baconcheese": {
+  "fichier": "hardees-baconcheese.png",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-chicken": {
+  "fichier": "hardees-chicken.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-nashville": {
+  "fichier": "hardees-nashville.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-chickenbiscuit": {
+  "fichier": "hardees-chickenbiscuit.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-bec": {
+  "fichier": "hardees-bec.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-countrysteak": {
+  "fichier": "hardees-countrysteak.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-countryham": {
+  "fichier": "hardees-countryham.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-porkchop": {
+  "fichier": "hardees-porkchop.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-wraps": {
+  "fichier": "hardees-wraps.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-frisco": {
+  "fichier": "hardees-frisco.png",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-steakfrisco": {
+  "fichier": "hardees-steakfrisco.png",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-bigroast": {
+  "fichier": "hardees-bigroast.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-bighotham": {
+  "fichier": "hardees-bighotham.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-omelet": {
+  "fichier": "hardees-omelet.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-burrito": {
+  "fichier": "hardees-burrito.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-smoresshake": {
+  "fichier": "hardees-smoresshake.png",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-steakbowl": {
+  "fichier": "hardees-steakbowl.png",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-superstar": {
+  "fichier": "hardees-superstar.png",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-doublefrisco": {
+  "fichier": "hardees-doublefrisco.png",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-monsterbiscuit": {
+  "fichier": "hardees-monsterbiscuit.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-platter": {
+  "fichier": "hardees-platter.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-monster": {
+  "fichier": "hardees-monster.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-monsterroast": {
+  "fichier": "hardees-monsterroast.jpg",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "hardees-biscuits12": {
+  "fichier": "hardees-biscuits12.png",
+  "auteur": "Hardee’s",
+  "licence": "photo officielle",
+  "source": "https://www.hardees.com/menu/featured"
+ },
+ "logo-wendys": {
+  "fichier": "logo-wendys.svg",
+  "auteur": "Wendy’s",
+  "licence": "Public domain",
+  "lienLicence": "",
+  "source": "https://commons.wikimedia.org/wiki/File:Wendy%27s_logo_2012.svg"
+ },
+ "wendys-jrhamburger": {
+  "fichier": "wendys-jrhamburger.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-jrcheese": {
+  "fichier": "wendys-jrcheese.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-jrdeluxe": {
+  "fichier": "wendys-jrdeluxe.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-jrbacon": {
+  "fichier": "wendys-jrbacon.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-fries": {
+  "fichier": "wendys-fries.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-chili": {
+  "fichier": "wendys-chili.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-potato": {
+  "fichier": "wendys-potato.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-sourcream": {
+  "fichier": "wendys-sourcream.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-applebites": {
+  "fichier": "wendys-applebites.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-nuggets4": {
+  "fichier": "wendys-nuggets4.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-nuggets10": {
+  "fichier": "wendys-nuggets10.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-spicynuggets": {
+  "fichier": "wendys-spicynuggets.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-tenders3": {
+  "fichier": "wendys-tenders3.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-choccookie": {
+  "fichier": "wendys-choccookie.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-sugarcookie": {
+  "fichier": "wendys-sugarcookie.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-lemonade": {
+  "fichier": "wendys-lemonade.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-strawlemon": {
+  "fichier": "wendys-strawlemon.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-coldbrew": {
+  "fichier": "wendys-coldbrew.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-coffee": {
+  "fichier": "wendys-coffee.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-honeybutter": {
+  "fichier": "wendys-honeybutter.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-frenchtoast": {
+  "fichier": "wendys-frenchtoast.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-potatoes": {
+  "fichier": "wendys-potatoes.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-sausagebiscuit": {
+  "fichier": "wendys-sausagebiscuit.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-davessingle": {
+  "fichier": "wendys-davessingle.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-doublestack": {
+  "fichier": "wendys-doublestack.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-bacondoublestack": {
+  "fichier": "wendys-bacondoublestack.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-classicchicken": {
+  "fichier": "wendys-classicchicken.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-spicychicken": {
+  "fichier": "wendys-spicychicken.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-wrap": {
+  "fichier": "wendys-wrap.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-crispyblt": {
+  "fichier": "wendys-crispyblt.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-caesar": {
+  "fichier": "wendys-caesar.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-cobb": {
+  "fichier": "wendys-cobb.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-applepecan": {
+  "fichier": "wendys-applepecan.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-chilicheesefries": {
+  "fichier": "wendys-chilicheesefries.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-croissant": {
+  "fichier": "wendys-croissant.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-davesdouble": {
+  "fichier": "wendys-davesdouble.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-bigbacon": {
+  "fichier": "wendys-bigbacon.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-sonof": {
+  "fichier": "wendys-sonof.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-asiago": {
+  "fichier": "wendys-asiago.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-baconfries": {
+  "fichier": "wendys-baconfries.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-breakfastbaconator": {
+  "fichier": "wendys-breakfastbaconator.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-vanillafrosty": {
+  "fichier": "wendys-vanillafrosty.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-cinnabon": {
+  "fichier": "wendys-cinnabon.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-davestriple": {
+  "fichier": "wendys-davestriple.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-bigbacontriple": {
+  "fichier": "wendys-bigbacontriple.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-chocofrosty": {
+  "fichier": "wendys-chocofrosty.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-nuggspack": {
+  "fichier": "wendys-nuggspack.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-baconator": {
+  "fichier": "wendys-baconator.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-peppermint": {
+  "fichier": "wendys-peppermint.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "wendys-holidaybox": {
+  "fichier": "wendys-holidaybox.png",
+  "auteur": "Wendy’s",
+  "licence": "photo officielle",
+  "source": "https://order.wendys.com/us/en/national/menu"
+ },
+ "logo-nandos": {
+  "fichier": "logo-nandos.svg",
+  "auteur": "Nando’s Ltd",
+  "licence": "Public domain",
+  "lienLicence": "",
+  "source": "https://commons.wikimedia.org/wiki/File:Nando%27s_wordmark.svg"
+ },
+ "nandos-chips": {
+  "fichier": "nandos-chips.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-mash": {
+  "fichier": "nandos-mash.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-coleslaw": {
+  "fichier": "nandos-coleslaw.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-peas": {
+  "fichier": "nandos-peas.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-slaw": {
+  "fichier": "nandos-slaw.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-corn": {
+  "fichier": "nandos-corn.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-spicyrice": {
+  "fichier": "nandos-spicyrice.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-garlicbread": {
+  "fichier": "nandos-garlicbread.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-broccoli": {
+  "fichier": "nandos-broccoli.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-leaf": {
+  "fichier": "nandos-leaf.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-houmous": {
+  "fichier": "nandos-houmous.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-olives": {
+  "fichier": "nandos-olives.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-nuts": {
+  "fichier": "nandos-nuts.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-wedges": {
+  "fichier": "nandos-wedges.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-wings3": {
+  "fichier": "nandos-wings3.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-quarter": {
+  "fichier": "nandos-quarter.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-quarterleg": {
+  "fichier": "nandos-quarterleg.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-nata": {
+  "fichier": "nandos-nata.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-vanillagelado": {
+  "fichier": "nandos-vanillagelado.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-mangogelado": {
+  "fichier": "nandos-mangogelado.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-perinaise": {
+  "fichier": "nandos-perinaise.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-garlicperinaise": {
+  "fichier": "nandos-garlicperinaise.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-medium": {
+  "fichier": "nandos-medium.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-halloumi": {
+  "fichier": "nandos-halloumi.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-wings5": {
+  "fichier": "nandos-wings5.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-thighs": {
+  "fichier": "nandos-thighs.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-breast": {
+  "fichier": "nandos-breast.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-wrap": {
+  "fichier": "nandos-wrap.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-pitta": {
+  "fichier": "nandos-pitta.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-fino": {
+  "fichier": "nandos-fino.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-burger": {
+  "fichier": "nandos-burger.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-sunset": {
+  "fichier": "nandos-sunset.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-beanie": {
+  "fichier": "nandos-beanie.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-imitator": {
+  "fichier": "nandos-imitator.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-chickpea": {
+  "fichier": "nandos-chickpea.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-half": {
+  "fichier": "nandos-half.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-butterfly": {
+  "fichier": "nandos-butterfly.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-butterflyburger": {
+  "fichier": "nandos-butterflyburger.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-doubleburger": {
+  "fichier": "nandos-doubleburger.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-wings10": {
+  "fichier": "nandos-wings10.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-rainbow": {
+  "fichier": "nandos-rainbow.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-chocalot": {
+  "fichier": "nandos-chocalot.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-extrahot": {
+  "fichier": "nandos-extrahot.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-whole": {
+  "fichier": "nandos-whole.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-roulette": {
+  "fichier": "nandos-roulette.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-wings15": {
+  "fichier": "nandos-wings15.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-boneless": {
+  "fichier": "nandos-boneless.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-fullplatter": {
+  "fichier": "nandos-fullplatter.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-family": {
+  "fichier": "nandos-family.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "nandos-wingplatter": {
+  "fichier": "nandos-wingplatter.jpg",
+  "auteur": "Nando’s",
+  "licence": "photo officielle",
+  "source": "https://www.nandos.co.uk/food/menu/"
+ },
+ "logo-itsu": {
+  "fichier": "logo-itsu.svg",
+  "auteur": "itsu",
+  "licence": "logo officiel",
+  "source": "https://www.itsu.com/menu"
+ },
+ "itsu-miso": {
+  "fichier": "itsu-miso.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/soups/hot-miso-soup-120925/"
+ },
+ "itsu-edamame": {
+  "fichier": "itsu-edamame.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/sushi-and-salads/side-edamame-cup/"
+ },
+ "itsu-prawncrackers": {
+  "fichier": "itsu-prawncrackers.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/desserts-and-snacks/snacks-original-prawn-crackers/"
+ },
+ "itsu-thaicrackers": {
+  "fichier": "itsu-thaicrackers.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/desserts-and-snacks/snacks-thai-prawn-crackers/"
+ },
+ "itsu-seaweed": {
+  "fichier": "itsu-seaweed.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/desserts-and-snacks/snacks-sea-salt-seaweed-thins/"
+ },
+ "itsu-chocedamame": {
+  "fichier": "itsu-chocedamame.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/desserts-and-snacks/chocolate-edamame/"
+ },
+ "itsu-moons": {
+  "fichier": "itsu-moons.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/desserts-and-snacks/dark-chocolate-moons/"
+ },
+ "itsu-mochi": {
+  "fichier": "itsu-mochi.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/desserts-and-snacks/dessert-strawberry-and-matcha-mochi-131126/"
+ },
+ "itsu-yuzumochi": {
+  "fichier": "itsu-yuzumochi.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/desserts-and-snacks/dessert-yuzu-cheesecake-mochi-110926/"
+ },
+ "itsu-mango": {
+  "fichier": "itsu-mango.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/desserts-and-snacks/snacks-about-half-a-mango-160925/"
+ },
+ "itsu-porridge": {
+  "fichier": "itsu-porridge.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/breakfast/porridge-with-agave/"
+ },
+ "itsu-eggbun": {
+  "fichier": "itsu-eggbun.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/breakfast/the-egg-bun/"
+ },
+ "itsu-mangoyog": {
+  "fichier": "itsu-mangoyog.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/breakfast/mango-yoghurt-pot/"
+ },
+ "itsu-rasyog": {
+  "fichier": "itsu-rasyog.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/breakfast/raspberry-yoghurt-pot/"
+ },
+ "itsu-greentea": {
+  "fichier": "itsu-greentea.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/hot-iced-drinks/green-tea/"
+ },
+ "itsu-latte": {
+  "fichier": "itsu-latte.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/hot-iced-drinks/latte/"
+ },
+ "itsu-matcha": {
+  "fichier": "itsu-matcha.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/hot-iced-drinks/matcha-latte/"
+ },
+ "itsu-icedmatcha": {
+  "fichier": "itsu-icedmatcha.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/hot-iced-drinks/iced-matcha-latte/"
+ },
+ "itsu-lemonbubble": {
+  "fichier": "itsu-lemonbubble.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/cold-drinks/lemon-bubble-tea/"
+ },
+ "itsu-mangobubble": {
+  "fichier": "itsu-mangobubble.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/cold-drinks/mango-passionfruit-bubble-tea/"
+ },
+ "itsu-coca": {
+  "fichier": "itsu-coca.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/drinks-coca-cola-can-regular/"
+ },
+ "itsu-noricrunch": {
+  "fichier": "itsu-noricrunch.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/desserts-and-snacks/sushi-style-nori-crunch/"
+ },
+ "itsu-ricegreens": {
+  "fichier": "itsu-ricegreens.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/rice-bowls/little-rice-and-greens/"
+ },
+ "itsu-gyoza": {
+  "fichier": "itsu-gyoza.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/steamed-gyoza/hot-side-chicken-gyoza/"
+ },
+ "itsu-prawngyoza": {
+  "fichier": "itsu-prawngyoza.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/steamed-gyoza/king-prawn-gyoza/"
+ },
+ "itsu-veggyoza": {
+  "fichier": "itsu-veggyoza.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/steamed-gyoza/hot-side-vegetable-gyoza/"
+ },
+ "itsu-teriyaki": {
+  "fichier": "itsu-teriyaki.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/rice-bowls/hot-teriyaki-chicken-rice-bowl-131126/"
+ },
+ "itsu-koreanbbq": {
+  "fichier": "itsu-koreanbbq.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/rice-bowls/korean-bbq-chicken/"
+ },
+ "itsu-thaicurry": {
+  "fichier": "itsu-thaicurry.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/rice-bowls/thai-chicken-curry/"
+ },
+ "itsu-california": {
+  "fichier": "itsu-california.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/sushi-and-salads/the-california-rolls/"
+ },
+ "itsu-salmonavo": {
+  "fichier": "itsu-salmonavo.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/sushi-and-salads/the-salmon-and-avo-rolls/"
+ },
+ "itsu-avobaby": {
+  "fichier": "itsu-avobaby.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/sushi-and-salads/the-avo-baby-rolls/"
+ },
+ "itsu-salmonbaby": {
+  "fichier": "itsu-salmonbaby.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/sushi-and-salads/the-salmon-baby-rolls/"
+ },
+ "itsu-noodlesoup": {
+  "fichier": "itsu-noodlesoup.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/soups/chicken-noodle-soup/"
+ },
+ "itsu-baconbun": {
+  "fichier": "itsu-baconbun.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/breakfast/the-bacon-and-egg-bun/"
+ },
+ "itsu-katsunoodles": {
+  "fichier": "itsu-katsunoodles.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/noodles/katsu-curry-noodles/"
+ },
+ "itsu-koreannoodles": {
+  "fichier": "itsu-koreannoodles.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/noodles/korean-spicy-noodles/"
+ },
+ "itsu-thainoodles": {
+  "fichier": "itsu-thainoodles.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/noodles/thai-noodles/"
+ },
+ "itsu-katsucurry": {
+  "fichier": "itsu-katsucurry.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/rice-bowls/grilled-katsu-chicken-curry/"
+ },
+ "itsu-coconutsoup": {
+  "fichier": "itsu-coconutsoup.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/soups/famous-coconut-chicken-soup/"
+ },
+ "itsu-tunadragon": {
+  "fichier": "itsu-tunadragon.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/sushi-and-salads/sushi-tuna-dragon-roll-131126/"
+ },
+ "itsu-salmondragon": {
+  "fichier": "itsu-salmondragon.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/sushi-and-salads/the-salmon-dragon/"
+ },
+ "itsu-doubleteriyaki": {
+  "fichier": "itsu-doubleteriyaki.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/rice-bowls/double-chicken-teriyaki/"
+ },
+ "itsu-bestof": {
+  "fichier": "itsu-bestof.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/sushi-and-salads/the-best-of-itsu-/"
+ },
+ "itsu-fullhouse": {
+  "fichier": "itsu-fullhouse.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/sushi-and-salads/the-salmon-full-house/"
+ },
+ "itsu-sashimi": {
+  "fichier": "itsu-sashimi.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/sushi-and-salads/the-tuna-and-salmon-sashimi/"
+ },
+ "itsu-superlight": {
+  "fichier": "itsu-superlight.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/sushi-and-salads/the-super-salmon-light/"
+ },
+ "itsu-festival": {
+  "fichier": "itsu-festival.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/sushi-and-salads/the-sushi-festival/"
+ },
+ "itsu-festivebento": {
+  "fichier": "itsu-festivebento.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/sushi-and-salads/the-festive-bento/"
+ },
+ "itsu-chilligyozabowl": {
+  "fichier": "itsu-chilligyozabowl.jpg",
+  "auteur": "itsu",
+  "licence": "photo officielle",
+  "source": "https://www.itsu.com/menu/noodles/chilli-chicken-gyoza-noodle-bowl/"
+ },
+ "logo-leon": {
+  "fichier": "logo-leon.svg",
+  "auteur": "LEON",
+  "licence": "logo officiel",
+  "source": "https://leon.co/"
+ },
+ "leon-fries": {
+  "fichier": "leon-fries.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-slaw": {
+  "fichier": "leon-slaw.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-hashbrowns": {
+  "fichier": "leon-hashbrowns.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/breakfast"
+ },
+ "leon-toast": {
+  "fichier": "leon-toast.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/breakfast"
+ },
+ "leon-croissant": {
+  "fichier": "leon-croissant.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/bits-in-between"
+ },
+ "leon-painchoc": {
+  "fichier": "leon-painchoc.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/bits-in-between"
+ },
+ "leon-cookie": {
+  "fichier": "leon-cookie.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/bits-in-between"
+ },
+ "leon-oatcookie": {
+  "fichier": "leon-oatcookie.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/bits-in-between"
+ },
+ "leon-brownie": {
+  "fichier": "leon-brownie.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/bits-in-between"
+ },
+ "leon-crunch": {
+  "fichier": "leon-crunch.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/bits-in-between"
+ },
+ "leon-muffin": {
+  "fichier": "leon-muffin.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/bits-in-between"
+ },
+ "leon-porridge": {
+  "fichier": "leon-porridge.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/breakfast"
+ },
+ "leon-granola": {
+  "fichier": "leon-granola.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/breakfast"
+ },
+ "leon-beans": {
+  "fichier": "leon-beans.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/breakfast"
+ },
+ "leon-flatwhite": {
+  "fichier": "leon-flatwhite.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/coffee"
+ },
+ "leon-latte": {
+  "fichier": "leon-latte.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/coffee"
+ },
+ "leon-hotchoc": {
+  "fichier": "leon-hotchoc.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/coffee"
+ },
+ "leon-icedlatte": {
+  "fichier": "leon-icedlatte.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/coffee"
+ },
+ "leon-lemonade": {
+  "fichier": "leon-lemonade.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/drinks"
+ },
+ "leon-razza": {
+  "fichier": "leon-razza.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/drinks"
+ },
+ "leon-koreanmayo": {
+  "fichier": "leon-koreanmayo.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-chilli": {
+  "fichier": "leon-chilli.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-baconmuffin": {
+  "fichier": "leon-baconmuffin.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/breakfast"
+ },
+ "leon-aioliwrap": {
+  "fichier": "leon-aioliwrap.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-halloumiwrap": {
+  "fichier": "leon-halloumiwrap.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-fishwrap": {
+  "fichier": "leon-fishwrap.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-koreanwrap": {
+  "fichier": "leon-koreanwrap.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-burger": {
+  "fichier": "leon-burger.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-love": {
+  "fichier": "leon-love.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-gfc": {
+  "fichier": "leon-gfc.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-macbites": {
+  "fichier": "leon-macbites.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-sausageegg": {
+  "fichier": "leon-sausageegg.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/breakfast"
+ },
+ "leon-baconegg": {
+  "fichier": "leon-baconegg.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/breakfast"
+ },
+ "leon-avohalloumi": {
+  "fichier": "leon-avohalloumi.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/breakfast"
+ },
+ "leon-broccoli": {
+  "fichier": "leon-broccoli.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-aioli": {
+  "fichier": "leon-aioli.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-satay": {
+  "fichier": "leon-satay.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-ajiverde": {
+  "fichier": "leon-ajiverde.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-romesco": {
+  "fichier": "leon-romesco.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-gyros": {
+  "fichier": "leon-gyros.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-superfood": {
+  "fichier": "leon-superfood.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-ajiburger": {
+  "fichier": "leon-ajiburger.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-shakshuka": {
+  "fichier": "leon-shakshuka.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/breakfast"
+ },
+ "leon-satayBig": {
+  "fichier": "leon-satayBig.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-aioliBig": {
+  "fichier": "leon-aioliBig.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-bigbreakfast": {
+  "fichier": "leon-bigbreakfast.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/breakfast"
+ },
+ "leon-mezze": {
+  "fichier": "leon-mezze.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-xmascurry": {
+  "fichier": "leon-xmascurry.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-xmaswrap": {
+  "fichier": "leon-xmaswrap.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/all-day"
+ },
+ "leon-sandoclaus": {
+  "fichier": "leon-sandoclaus.jpg",
+  "auteur": "LEON",
+  "licence": "photo officielle",
+  "source": "https://leon.co/menu/breakfast"
+ },
+ "logo-greggs": {
+  "fichier": "logo-greggs.svg",
+  "auteur": "Greggs",
+  "licence": "logo officiel",
+  "source": "https://www.greggs.com/"
+ },
+ "greggs-sausageroll": {
+  "fichier": "greggs-sausageroll.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-veganroll": {
+  "fichier": "greggs-veganroll.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-cheesebake": {
+  "fichier": "greggs-cheesebake.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-baconroll": {
+  "fichier": "greggs-baconroll.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-sausagebreakfast": {
+  "fichier": "greggs-sausagebreakfast.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-hashbrown": {
+  "fichier": "greggs-hashbrown.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-croissant": {
+  "fichier": "greggs-croissant.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-painchoc": {
+  "fichier": "greggs-painchoc.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-glazed": {
+  "fichier": "greggs-glazed.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-jam": {
+  "fichier": "greggs-jam.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-sugarstrand": {
+  "fichier": "greggs-sugarstrand.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-pinkjammie": {
+  "fichier": "greggs-pinkjammie.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-gingerbread": {
+  "fichier": "greggs-gingerbread.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-milkcookie": {
+  "fichier": "greggs-milkcookie.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-triplecookie": {
+  "fichier": "greggs-triplecookie.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-flapjack": {
+  "fichier": "greggs-flapjack.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-caramelcrispy": {
+  "fichier": "greggs-caramelcrispy.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-soup": {
+  "fichier": "greggs-soup.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-latte": {
+  "fichier": "greggs-latte.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-americano": {
+  "fichier": "greggs-americano.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-hotchoc": {
+  "fichier": "greggs-hotchoc.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-tea": {
+  "fichier": "greggs-tea.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-margherita": {
+  "fichier": "greggs-margherita.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-steakbake": {
+  "fichier": "greggs-steakbake.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-chickenbake": {
+  "fichier": "greggs-chickenbake.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-melt": {
+  "fichier": "greggs-melt.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-saltchilli": {
+  "fichier": "greggs-saltchilli.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-pepperoni": {
+  "fichier": "greggs-pepperoni.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-wedges": {
+  "fichier": "greggs-wedges.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-goujons": {
+  "fichier": "greggs-goujons.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-bbqbites": {
+  "fichier": "greggs-bbqbites.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-mexicanbaguette": {
+  "fichier": "greggs-mexicanbaguette.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-tunabaguette": {
+  "fichier": "greggs-tunabaguette.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-toastie": {
+  "fichier": "greggs-toastie.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-belgian": {
+  "fichier": "greggs-belgian.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-festivebake": {
+  "fichier": "greggs-festivebake.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-hothoney": {
+  "fichier": "greggs-hothoney.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-hotfriedbaguette": {
+  "fichier": "greggs-hotfriedbaguette.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-clubbaguette": {
+  "fichier": "greggs-clubbaguette.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-millionaire": {
+  "fichier": "greggs-millionaire.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-eclair": {
+  "fichier": "greggs-eclair.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-custard": {
+  "fichier": "greggs-custard.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-candycane": {
+  "fichier": "greggs-candycane.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-pigs": {
+  "fichier": "greggs-pigs.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-feastbaguette": {
+  "fichier": "greggs-feastbaguette.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-pigstoastie": {
+  "fichier": "greggs-pigstoastie.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-pizzabox": {
+  "fichier": "greggs-pizzabox.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-pudseybun": {
+  "fichier": "greggs-pudseybun.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-xmasslice": {
+  "fichier": "greggs-xmasslice.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "greggs-mincepie": {
+  "fichier": "greggs-mincepie.png",
+  "auteur": "Greggs",
+  "licence": "photo officielle",
+  "source": "https://www.greggs.com/menu"
+ },
+ "logo-pdp": {
+  "fichier": "logo-pdp.svg",
+  "auteur": "Pomme de Pain",
+  "licence": "logo officiel",
+  "source": "https://www.pommedepain.fr/"
+ },
+ "pdp-croissant": {
+  "fichier": "pdp-croissant.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/viennoiseries/"
+ },
+ "pdp-painchoc": {
+  "fichier": "pdp-painchoc.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/viennoiseries/"
+ },
+ "pdp-raisins": {
+  "fichier": "pdp-raisins.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/viennoiseries/"
+ },
+ "pdp-chausson": {
+  "fichier": "pdp-chausson.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/viennoiseries/"
+ },
+ "pdp-tartines": {
+  "fichier": "pdp-tartines.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/viennoiseries/"
+ },
+ "pdp-confiture": {
+  "fichier": "pdp-confiture.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/viennoiseries/"
+ },
+ "pdp-expresso": {
+  "fichier": "pdp-expresso.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/boissons-chaudes/"
+ },
+ "pdp-allonge": {
+  "fichier": "pdp-allonge.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/boissons-chaudes/"
+ },
+ "pdp-the": {
+  "fichier": "pdp-the.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/boissons-chaudes/"
+ },
+ "pdp-cafeaulait": {
+  "fichier": "pdp-cafeaulait.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/boissons-chaudes/"
+ },
+ "pdp-chocolat": {
+  "fichier": "pdp-chocolat.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/boissons-chaudes/"
+ },
+ "pdp-orange": {
+  "fichier": "pdp-orange.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/boissons-fraiches/"
+ },
+ "pdp-citronnade": {
+  "fichier": "pdp-citronnade.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/boissons-fraiches/"
+ },
+ "pdp-theglace": {
+  "fichier": "pdp-theglace.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/boissons-fraiches/"
+ },
+ "pdp-coca": {
+  "fichier": "pdp-coca.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/boissons-fraiches/"
+ },
+ "pdp-orangina": {
+  "fichier": "pdp-orangina.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/boissons-fraiches/"
+ },
+ "pdp-compote": {
+  "fichier": "pdp-compote.jpg",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/desserts/"
+ },
+ "pdp-flan": {
+  "fichier": "pdp-flan.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/desserts/"
+ },
+ "pdp-brownie": {
+  "fichier": "pdp-brownie.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/desserts/"
+ },
+ "pdp-cookie3": {
+  "fichier": "pdp-cookie3.jpg",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/desserts/"
+ },
+ "pdp-donutsucre": {
+  "fichier": "pdp-donutsucre.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/desserts/"
+ },
+ "pdp-gaufre": {
+  "fichier": "pdp-gaufre.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/desserts/"
+ },
+ "pdp-potatoes": {
+  "fichier": "pdp-potatoes.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/petite-faim/"
+ },
+ "pdp-parisien": {
+  "fichier": "pdp-parisien.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/sandwichs/"
+ },
+ "pdp-thon": {
+  "fichier": "pdp-thon.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/sandwichs/"
+ },
+ "pdp-villageois": {
+  "fichier": "pdp-villageois.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/sandwichs/"
+ },
+ "pdp-comte": {
+  "fichier": "pdp-comte.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/sandwichs/"
+ },
+ "pdp-croque": {
+  "fichier": "pdp-croque.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/sandwichs/"
+ },
+ "pdp-miniparisien": {
+  "fichier": "pdp-miniparisien.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/petite-faim/"
+ },
+ "pdp-croissantjambon": {
+  "fichier": "pdp-croissantjambon.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/viennoiseries/"
+ },
+ "pdp-croissantcomte": {
+  "fichier": "pdp-croissantcomte.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/viennoiseries/"
+ },
+ "pdp-nutella": {
+  "fichier": "pdp-nutella.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/viennoiseries/"
+ },
+ "pdp-cookiecaramel": {
+  "fichier": "pdp-cookiecaramel.jpg",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/desserts/"
+ },
+ "pdp-cookiepecan": {
+  "fichier": "pdp-cookiepecan.jpg",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/desserts/"
+ },
+ "pdp-cappuccino": {
+  "fichier": "pdp-cappuccino.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/boissons-chaudes/"
+ },
+ "pdp-bucolique": {
+  "fichier": "pdp-bucolique.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/sandwichs/"
+ },
+ "pdp-london": {
+  "fichier": "pdp-london.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/sandwichs/"
+ },
+ "pdp-rubanbleu": {
+  "fichier": "pdp-rubanbleu.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/sandwichs/"
+ },
+ "pdp-poivre": {
+  "fichier": "pdp-poivre.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/sandwichs/"
+ },
+ "pdp-citron": {
+  "fichier": "pdp-citron.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/desserts/"
+ },
+ "pdp-framboises": {
+  "fichier": "pdp-framboises.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/desserts/"
+ },
+ "pdp-carrot": {
+  "fichier": "pdp-carrot.jpg",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/desserts/"
+ },
+ "pdp-moelleux": {
+  "fichier": "pdp-moelleux.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/desserts/"
+ },
+ "pdp-bearnaise": {
+  "fichier": "pdp-bearnaise.jpg",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/sandwichs/"
+ },
+ "pdp-donutpistache": {
+  "fichier": "pdp-donutpistache.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/desserts/"
+ },
+ "pdp-caprice": {
+  "fichier": "pdp-caprice.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/boissons-chaudes/"
+ },
+ "pdp-caprice2": {
+  "fichier": "pdp-caprice2.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/boissons-chaudes/"
+ },
+ "pdp-lot3": {
+  "fichier": "pdp-lot3.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/viennoiseries/"
+ },
+ "pdp-madeleines": {
+  "fichier": "pdp-madeleines.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/desserts/"
+ },
+ "pdp-torsade": {
+  "fichier": "pdp-torsade.png",
+  "auteur": "Pomme de Pain",
+  "licence": "photo officielle",
+  "source": "https://www.pommedepain.fr/pdp-product-type/viennoiseries/"
+ },
+ "logo-paul": {
+  "fichier": "logo-paul.png",
+  "auteur": "PAUL",
+  "licence": "logo officiel",
+  "source": "https://www.paul.fr/"
+ },
+ "paul-baguette": {
+  "fichier": "paul-baguette.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/pains/classiques"
+ },
+ "paul-complet": {
+  "fichier": "paul-complet.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/pains/classiques"
+ },
+ "paul-noix": {
+  "fichier": "paul-noix.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/pains/speciaux"
+ },
+ "paul-fougasse": {
+  "fichier": "paul-fougasse.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/pains/snacking"
+ },
+ "paul-bretzel": {
+  "fichier": "paul-bretzel.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/dejeuner/pause-salee"
+ },
+ "paul-chips": {
+  "fichier": "paul-chips.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/dejeuner/pause-salee"
+ },
+ "paul-maxipainchoc": {
+  "fichier": "paul-maxipainchoc.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/petit-dejeuner/viennoiserie"
+ },
+ "paul-oranais": {
+  "fichier": "paul-oranais.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/petit-dejeuner/viennoiserie"
+ },
+ "paul-briochette": {
+  "fichier": "paul-briochette.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/petit-dejeuner/viennoiserie"
+ },
+ "paul-palmier": {
+  "fichier": "paul-palmier.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/petit-dejeuner/viennoiserie"
+ },
+ "paul-donut": {
+  "fichier": "paul-donut.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/petit-dejeuner/viennoiserie"
+ },
+ "paul-muffin": {
+  "fichier": "paul-muffin.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/petit-dejeuner/viennoiserie"
+ },
+ "paul-cinnamon": {
+  "fichier": "paul-cinnamon.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/petit-dejeuner/viennoiserie"
+ },
+ "paul-cookie": {
+  "fichier": "paul-cookie.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/patisserie/patisseries-individuelles"
+ },
+ "paul-flancoco": {
+  "fichier": "paul-flancoco.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/patisserie/patisseries-individuelles"
+ },
+ "paul-eclair": {
+  "fichier": "paul-eclair.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/patisserie/patisseries-individuelles"
+ },
+ "paul-macaron": {
+  "fichier": "paul-macaron.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/patisserie/macarons"
+ },
+ "paul-expresso": {
+  "fichier": "paul-expresso.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/petit-dejeuner/boissons"
+ },
+ "paul-creme": {
+  "fichier": "paul-creme.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/petit-dejeuner/boissons"
+ },
+ "paul-cappuccino": {
+  "fichier": "paul-cappuccino.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/petit-dejeuner/boissons"
+ },
+ "paul-coca": {
+  "fichier": "paul-coca.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/boissons/froides"
+ },
+ "paul-yaourt": {
+  "fichier": "paul-yaourt.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/patisserie/desserts"
+ },
+ "paul-croissantjambon": {
+  "fichier": "paul-croissantjambon.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/dejeuner/sandwichs"
+ },
+ "paul-parisien": {
+  "fichier": "paul-parisien.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/dejeuner/sandwichs"
+ },
+ "paul-mixte": {
+  "fichier": "paul-mixte.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/dejeuner/sandwichs"
+ },
+ "paul-croque": {
+  "fichier": "paul-croque.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/dejeuner/sandwichs"
+ },
+ "paul-bagnat": {
+  "fichier": "paul-bagnat.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/dejeuner/sandwichs"
+ },
+ "paul-wrapsaumon": {
+  "fichier": "paul-wrapsaumon.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/dejeuner/sandwichs"
+ },
+ "paul-panini": {
+  "fichier": "paul-panini.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/dejeuner/sandwichs"
+ },
+ "paul-quiche": {
+  "fichier": "paul-quiche.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/dejeuner/quiches-&-pizzas"
+ },
+ "paul-pizza": {
+  "fichier": "paul-pizza.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/dejeuner/quiches-&-pizzas"
+ },
+ "paul-salade": {
+  "fichier": "paul-salade.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/dejeuner/salades"
+ },
+ "paul-flat": {
+  "fichier": "paul-flat.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/petit-dejeuner/viennoiserie"
+ },
+ "paul-eclaircaramel": {
+  "fichier": "paul-eclaircaramel.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/patisserie/patisseries-individuelles"
+ },
+ "paul-tartelette": {
+  "fichier": "paul-tartelette.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/patisserie/patisseries-individuelles"
+ },
+ "paul-rolljambon": {
+  "fichier": "paul-rolljambon.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/dejeuner/sandwichs"
+ },
+ "paul-hotdog": {
+  "fichier": "paul-hotdog.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/dejeuner/sandwichs"
+ },
+ "paul-crepe": {
+  "fichier": "paul-crepe.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/dejeuner/sandwichs"
+ },
+ "paul-millefeuille": {
+  "fichier": "paul-millefeuille.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/patisserie/patisseries-individuelles"
+ },
+ "paul-opera": {
+  "fichier": "paul-opera.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/patisserie/patisseries-individuelles"
+ },
+ "paul-sainthonore": {
+  "fichier": "paul-sainthonore.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/patisserie/patisseries-individuelles"
+ },
+ "paul-fraisier": {
+  "fichier": "paul-fraisier.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/patisserie/patisseries-individuelles"
+ },
+ "paul-frappe": {
+  "fichier": "paul-frappe.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/boissons/glacees"
+ },
+ "paul-minimacarons": {
+  "fichier": "paul-minimacarons.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/patisserie/macarons"
+ },
+ "paul-tropezienne": {
+  "fichier": "paul-tropezienne.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/patisserie/tartes-gateaux"
+ },
+ "paul-foretnoire": {
+  "fichier": "paul-foretnoire.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/patisserie/tartes-gateaux"
+ },
+ "paul-couscous": {
+  "fichier": "paul-couscous.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/dejeuner/plats-cuisines"
+ },
+ "paul-pyramide": {
+  "fichier": "paul-pyramide.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/patisserie/macarons"
+ },
+ "paul-fleurdelys": {
+  "fichier": "paul-fleurdelys.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/patisserie/tartes-gateaux"
+ },
+ "paul-dubai": {
+  "fichier": "paul-dubai.jpg",
+  "auteur": "PAUL",
+  "licence": "photo officielle",
+  "source": "https://www.paul.fr/petit-dejeuner/viennoiserie"
+ },
+ "logo-jollibee": {
+  "fichier": "logo-jollibee.svg",
+  "auteur": "Jollibee Foods Corporation",
+  "licence": "Public domain",
+  "lienLicence": "",
+  "source": "https://commons.wikimedia.org/wiki/File:Jollibee_2011_wordmark.svg"
+ },
+ "jollibee-yumburger": {
+  "fichier": "jollibee-yumburger.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/burgers"
+ },
+ "jollibee-cheesy": {
+  "fichier": "jollibee-cheesy.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/burgers"
+ },
+ "jollibee-nuggets6": {
+  "fichier": "jollibee-nuggets6.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/chicken-nuggets"
+ },
+ "jollibee-fries": {
+  "fichier": "jollibee-fries.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/fries-sides-n-extras"
+ },
+ "jollibee-friesl": {
+  "fichier": "jollibee-friesl.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/fries-sides-n-extras"
+ },
+ "jollibee-mash": {
+  "fichier": "jollibee-mash.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/fries-sides-n-extras"
+ },
+ "jollibee-soup": {
+  "fichier": "jollibee-soup.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/fries-sides-n-extras"
+ },
+ "jollibee-gravy": {
+  "fichier": "jollibee-gravy.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/fries-sides-n-extras"
+ },
+ "jollibee-rice": {
+  "fichier": "jollibee-rice.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/fries-sides-n-extras"
+ },
+ "jollibee-pie": {
+  "fichier": "jollibee-pie.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/desserts-and-sweet-pie"
+ },
+ "jollibee-sundae": {
+  "fichier": "jollibee-sundae.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/desserts-and-sweet-pie"
+ },
+ "jollibee-minisundae": {
+  "fichier": "jollibee-minisundae.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/desserts-and-sweet-pie"
+ },
+ "jollibee-icedlatte": {
+  "fichier": "jollibee-icedlatte.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/beverages"
+ },
+ "jollibee-icedvanilla": {
+  "fichier": "jollibee-icedvanilla.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/beverages"
+ },
+ "jollibee-icedcaramel": {
+  "fichier": "jollibee-icedcaramel.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/beverages"
+ },
+ "jollibee-icedmocha": {
+  "fichier": "jollibee-icedmocha.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/beverages"
+ },
+ "jollibee-cokefloat": {
+  "fichier": "jollibee-cokefloat.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/beverages"
+ },
+ "jollibee-coffee": {
+  "fichier": "jollibee-coffee.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/breakfast-joys"
+ },
+ "jollibee-longganisa": {
+  "fichier": "jollibee-longganisa.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/breakfast-joys"
+ },
+ "jollibee-cornedbeef": {
+  "fichier": "jollibee-cornedbeef.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/breakfast-joys"
+ },
+ "jollibee-hotdog": {
+  "fichier": "jollibee-hotdog.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/breakfast-joys"
+ },
+ "jollibee-pancakes": {
+  "fichier": "jollibee-pancakes.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/breakfast-joys"
+ },
+ "jollibee-burgersteak": {
+  "fichier": "jollibee-burgersteak.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/burger-steak-n-chicken-fillet"
+ },
+ "jollibee-specialcheesy": {
+  "fichier": "jollibee-specialcheesy.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/burgers"
+ },
+ "jollibee-baconcheesy": {
+  "fichier": "jollibee-baconcheesy.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/burgers"
+ },
+ "jollibee-doublecheesy": {
+  "fichier": "jollibee-doublecheesy.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/burgers"
+ },
+ "jollibee-aloha": {
+  "fichier": "jollibee-aloha.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/burgers"
+ },
+ "jollibee-nuggets10": {
+  "fichier": "jollibee-nuggets10.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/chicken-nuggets"
+ },
+ "jollibee-spicy": {
+  "fichier": "jollibee-spicy.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/chickenjoy"
+ },
+ "jollibee-tapa": {
+  "fichier": "jollibee-tapa.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/breakfast-joys"
+ },
+ "jollibee-pancakesandwich": {
+  "fichier": "jollibee-pancakesandwich.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/breakfast-joys"
+ },
+ "jollibee-supreme": {
+  "fichier": "jollibee-supreme.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/burger-steak-n-chicken-fillet"
+ },
+ "jollibee-palabok": {
+  "fichier": "jollibee-palabok.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/jolly-spaghetti-n-palabok"
+ },
+ "jollibee-cookiesundae": {
+  "fichier": "jollibee-cookiesundae.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/desserts-and-sweet-pie"
+ },
+ "jollibee-caramelfloat": {
+  "fichier": "jollibee-caramelfloat.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/beverages"
+ },
+ "jollibee-champ": {
+  "fichier": "jollibee-champ.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/burgers"
+ },
+ "jollibee-doublealoha": {
+  "fichier": "jollibee-doublealoha.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/burgers"
+ },
+ "jollibee-burgersteak2": {
+  "fichier": "jollibee-burgersteak2.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/burger-steak-n-chicken-fillet"
+ },
+ "jollibee-peppercream": {
+  "fichier": "jollibee-peppercream.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/burger-steak-n-chicken-fillet"
+ },
+ "jollibee-breakfastjoy": {
+  "fichier": "jollibee-breakfastjoy.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/breakfast-joys"
+ },
+ "jollibee-largepie": {
+  "fichier": "jollibee-largepie.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/desserts-and-sweet-pie"
+ },
+ "jollibee-bucket": {
+  "fichier": "jollibee-bucket.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/fries-sides-n-extras"
+ },
+ "jollibee-kidsmeal": {
+  "fichier": "jollibee-kidsmeal.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/jollibee-kids-meal"
+ },
+ "jollibee-chickenjoy": {
+  "fichier": "jollibee-chickenjoy.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/chickenjoy"
+ },
+ "jollibee-spaghetti": {
+  "fichier": "jollibee-spaghetti.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/jolly-spaghetti-n-palabok"
+ },
+ "jollibee-familybox": {
+  "fichier": "jollibee-familybox.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/family-meals"
+ },
+ "jollibee-palabokpan": {
+  "fichier": "jollibee-palabokpan.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/family-meals"
+ },
+ "jollibee-spaghettipan": {
+  "fichier": "jollibee-spaghettipan.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/family-meals"
+ },
+ "jollibee-bigpan": {
+  "fichier": "jollibee-bigpan.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/jolly-spaghetti-n-palabok"
+ },
+ "jollibee-pies6": {
+  "fichier": "jollibee-pies6.jpg",
+  "auteur": "Jollibee",
+  "licence": "photo officielle",
+  "source": "https://www.jollibee.com.ph/menu/desserts-and-sweet-pie"
+ },
+ "logo-krispy": {
+  "fichier": "logo-krispy.svg",
+  "auteur": "Krispy Kreme",
+  "licence": "Public domain",
+  "lienLicence": "",
+  "source": "https://commons.wikimedia.org/wiki/File:Krispy_Kreme_logo.svg"
+ },
+ "krispy-cinnamon": {
+  "fichier": "krispy-cinnamon.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-chocolate": {
+  "fichier": "krispy-chocolate.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-viennois": {
+  "fichier": "krispy-viennois.png",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-chocolat": {
+  "fichier": "krispy-chocolat.png",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-latte": {
+  "fichier": "krispy-latte.png",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-chai": {
+  "fichier": "krispy-chai.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-cappuccino": {
+  "fichier": "krispy-cappuccino.png",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-flatwhite": {
+  "fichier": "krispy-flatwhite.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-espresso": {
+  "fichier": "krispy-espresso.png",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-americano": {
+  "fichier": "krispy-americano.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-macchiato": {
+  "fichier": "krispy-macchiato.png",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-matcha": {
+  "fichier": "krispy-matcha.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-mcaramel": {
+  "fichier": "krispy-mcaramel.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-mfraise": {
+  "fichier": "krispy-mfraise.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-mvanille": {
+  "fichier": "krispy-mvanille.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-granitemangue": {
+  "fichier": "krispy-granitemangue.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-chillerpassion": {
+  "fichier": "krispy-chillerpassion.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-chillerfraise": {
+  "fichier": "krispy-chillerfraise.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-granite": {
+  "fichier": "krispy-granite.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-citronnade": {
+  "fichier": "krispy-citronnade.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-coca": {
+  "fichier": "krispy-coca.png",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/sodas-menu/"
+ },
+ "krispy-fuzetea": {
+  "fichier": "krispy-fuzetea.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/sodas-menu/"
+ },
+ "krispy-lotuslatte": {
+  "fichier": "krispy-lotuslatte.png",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-pink": {
+  "fichier": "krispy-pink.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-custard": {
+  "fichier": "krispy-custard.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-nutty": {
+  "fichier": "krispy-nutty.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-hazelnut": {
+  "fichier": "krispy-hazelnut.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-raspberry": {
+  "fichier": "krispy-raspberry.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-blueberry": {
+  "fichier": "krispy-blueberry.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-apple": {
+  "fichier": "krispy-apple.png",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-sprinkles": {
+  "fichier": "krispy-sprinkles.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-nutella": {
+  "fichier": "krispy-nutella.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-matchafraise": {
+  "fichier": "krispy-matchafraise.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-caramel": {
+  "fichier": "krispy-caramel.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-biscotti": {
+  "fichier": "krispy-biscotti.png",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-kreme": {
+  "fichier": "krispy-kreme.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-saltedcaramel": {
+  "fichier": "krispy-saltedcaramel.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-cheesecake": {
+  "fichier": "krispy-cheesecake.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-ontopshake": {
+  "fichier": "krispy-ontopshake.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-ontoplatte": {
+  "fichier": "krispy-ontoplatte.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-lotusshake": {
+  "fichier": "krispy-lotusshake.png",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-psl": {
+  "fichier": "krispy-psl.png",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-popcorn": {
+  "fichier": "krispy-popcorn.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/carte-boissons-chaudes-et-froides/"
+ },
+ "krispy-glazed": {
+  "fichier": "krispy-glazed.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-pistache": {
+  "fichier": "krispy-pistache.png",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-lotus": {
+  "fichier": "krispy-lotus.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-box6": {
+  "fichier": "krispy-box6.png",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-alger": {
+  "fichier": "krispy-alger.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-nomad": {
+  "fichier": "krispy-nomad.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
+ },
+ "krispy-newyork": {
+  "fichier": "krispy-newyork.jpg",
+  "auteur": "Krispy Kreme",
+  "licence": "photo officielle",
+  "source": "https://krispykreme.fr/menu/"
  }
 }

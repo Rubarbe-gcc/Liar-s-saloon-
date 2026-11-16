@@ -13,8 +13,9 @@ import { makeRng } from '../public/shared/hasard.js';
 const H = 3600 * 1000;
 const T0 = Date.UTC(2026, 10, 10, 12, 0, 0);
 
-test('les cartes : 15 enseignes de 50 cartes, 23 C / 12 R / 8 É / 4 L / 3 M, ids uniques', () => {
-  assert.equal(ORDRE_ENSEIGNES.length, 15);
+test('les cartes : 26 enseignes de 50 cartes, 23 C / 12 R / 8 É / 4 L / 3 M, ids uniques', () => {
+  assert.equal(ORDRE_ENSEIGNES.length, 26);
+  assert.equal(CARTES.length, 1300);
   assert.equal(new Set(CARTES.map(c => c.id)).size, CARTES.length);
   for (const e of ORDRE_ENSEIGNES) {
     const cs = cartesDe(e);
