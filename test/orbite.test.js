@@ -26,7 +26,7 @@ test('6 cartes : parties sans erreur, tout reste dans le terrain', () => {
     const s = creer(c + 1, 'fer', 'echos', c, 2, 3);
     for (let i = 0; i < 5000 && s.fin < 0; i++) { ia(s, 0); ia(s, 1); step(s); }
     assert.ok(s.ent.length > 6 && s.relais.length >= 3, 'carte ' + c);
-    assert.ok(s.ent.every(e => e.x >= 0 && e.x <= 48000 && e.y >= 0 && e.y <= 48000), 'bornes carte ' + c);
+    assert.ok(s.ent.every(e => e.x >= 0 && e.x <= 64000 && e.y >= 0 && e.y <= 64000), 'bornes carte ' + c);
   }
 });
 import { hash, jouerTour, cmd, UPG, FA, BA as BAT } from '../public/shared/orbite/moteur.js';

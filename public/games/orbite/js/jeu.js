@@ -129,7 +129,7 @@ const img = (k, eq = ME) => { try { return `<img src="${rendu.portrait(k, eq)}" 
 function fabriquerCartes() {
   const o = mine(), L = []; if (!o.length) return L;
   const ouv = o.some(estOuv), b0 = o.find(e => BA[e.k] && BA[e.k].prod && !e.cons), qg = o.find(e => BA[e.k] && BA[e.k].qg), ch = o.find(e => UN[e.k] && UN[e.k].ch), unites = o.filter(e => !BA[e.k]);
-  if (ouv) for (const b of [...FA[s.fac[ME]].bat, FA[s.fac[ME]].ravit]) L.push({ ic: img(b), lb: NOM[b], co: BA[b].cout, ok: s.pr[ME] >= BA[b].cout, act: () => { place = b; ciblage = false; } });
+  if (ouv) for (const b of [...FA[s.fac[ME]].bat, FA[s.fac[ME]].ravit, FA[s.fac[ME]].qg]) L.push({ ic: img(b), lb: NOM[b], co: BA[b].cout, ok: s.pr[ME] >= BA[b].cout, act: () => { place = b; ciblage = false; } });
   if (b0) for (const u of BA[b0.k].prod) L.push({ ic: img(u), lb: NOM[u], co: UN[u].cout + (UN[u].en ? '+' + UN[u].en + '⚡' : ''), ok: s.pr[ME] >= UN[u].cout && (!UN[u].en || s.en[ME] >= UN[u].en) && (() => { const [pu, pm] = population(s, ME); return pu + popDe(u) <= pm; })() && !(UN[u].ch && s.ent.some(x => x.eq === ME && (x.k === u || x.file.includes(u)))), act: () => ordre(o.filter(e => BA[e.k] && BA[e.k].prod && !e.cons).map(e => e.id), { t: 'prod', k: u }) });
   if (qg) for (const u of Object.keys(UPG)) { const l = s.up[ME][u]; L.push({ ic: ICO[u], lb: `${UPG[u].nom} ${l}/3`, co: l < 3 ? `${UPG[u].pr * (l + 1)}+${UPG[u].en * (l + 1)}⚡` : 'max', ok: l < 3 && s.pr[ME] >= UPG[u].pr * (l + 1) && s.en[ME] >= UPG[u].en * (l + 1), act: () => ordre([qg.id], { t: 'up', k: u }) }); }
   if (unites.length && !ouv) L.push({ ic: '⚔️', lb: 'Attaquer', co: 'clic', ok: true, act: () => { ciblage = true; place = null; } });

@@ -49,9 +49,9 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre }) {
 
   // ---------- relief : plateau rocheux en orbite (falaises vers le vide, plateaux des bases, sols de faction) ----------
   let bases = [], plats = [], carte = 0, crateres = [], R0 = 0, carteMini = null;
-  const CTR = 23.5;
+  const CTR = W / 2 - .5;
   function bordure(x, z) { // distance au bord du plateau, contour irrégulier (négatif : le vide)
-    const b = Math.min(x + 2.2, z + 2.2, 49.7 - x, 49.7 - z);
+    const b = Math.min(x + 2.2, z + 2.2, W + 1.7 - x, H + 1.7 - z);
     return b + .8 * Math.sin(x * .41 + z * .13 + R0) + .55 * Math.sin(z * .57 - x * .21 + 2 * R0) + .3 * Math.sin((x + z) * 1.3 + R0);
   }
   // hauteur de chaque case d'après la grille du moteur (s.g) : 0 en bas, 1 sur les plateaux, en pente sur les rampes
@@ -159,7 +159,7 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre }) {
     plats = [...s.mines.map(m => ({ x: m.x / 1000, z: m.y / 1000 })), ...s.relais.map(r => ({ x: r.x / 1000, z: r.y / 1000 }))];
     const rnd = alea((carte + 1) * 7919);
     crateres = []; for (let i = 0; i < 40 && crateres.length < 9; i++) { const x = 4 + rnd() * 40, z = 4 + rnd() * 40, r = 1.2 + rnd() * 2.2; if (libre(x, z, 12, 4 + r) && crateres.every(c => Math.hypot(x - c.x, z - c.z) > c.r + r + 2)) crateres.push({ x, z, r }); }
-    const N = 208, geo = new THREE.PlaneGeometry(68, 68, N, N); geo.rotateX(-Math.PI / 2); geo.translate(CTR, 0, CTR);
+    const N = Math.round((W + 20) * 3.1), geo = new THREE.PlaneGeometry(W + 20, H + 20, N, N); geo.rotateX(-Math.PI / 2); geo.translate(CTR, 0, CTR);
     const p = geo.attributes.position, col = new Float32Array(p.count * 3), mix = new Float32Array(p.count * 4), em = new Float32Array(p.count * 3);
     const tc = new THREE.Color(), A = new THREE.Color(0xa08f78), Bc = new THREE.Color(0x58524c), Pc = new THREE.Color(0xa8977c), Rc = new THREE.Color(0x8c8a90);
     for (let i = 0; i < p.count; i++) {
@@ -207,14 +207,14 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre }) {
       const crete = (bd > .6 && bd < 2.4) || BORD[ci]; if (!crete || !libre(x, z, 0, 3.4)) continue;
       const s_ = .22 + rnd() * .5; gros[i % 3].push([x, pose(x, z) + s_ * .15, z, s_, .8 + rnd() * .6, rnd() * 6.3, (rnd() - .5) * .5]);
     }
-    for (let i = 0; i < 260; i++) { // rochers isolés en plaine
-      const x = 1 + rnd() * 46, z = 1 + rnd() * 46; if (!libre(x, z, 10, 3.6) || bordure(x, z) < 1.5) continue;
+    for (let i = 0; i < 460; i++) { // rochers isolés en plaine
+      const x = 1 + rnd() * (W - 2), z = 1 + rnd() * (H - 2); if (!libre(x, z, 10, 3.6) || bordure(x, z) < 1.5) continue;
       const s_ = rnd() < .85 ? .16 + rnd() * .3 : .45 + rnd() * .5; gros[i % 3].push([x, pose(x, z) + s_ * .1, z, s_, .7 + rnd() * .5, rnd() * 6.3, (rnd() - .5) * .4]);
     }
-    for (let i = 0; i < 1400; i++) { const x = rnd() * 48, z = rnd() * 48; if (!libre(x, z, 6.5, 2.4) || bordure(x, z) < 1) continue; const s_ = .05 + rnd() * .1; cailloux.push([x, pose(x, z) + .02, z, s_, .6, rnd() * 6.3, rnd()]); }
-    for (let c = 0; c < 16; c++) { const cx = 2 + rnd() * 44, cz = 2 + rnd() * 44; if (!libre(cx, cz, 10.5, 4) || bordure(cx, cz) < 2) continue;
+    for (let i = 0; i < 2500; i++) { const x = rnd() * W, z = rnd() * H; if (!libre(x, z, 6.5, 2.4) || bordure(x, z) < 1) continue; const s_ = .05 + rnd() * .1; cailloux.push([x, pose(x, z) + .02, z, s_, .6, rnd() * 6.3, rnd()]); }
+    for (let c = 0; c < 28; c++) { const cx = 2 + rnd() * (W - 4), cz = 2 + rnd() * (H - 4); if (!libre(cx, cz, 10.5, 4) || bordure(cx, cz) < 2) continue;
       const n = 3 + rnd() * 6 | 0; for (let k = 0; k < n; k++) { const x = cx + (rnd() - .5) * 1.6, z = cz + (rnd() - .5) * 1.6, s_ = .12 + rnd() * .16; eclats.push([x, pose(x, z) - .05, z, s_, 1.6 + rnd() * 2.2, rnd() * 6.3, (rnd() - .5) * .9]); } }
-    for (let c = 0; c < 14; c++) { const cx = 2 + rnd() * 44, cz = 2 + rnd() * 44; if (!libre(cx, cz, 10, 3.8) || bordure(cx, cz) < 2) continue;
+    for (let c = 0; c < 24; c++) { const cx = 2 + rnd() * (W - 4), cz = 2 + rnd() * (H - 4); if (!libre(cx, cz, 10, 3.8) || bordure(cx, cz) < 2) continue;
       const n = 4 + rnd() * 7 | 0; for (let k = 0; k < n; k++) { const x = cx + (rnd() - .5) * 2.4, z = cz + (rnd() - .5) * 2.4, hh = .3 + rnd() * .6, y0 = pose(x, z), ry = rnd() * 6.3, rx = (rnd() - .5) * .35; tiges.push([x, y0 + hh / 2, z, .035, hh / .035, ry, rx]); bulbes.push([x + Math.sin(rx) * 0, y0 + hh, z, .07 + rnd() * .07, 1.3, ry, 0]); } }
     if (gg) for (let i = 0; i < W * H; i++) if (gg.roc[i]) { const cx = i % W + .5, cz = ((i / W) | 0) + .5; for (let k = 0; k < 2; k++) { const x = cx + (rnd() - .5) * .7, z = cz + (rnd() - .5) * .7, s_ = .55 + rnd() * .45; gros[(i + k) % 3].push([x, pose(x, z) + s_ * .2, z, s_, 1.1 + rnd() * .9, rnd() * 6.3, (rnd() - .5) * .3]); } }
     gros.forEach((l, i) => semer(ROCHE[i], i === 1 ? matRoche2 : matRoche, l));
@@ -222,8 +222,8 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre }) {
     semer(G('eclat', () => { const g = new THREE.CylinderGeometry(.5, .7, 1, 6); g.translate(0, .5, 0); const t = new THREE.ConeGeometry(.5, .5, 6); t.translate(0, 1.25, 0); return fusion([g, t]); }), MT(0x6fd6ff, { emissive: 0x2a8cff, emissiveIntensity: .9, roughness: .15, metalness: .1, flatShading: true }), eclats, false);
     semer(cyl(1, 1, 1, 5), MT(0x4a5a3a, { roughness: .9, metalness: 0 }), tiges, false);
     semer(sph(1, 10, 8), MT(0xc8ff9a, { emissive: 0x8cff5a, emissiveIntensity: 1.3, roughness: .4, metalness: 0 }), bulbes, false);
-    for (let i = 0; i < 7; i++) { // épaves de vaisseaux tombés
-      const x = 3 + rnd() * 42, z = 3 + rnd() * 42; if (!libre(x, z, 11, 4.5) || bordure(x, z) < 2.5) continue;
+    for (let i = 0; i < 12; i++) { // épaves de vaisseaux tombés
+      const x = 3 + rnd() * (W - 6), z = 3 + rnd() * (H - 6); if (!libre(x, z, 11, 4.5) || bordure(x, z) < 2.5) continue;
       const g = new THREE.Group(); g.position.set(x, pose(x, z) - .1, z); g.rotation.set((rnd() - .5) * .3, rnd() * 6.3, (rnd() - .5) * .4);
       const mc = MT(0x6e6a66, { roughness: .7, metalness: .6 }), mr = MT(0x7a4a32, { roughness: .9, metalness: .3 });
       add(g, box(1.6, .5, .9), mc, 0, .2, 0, { r: [0, 0, .25] }); add(g, box(.9, .25, .5), mr, -.9, .1, .3, { r: [.2, .4, -.3] }); add(g, cyl(.18, .26, 1.1, 8), mc, .7, .45, -.2, { r: [0, 0, 1.3] }); add(g, box(1.2, .08, .4), mr, .1, .5, .55, { r: [.5, .2, 0] });
@@ -278,11 +278,11 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre }) {
     const h = new THREE.Sprite(new THREE.SpriteMaterial({ map: rimTex, color: lin(rim), transparent: true, opacity: .9, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })); h.scale.set(r * 2.7, r * 2.7, 1); h.position.set(x, y, z); scene.add(h);
   }
   planete(-75, -34, 30, 28, 0x141a36, 0x5b7bff); planete(100, -58, 75, 12, 0x2a1230, 0xff6ad0); planete(10, -50, -95, 20, 0x10222c, 0x3fe0c8);
-  const NP = 380, pp = new Float32Array(NP * 3), pv = []; for (let i = 0; i < NP; i++) { pp[i * 3] = Math.random() * 56 - 4; pp[i * 3 + 1] = .3 + Math.random() * 7; pp[i * 3 + 2] = Math.random() * 56 - 4; pv.push([(Math.random() - .3) * .5, .05 + Math.random() * .25, (Math.random() - .5) * .4]); }
+  const NP = 600, pp = new Float32Array(NP * 3), pv = []; for (let i = 0; i < NP; i++) { pp[i * 3] = Math.random() * (W + 8) - 4; pp[i * 3 + 1] = .3 + Math.random() * 7; pp[i * 3 + 2] = Math.random() * (H + 8) - 4; pv.push([(Math.random() - .3) * .5, .05 + Math.random() * .25, (Math.random() - .5) * .4]); }
   const dustG = new THREE.BufferGeometry(); dustG.setAttribute('position', new THREE.BufferAttribute(pp, 3));
   scene.add(new THREE.Points(dustG, new THREE.PointsMaterial({ map: glowTex, color: lin(0xa9c0ff), size: 3.2, sizeAttenuation: false, transparent: true, opacity: .5, depthWrite: false, blending: THREE.AdditiveBlending, fog: false })));
   const feux = [];
-  const roches = []; { const gm = MT(0x232838, { roughness: .95, flatShading: true }); for (let i = 0; i < 46; i++) { const a = Math.random() * 6.283, d = 36 + Math.random() * 45, sz = .5 + Math.random() * 2.6; const m = new THREE.Mesh(dod(1), gm); m.scale.set(sz, sz * (.6 + Math.random() * .6), sz * (.8 + Math.random() * .5)); m.position.set(24 + Math.cos(a) * d, -22 + Math.random() * 30, 24 + Math.sin(a) * d); m.userData = { w: (Math.random() - .5) * .4, b: Math.random() * 6, y0: m.position.y }; if (i % 5 === 0) { const c = new THREE.Mesh(cone(.18, 1.2, 5), glow(i % 10 ? 0x5ad1ff : 0xa46bff, 1.4)); c.position.set(0, .9, 0); c.scale.setScalar(1 / sz); m.add(c); } m.castShadow = false; scene.add(m); roches.push(m); } }
+  const roches = []; { const gm = MT(0x232838, { roughness: .95, flatShading: true }); for (let i = 0; i < 46; i++) { const a = Math.random() * 6.283, d = 36 + Math.random() * 45, sz = .5 + Math.random() * 2.6; const m = new THREE.Mesh(dod(1), gm); m.scale.set(sz, sz * (.6 + Math.random() * .6), sz * (.8 + Math.random() * .5)); m.position.set(CTR + Math.cos(a) * (d + 10), -22 + Math.random() * 30, CTR + Math.sin(a) * (d + 10)); m.userData = { w: (Math.random() - .5) * .4, b: Math.random() * 6, y0: m.position.y }; if (i % 5 === 0) { const c = new THREE.Mesh(cone(.18, 1.2, 5), glow(i % 10 ? 0x5ad1ff : 0xa46bff, 1.4)); c.position.set(0, .9, 0); c.scale.setScalar(1 / sz); m.add(c); } m.castShadow = false; scene.add(m); roches.push(m); } }
   scene.add(new THREE.HemisphereLight(0xb4c2e6, 0x3a2e24, .8 * LK));
   const sun = new THREE.DirectionalLight(0xffe2c0, 2.2 * LK); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
   Object.assign(sun.shadow.camera, { left: -34, right: 34, top: 34, bottom: -34, near: 1, far: 120 }); sun.shadow.bias = -.0006; scene.add(sun, sun.target);
@@ -909,7 +909,7 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre }) {
   // ---------- caméra, picking ----------
   const ray = new THREE.Raycaster(), plan = new THREE.Plane(new V3(0, 1, 0), 0);
   function appliquer() {
-    cible.x = clamp(cible.x, 3, 44); cible.z = clamp(cible.z, 3, 44); dist = clamp(dist, 9, 40);
+    cible.x = clamp(cible.x, 3, W - 4); cible.z = clamp(cible.z, 3, H - 4); dist = clamp(dist, 9, 40);
     const pit = orb ? .6 : PITCH; cam.position.set(cible.x + Math.sin(yaw) * dist * Math.cos(pit), cible.y + dist * Math.sin(pit), cible.z + Math.cos(yaw) * dist * Math.cos(pit)); cam.lookAt(cible); if (shake > .005) { cam.position.x += (Math.random() - .5) * shake; cam.position.y += (Math.random() - .5) * shake; shake *= .9; }
     sun.position.set(cible.x - 22, 38, cible.z + 18); sun.target.position.copy(cible); sun.target.updateMatrixWorld();
   }
@@ -979,7 +979,7 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre }) {
     deplacer(dx, dz) { cible.x += dx; cible.z += dz; }, zoom(d) { dist *= d; }, centrer(x, z) { cible.x = x; cible.z = z + 3; },
     vue: () => ({ x: cible.x, z: cible.z }),
     maj(s, C) { const now = performance.now(), dt = Math.min(.1, (now - t0) / 1000); t0 = now; const t = now / 1000; tt += dt; if (++nf >= 60) { if (tt / nf > .05 && SSV > 1) { SSV = Math.max(1, SSV - .25); redim(W0, H0); } tt = 0; nf = 0; } appliquer(); if (orb) yaw += dt * .06; for (const m of roches) { m.rotation.y += m.userData.w * dt; m.rotation.x += m.userData.w * .5 * dt; m.position.y = m.userData.y0 + Math.sin(t * .3 + m.userData.b) * .6; } feux.forEach((f, i) => { f.material.opacity = .45 + .4 * Math.sin(t * 2 + i * .8); });
-      for (let i = 0; i < NP; i++) { const q = pv[i]; pp[i * 3] += q[0] * dt; pp[i * 3 + 1] += (Math.sin(t * .5 + i) * .15 + q[1]) * dt * .6; pp[i * 3 + 2] += q[2] * dt; if (pp[i * 3] > 52) pp[i * 3] -= 56; if (pp[i * 3] < -4) pp[i * 3] += 56; if (pp[i * 3 + 1] > 8) pp[i * 3 + 1] = .3; if (pp[i * 3 + 2] > 52) pp[i * 3 + 2] -= 56; if (pp[i * 3 + 2] < -4) pp[i * 3 + 2] += 56; } dustG.attributes.position.needsUpdate = true; sync(s, C, dt, t); majFx(dt); rendre(); },
-    menu(on) { orb = on; if (on) { cible.set(24, .5, 24); dist = 15; } else yaw = 0; }, suivre(x, z) { cible.x += (x - cible.x) * .03; cible.z += (z - cible.z) * .03; },
+      for (let i = 0; i < NP; i++) { const q = pv[i]; pp[i * 3] += q[0] * dt; pp[i * 3 + 1] += (Math.sin(t * .5 + i) * .15 + q[1]) * dt * .6; pp[i * 3 + 2] += q[2] * dt; if (pp[i * 3] > W + 4) pp[i * 3] -= W + 8; if (pp[i * 3] < -4) pp[i * 3] += W + 8; if (pp[i * 3 + 1] > 8) pp[i * 3 + 1] = .3; if (pp[i * 3 + 2] > H + 4) pp[i * 3 + 2] -= H + 8; if (pp[i * 3 + 2] < -4) pp[i * 3 + 2] += H + 8; } dustG.attributes.position.needsUpdate = true; sync(s, C, dt, t); majFx(dt); rendre(); },
+    menu(on) { orb = on; if (on) { cible.set(CTR, .5, CTR); dist = 15; } else yaw = 0; }, suivre(x, z) { cible.x += (x - cible.x) * .03; cible.z += (z - cible.z) * .03; },
   };
 }

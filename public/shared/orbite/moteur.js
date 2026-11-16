@@ -1,5 +1,5 @@
 // ORBITE NOIRE — moteur déterministe (entiers, millièmes de case, 20 pas/s). Aucun DOM.
-export const W = 48, H = 48;
+export const W = 64, H = 64;
 export const UN = {
   ouvrier:   { pv: 40,  v: 70, pt: 1000, deg: 0,  cd: 10, cout: 50,  tp: 160, vue: 6000 },
   fantassin: { pv: 117,  v: 80, pt: 1200, deg: 10, cd: 10, cout: 80,  tp: 200, vue: 6000 },
@@ -70,7 +70,7 @@ Object.assign(BA, {
   diapason: { pv: 180, cout: 100, tc: 160, vue: 4000, pop: 8 },   // Échos
   braisier: { pv: 200, cout: 100, tc: 160, vue: 4000, pop: 8 },   // Cendres
 });
-for (const k of ['noyau', 'coeur', 'nexus', 'fournaise']) BA[k].pop = 10;
+for (const k of ['noyau', 'coeur', 'nexus', 'fournaise']) { BA[k].pop = 10; BA[k].cout = 400; BA[k].tc = 600; } // un QG de plus = une expansion
 FA.fer.ravit = 'entrepot'; FA.bosquet.ravit = 'terrier'; FA.echos.ravit = 'diapason'; FA.cendres.ravit = 'braisier';
 export const POP_MAX = 100;
 export const popDe = k => (UN[k].ch ? 4 : UN[k].pv >= 250 ? 3 : 1);
@@ -89,22 +89,22 @@ function regen(s, e) {
   if (d.enr && !e.cons && s.tick % 10 === 0 && e.pv < e.max) e.pv++;
   if (d.pra && s.tick % 20 === 0 && e.pv < e.max && s.ent.some(b => b.eq === e.eq && BA[b.k] && BA[b.k].enr && d2(b, e) <= 5000 * 5000)) e.pv = Math.min(e.max, e.pv + 2);
 }
-const mir = a => a.map(([x, y]) => [47 - x, 47 - y]);
-// 6 cartes 48x48 : base de l'équipe 0 (l'équipe 1 est en miroir), mines et Relais d'un côté (miroir ajouté), `centre` et `rc` non mirorés
+const mir = a => a.map(([x, y]) => [W - 1 - x, H - 1 - y]);
+// 6 cartes 64x64 : base de l'équipe 0 (l'équipe 1 est en miroir : 63 - x, 63 - y), mines, Relais, sites d'expansion `exp` et massifs `rocs` d'un côté (miroir ajouté) ; `centre` et `rc` non mirorés
 export const MAPS = [
-  { nom: 'Croisée',        base: [6, 6],   mines: [[10, 6], [6, 10], [20, 28]],  centre: [[24, 24]],           relais: [[14, 34], [24, 12]], rocs: [[17, 17, 2], [10, 23, 1], [23, 10, 1], [30, 22, 1]] },
-  { nom: 'Diagonale',      base: [5, 5],   mines: [[9, 5], [5, 9], [14, 14]],    centre: [[24, 24]],           relais: [[12, 30], [24, 10]], rocs: [[20, 7, 2], [7, 20, 2], [19, 19, 1]] },
-  { nom: 'Duel au centre', base: [8, 8],   mines: [[12, 8], [8, 12]],            centre: [[24, 24]],           relais: [[16, 22], [24, 12]], rocs: [[19, 15, 2], [15, 19, 2], [28, 8, 1]] },
-  { nom: 'Couloirs',       base: [5, 24],  mines: [[5, 18], [5, 30], [14, 24]],  centre: [[24, 12], [23, 35]], relais: [[16, 10]], rc: [[24, 24]], rocs: [[15, 18, 2], [15, 30, 2], [24, 18, 1]] },
-  { nom: 'Archipel',       base: [6, 41],  mines: [[10, 41], [6, 37], [16, 30]], centre: [[24, 24]],           relais: [[12, 20], [24, 36]], rocs: [[18, 41, 2], [9, 28, 2], [20, 26, 1]] },
-  { nom: 'Forteresse',     base: [24, 5],  mines: [[20, 5], [28, 5], [24, 12]],  centre: [[24, 24]],           relais: [[10, 20], [14, 32]], rc: [[24, 28]], rocs: [[16, 12, 2], [32, 12, 2], [24, 18, 1]] },
+  { nom: 'Croisée',        base: [8, 8],   mines: [[13, 8], [8, 13], [6, 26], [10, 31], [26, 6], [31, 10]], exp: [[10, 26], [26, 10]], centre: [[31, 32], [32, 31]], relais: [[18, 44], [34, 18]], rocs: [[21, 21, 2], [15, 36, 1], [36, 15, 1], [42, 26, 2]] },
+  { nom: 'Diagonale',      base: [6, 6],   mines: [[11, 6], [6, 11], [16, 23], [23, 16], [4, 31], [8, 35]], exp: [[20, 20], [8, 30]], centre: [[31, 31], [32, 32]], relais: [[17, 42], [33, 13]], rocs: [[28, 8, 2], [14, 28, 1], [27, 27, 1]] },
+  { nom: 'Duel au centre', base: [10, 10], mines: [[15, 10], [10, 15], [30, 10], [26, 7]], exp: [[26, 12]], centre: [[31, 31], [32, 32]], relais: [[20, 32], [33, 17]], rocs: [[24, 21, 2], [18, 26, 2], [40, 8, 1]] },
+  { nom: 'Couloirs',       base: [6, 32],  mines: [[6, 26], [6, 38], [14, 11], [18, 8]], exp: [[18, 13]], centre: [[32, 16], [31, 47]], relais: [[24, 29]], rc: [[32, 32]], rocs: [[19, 22, 2], [19, 42, 2], [32, 24, 1]] },
+  { nom: 'Archipel',       base: [8, 55],  mines: [[13, 55], [8, 50], [18, 37], [22, 35]], exp: [[22, 40]], centre: [[31, 32]], relais: [[15, 26], [33, 48]], rocs: [[25, 55, 2], [11, 38, 2], [28, 32, 1]] },
+  { nom: 'Forteresse',     base: [32, 7],  mines: [[27, 7], [37, 7], [10, 12], [14, 9]], exp: [[14, 14]], centre: [[32, 32]], relais: [[12, 28], [20, 44]], rc: [[32, 38]], rocs: [[22, 17, 2], [42, 17, 2], [32, 25, 1]] },
 ];
 // cartes de l'éditeur : même forme que MAPS ; refusée si une valeur sort des bornes (alors la carte 0 sert)
-const pt = p => Array.isArray(p) && p.length === 2 && p.every(v => Number.isInteger(v) && v >= 2 && v <= 45);
+const pt = p => Array.isArray(p) && p.length === 2 && p.every(v => Number.isInteger(v) && v >= 2 && v <= W - 3);
 const pts = (l, max) => Array.isArray(l) && l.length <= max && l.every(pt);
 export function carteValide(d) {
-  if (!d || typeof d !== 'object' || !pt(d.base) || !pts(d.mines, 6) || !pts(d.centre || [], 3) || !pts(d.relais || [], 4) || !pts(d.rc || [], 2) || !(d.rocs === undefined || (Array.isArray(d.rocs) && d.rocs.length <= 8 && d.rocs.every(r => Array.isArray(r) && r.length === 3 && pt(r.slice(0, 2)) && Number.isInteger(r[2]) && r[2] >= 1 && r[2] <= 3)))) return false;
-  const [bx, by] = d.base; if (bx < 3 || by < 3 || bx > 44 || by > 44 || Math.hypot(bx - (47 - bx), by - (47 - by)) < 16 || !d.mines.length) return false;
+  if (!d || typeof d !== 'object' || !pt(d.base) || !pts(d.mines, 10) || !pts(d.exp || [], 3) || !pts(d.centre || [], 3) || !pts(d.relais || [], 4) || !pts(d.rc || [], 2) || !(d.rocs === undefined || (Array.isArray(d.rocs) && d.rocs.length <= 8 && d.rocs.every(r => Array.isArray(r) && r.length === 3 && pt(r.slice(0, 2)) && Number.isInteger(r[2]) && r[2] >= 1 && r[2] <= 3)))) return false;
+  const [bx, by] = d.base; if (bx < 3 || by < 3 || bx > W - 4 || by > H - 4 || Math.hypot(bx - (W - 1 - bx), by - (H - 1 - by)) < 16 || !d.mines.length) return false;
   return [...d.mines, ...(d.relais || [])].every(([x, y]) => Math.hypot(x - bx, y - by) >= 3);
 }
 // niveaux d'IA : pas = décision tous les N pas ; th/nw = écart de taille de vague / d'ouvriers ; nb = bâtiments max ; bonus = multiplicateur de récolte
@@ -127,21 +127,22 @@ export function terrain(M) {
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const X = 2 * x + 1, Y = 2 * y + 1, i = y * W + x;
     for (const [bx, by] of bases) {
-      const dx = X - 2 * bx, dy = Y - 2 * by, D = dx * dx + dy * dy, cx = 48 - 2 * bx, cy = 48 - 2 * by, C = cx * cx + cy * cy, dot = dx * cx + dy * cy;
+      const dx = X - 2 * bx, dy = Y - 2 * by, D = dx * dx + dy * dy, cx = W - 2 * bx, cy = H - 2 * by, C = cx * cx + cy * cy, dot = dx * cx + dy * cy;
       if (D <= 354) g.niv[i] = 1;                                                    // plateau de la base : rayon ~9,4 cases
       if (D >= 225 && D <= 484 && dot > 0 && dot * dot * 100 >= 81 * D * C) g.rampe[i] = 1; // rampe tournée vers le centre
     }
   }
-  const points = [...bases, ...M.mines, ...mir(M.mines), ...(M.centre || []), ...(M.relais || []), ...mir(M.relais || []), ...(M.rc || [])];
+  const points = [...bases, ...(M.exp || []), ...mir(M.exp || []), ...M.mines, ...mir(M.mines), ...(M.centre || []), ...(M.relais || []), ...mir(M.relais || []), ...(M.rc || [])];
   const loin = (X, Y, r2) => points.every(([px, py]) => (X - 2 * px) ** 2 + (Y - 2 * py) ** 2 > r2);
-  for (const [rx, ry, r] of [...(M.rocs || []), ...(M.rocs || []).map(([x, y, r]) => [47 - x, 47 - y, r])])
+  for (const [rx, ry, r] of [...(M.rocs || []), ...(M.rocs || []).map(([x, y, r]) => [W - 1 - x, H - 1 - y, r])])
     for (let y = Math.max(0, ry - r - 1); y <= Math.min(H - 1, ry + r + 1); y++) for (let x = Math.max(0, rx - r - 1); x <= Math.min(W - 1, rx + r + 1); x++) {
       const X = 2 * x + 1, Y = 2 * y + 1, i = y * W + x;
       if ((X - 2 * rx) ** 2 + (Y - 2 * ry) ** 2 <= 4 * r * r + 2 && !g.rampe[i] && loin(X, Y, 49)) g.roc[i] = 1;
     }
   // cristaux : les cases derrière chaque mine proche d'une base (vues depuis la base) bloquent le passage
+  const sites = [...bases, ...(M.exp || []), ...mir(M.exp || [])];
   [...M.mines, ...mir(M.mines), ...(M.centre || [])].forEach(([mx, my], k) => {
-    let bb = null, bd = INF; for (const [bx, by] of bases) { const d = (mx - bx) ** 2 + (my - by) ** 2; if (d < bd) { bd = d; bb = [bx, by]; } }
+    let bb = null, bd = INF; for (const [bx, by] of sites) { const d = (mx - bx) ** 2 + (my - by) ** 2; if (d < bd) { bd = d; bb = [bx, by]; } }
     if (bd > 225) return;
     for (let y = my - 3; y <= my + 2; y++) for (let x = mx - 3; x <= mx + 2; x++) {
       if (x < 0 || y < 0 || x >= W || y >= H) continue;
@@ -223,7 +224,7 @@ function emprise(k, x, y) {
 export function placeLibre(s, k, x, y) {
   const g = s.g, l = emprise(k, x, y), h = BA[k].qg ? 2 : 1, cx = Math.round(x / 1000), cy = Math.round(y / 1000);
   if (cx - h < 1 || cy - h < 1 || cx + h > W - 1 || cy + h > H - 1) return false;
-  return l.every(i => libreCase(g, i) && !g.rampe[i] && g.niv[i] === g.niv[l[0]]) && !s.mines.some(m => Math.abs(m.x - x) < 2500 && Math.abs(m.y - y) < 2500) && !s.relais.some(r => Math.abs(r.x - x) < 3000 && Math.abs(r.y - y) < 3000);
+  return l.every(i => libreCase(g, i) && !g.rampe[i] && g.niv[i] === g.niv[l[0]]) && !s.mines.some(m => Math.abs(m.x - x) < (BA[k].qg ? 3500 : 2500) && Math.abs(m.y - y) < (BA[k].qg ? 3500 : 2500)) && !s.relais.some(r => Math.abs(r.x - x) < 3000 && Math.abs(r.y - y) < 3000);
 }
 function occuper(s, e, v) { for (const i of emprise(e.k, e.x, e.y)) s.g.occ[i] = v ? e.id : 0; s.g.ver++; }
 
@@ -251,7 +252,8 @@ export function creer(graine = 1, f0 = 'fer', f1 = 'fer', carte = 0, n0 = 2, n1 
   for (const [x, y] of [...M.mines, ...mir(M.mines), ...(M.centre || [])])
     s.mines.push({ x: x * 1000, y: y * 1000, q: 3500 + hasard(s, 1000) });
   // point d'approche des ouvriers : devant les cristaux, du côté de la base la plus proche
-  for (const m of s.mines) { let bb = B[0]; for (const b of B) if ((m.x - b[0] * 1000) ** 2 + (m.y - b[1] * 1000) ** 2 < (m.x - bb[0] * 1000) ** 2 + (m.y - bb[1] * 1000) ** 2) bb = b; const dx = bb[0] * 1000 - m.x, dy = bb[1] * 1000 - m.y, d = sq(dx * dx + dy * dy) || 1; m.ax = m.x + Math.trunc(dx * 700 / d); m.ay = m.y + Math.trunc(dy * 700 / d); }
+  const SITES = [...B, ...(M.exp || []), ...mir(M.exp || [])]; s.exp = [...(M.exp || []), ...mir(M.exp || [])].map(([x, y]) => ({ x: x * 1000, y: y * 1000 }));
+  for (const m of s.mines) { let bb = SITES[0]; for (const b of SITES) if ((m.x - b[0] * 1000) ** 2 + (m.y - b[1] * 1000) ** 2 < (m.x - bb[0] * 1000) ** 2 + (m.y - bb[1] * 1000) ** 2) bb = b; const dx = bb[0] * 1000 - m.x, dy = bb[1] * 1000 - m.y, d = sq(dx * dx + dy * dy) || 1; m.ax = m.x + Math.trunc(dx * 700 / d); m.ay = m.y + Math.trunc(dy * 700 / d); }
   for (const [x, y] of [...(M.relais || []), ...mir(M.relais || []), ...(M.rc || [])]) {
     s.relais.push({ x: x * 1000, y: y * 1000, prog: 0, own: -1 });
     ajout(s, 2, 'gardien', x * 1000 - 800, y * 1000); ajout(s, 2, 'gardien', x * 1000 + 800, y * 1000);
@@ -393,12 +395,12 @@ const nombre = v => Number.isFinite(v);
 function ordreNet(s, c) {
   if (c.t === 'att' && nombre(c.c)) return { t: 'att', c: c.c };
   if (c.t === 'rec' && s.mines[c.m]) return { t: 'rec', m: c.m };
-  if ((c.t === 'move' || c.t === 'am') && nombre(c.x) && nombre(c.y)) return { t: c.t, x: Math.max(500, Math.min(47500, Math.trunc(c.x))), y: Math.max(500, Math.min(47500, Math.trunc(c.y))) };
+  if ((c.t === 'move' || c.t === 'am') && nombre(c.x) && nombre(c.y)) return { t: c.t, x: Math.max(500, Math.min(W * 1000 - 500, Math.trunc(c.x))), y: Math.max(500, Math.min(H * 1000 - 500, Math.trunc(c.y))) };
   return null;
 }
 function renfort(s, eq, role, n) {
   const q = s.ent.find(e => e.eq === eq && BA[e.k] && BA[e.k].qg); if (!q) return;
-  const k = FA[s.fac[eq]].u[role], ux = Math.sign(24000 - q.x) || 1, uy = Math.sign(24000 - q.y) || 1;
+  const k = FA[s.fac[eq]].u[role], ux = Math.sign(W * 500 - q.x) || 1, uy = Math.sign(H * 500 - q.y) || 1;
   for (let i = 0; i < n; i++) ajout(s, eq, k, q.x + ux * (2500 + (i % 4) * 400), q.y + uy * (1500 + ((i / 4) | 0) * 400));
 }
 // pouvoirs des Champions (recharge 30 s) : Maréchal = frappe de zone, Ancien = soin de zone, Oracle = boucliers de zone
@@ -421,14 +423,14 @@ export function cmd(s, eq, ids, c) {
       if (b && b.prod && b.prod.includes(c.k) && !e.cons && s.pr[eq] >= u.cout && (!u.en || s.en[eq] >= u.en) && e.file.length < 5 && !(u.ch && s.ent.some(x => x.eq === eq && (x.k === c.k || x.file.includes(c.k)))) && (() => { const [pu, pm] = population(s, eq); return pu + popDe(c.k) <= pm; })()) { s.pr[eq] -= u.cout; s.en[eq] -= u.en || 0; e.file.push(c.k); }
     } else if (c.t === 'bat') {
       const b = BA[c.k];
-      const x = nombre(c.x) ? Math.round(Math.max(1500, Math.min(46500, c.x)) / 1000) * 1000 : 0, y = nombre(c.y) ? Math.round(Math.max(1500, Math.min(46500, c.y)) / 1000) * 1000 : 0;
+      const x = nombre(c.x) ? Math.round(Math.max(1500, Math.min(W * 1000 - 1500, c.x)) / 1000) * 1000 : 0, y = nombre(c.y) ? Math.round(Math.max(1500, Math.min(H * 1000 - 1500, c.y)) / 1000) * 1000 : 0;
       if (UN[e.k] && UN[e.k].ouv && b && b.cout && x && y && s.pr[eq] >= b.cout && placeLibre(s, c.k, x, y)) { s.pr[eq] -= b.cout; e.ordre = { t: 'bat', k: c.k, x, y }; break; }
     } else if (c.t === 'up') {
       const g = UPG[c.k], l = g && BA[e.k] && BA[e.k].qg ? s.up[eq][c.k] : 9;
       if (l < 3 && s.pr[eq] >= g.pr * (l + 1) && s.en[eq] >= g.en * (l + 1)) { s.pr[eq] -= g.pr * (l + 1); s.en[eq] -= g.en * (l + 1); s.up[eq][c.k]++; }
       break;
     } else if (c.t === 'pouv') { pouvoir(s, e);
-    } else if (c.t === 'ral') { if (BA[e.k] && BA[e.k].prod && nombre(c.x) && nombre(c.y)) e.ral = { x: Math.max(500, Math.min(47500, Math.trunc(c.x))), y: Math.max(500, Math.min(47500, Math.trunc(c.y))) };
+    } else if (c.t === 'ral') { if (BA[e.k] && BA[e.k].prod && nombre(c.x) && nombre(c.y)) e.ral = { x: Math.max(500, Math.min(W * 1000 - 500, Math.trunc(c.x))), y: Math.max(500, Math.min(H * 1000 - 500, Math.trunc(c.y))) };
     } else if (c.t === 'stop') { if (!BA[e.k]) e.ordre = null;
     } else if (!BA[e.k]) { const o = ordreNet(s, c); if (o) { e.ordre = o; e.w = 0; } }
   }
@@ -447,12 +449,19 @@ export function ia(s, eq) {
   if (s.fin >= 0 || s.tick % L.pas) return;
   const mi = s.ent.filter(e => e.eq === eq), q = k => mi.filter(e => e.k === k), noy = mi.find(e => BA[e.k] && BA[e.k].qg);
   if (!noy) return;
-  const ux = Math.sign(24000 - noy.x) || 1, uy = Math.sign(24000 - noy.y) || 1; // direction vers le centre
+  const ux = Math.sign(W * 500 - noy.x) || 1, uy = Math.sign(H * 500 - noy.y) || 1; // direction vers le centre
   const st = (s.ia = s.ia || [{}, {}])[eq];
   if (st.th === undefined) { st.th = Math.max(4, 6 + L.th + hasard(s, 5)); st.nw = Math.max(3, 5 + L.nw + hasard(s, 3)); } // variété : taille de la 1re vague, nombre d'ouvriers
   const F = FA[s.fac[eq]], ou = q(F.ouv), en = s.ent.find(e => e.eq !== eq && BA[e.k] && BA[e.k].qg);
-  if (ou.length < st.nw && noy.file.length < 2) cmd(s, eq, [noy.id], { t: 'prod', k: F.ouv });
-  const ms = s.mines.map((m, i) => i).filter(i => s.mines[i].q > 0).sort((a, b) => d2(s.mines[a], noy) - d2(s.mines[b], noy));
+  const qgs = mi.filter(e => BA[e.k] && BA[e.k].qg && !e.cons), dq = p => Math.min(...qgs.map(q => d2(q, p)));
+  for (const q of qgs) if (ou.length < st.nw + 7 * (qgs.length - 1) && q.file.length < 2) cmd(s, eq, [q.id], { t: 'prod', k: F.ouv });
+  const ms = s.mines.map((m, i) => i).filter(i => s.mines[i].q > 0).sort((a, b) => dq(s.mines[a]) - dq(s.mines[b]));
+  // expansion : un QG de plus sur le site libre le plus proche (au bout de 3 min, ou quand les mines de la base s'épuisent)
+  if (qgs.length < 3 && s.pr[eq] >= BA[F.qg].cout && (s.tick > 3600 || ms.length && dq(s.mines[ms[0]]) > 8000 * 8000) && !mi.some(e => e.k === F.qg && e.cons) && !ou.some(o => o.ordre && o.ordre.t === 'bat' && o.ordre.k === F.qg)) {
+    const site = (s.exp || []).filter(p => !s.ent.some(e => BA[e.k] && BA[e.k].qg && d2(e, p) < 7000 * 7000)).sort((a, b) => d2(a, noy) - d2(b, noy))[0];
+    const p = site && chercherPlace(s, F.qg, site.x, site.y), o = ou.find(o => !o.ordre || o.ordre.t === 'rec');
+    if (p && o) cmd(s, eq, [o.id], { t: 'bat', k: F.qg, x: p[0], y: p[1] });
+  }
   if (ms.length) for (const o of ou) if (!o.ordre) cmd(s, eq, [o.id], { t: 'rec', m: ms[o.id % Math.min(2, ms.length)] });
   const W2 = [F.bat[0], F.bat[1], F.bat[2], F.bat[0], F.bat[2], F.bat[1], F.bat[2]], O = [[4, 0], [0, 4], [4, 4], [7, 1], [1, 7], [8, 5], [5, 8]];
   const nb = mi.filter(e => BA[e.k] && !BA[e.k].qg).length;
