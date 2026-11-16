@@ -312,7 +312,7 @@ function ruck(m, e, cons) {
   const g = tri[0];
   if (g && dist(g.x, g.y, r.x, r.y) < 7) {
     const k = vers(g, r.x + s * 0.2, r.y, { sprint: true, fx: r.x - g.x, fy: r.y - g.y });
-    if (dist(g.x, g.y, r.x, r.y) < 2.4 && g.verrou <= 0 && hasard(m) < 0.03 * st.gratte) k.action = { type: 'gratter' };
+    if (dist(g.x, g.y, r.x, r.y) < 2.4 && g.verrou <= 0 && r.gratte[e] < 1 && hasard(m) < 0.03 * st.gratte) k.action = { type: 'gratter' };
     cons[g.id] = k;
   }
   defense(m, e, cons, null, r.x, r.y, false, r.x + s * 3);

@@ -68,7 +68,14 @@ export function creerCommentateur(ctx) {
           if (ev.enOr) return C.dire(`${qui} ! L’essai en or ! ${ctx.equipe(ev.equipe).nom} l’emporte !`, { important: true, emotion: 1 });
           return C.dire(ch('essai', [`Essai ! ${qui} aplatit !`, `${qui} file dans l’en-but ! Essai !`, `Et c’est l’essai de ${qui} !`, `${qui} marque ! Quel essai !`]) + passe, { important: true, emotion: 1, apres: serie.n >= 2 ? `${serie.n} essais de suite pour ${eq(ev.equipe)} !` : parfois(0.5) ? ch('essai-cons', ['La défense a été prise de vitesse.', 'Superbe mouvement collectif.', 'Il fallait du souffle pour aller au bout.']) : null });
         }
+        case 'penalite':
+          return C.dire(ch('penalite', [`Coup de sifflet : pénalité pour ${eq(ev.equipe)}, les mains au sol dans le ruck.`, `L’arbitre sanctionne le grattage : pénalité pour ${eq(ev.equipe)}.`, `Pénalité ! ${eq(ev.equipe)} va pouvoir choisir.`]), { important: true, emotion: 0.5 });
+        case 'choix':
+          if (ev.choix === 'poteaux') return C.dire(`${eq(ev.equipe)} prend les points : on tape aux poteaux.`, { emotion: 0.4, apres: parfois(0.5) ? 'Trois points, c’est toujours bon à prendre.' : null });
+          if (ev.choix === 'touche') return C.dire(`${eq(ev.equipe)} tape en touche : la pénaltouche pour gagner du terrain.`, { emotion: 0.4 });
+          return C.dire(ch('vite', [`Jouée à la main, tout de suite ! ${eq(ev.equipe)} surprend tout le monde !`, `${eq(ev.equipe)} joue vite la pénalité !`]), { important: true, emotion: 0.7 });
         case 'transfo':
+          if (ev.penalite) return C.dire(ev.reussi ? ch('pen-ok', [`${n(ev.joueur)} passe la pénalité : trois points !`, `Entre les poteaux ! Trois points pour ${eq(ev.equipe)}.`]) : ch('pen-ko', [`${n(ev.joueur)} manque la pénalité.`, 'À côté ! Pas de points.']), { coupe: true, emotion: ev.reussi ? 0.6 : 0.4 });
           if (ev.reussi) return C.dire(ch('transfo-ok', [`${n(ev.joueur)} transforme !`, `Entre les poteaux : deux points de plus.`, `La transformation est réussie.`]), { coupe: true, emotion: 0.5 });
           return C.dire(ch('transfo-ko', [`${n(ev.joueur)} manque la transformation.`, 'À côté ! La transformation est ratée.', 'Pas de transformation.']), { coupe: true, emotion: 0.4 });
         case 'drop':

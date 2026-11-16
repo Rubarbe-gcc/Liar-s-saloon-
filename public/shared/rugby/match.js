@@ -90,12 +90,13 @@ export function creerMatch({ equipes, graine = 1, minutes = 3, controles = ['hum
     equipes: [0, 1].map((e) => ({ id: equipes[e], style: EQUIPE[equipes[e]].style, sens: e === 0 ? 1 : -1, ctrl: controles[e], niveau: niveaux[e] ?? 1, actif: e * N + 4, immobile: false })),
     joueurs: [],
     ballon: nouveauBallon(),
-    ruck: null, melee: null, touche: null, marque: null, transfo: null, faute: null,
+    ruck: null, melee: null, touche: null, marque: null, transfo: null, faute: null, penalite: null,
     prec: [0, 0],
     stats: {
       essais: [0, 0], transfos: [0, 0], transfosTentees: [0, 0], drops: [0, 0], pieds: [0, 0], passes: [0, 0],
       plaquages: [0, 0], plaquagesRates: [0, 0], franchissements: [0, 0], enAvants: [0, 0], rucks: [0, 0], grattages: [0, 0],
       melees: [0, 0], touches: [0, 0], possession: [0, 0], territoire: [0, 0], metres: [0, 0],
+      penalites: [0, 0], penalitesTentees: [0, 0], penalitesReussies: [0, 0],
     },
     points: [],
     perso: new Array(2 * N).fill(null).map(() => ({ pts: 0, essais: 0, plaquages: 0, passes: 0, franchis: 0, metres: 0 })),
@@ -186,7 +187,7 @@ function placerEnvoi(m, e, x0) {
   garer(m);
   if (botteur) donner(m, botteur, { bloque: true, z: 0.3 });
   m.envoi = { e, x0 };
-  m.ruck = m.melee = m.touche = m.marque = m.transfo = m.faute = null;
+  m.ruck = m.melee = m.touche = m.marque = m.transfo = m.faute = m.penalite = null;
   recadrerActifs(m);
   m.phase = 'engagement';
   m.t = m.entrainement ? 30 : ENGAGEMENT;
@@ -205,7 +206,7 @@ function placerDepart(m) {
   const r = ordre(0)[0];
   donner(m, r);
   m.envoi = null;
-  m.ruck = m.melee = m.touche = m.marque = m.transfo = m.faute = null;
+  m.ruck = m.melee = m.touche = m.marque = m.transfo = m.faute = m.penalite = null;
   recadrerActifs(m);
   m.phase = 'engagement';
   m.t = 30;
@@ -263,12 +264,15 @@ function placerTouche(m, x, cote, e) {
   m.t = TOUCHE;
 }
 
-/** La transformation : le buteur sur la ligne de l'essai, à 10-12 m ; les autres derrière lui, les défenseurs dans leur en-but. */
-function placerTransfo(m) {
-  const { e, y: ye } = m.marque;
+/**
+ * La transformation : le buteur sur la ligne de l'essai, à 10-12 m ; les autres derrière lui, les défenseurs dans leur en-but.
+ * pen : une pénalité tapée aux poteaux, depuis l'endroit de la faute { e, x, y } (3 points).
+ */
+function placerTransfo(m, pen = null) {
+  const { e, y: ye } = pen || m.marque;
   const s = m.equipes[e].sens;
   const by = clamp(ye, -14, 14);
-  const bx = s * (DEMI_L - 10 - Math.abs(by) * 0.12);
+  const bx = pen ? clamp(pen.x, -(DEMI_L - 5), DEMI_L - 5) : s * (DEMI_L - 10 - Math.abs(by) * 0.12);
   let buteur = null;
   for (const p of disponibles(m, e)) if (!buteur || p.n.pied > buteur.n.pied) buteur = p;
   const k = [0, 0];
@@ -281,7 +285,7 @@ function placerTransfo(m) {
   }
   garer(m);
   Object.assign(m.ballon, nouveauBallon(), { x: bx, y: by, z: BALLE_R + 0.1, porteur: -1, dernier: buteur.id, bloque: true });
-  m.transfo = { e, j: buteur.id, bx, by, vise: 0, charge: 0, parti: false, fini: false, t: 0, reussi: false };
+  m.transfo = { e, j: buteur.id, bx, by, vise: 0, charge: 0, parti: false, fini: false, t: 0, reussi: false, penalite: !!pen };
   m.equipes[e].actif = buteur.id;
   m.phase = 'transfo';
   m.t = 0;
@@ -336,6 +340,9 @@ export function pas(m, entrees = [0, 0]) {
         else if (m.sirene) finPeriode(m, evs);
         else { placerEnvoi(m, mq.e, 0); evs.push({ type: 'renvoi', equipe: mq.e }); }
       }
+      break;
+    case 'penalite':
+      penalite(m, k, ap, evs);
       break;
     case 'transfo':
       transformation(m, k, ap, rel, evs);
@@ -482,7 +489,7 @@ function verifier(m, evs) {
 }
 
 function finPeriode(m, evs) {
-  m.ruck = m.melee = m.touche = m.transfo = m.faute = null;
+  m.ruck = m.melee = m.touche = m.transfo = m.faute = m.penalite = null;
   Object.assign(m.ballon, { porteur: -1, cible: -1, bloque: false, ruck: false, vx: 0, vy: 0, vz: 0 });
   for (const p of m.joueurs) if (p.etat !== 'normal' && p.etat !== 'sol') { p.etat = 'normal'; p.charge = 0; }
   evs.push({ type: 'sifflet', n: 3 });
@@ -895,6 +902,16 @@ function finRuck(m, evs) {
     if (eqo.ctrl === 'ia') chance += niveauDe(eqo).gratte;
     if (hasard(m) < clamp(chance, 0.02, 0.5)) gagne = o;
   }
+  // Gratter sans gagner le ballon, c'est risqué : l'arbitre peut siffler les mains au sol (pénalité pour l'attaque).
+  if (gagne === e && r.gratte[o] > 0 && !m.equipes[o].immobile && hasard(m) < Math.min(0.32, 0.14 * r.gratte[o])) {
+    m.ruck = null;
+    m.ballon.ruck = false;
+    m.stats.penalites[o] += 1;
+    evs.push({ type: 'sifflet', n: 2 });
+    evs.push({ type: 'penalite', equipe: e, faute: 'ruck', joueur: best ? best.id : -1 });
+    placerPenalite(m, r.x, r.y, e);
+    return;
+  }
   m.stats.rucks[gagne] += 1;
   if (gagne === o) { m.stats.grattages[o] += 1; evs.push({ type: 'grattage', equipe: o, joueur: best.id }); }
   // Le ballon sort vers le joueur de l'équipe gagnante le mieux placé derrière le ruck.
@@ -1000,6 +1017,84 @@ function touche(m, evs) {
 }
 
 /* ------------------------------------------------------------------ */
+/* La pénalité                                                         */
+/* ------------------------------------------------------------------ */
+
+/** Les choix d'une pénalité : jouer vite (A), taper aux poteaux (B, à portée), la pénaltouche (X). */
+export const PENALITE = { portee: 32, attente: 480, reflexion: 70, recul: 10, gainTouche: 15 };
+
+/** La pénalité pour l'équipe e, à l'endroit de la faute : le ballon à un joueur sur la marque, les fautifs reculent de 10 m. */
+function placerPenalite(m, x, y, e) {
+  const s = m.equipes[e].sens;
+  x = clamp(x, -(DEMI_L - 5), DEMI_L - 5);
+  y = clamp(y, -(DEMI_W - 2), DEMI_W - 2);
+  let r = null, rd = 1e9;
+  for (const p of disponibles(m, e)) { const d = dist(p.x, p.y, x, y) + (p.i === 3 ? -2 : 0) + (p.etat !== 'normal' ? 4 : 0); if (d < rd) { rd = d; r = p; } }
+  for (const p of m.joueurs) {
+    if (p.absent) continue;
+    if (p.etat !== 'normal') { p.etat = 'normal'; p.t = 0; }
+    p.vx = 0; p.vy = 0; p.cible = -1; p.charge = 0;
+    // Les adversaires reculent derrière la ligne des 10 m.
+    if (p.e !== e && s * (p.x - x) < PENALITE.recul) p.x = clamp(x + s * PENALITE.recul, -MORT + 1, MORT - 1);
+  }
+  remettre(r, x, y, s);
+  donner(m, r, { bloque: true, z: 0.4 });
+  m.penalite = { x, y, e, t: 0 };
+  m.faute = null;
+  recadrerActifs(m);
+  m.phase = 'penalite';
+  m.t = 0;
+}
+
+/** Peut-on taper aux poteaux d'ici ? (assez près, pas trop en coin) */
+export function aPortee(m, pen) {
+  const s = m.equipes[pen.e].sens;
+  return dist(pen.x, Math.abs(pen.y) * 1.3, s * DEMI_L, 0) <= PENALITE.portee;
+}
+
+/** Le choix de l'ordinateur : les poteaux à portée quand les 3 points comptent, la touche dans son camp, sinon on joue vite. */
+function choixIA(m, pen) {
+  const e = pen.e, s = m.equipes[e].sens;
+  const ecart = m.score[e] - m.score[1 - e];
+  const tard = m.enOr || m.sirene || (m.periode === 2 && m.chrono > m.duree * 0.6);
+  if (aPortee(m, pen) && (m.enOr || (tard && ecart >= -3 && ecart <= 2) || dist(pen.x, pen.y, s * DEMI_L, 0) < 20 || hasard(m) < 0.35)) return 'poteaux';
+  if (s * pen.x < 4) return 'touche';
+  return 'vite';
+}
+
+function penalite(m, k, ap, evs) {
+  const pen = m.penalite;
+  const eq = m.equipes[pen.e];
+  pen.t += 1;
+  for (const p of m.joueurs) if (!p.absent) deplacer(m, p, RIEN);
+  physiqueBallon(m, evs);
+  let choix = null;
+  if (eq.ctrl === 'humain') {
+    const a = ap[pen.e];
+    if (a & T.A) choix = 'vite';
+    else if (a & T.B && aPortee(m, pen)) choix = 'poteaux';
+    else if (a & T.X) choix = 'touche';
+    else if (pen.t > PENALITE.attente) choix = 'vite';
+  } else if (pen.t >= PENALITE.reflexion) choix = choixIA(m, pen);
+  if (!choix) return;
+  const s = eq.sens;
+  m.penalite = null;
+  evs.push({ type: 'choix', equipe: pen.e, choix });
+  if (choix === 'poteaux') { placerTransfo(m, pen); return; }
+  if (choix === 'touche') {
+    // La pénaltouche : en touche plus loin, et le lancer reste à l'équipe qui a eu la pénalité.
+    const cote = pen.y >= 0 ? 1 : -1;
+    evs.push({ type: 'touche', equipe: pen.e, x: pen.x + s * PENALITE.gainTouche, cote });
+    placerTouche(m, pen.x + s * PENALITE.gainTouche, cote, pen.e);
+    return;
+  }
+  // Jouer vite : le ballon repart, les défenseurs sont encore en train de reculer.
+  m.phase = 'jeu';
+  m.ballon.bloque = false;
+  for (const p of m.joueurs) if (p.e !== pen.e && !p.absent) { p.verrou = Math.max(p.verrou, 30); p.surpris = Math.max(p.surpris, 20); }
+}
+
+/* ------------------------------------------------------------------ */
 /* L'essai, la transformation, le drop                                 */
 /* ------------------------------------------------------------------ */
 
@@ -1056,13 +1151,19 @@ function transformation(m, k, ap, rel, evs) {
   physiqueBallon(m, evs, true);
   if (!tr.fini && (m.ballon.z <= BALLE_R + 0.01 || eq.sens * m.ballon.x > MORT + 5)) {
     tr.fini = true; tr.tFin = tr.t;
-    evs.push({ type: 'transfo', equipe: tr.e, joueur: tr.j, reussi: false });
+    evs.push({ type: 'transfo', equipe: tr.e, joueur: tr.j, reussi: false, penalite: tr.penalite });
   }
   if (tr.fini && tr.t - tr.tFin > APRES_TRANSFO) {
     m.transfo = null;
-    if (m.entrainement) placerDepart(m);
+    if (m.enOr && tr.penalite && tr.reussi) finir(m, evs);
+    else if (m.entrainement) placerDepart(m);
     else if (m.sirene) finPeriode(m, evs);
-    else { placerEnvoi(m, tr.e, 0); evs.push({ type: 'renvoi', equipe: tr.e }); }
+    else if (tr.penalite && !tr.reussi) {
+      // Pénalité manquée : renvoi aux 22 pour l'équipe qui défendait.
+      const d = 1 - tr.e;
+      placerEnvoi(m, d, -m.equipes[d].sens * (DEMI_L - LIGNE_22));
+      evs.push({ type: 'renvoi', equipe: d, vingtDeux: true });
+    } else { placerEnvoi(m, tr.e, 0); evs.push({ type: 'renvoi', equipe: tr.e }); }
   }
 }
 
@@ -1085,8 +1186,8 @@ function frapperTransfo(m, u, evs) {
   tr.tFrappe = tr.t;
   p.etat = 'normal'; p.charge = 0;
   p.frappe = 16;
-  m.stats.transfosTentees[tr.e] += 1;
-  evs.push({ type: 'pied', joueur: p.id, transfo: true, force: u, q });
+  if (tr.penalite) m.stats.penalitesTentees[tr.e] += 1; else m.stats.transfosTentees[tr.e] += 1;
+  evs.push({ type: 'pied', joueur: p.id, transfo: true, penalite: tr.penalite, force: u, q });
 }
 
 /** Le ballon franchit la ligne d'essai par les airs : entre les poteaux et au-dessus de la barre ? */
@@ -1112,12 +1213,14 @@ function passePoteaux(m, b, px, evs) {
     if (!tr || tr.fini) return;
     tr.fini = true; tr.tFin = tr.t; tr.reussi = reussi;
     if (reussi) {
-      m.score[pd.e] += 2;
-      m.stats.transfos[pd.e] += 1;
-      m.perso[pd.j].pts += 2;
-      m.points.push({ e: pd.e, j: pd.j, type: 'transfo', pts: 2, passeur: -1, periode: m.periode, chrono: m.chrono, enOr: m.enOr });
+      // La transformation vaut 2 points ; la pénalité, 3.
+      const pts = tr.penalite ? 3 : 2;
+      m.score[pd.e] += pts;
+      if (tr.penalite) m.stats.penalitesReussies[pd.e] += 1; else m.stats.transfos[pd.e] += 1;
+      m.perso[pd.j].pts += pts;
+      m.points.push({ e: pd.e, j: pd.j, type: tr.penalite ? 'penalite' : 'transfo', pts, passeur: -1, periode: m.periode, chrono: m.chrono, enOr: m.enOr });
     }
-    evs.push({ type: 'transfo', equipe: pd.e, joueur: pd.j, reussi });
+    evs.push({ type: 'transfo', equipe: pd.e, joueur: pd.j, reussi, penalite: tr.penalite });
     return;
   }
   if (pd.drop && reussi && m.phase === 'jeu') {

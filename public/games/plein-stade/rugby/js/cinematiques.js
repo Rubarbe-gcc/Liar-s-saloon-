@@ -107,6 +107,37 @@ export function miTemps(P) {
   }];
 }
 
+/**
+ * Le ralenti de l'essai : les dernières secondes revues deux fois moins vite,
+ * la caméra au ras du ballon, de côté. images : les vues gardées (une par image du moteur).
+ */
+export function ralenti(P, images, e) {
+  const R = P.rendu;
+  const n = images.length;
+  if (n < 30) return [];
+  const s = P.m.equipes[e].sens;
+  const duree = (n / 60) * 2;
+  const l = (u, v, t) => u + (v - u) * t;
+  let vue = { ...images[0], actifs: [-1, -1], humeurs: null, heros: -1 };
+  return [{
+    duree,
+    vue: () => vue,
+    debut: (api) => api.afficher('<div class="cine-ralenti">● RALENTI</div>'),
+    maj: (t) => {
+      const k = Math.min(n - 1, (t / duree) * (n - 1));
+      const i = Math.floor(k), f = k - i;
+      const a = images[i], b = images[Math.min(n - 1, i + 1)];
+      vue = {
+        ...b, actifs: [-1, -1], humeurs: null, heros: -1,
+        joueurs: b.joueurs.map((p, j) => ({ ...p, x: l(a.joueurs[j].x, p.x, f), y: l(a.joueurs[j].y, p.y, f), z: l(a.joueurs[j].z, p.z, f) })),
+        ballon: { ...b.ballon, x: l(a.ballon.x, b.ballon.x, f), y: l(a.ballon.y, b.ballon.y, f), z: l(a.ballon.z, b.ballon.z, f) },
+      };
+      const bx = vue.ballon.x, by = vue.ballon.y;
+      R.cadrer([bx - s * 6.5, by - 7.5, 3.2], [bx + s * 1.5, by, 1], t < 0.03);
+    },
+  }];
+}
+
 /** Ce que le meilleur joueur a fait, en quelques mots. */
 export function detailJoueur(s) {
   const pl = (n, mot) => (n ? `${n} ${mot}${n > 1 ? 's' : ''}` : '');

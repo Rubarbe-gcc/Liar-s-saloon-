@@ -23,7 +23,8 @@ export function creerCinematique(hote) {
   const passer = () => { if (passable && etapes.length) demandePasser = true; };
   const ecoute = (e) => {
     if (!etapes.length) return;
-    if (e.type === 'keydown' && ['Shift', 'Control', 'Alt', 'Meta', 'F3'].includes(e.key)) return;
+    // Une touche tenue (qui se répète) ne passe pas la cinématique : seul un nouvel appui compte.
+    if (e.type === 'keydown' && (e.repeat || ['Shift', 'Control', 'Alt', 'Meta', 'F3'].includes(e.key))) return;
     passer();
   };
   addEventListener('keydown', ecoute);

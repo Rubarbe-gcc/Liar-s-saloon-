@@ -14,6 +14,7 @@ import { EQUIPES, EQUIPE, STYLES, POSTES, notesEquipe } from '../public/shared/r
 import { vitessePied, chute } from '../public/shared/rugby/terrain.js';
 import { ecussonSVG } from '../public/games/plein-stade/commun/ecusson.js';
 import { creerTournoi, matchDuJoueur, stadeDuTour, enregistrer, jouerSansMoi, aJouer, avancer, resumer, noterStats, classement, TOURS } from '../public/shared/rugby/tournoi.js';
+import { calendrier as calendrierChamp, creerChampionnat, matchDuJoueur as matchChamp, enregistrer as enregistrerChamp, aJouer as aJouerChamp, jouerSansMoi as jouerSansMoiChamp, avancer as avancerChamp, classement as classementChamp, pointsDuMatch, simulerLeReste } from '../public/shared/rugby/championnat.js';
 import { creerSession, FENETRE } from '../public/shared/rollback.js';
 import * as serveur from '../server/rugby.js';
 import { delaiSelonPing, REGLAGES } from '../public/games/plein-stade/rugby/js/enligne.js';
@@ -117,7 +118,7 @@ test('un match entre deux ordinateurs va au bout, et le score tient ses comptes'
     for (let e = 0; e < 2; e++) {
       const pts = m.points.filter((p) => p.e === e).reduce((s, p) => s + p.pts, 0);
       assert.equal(pts, m.score[e], 'les points de la liste font le score');
-      assert.equal(m.stats.essais[e] * 5 + m.stats.transfos[e] * 2 + m.stats.drops[e] * 3, m.score[e]);
+      assert.equal(m.stats.essais[e] * 5 + m.stats.transfos[e] * 2 + (m.stats.drops[e] + m.stats.penalitesReussies[e]) * 3, m.score[e]);
     }
     if (m.enOr) nul += 1;
     total += m.score[0] + m.score[1];
@@ -268,6 +269,52 @@ test('les gestes techniques : le crochet et la roulette font rater les plaquages
   assert.ok(mordus >= 10, `la défense mord (${mordus})`);
 });
 
+test('la pénalité : gratter sans gagner le ballon est sifflé, puis on joue vite, on tape aux poteaux (3 points) ou en touche', () => {
+  /** Un ruck de l'équipe 0 où l'équipe 1 a beaucoup gratté ; on cherche une graine où l'arbitre siffle. */
+  const sifflet = (choix) => {
+    for (let g = 1; g < 200; g++) {
+      const m = creerMatch({ equipes: ['pre-sale', 'bois-noir'], graine: g, controles: ['humain', 'ia'] });
+      for (const o of m.joueurs) { o.x = o.e === 0 ? -20 : 20; o.y = -15 + o.i * 4; }
+      const plaque = m.joueurs[6], gratteur = m.joueurs[N + 2];
+      Object.assign(plaque, { x: 8, y: 0, etat: 'sol', t: 60 });
+      Object.assign(gratteur, { x: 8.6, y: 0.3 });
+      Object.assign(m.ballon, { x: 7.4, y: 0, z: 0.14, porteur: -1, ruck: true, bloque: false, pied: null, cible: -1 });
+      m.ruck = { x: 7.4, y: 0, e: 0, t: 1, gratte: [0, 2], plaque: 6 };
+      m.phase = 'ruck'; m.envoi = null;
+      const evs = pas(m, [0, 0]);
+      if (!evs.some((e) => e.type === 'penalite')) continue;
+      assert.equal(m.phase, 'penalite');
+      assert.equal(m.penalite.e, 0);
+      assert.equal(m.stats.penalites[1], 1);
+      // Les fautifs ont reculé de 10 m.
+      for (const o of m.joueurs) if (o.e === 1 && !o.absent) assert.ok(o.x - m.penalite.x >= 9.9, 'derrière les 10 m');
+      return { m, vus: jusqua(m, (mm) => mm.phase !== 'penalite', 20, (mm) => [mm.f % 2 ? choix : 0, 0]) };
+    }
+    assert.fail('jamais de pénalité');
+  };
+  // Aux poteaux : la visée de la transformation, et 3 points.
+  const { m } = sifflet(T.B);
+  assert.equal(m.phase, 'transfo');
+  assert.equal(m.transfo.penalite, true);
+  const tenir = Math.round(FORCE_IDEALE * CHARGE_MAX);
+  let k = 0;
+  const fin = jusqua(m, (mm, evs) => evs.some((e) => e.type === 'transfo'), 600, () => [k++ < tenir ? T.B : 0, 0]);
+  const tir = fin.find((e) => e.type === 'transfo');
+  assert.ok(tir && tir.penalite);
+  assert.equal(m.score[0], tir.reussi ? 3 : 0);
+  assert.equal(m.stats.penalitesTentees[0], 1);
+  // La pénaltouche : la touche plus loin, le lancer pour nous.
+  const t = sifflet(T.X);
+  assert.equal(t.m.phase, 'touche');
+  assert.equal(t.m.touche.e, 0);
+  assert.ok(t.vus.some((e) => e.type === 'choix' && e.choix === 'touche'));
+  // Jouer vite : le jeu repart, le ballon à nous, les défenseurs ne peuvent pas plonger tout de suite.
+  const v = sifflet(T.A);
+  assert.equal(v.m.phase, 'jeu');
+  assert.equal(v.m.joueurs[v.m.ballon.porteur].e, 0);
+  assert.ok(v.m.joueurs.filter((o) => o.e === 1).every((o) => o.verrou > 0));
+});
+
 test('des humains qui tapent au hasard : le match tient debout', () => {
   for (let g = 1; g <= 3; g++) {
     const m = creerMatch({ equipes: [EQUIPES[g].id, EQUIPES[15 - g].id], graine: g, minutes: 1, controles: ['humain', 'humain'] });
@@ -318,6 +365,45 @@ test('le Tournoi : huit clubs, trois tours, un champion', () => {
   const top = classement(c.stats, 'plaquages');
   assert.ok(top.length > 0 && top[0].rang === 1);
   assert.ok(classement(c.stats, 'eval').length > 0);
+});
+
+test('le Grand Championnat : chacun contre tous, le barème du rugby et ses bonus', () => {
+  // Le calendrier : chaque club joue une fois par journée, et rencontre chacun des quinze autres.
+  const ids = EQUIPES.map((e) => e.id);
+  const cal = calendrierChamp(ids);
+  assert.equal(cal.length, 15);
+  for (const j of cal) assert.equal(new Set(j.flatMap((r) => [r.a, r.b])).size, 16);
+  const paires = new Set(cal.flat().map((r) => [r.a, r.b].sort().join('-')));
+  assert.equal(paires.size, 120);
+  assert.equal(calendrierChamp(ids, 'retour').length, 30);
+  // Le barème : 4 la victoire, 0 la défaite, +1 pour 3 essais d'écart, +1 pour une défaite de 5 points ou moins.
+  assert.deepEqual(pointsDuMatch(true, 31, 7, 5, 1), [5, true, false]);
+  assert.deepEqual(pointsDuMatch(true, 12, 10, 2, 2), [4, false, false]);
+  assert.deepEqual(pointsDuMatch(false, 10, 12, 2, 2), [1, false, true]);
+  assert.deepEqual(pointsDuMatch(false, 0, 21, 0, 3), [0, false, false]);
+  // Une saison : le joueur abandonne tout (défaites 0-28), les autres matchs se jouent.
+  const c = creerChampionnat({ moi: 'grand-gel', graine: 5, minutes: 1 });
+  const r = matchChamp(c);
+  assert.ok(r && (r.a === 'grand-gel' || r.b === 'grand-gel'));
+  enregistrerChamp(c, r.i, { score: r.a === 'grand-gel' ? [10, 12] : [12, 10], essais: [2, 2], vainqueur: r.a === 'grand-gel' ? 1 : 0 });
+  for (const i of aJouerChamp(c)) jouerSansMoiChamp(c, i);
+  assert.equal(avancerChamp(c), true);
+  assert.equal(c.journee, 1);
+  const moi = classementChamp(c).find((x) => x.id === 'grand-gel');
+  assert.equal(moi.pts, 1, 'le bonus défensif de la défaite 10-12');
+  // Le reste de la saison, avec des résultats posés à la main (le moteur est déjà testé ailleurs).
+  const R = rng(9);
+  while (!c.fini) {
+    c.journees[c.journee].forEach((rr, i) => { if (!rr.score) { const a = Math.floor(R() * 6), b = Math.floor(R() * 6); enregistrerChamp(c, i, { score: [a * 5 + 2, b * 5], essais: [a, b] }); } });
+    avancerChamp(c);
+  }
+  assert.equal(c.fini, true);
+  assert.equal(typeof simulerLeReste, 'function');
+  const cl = classementChamp(c);
+  assert.equal(cl[0].id, c.champion);
+  assert.ok(cl.every((x) => x.j === 15));
+  assert.equal(cl.reduce((s, x) => s + x.v, 0), 120, 'un vainqueur par match');
+  for (let k = 1; k < cl.length; k++) assert.ok(cl[k - 1].pts >= cl[k].pts);
 });
 
 /* ------------------------------------------------------------------ */

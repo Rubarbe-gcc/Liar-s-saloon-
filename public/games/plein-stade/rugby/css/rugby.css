@@ -38,3 +38,10 @@ body.rugby {
 
 .bj-b { background: radial-gradient(circle at 40% 30%, #ff6a7a, #a8323e); }
 .bj-x { background: radial-gradient(circle at 40% 30%, #ffd77a, #c48a12); }
+
+/* Le ralenti de l'essai : le badge en haut à gauche, comme à la télé. */
+.cine-ralenti { position: absolute; top: calc(max(12px, env(safe-area-inset-top)) + 46px); left: 14px; padding: 4px 10px; border-radius: 4px; background: rgba(200, 20, 30, .85); color: #fff; font: 800 .85em/1.2 var(--titre, sans-serif); letter-spacing: .12em; animation: clignote 1.2s infinite; }
+
+/* La pénalité : les trois choix ; trop loin des poteaux, le tir est grisé. */
+.aide-penalite span { margin-left: 12px; }
+.aide-penalite.loin .poteaux { opacity: .35; text-decoration: line-through; }

@@ -10,7 +10,7 @@
  * plus cher qu'une poignée de millisecondes de latence.
  */
 
-const VERSION = 'v200';
+const VERSION = 'v201';
 const CACHE = `insert-coin-${VERSION}`;
 
 /** Coquille de l'application : tout ce qu'il faut pour jouer hors connexion. */
@@ -340,6 +340,7 @@ const SHELL = [
   '/shared/rugby/ia.js',
   '/shared/rugby/match.js',
   '/shared/rugby/tournoi.js',
+  '/shared/rugby/championnat.js',
   '/games/street-combat/js/trois/rendu3d.js',
   '/games/street-combat/js/trois/decors3d.js',
   '/vendor/three/three.module.min.js',
