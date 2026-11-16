@@ -1,6 +1,6 @@
 // ORBITE NOIRE — rendu 3D (Three.js). THREE est passé en paramètre : global r128 (aperçu) ou module r170 (jeu).
 // Le rendu ne fait que LIRE l'état du moteur (aucune règle de jeu ici).
-export function creerRendu(THREE, hote, { W, H, UN, BA }) {
+export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre }) {
   const REV = parseInt(THREE.REVISION, 10) || 128, LK = REV >= 155 ? Math.PI : 1, V3 = THREE.Vector3;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lisse = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
   const TC = [0x4cc9f0, 0xf25c54, 0xd6a84a];
@@ -54,15 +54,12 @@ export function creerRendu(THREE, hote, { W, H, UN, BA }) {
     const b = Math.min(x + 2.2, z + 2.2, 49.7 - x, 49.7 - z);
     return b + .8 * Math.sin(x * .41 + z * .13 + R0) + .55 * Math.sin(z * .57 - x * .21 + 2 * R0) + .3 * Math.sin((x + z) * 1.3 + R0);
   }
-  function plateau(x, z) { // 0..1 : hauteur du plateau des bases, rampe tournée vers le centre
-    let pl = 0;
-    for (const b of bases) {
-      const dx = x - b.x, dz = z - b.z, d = Math.hypot(dx, dz); if (d > 13) continue;
-      const a = Math.atan2(dz, dx), ac = Math.atan2(CTR - b.z, CTR - b.x); let da = Math.abs(a - ac); if (da > Math.PI) da = 2 * Math.PI - da;
-      const rampe = lisse(1 - da / .5), R = 9.6 + .55 * Math.sin(a * 3 + b.x) + .3 * Math.sin(a * 7 + b.z), w = .75 + 3.6 * rampe;
-      pl = Math.max(pl, lisse((R - d) / w + .5));
-    }
-    return pl;
+  // hauteur de chaque case d'après la grille du moteur (s.g) : 0 en bas, 1 sur les plateaux, en pente sur les rampes
+  let HC = null, BORD = null;
+  function plateau(x, z) {
+    if (!HC) return 0;
+    const fx = clamp(x - .5, 0, W - 1.001), fz = clamp(z - .5, 0, H - 1.001), i = Math.floor(fx), j = Math.floor(fz), tx = lisse(fx - i), tz = lisse(fz - j), o = j * W + i;
+    return (HC[o] * (1 - tx) + HC[o + 1] * tx) * (1 - tz) + (HC[o + W] * (1 - tx) + HC[o + W + 1] * tx) * tz;
   }
   function haut(x, z) {
     const bd = bordure(x, z);
@@ -156,6 +153,9 @@ export function creerRendu(THREE, hote, { W, H, UN, BA }) {
     carte = s.carte | 0; R0 = carte * 1.7;
     const qgs = s.ent.filter(e => BA[e.k] && BA[e.k].qg);
     bases = qgs.map(e => ({ x: e.x / 1000, z: e.y / 1000, f: s.fac[e.eq], eq: e.eq }));
+    const gg = s.g; HC = new Float32Array(W * H); BORD = new Uint8Array(W * H);
+    if (gg) { for (let i = 0; i < W * H; i++) { if (gg.rampe[i]) { const cx = i % W + .5, cz = ((i / W) | 0) + .5; let d = 99; for (const b of bases) d = Math.min(d, Math.hypot(cx - b.x, cz - b.z)); HC[i] = clamp((10.8 - d) / 3.6, 0, 1); } else HC[i] = gg.niv[i]; }
+      for (let i = 0; i < W * H; i++) { const x = i % W, y = (i / W) | 0; if (gg.rampe[i]) continue; for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const n = (y + dy) * W + x + dx; if (x + dx >= 0 && y + dy >= 0 && x + dx < W && y + dy < H && !gg.rampe[n] && gg.niv[n] !== gg.niv[i]) BORD[i] = 1; } } }
     plats = [...s.mines.map(m => ({ x: m.x / 1000, z: m.y / 1000 })), ...s.relais.map(r => ({ x: r.x / 1000, z: r.y / 1000 }))];
     const rnd = alea((carte + 1) * 7919);
     crateres = []; for (let i = 0; i < 40 && crateres.length < 9; i++) { const x = 4 + rnd() * 40, z = 4 + rnd() * 40, r = 1.2 + rnd() * 2.2; if (libre(x, z, 12, 4 + r) && crateres.every(c => Math.hypot(x - c.x, z - c.z) > c.r + r + 2)) crateres.push({ x, z, r }); }
@@ -191,7 +191,7 @@ export function creerRendu(THREE, hote, { W, H, UN, BA }) {
     carteMini = document.createElement('canvas'); carteMini.width = W; carteMini.height = H; { const c = carteMini.getContext('2d'), im = c.createImageData(W, H);
       for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const x = i + .5, z = j + .5, y = haut(x, z), o = (j * W + i) * 4, pl = plateau(x, z); let r = 92 + y * 22, g = 84 + y * 20, b = 74 + y * 18;
         for (const ba of bases) if (Math.hypot(x - ba.x, z - ba.z) < 5.5) { if (ba.f === 'bosquet') { r = 70; g = 110; b = 55; } else if (ba.f === 'cendres') { r = 90; g = 45; b = 30; } else if (ba.f === 'fer') { r = 100; g = 108; b = 122; } else { r = 80; g = 72; b = 110; } }
-        if (pl > .1 && pl < .9) { r *= .7; g *= .7; b *= .7; } im.data[o] = r; im.data[o + 1] = g; im.data[o + 2] = b; im.data[o + 3] = 255; }
+        if (BORD[j * W + i]) { r *= .6; g *= .6; b *= .6; } if (gg && gg.roc[j * W + i]) { r = 45; g = 42; b = 40; } if (gg && gg.cristal[j * W + i] >= 0) { r = 70; g = 170; b = 230; } im.data[o] = r; im.data[o + 1] = g; im.data[o + 2] = b; im.data[o + 3] = 255; }
       c.putImageData(im, 0, 0); }
     // brouillard de guerre : plan translucide dont l'opacité vient de la grille de visibilité
     fogData = new Uint8Array(FW * FH * 4); fogTex = new THREE.DataTexture(fogData, FW, FH, THREE.RGBAFormat);
@@ -203,9 +203,8 @@ export function creerRendu(THREE, hote, { W, H, UN, BA }) {
     const gros = [[], [], []], cailloux = [], eclats = [], tiges = [], bulbes = [];
     const pose = (x, z) => haut(x, z);
     for (let i = 0; i < 900; i++) { // crêtes : là où ça monte fort
-      const x = -1 + rnd() * 50, z = -1 + rnd() * 50, bd = bordure(x, z), pl = plateau(x, z);
-      const crete = (bd > .6 && bd < 2.4) || (pl > .15 && pl < .85); if (!crete || !libre(x, z, 0, 3.4)) continue;
-      if (bases.some(b => Math.hypot(x - b.x, z - b.z) < 7.6)) continue;
+      const x = -1 + rnd() * 50, z = -1 + rnd() * 50, bd = bordure(x, z), ci = clamp(Math.floor(z), 0, H - 1) * W + clamp(Math.floor(x), 0, W - 1);
+      const crete = (bd > .6 && bd < 2.4) || BORD[ci]; if (!crete || !libre(x, z, 0, 3.4)) continue;
       const s_ = .22 + rnd() * .5; gros[i % 3].push([x, pose(x, z) + s_ * .15, z, s_, .8 + rnd() * .6, rnd() * 6.3, (rnd() - .5) * .5]);
     }
     for (let i = 0; i < 260; i++) { // rochers isolés en plaine
@@ -217,6 +216,7 @@ export function creerRendu(THREE, hote, { W, H, UN, BA }) {
       const n = 3 + rnd() * 6 | 0; for (let k = 0; k < n; k++) { const x = cx + (rnd() - .5) * 1.6, z = cz + (rnd() - .5) * 1.6, s_ = .12 + rnd() * .16; eclats.push([x, pose(x, z) - .05, z, s_, 1.6 + rnd() * 2.2, rnd() * 6.3, (rnd() - .5) * .9]); } }
     for (let c = 0; c < 14; c++) { const cx = 2 + rnd() * 44, cz = 2 + rnd() * 44; if (!libre(cx, cz, 10, 3.8) || bordure(cx, cz) < 2) continue;
       const n = 4 + rnd() * 7 | 0; for (let k = 0; k < n; k++) { const x = cx + (rnd() - .5) * 2.4, z = cz + (rnd() - .5) * 2.4, hh = .3 + rnd() * .6, y0 = pose(x, z), ry = rnd() * 6.3, rx = (rnd() - .5) * .35; tiges.push([x, y0 + hh / 2, z, .035, hh / .035, ry, rx]); bulbes.push([x + Math.sin(rx) * 0, y0 + hh, z, .07 + rnd() * .07, 1.3, ry, 0]); } }
+    if (gg) for (let i = 0; i < W * H; i++) if (gg.roc[i]) { const cx = i % W + .5, cz = ((i / W) | 0) + .5; for (let k = 0; k < 2; k++) { const x = cx + (rnd() - .5) * .7, z = cz + (rnd() - .5) * .7, s_ = .55 + rnd() * .45; gros[(i + k) % 3].push([x, pose(x, z) + s_ * .2, z, s_, 1.1 + rnd() * .9, rnd() * 6.3, (rnd() - .5) * .3]); } }
     gros.forEach((l, i) => semer(ROCHE[i], i === 1 ? matRoche2 : matRoche, l));
     semer(ROCHE[0], matRoche2, cailloux, false);
     semer(G('eclat', () => { const g = new THREE.CylinderGeometry(.5, .7, 1, 6); g.translate(0, .5, 0); const t = new THREE.ConeGeometry(.5, .5, 6); t.translate(0, 1.25, 0); return fusion([g, t]); }), MT(0x6fd6ff, { emissive: 0x2a8cff, emissiveIntensity: .9, roughness: .15, metalness: .1, flatShading: true }), eclats, false);
@@ -236,14 +236,16 @@ export function creerRendu(THREE, hote, { W, H, UN, BA }) {
       const mx = m.x / 1000, mz = m.y / 1000, g = new THREE.Group(); g.position.set(mx, 0, mz);
       let bp = null, bdd = 1e9; for (const b of bases) { const d = Math.hypot(mx - b.x, mz - b.z); if (d < bdd) { bdd = d; bp = b; } }
       const ang = bp && bdd < 15 ? Math.atan2(mz - bp.z, mx - bp.x) : Math.atan2(mz - CTR, mx - CTR) + Math.PI, cr = [], r2 = alea(i * 31 + 7);
-      for (let k = 0; k < 9; k++) {
-        const a = ang + (k / 8 - .5) * 2.3, r = .75 + (k % 2) * .45 + r2() * .2, x = Math.cos(a) * r, z = Math.sin(a) * r, y0 = haut(mx + x, mz + z) - .08;
+      const cases = []; if (gg) for (let c = 0; c < W * H; c++) if (gg.cristal[c] === i) cases.push([c % W + .5 - mx, ((c / W) | 0) + .5 - mz]);
+      const spots = cases.length ? cases.flatMap(([x, z]) => [[x - .2, z - .15], [x + .22, z + .18]]) : [...Array(9)].map((_, k) => { const a = ang + (k / 8 - .5) * 2.3, r = .75 + (k % 2) * .45; return [Math.cos(a) * r, Math.sin(a) * r]; });
+      for (let k = 0; k < spots.length; k++) {
+        const x = spots[k][0] + (r2() - .5) * .15, z = spots[k][1] + (r2() - .5) * .15, y0 = haut(mx + x, mz + z) - .08;
         const sg = new THREE.Group(); sg.position.set(x, y0, z); g.add(sg); cr.push(sg);
         P(sg, ROCHE[k % 3], matRoche2, 0, .05, 0, { s: [.42, .3, .42], r: [0, r2() * 6, 0] });
         const nb = 2 + (r2() * 2 | 0); for (let c = 0; c < nb; c++) { const h = .45 + r2() * .55 - (k % 2) * .12; P(sg, crist, MCr[(k + c) % 3], (r2() - .5) * .3, 0, (r2() - .5) * .3, { s: [.8 + r2() * .3, h, .8 + r2() * .3], r: [(r2() - .5) * .6, r2() * 6, (r2() - .5) * .6] }); }
       }
       const gl = sprite(0x4aa8ff, 3.6, .3); gl.position.set(Math.cos(ang) * .9, haut(mx, mz) + .6, Math.sin(ang) * .9); g.add(gl);
-      compacter(g, 'mine' + carte + ':' + i); g.userData = { q0: m.q, mine: m, gl, cr, idx: i }; cartesObjs.add(g);
+      compacter(g, 'mine' + m.x + ',' + m.y + ':' + spots.length + ':' + (bases[0] ? bases[0].x : 0)); g.userData = { q0: m.q, mine: m, gl, cr, idx: i }; cartesObjs.add(g);
     });
     // Relais d'Énergie : pylône sur une bouche de chaleur
     s.relais.forEach(rl => {
@@ -861,7 +863,7 @@ export function creerRendu(THREE, hote, { W, H, UN, BA }) {
     }
     // fantôme de placement
     if (C.place !== fantomeK) { if (fantome) scene.remove(fantome); fantome = null; fantomeK = C.place; if (C.place) { const g = new THREE.Group(), u = { an: [], hb: 1, bw: 1 }; B[C.place](g, C.ME, u); g.traverse(m => { if (m.isMesh) { m.material = ghostMat; m.castShadow = false; } }); fantome = g; scene.add(g); } }
-    if (fantome && C.souris) { const p = sol(C.souris.x, C.souris.y); if (p) { const x = Math.round(p.x / 1000), z = Math.round(p.y / 1000); fantome.position.set(x, haut(x, z), z); } }
+    if (fantome && C.souris) { const p = sol(C.souris.x, C.souris.y); if (p) { const x = Math.round(p.x / 1000), z = Math.round(p.y / 1000); fantome.position.set(x, haut(x, z), z); if (placeLibre) ghostMat.color.set(lin(placeLibre(s, C.place, x * 1000, z * 1000) ? 0x4cc9f0 : 0xff4a3a)); } }
     // brouillard
     if (dernierFog !== s.tick || C.tout !== fogTex.tout) { if (s.tick % 5 === 0 || dernierFog < 0 || C.tout !== fogTex.tout) {
       for (let j = 0; j < FH; j++) for (let i = 0; i < FW; i++) { const q = C.tout ? 2 : v[(j >> 1) * W + (i >> 1)]; fa[j * FW + i] = q === 2 ? 0 : q === 1 ? 135 : 238; }

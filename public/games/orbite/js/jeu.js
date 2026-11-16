@@ -1,4 +1,4 @@
-import { W, H, UN, BA, FA, UPG, creer, step, cmd, ia, jouerTour, hash } from '../../../shared/orbite/moteur.js';
+import { W, H, UN, BA, FA, UPG, creer, step, cmd, ia, jouerTour, hash, placeLibre } from '../../../shared/orbite/moteur.js';
 import { MISSIONS, etat } from '../../../shared/orbite/campagne.js';
 import { Reseau } from './reseau.js';
 import { creerRendu } from './rendu3d.js';
@@ -11,7 +11,7 @@ const adresseEnLigne = () => (['localhost', '127.0.0.1'].includes(location.hostn
 const THREE = globalThis.THREE || await import('../../../vendor/three/three.module.min.js');
 
 const $ = id => document.getElementById(id);
-const rendu = creerRendu(THREE, $('vue3d'), { W, H, UN, BA }), cv = rendu.canvas, mini2 = $('mini'), gm = mini2.getContext('2d');
+const rendu = creerRendu(THREE, $('vue3d'), { W, H, UN, BA, placeLibre }), cv = rendu.canvas, mini2 = $('mini'), gm = mini2.getContext('2d');
 const COL = ['#4cc9f0', '#f25c54', '#d6a84a'], NOMF = { fer: 'Ligue de Fer', bosquet: 'Bosquet', echos: 'Échos', cendres: 'Cendres' };
 const lire = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v === null || v === undefined ? d : v; } catch { return d; } };
 const ecrire = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* stockage plein ou refusé */ } };

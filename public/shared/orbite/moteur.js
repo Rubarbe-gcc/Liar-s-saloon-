@@ -75,18 +75,18 @@ function regen(s, e) {
 const mir = a => a.map(([x, y]) => [47 - x, 47 - y]);
 // 6 cartes 48x48 : base de l'équipe 0 (l'équipe 1 est en miroir), mines et Relais d'un côté (miroir ajouté), `centre` et `rc` non mirorés
 export const MAPS = [
-  { nom: 'Croisée',        base: [6, 6],   mines: [[10, 6], [6, 10], [20, 28]],  centre: [[24, 24]],           relais: [[14, 34], [24, 12]] },
-  { nom: 'Diagonale',      base: [5, 5],   mines: [[9, 5], [5, 9], [14, 14]],    centre: [[24, 24]],           relais: [[12, 30], [24, 10]] },
-  { nom: 'Duel au centre', base: [8, 8],   mines: [[12, 8], [8, 12]],            centre: [[24, 24]],           relais: [[16, 22], [24, 12]] },
-  { nom: 'Couloirs',       base: [5, 24],  mines: [[5, 18], [5, 30], [14, 24]],  centre: [[24, 12], [23, 35]], relais: [[16, 10]], rc: [[24, 24]] },
-  { nom: 'Archipel',       base: [6, 41],  mines: [[10, 41], [6, 37], [16, 30]], centre: [[24, 24]],           relais: [[12, 20], [24, 36]] },
-  { nom: 'Forteresse',     base: [24, 5],  mines: [[20, 5], [28, 5], [24, 12]],  centre: [[24, 24]],           relais: [[10, 20], [14, 32]], rc: [[24, 28]] },
+  { nom: 'Croisée',        base: [6, 6],   mines: [[10, 6], [6, 10], [20, 28]],  centre: [[24, 24]],           relais: [[14, 34], [24, 12]], rocs: [[17, 17, 2], [10, 23, 1], [23, 10, 1], [30, 22, 1]] },
+  { nom: 'Diagonale',      base: [5, 5],   mines: [[9, 5], [5, 9], [14, 14]],    centre: [[24, 24]],           relais: [[12, 30], [24, 10]], rocs: [[20, 7, 2], [7, 20, 2], [19, 19, 1]] },
+  { nom: 'Duel au centre', base: [8, 8],   mines: [[12, 8], [8, 12]],            centre: [[24, 24]],           relais: [[16, 22], [24, 12]], rocs: [[19, 15, 2], [15, 19, 2], [28, 8, 1]] },
+  { nom: 'Couloirs',       base: [5, 24],  mines: [[5, 18], [5, 30], [14, 24]],  centre: [[24, 12], [23, 35]], relais: [[16, 10]], rc: [[24, 24]], rocs: [[15, 18, 2], [15, 30, 2], [24, 18, 1]] },
+  { nom: 'Archipel',       base: [6, 41],  mines: [[10, 41], [6, 37], [16, 30]], centre: [[24, 24]],           relais: [[12, 20], [24, 36]], rocs: [[18, 41, 2], [9, 28, 2], [20, 26, 1]] },
+  { nom: 'Forteresse',     base: [24, 5],  mines: [[20, 5], [28, 5], [24, 12]],  centre: [[24, 24]],           relais: [[10, 20], [14, 32]], rc: [[24, 28]], rocs: [[16, 12, 2], [32, 12, 2], [24, 18, 1]] },
 ];
 // cartes de l'éditeur : même forme que MAPS ; refusée si une valeur sort des bornes (alors la carte 0 sert)
 const pt = p => Array.isArray(p) && p.length === 2 && p.every(v => Number.isInteger(v) && v >= 2 && v <= 45);
 const pts = (l, max) => Array.isArray(l) && l.length <= max && l.every(pt);
 export function carteValide(d) {
-  if (!d || typeof d !== 'object' || !pt(d.base) || !pts(d.mines, 6) || !pts(d.centre || [], 3) || !pts(d.relais || [], 4) || !pts(d.rc || [], 2)) return false;
+  if (!d || typeof d !== 'object' || !pt(d.base) || !pts(d.mines, 6) || !pts(d.centre || [], 3) || !pts(d.relais || [], 4) || !pts(d.rc || [], 2) || !(d.rocs === undefined || (Array.isArray(d.rocs) && d.rocs.length <= 8 && d.rocs.every(r => Array.isArray(r) && r.length === 3 && pt(r.slice(0, 2)) && Number.isInteger(r[2]) && r[2] >= 1 && r[2] <= 3)))) return false;
   const [bx, by] = d.base; if (bx < 3 || by < 3 || bx > 44 || by > 44 || Math.hypot(bx - (47 - bx), by - (47 - by)) < 16 || !d.mines.length) return false;
   return [...d.mines, ...(d.relais || [])].every(([x, y]) => Math.hypot(x - bx, y - by) >= 3);
 }
@@ -100,22 +100,141 @@ export const NIV = {
 const d2 = (a, b) => (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
 const sq = n => Math.floor(Math.sqrt(n));
 const hasard = (s, n) => { s.rng = (Math.imul(s.rng, 1664525) + 1013904223) | 0; return (s.rng >>> 8) % n; };
+// ---------- terrain : grille de cases (niveau bas/haut, rampes, rochers, cristaux, bâtiments) ----------
+// Tout en entiers (coordonnées doublées) : la même grille partout, donc la même partie en ligne.
+const INF = 1 << 29;
+const DIRS = [[1, 0, 10], [-1, 0, 10], [0, 1, 10], [0, -1, 10], [1, 1, 14], [1, -1, 14], [-1, 1, 14], [-1, -1, 14]];
+export function terrain(M) {
+  const N = W * H, g = { niv: new Uint8Array(N), rampe: new Uint8Array(N), roc: new Uint8Array(N), cristal: new Int16Array(N).fill(-1), occ: new Int32Array(N), champs: new Map(), ver: 0 };
+  const bases = [M.base, ...mir([M.base])];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const X = 2 * x + 1, Y = 2 * y + 1, i = y * W + x;
+    for (const [bx, by] of bases) {
+      const dx = X - 2 * bx, dy = Y - 2 * by, D = dx * dx + dy * dy, cx = 48 - 2 * bx, cy = 48 - 2 * by, C = cx * cx + cy * cy, dot = dx * cx + dy * cy;
+      if (D <= 354) g.niv[i] = 1;                                                    // plateau de la base : rayon ~9,4 cases
+      if (D >= 225 && D <= 484 && dot > 0 && dot * dot * 100 >= 81 * D * C) g.rampe[i] = 1; // rampe tournée vers le centre
+    }
+  }
+  const points = [...bases, ...M.mines, ...mir(M.mines), ...(M.centre || []), ...(M.relais || []), ...mir(M.relais || []), ...(M.rc || [])];
+  const loin = (X, Y, r2) => points.every(([px, py]) => (X - 2 * px) ** 2 + (Y - 2 * py) ** 2 > r2);
+  for (const [rx, ry, r] of [...(M.rocs || []), ...(M.rocs || []).map(([x, y, r]) => [47 - x, 47 - y, r])])
+    for (let y = Math.max(0, ry - r - 1); y <= Math.min(H - 1, ry + r + 1); y++) for (let x = Math.max(0, rx - r - 1); x <= Math.min(W - 1, rx + r + 1); x++) {
+      const X = 2 * x + 1, Y = 2 * y + 1, i = y * W + x;
+      if ((X - 2 * rx) ** 2 + (Y - 2 * ry) ** 2 <= 4 * r * r + 2 && !g.rampe[i] && loin(X, Y, 49)) g.roc[i] = 1;
+    }
+  // cristaux : les cases derrière chaque mine proche d'une base (vues depuis la base) bloquent le passage
+  [...M.mines, ...mir(M.mines), ...(M.centre || [])].forEach(([mx, my], k) => {
+    let bb = null, bd = INF; for (const [bx, by] of bases) { const d = (mx - bx) ** 2 + (my - by) ** 2; if (d < bd) { bd = d; bb = [bx, by]; } }
+    if (bd > 225) return;
+    for (let y = my - 3; y <= my + 2; y++) for (let x = mx - 3; x <= mx + 2; x++) {
+      if (x < 0 || y < 0 || x >= W || y >= H) continue;
+      const dx = 2 * x + 1 - 2 * mx, dy = 2 * y + 1 - 2 * my, D = dx * dx + dy * dy, dot = dx * (mx - bb[0]) + dy * (my - bb[1]);
+      if (D >= 2 && D <= 14 && dot > 0) g.cristal[y * W + x] = k;
+    }
+  });
+  // sécurité : si des rochers coupent la carte, on les enlève
+  const s0 = { g }, c0 = cellule(bases[0][0] * 1000, bases[0][1] * 1000), f = champ(s0, c0 % W, (c0 / W) | 0);
+  if (points.some(([px, py]) => f[cellule(px * 1000 - 500, py * 1000 - 500)] >= INF && f[cellule(px * 1000, py * 1000)] >= INF)) { g.roc.fill(0); g.champs.clear(); }
+  return g;
+}
+const cellule = (x, y) => Math.max(0, Math.min(H - 1, Math.floor(y / 1000))) * W + Math.max(0, Math.min(W - 1, Math.floor(x / 1000)));
+const libreCase = (g, i) => !g.roc[i] && g.cristal[i] < 0 && !g.occ[i];
+/** Peut-on passer de la case a à la case b (voisines) ? Même niveau, ou l'une est une rampe. */
+function passe(g, a, b) { return libreCase(g, b) && (g.niv[a] === g.niv[b] || g.rampe[a] || g.rampe[b]); }
+function passeDiag(g, a, b) { const ax = a % W, ay = (a / W) | 0, bx = b % W, by = (b / W) | 0; return passe(g, a, b) && passe(g, a, ay * W + bx) && passe(g, a, by * W + ax); }
+/** Champ de distances vers une case (mis en cache tant qu'aucun bâtiment ne change). */
+function champ(s, gx, gy) {
+  const g = s.g, but = gy * W + gx, cle = but + ':' + g.ver;
+  let f = g.champs.get(cle); if (f) return f;
+  f = new Int32Array(W * H).fill(INF); f[but] = 0;
+  const seaux = [[but]];
+  if (!libreCase(g, but)) for (let y = gy - 2; y <= gy + 2; y++) for (let x = gx - 2; x <= gx + 2; x++) { const i = y * W + x; if (x >= 0 && y >= 0 && x < W && y < H && !libreCase(g, i) && f[i]) { f[i] = 0; seaux[0].push(i); } } // but dans un obstacle : on part de tout l'obstacle
+  for (let d = 0; d < seaux.length; d++) {
+    const l = seaux[d]; if (!l) continue;
+    for (const c of l) {
+      if (f[c] !== d) continue;
+      const cx = c % W, cy = (c / W) | 0;
+      for (const [dx, dy, k] of DIRS) {
+        const x = cx + dx, y = cy + dy; if (x < 0 || y < 0 || x >= W || y >= H) continue;
+        const n = y * W + x; // on remonte le chemin : il faut pouvoir aller de n vers c
+        if (!libreCase(g, n)) continue;
+        if (libreCase(g, c) && !(k === 10 ? passe(g, n, c) : passeDiag(g, n, c))) continue;
+        const nd = d + k; if (nd < f[n]) { f[n] = nd; (seaux[nd] = seaux[nd] || []).push(n); }
+      }
+    }
+  }
+  if (g.champs.size > 60) g.champs.delete(g.champs.keys().next().value);
+  g.champs.set(cle, f); return f;
+}
+/** La ligne droite de a vers (x, y) traverse-t-elle seulement des cases où l'on passe ? */
+function ligne(g, ax, ay, x, y) {
+  const dx = x - ax, dy = y - ay, n = Math.max(1, (Math.max(Math.abs(dx), Math.abs(dy)) / 250) | 0);
+  let p = cellule(ax, ay);
+  for (let i = 1; i <= n; i++) {
+    const c = cellule(ax + Math.trunc(dx * i / n), ay + Math.trunc(dy * i / n));
+    if (c === p) continue;
+    const diag = (p % W) !== (c % W) && ((p / W) | 0) !== ((c / W) | 0);
+    if (Math.abs((p % W) - (c % W)) > 1 || Math.abs(((p / W) | 0) - ((c / W) | 0)) > 1 || !(diag ? passeDiag(g, p, c) : passe(g, p, c))) return false;
+    p = c;
+  }
+  return true;
+}
+/** Déplace e de (dx, dy) sans entrer dans une case interdite (glisse le long des murs). */
+function pousser(s, e, dx, dy) {
+  const g = s.g, a = cellule(e.x, e.y), ok = (x, y) => { const c = cellule(x, y); return c === a || !libreCase(g, a) || passe(g, a, c); };
+  const nx = Math.max(500, Math.min(W * 1000 - 500, e.x + dx)), ny = Math.max(500, Math.min(H * 1000 - 500, e.y + dy));
+  if (ok(nx, ny)) { e.x = nx; e.y = ny; } else if (ok(nx, e.y)) e.x = nx; else if (ok(e.x, ny)) e.y = ny;
+}
+/** Sort une unité d'une case occupée (bâtiment posé sur elle, poussée) vers la case libre la plus proche. */
+function degager(s, e) {
+  const g = s.g, a = cellule(e.x, e.y); if (libreCase(g, a)) return false;
+  const ax = a % W, ay = (a / W) | 0;
+  for (let r = 1; r < 6; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+    const x = ax + dx, y = ay + dy; if (x < 0 || y < 0 || x >= W || y >= H || !libreCase(g, y * W + x)) continue;
+    e.x = x * 1000 + 500; e.y = y * 1000 + 500; return true;
+  }
+  return false;
+}
+/** Les cases d'un bâtiment posé en (x, y) : 4×4 pour un QG, 2×2 sinon. */
+function emprise(k, x, y) {
+  const h = BA[k].qg ? 2 : 1, cx = Math.round(x / 1000), cy = Math.round(y / 1000), l = [];
+  for (let j = cy - h; j < cy + h; j++) for (let i = cx - h; i < cx + h; i++) if (i >= 0 && j >= 0 && i < W && j < H) l.push(j * W + i);
+  return l;
+}
+/** Peut-on construire k en (x, y) ? Cases libres, même niveau, pas de rampe, rien dessus. */
+export function placeLibre(s, k, x, y) {
+  const g = s.g, l = emprise(k, x, y), h = BA[k].qg ? 2 : 1, cx = Math.round(x / 1000), cy = Math.round(y / 1000);
+  if (cx - h < 1 || cy - h < 1 || cx + h > W - 1 || cy + h > H - 1) return false;
+  return l.every(i => libreCase(g, i) && !g.rampe[i] && g.niv[i] === g.niv[l[0]]) && !s.mines.some(m => Math.abs(m.x - x) < 2500 && Math.abs(m.y - y) < 2500) && !s.relais.some(r => Math.abs(r.x - x) < 3000 && Math.abs(r.y - y) < 3000);
+}
+function occuper(s, e, v) { for (const i of emprise(e.k, e.x, e.y)) s.g.occ[i] = v ? e.id : 0; s.g.ver++; }
 
+
+// réglage d'équilibre : PV des unités par faction (pourcents), mesuré IA contre IA sur les 6 cartes avec le terrain
+export const PV_FAC = { fer: 128, bosquet: 92, echos: 110, cendres: 87 };
+const FAC_U = {}; for (const [f, d] of Object.entries(FA)) for (const k of [d.ouv, ...d.u]) FAC_U[k] = f;
+FAC_U.marechal = 'fer'; FAC_U.ancien = 'bosquet'; FAC_U.oracle = 'echos'; FAC_U.pyrarque = 'cendres';
 export function ajout(s, eq, k, x, y, fait = 1) {
-  const d = UN[k] || BA[k];
-  const e = { id: s.n++, eq, k, x, y, pv: d.pv, max: d.pv, ordre: null, cd: 0, file: [], prog: 0, port: 0, w: 0, cons: fait ? 0 : d.tc, bc: d.bm || 0, bm: d.bm || 0, rg: 99, pc: 0 };
-  s.ent.push(e); return e;
+  const d = UN[k] || BA[k], pv = UN[k] && FAC_U[k] ? Math.floor(d.pv * PV_FAC[FAC_U[k]] / 100) : d.pv;
+  const e = { id: s.n++, eq, k, x, y, pv, max: pv, ordre: null, cd: 0, file: [], prog: 0, port: 0, w: 0, cons: fait ? 0 : d.tc, bc: d.bm || 0, bm: d.bm || 0, rg: 99, pc: 0 };
+  s.ent.push(e);
+  if (s.g) { if (BA[k]) occuper(s, e, 1); else degager(s, e); }
+  return e;
 }
 
 export function creer(graine = 1, f0 = 'fer', f1 = 'fer', carte = 0, n0 = 2, n1 = 2, opt = {}) {
   const M = carteValide(opt.def) ? opt.def : (MAPS[carte] || MAPS[0]), B = [M.base, ...mir([M.base])];
   const s = { niv: [n0, n1], carte, bonus: [NIV[n0].bonus, NIV[n1].bonus], fac: [f0, f1], en: [0, 0], relais: [], tick: 0, pr: [300, 300], ent: [], n: 1, mines: [], fin: -1, rng: graine | 0, vis: [new Uint8Array(W * H), new Uint8Array(W * H)] };
+  s.g = terrain(M);
   for (const [q, [x, y]] of B.entries()) {
     const F = FA[s.fac[q]]; ajout(s, q, F.qg, x * 1000, y * 1000);
     for (let i = 0; i < 3; i++) ajout(s, q, F.ouv, x * 1000 + i * 600 - 600, y * 1000 + 2500 * (q ? -1 : 1));
   }
   for (const [x, y] of [...M.mines, ...mir(M.mines), ...(M.centre || [])])
     s.mines.push({ x: x * 1000, y: y * 1000, q: 3500 + hasard(s, 1000) });
+  // point d'approche des ouvriers : devant les cristaux, du côté de la base la plus proche
+  for (const m of s.mines) { let bb = B[0]; for (const b of B) if ((m.x - b[0] * 1000) ** 2 + (m.y - b[1] * 1000) ** 2 < (m.x - bb[0] * 1000) ** 2 + (m.y - bb[1] * 1000) ** 2) bb = b; const dx = bb[0] * 1000 - m.x, dy = bb[1] * 1000 - m.y, d = sq(dx * dx + dy * dy) || 1; m.ax = m.x + Math.trunc(dx * 700 / d); m.ay = m.y + Math.trunc(dy * 700 / d); }
   for (const [x, y] of [...(M.relais || []), ...mir(M.relais || []), ...(M.rc || [])]) {
     s.relais.push({ x: x * 1000, y: y * 1000, prog: 0, own: -1 });
     ajout(s, 2, 'gardien', x * 1000 - 800, y * 1000); ajout(s, 2, 'gardien', x * 1000 + 800, y * 1000);
@@ -126,38 +245,63 @@ export function creer(graine = 1, f0 = 'fer', f1 = 'fer', carte = 0, n0 = 2, n1 
   vue(s); return s;
 }
 
-function aller(e, x, y, v) {
-  const dx = x - e.x, dy = y - e.y, d = sq(dx * dx + dy * dy);
-  if (d <= v) { e.x = x; e.y = y; return true; }
-  e.x += Math.trunc(dx * v / d); e.y += Math.trunc(dy * v / d); return false;
+/** Avance e vers (x, y) en contournant les obstacles ; vrai à l'arrivée (ou au plus près si le but est inaccessible). */
+function aller(s, e, x, y, v) {
+  const g = s.g, a = cellule(e.x, e.y), b = cellule(x, y);
+  let tx = x, ty = y;
+  if (a !== b && !ligne(g, e.x, e.y, x, y)) {
+    const f = champ(s, b % W, (b / W) | 0);
+    if (f[a] >= INF) { // enfermée (bâtiments autour) : on la pose sur la case accessible la plus proche
+      const ax = a % W, ay = (a / W) | 0;
+      for (let r = 1; r < 5; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) { const x2 = ax + dx, y2 = ay + dy; if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || x2 < 0 || y2 < 0 || x2 >= W || y2 >= H) continue; const n = y2 * W + x2; if (f[n] < INF && libreCase(g, n)) { e.x = x2 * 1000 + 500; e.y = y2 * 1000 + 500; return false; } }
+    }
+    if (f[a] < INF) {
+      // on suit le champ quelques cases, et on vise la plus lointaine encore en ligne droite
+      let c = a, vise = -1;
+      for (let k = 0; k < 5 && c !== b; k++) {
+        const cx = c % W, cy = (c / W) | 0; let m = f[c], nb = -1;
+        for (const [dx, dy, kk] of DIRS) { const nx = cx + dx, ny = cy + dy; if (nx < 0 || ny < 0 || nx >= W || ny >= H) continue; const n = ny * W + nx; if (f[n] < m && (kk === 10 ? passe(g, c, n) : passeDiag(g, c, n))) { m = f[n]; nb = n; } }
+        if (nb < 0) break; c = nb;
+        if (k === 0 || ligne(g, e.x, e.y, (c % W) * 1000 + 500, ((c / W) | 0) * 1000 + 500)) vise = c; else break;
+      }
+      if (vise < 0) return true; // déjà au plus près
+      if (vise !== b) { tx = (vise % W) * 1000 + 500; ty = ((vise / W) | 0) * 1000 + 500; }
+    }
+  }
+  const dx = tx - e.x, dy = ty - e.y, d = sq(dx * dx + dy * dy);
+  if (d <= v) { pousser(s, e, dx, dy); return tx === x && ty === y; }
+  const ox = e.x, oy = e.y; pousser(s, e, Math.trunc(dx * v / d), Math.trunc(dy * v / d));
+  if (e.x === ox && e.y === oy && cellule(x, y) !== a && !libreCase(g, b) && Math.abs(x - e.x) + Math.abs(y - e.y) < 2600) return true; // collé à un but bloqué
+  return false;
 }
 function cible(s, e, r) {
-  let b = null, m = r * r + 1;
-  for (const o of s.ent) if (o.eq !== e.eq && o.pv > 0) { const d = d2(e, o); if (d < m) { m = d; b = o; } }
+  let b = null, m = r * r + 1; const v = s.vis[e.eq], ne = s.g.niv[cellule(e.x, e.y)];
+  for (const o of s.ent) if (o.eq !== e.eq && o.pv > 0) { const d = d2(e, o); if (d < m) { const c = cellule(o.x, o.y); if (v ? v[c] !== 2 : s.g.niv[c] > ne) continue; m = d; b = o; } }
   return b;
 }
 function frappe(s, e, c, u) {
-  const r = u.pt + (BA[c.k] ? 1200 : 0);
-  if (d2(e, c) <= r * r) { if (!e.cd) { let d = Math.floor(u.deg * (10 + s.up[e.eq].att) / 10); if (u.res) d += Math.min(3, s.ent.filter(a => a !== e && a.eq === e.eq && a.pv > 0 && UN[a.k] && UN[a.k].res && d2(a, e) <= 3000 * 3000).length); hit(s, c, d, e); e.cd = u.cd; e.tg = c.id; e.ht = s.tick; } } else aller(e, c.x, c.y, u.v);
+  const r = u.pt + (BA[c.k] ? (BA[c.k].qg ? 2200 : 1200) : 0);
+  if (d2(e, c) <= r * r) { if (!e.cd) { let d = Math.floor(u.deg * (10 + s.up[e.eq].att) / 10); if (u.res) d += Math.min(3, s.ent.filter(a => a !== e && a.eq === e.eq && a.pv > 0 && UN[a.k] && UN[a.k].res && d2(a, e) <= 3000 * 3000).length); hit(s, c, d, e); e.cd = u.cd; e.tg = c.id; e.ht = s.tick; } } else aller(s, e, c.x, c.y, u.v);
 }
 function rec(s, e, u, o) {
   const m = s.mines[o.m];
   if (e.port >= 10) {
     const n = s.ent.filter(x => x.eq === e.eq && BA[x.k] && BA[x.k].qg && x.pv > 0).sort((a, b) => d2(a, e) - d2(b, e))[0];
     if (!n) { e.ordre = null; return; }
-    if (d2(e, n) <= 2000 * 2000) { s.pr[e.eq] += Math.floor(e.port * s.bonus[e.eq]); s.tot[e.eq] += e.port; e.port = 0; } else aller(e, n.x, n.y, u.v);
+    if (d2(e, n) <= 3000 * 3000) { s.pr[e.eq] += Math.floor(e.port * s.bonus[e.eq]); s.tot[e.eq] += e.port; e.port = 0; } else aller(s, e, n.x, n.y, u.v);
     return;
   }
   if (m.q <= 0) { e.ordre = null; return; }
-  if (d2(e, m) <= 1200 * 1200) { if (++e.w >= 30) { e.w = 0; e.port = 10 + 2 * s.up[e.eq].rec; m.q -= 10; } } else aller(e, m.x, m.y, u.v);
+  if (d2(e, m) <= 1200 * 1200) { if (++e.w >= 30) { e.w = 0; e.port = 10 + 2 * s.up[e.eq].rec; m.q -= 10; } } else aller(s, e, m.ax ?? m.x, m.ay ?? m.y, u.v);
 }
 function mob(s, e) {
   const u = UN[e.k], o = e.ordre;
+  if (degager(s, e)) return;
   if (o) {
-    if (o.t === 'move') { if (aller(e, o.x, o.y, u.v)) e.ordre = null; return; }
+    if (o.t === 'move') { if (aller(s, e, o.x, o.y, u.v)) e.ordre = null; return; }
     if (o.t === 'att') { const c = s.ent.find(x => x.id === o.c && x.pv > 0); if (!c) e.ordre = null; else { frappe(s, e, c, u); return; } }
-    if (o.t === 'am') { const c = u.deg && cible(s, e, u.vue); if (c) frappe(s, e, c, u); else if (aller(e, o.x, o.y, u.v)) e.ordre = null; return; }
-    if (o.t === 'bat') { if (aller(e, o.x, o.y, u.v)) { ajout(s, e.eq, o.k, o.x, o.y, 0); e.ordre = null; } return; }
+    if (o.t === 'am') { const c = u.deg && cible(s, e, u.vue); if (c) frappe(s, e, c, u); else if (aller(s, e, o.x, o.y, u.v)) e.ordre = null; return; }
+    if (o.t === 'bat') { if (aller(s, e, o.x, o.y, u.v) || d2(e, o) <= 1500 * 1500) { if (placeLibre(s, o.k, o.x, o.y)) ajout(s, e.eq, o.k, o.x, o.y, 0); else s.pr[e.eq] += BA[o.k].cout; e.ordre = null; } return; }
     if (o.t === 'rec') { rec(s, e, u, o); return; }
   }
   if (u.deg) { const c = cible(s, e, u.vue); if (c) frappe(s, e, c, u); }
@@ -176,9 +320,9 @@ function sep(s) {
   for (let i = 0; i < U.length; i++) for (let j = i + 1; j < U.length; j++) {
     const a = U[i], b = U[j], dx = a.x - b.x, dy = a.y - b.y, dd = dx * dx + dy * dy;
     if (dd >= 640000) continue;
-    if (!dd) { a.x += 50; continue; }
+    if (!dd) { pousser(s, a, 50, 0); continue; }
     const d = sq(dd) || 1, p = (800 - d) >> 3, px = Math.trunc(dx * p / d), py = Math.trunc(dy * p / d);
-    a.x += px; a.y += py; b.x -= px; b.y -= py;
+    pousser(s, a, px, py); pousser(s, b, -px, -py);
   }
   for (const e of U) { e.x = Math.max(500, Math.min(W * 1000 - 500, e.x)); e.y = Math.max(500, Math.min(H * 1000 - 500, e.y)); }
 }
@@ -188,10 +332,10 @@ function vue(s) {
     const v = s.vis[q];
     for (let i = 0; i < v.length; i++) if (v[i] === 2) v[i] = 1;
     for (const e of s.ent) if (e.eq === q && e.pv > 0) {
-      const r = ((UN[e.k] || BA[e.k]).vue / 1000) | 0, cx = (e.x / 1000) | 0, cy = (e.y / 1000) | 0;
+      const r = ((UN[e.k] || BA[e.k]).vue / 1000) | 0, cx = (e.x / 1000) | 0, cy = (e.y / 1000) | 0, c0 = cellule(e.x, e.y), haut = s.g.niv[c0] || s.g.rampe[c0];
       for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
         const x = cx + dx, y = cy + dy;
-        if (dx * dx + dy * dy <= r * r && x >= 0 && y >= 0 && x < W && y < H) v[y * W + x] = 2;
+        if (dx * dx + dy * dy <= r * r && x >= 0 && y >= 0 && x < W && y < H && (haut || !s.g.niv[y * W + x] || s.g.rampe[y * W + x])) v[y * W + x] = 2;
       }
     }
   }
@@ -215,6 +359,7 @@ export function step(s) {
     if (e.eq < 2 && e.last < 2 && e.last !== e.eq && !BA[e.k]) s.kills[e.last]++;
     if (UN[e.k] && UN[e.k].braise && !e.boum) { e.boum = 1; for (const o of s.ent) if (o.pv > 0 && o.eq !== e.eq && d2(o, e) <= 1500 * 1500) { let d = 12; if (o.bc > 0) { const b = Math.min(o.bc, d); o.bc -= b; d -= b; } o.pv -= d; o.last = e.eq; } }
   }
+  for (const e of s.ent) if (e.pv <= 0 && BA[e.k]) occuper(s, e, 0);
   s.ent = s.ent.filter(e => e.pv > 0);
   if (s.tick % 5 === 0) { vue(s); relais(s); }
   if (s.tick % 10 === 0) for (const r of s.relais) if (r.own >= 0) s.en[r.own]++;
@@ -255,7 +400,8 @@ export function cmd(s, eq, ids, c) {
       if (b && b.prod && b.prod.includes(c.k) && !e.cons && s.pr[eq] >= u.cout && (!u.en || s.en[eq] >= u.en) && e.file.length < 5 && !(u.ch && s.ent.some(x => x.eq === eq && (x.k === c.k || x.file.includes(c.k))))) { s.pr[eq] -= u.cout; s.en[eq] -= u.en || 0; e.file.push(c.k); }
     } else if (c.t === 'bat') {
       const b = BA[c.k];
-      if (UN[e.k] && UN[e.k].ouv && b && b.cout && nombre(c.x) && nombre(c.y) && s.pr[eq] >= b.cout) { s.pr[eq] -= b.cout; e.ordre = { t: 'bat', k: c.k, x: Math.max(1500, Math.min(46500, c.x)), y: Math.max(1500, Math.min(46500, c.y)) }; break; }
+      const x = nombre(c.x) ? Math.round(Math.max(1500, Math.min(46500, c.x)) / 1000) * 1000 : 0, y = nombre(c.y) ? Math.round(Math.max(1500, Math.min(46500, c.y)) / 1000) * 1000 : 0;
+      if (UN[e.k] && UN[e.k].ouv && b && b.cout && x && y && s.pr[eq] >= b.cout && placeLibre(s, c.k, x, y)) { s.pr[eq] -= b.cout; e.ordre = { t: 'bat', k: c.k, x, y }; break; }
     } else if (c.t === 'up') {
       const g = UPG[c.k], l = g && BA[e.k] && BA[e.k].qg ? s.up[eq][c.k] : 9;
       if (l < 3 && s.pr[eq] >= g.pr * (l + 1) && s.en[eq] >= g.en * (l + 1)) { s.pr[eq] -= g.pr * (l + 1); s.en[eq] -= g.en * (l + 1); s.up[eq][c.k]++; }
@@ -264,6 +410,14 @@ export function cmd(s, eq, ids, c) {
     } else if (c.t === 'stop') { if (!BA[e.k]) e.ordre = null;
     } else if (!BA[e.k]) { const o = ordreNet(s, c); if (o) { e.ordre = o; e.w = 0; } }
   }
+}
+function chercherPlace(s, k, x, y) {
+  const cx = Math.round(x / 1000), cy = Math.round(y / 1000);
+  for (let r = 0; r < 7; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+    if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+    if (placeLibre(s, k, (cx + dx) * 1000, (cy + dy) * 1000)) return [(cx + dx) * 1000, (cy + dy) * 1000];
+  }
+  return null;
 }
 // IA simple (une décision par seconde)
 export function ia(s, eq) {
@@ -281,7 +435,7 @@ export function ia(s, eq) {
   const W2 = [F.bat[0], F.bat[1], F.bat[2], F.bat[0], F.bat[2], F.bat[1], F.bat[2]], O = [[4, 0], [0, 4], [4, 4], [7, 1], [1, 7], [8, 5], [5, 8]];
   const nb = mi.filter(e => BA[e.k] && !BA[e.k].qg).length;
   if (nb < L.nb && ou.length >= 4 && !ou.some(o => o.ordre && o.ordre.t === 'bat') && s.pr[eq] >= BA[W2[nb]].cout)
-    cmd(s, eq, [ou[0].id], { t: 'bat', k: W2[nb], x: noy.x + ux * O[nb][0] * 1000, y: noy.y + uy * O[nb][1] * 1000 });
+    { const p = chercherPlace(s, W2[nb], noy.x + ux * O[nb][0] * 1000, noy.y + uy * O[nb][1] * 1000); if (p) cmd(s, eq, [ou[0].id], { t: 'bat', k: W2[nb], x: p[0], y: p[1] }); }
   for (const b of mi) {
     if (!BA[b.k] || b.cons || b.file.length > 1 || BA[b.k].qg || !BA[b.k].prod) continue;
     if (hasard(s, 6) === 0) continue; // petite hésitation
