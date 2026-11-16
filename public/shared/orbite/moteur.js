@@ -72,15 +72,45 @@ Object.assign(BA, {
 });
 for (const k of ['noyau', 'coeur', 'nexus', 'fournaise']) { BA[k].pop = 10; BA[k].cout = 400; BA[k].tc = 600; } // un QG de plus = une expansion
 FA.fer.ravit = 'entrepot'; FA.bosquet.ravit = 'terrier'; FA.echos.ravit = 'diapason'; FA.cendres.ravit = 'braisier';
+// étape 6 : volants (passent au-dessus de tout, ne sont touchés que par les unités « aa »), invisibles, détecteurs
+Object.assign(UN, {
+  faucon:     { pv: 120, v: 95,  pt: 4500, deg: 11, cd: 12, cout: 175, en: 25, tp: 320, vue: 8000, vol: 1, aa: 1 },               // Ligue de Fer
+  spore:      { pv: 140, v: 80,  pt: 4000, deg: 10, cd: 12, cout: 160, en: 25, tp: 300, vue: 8000, vol: 1, aa: 1, pra: 1 },       // Bosquet
+  voile:      { pv: 70,  v: 100, pt: 4500, deg: 10, cd: 12, cout: 180, en: 30, tp: 330, vue: 8000, vol: 1, aa: 1, invis: 1, bm: 50, res: 1 }, // Échos (invisible)
+  escarbille: { pv: 110, v: 105, pt: 4000, deg: 9,  cd: 11, cout: 165, en: 25, tp: 300, vue: 8000, vol: 1, aa: 1, brule: 1 },     // Cendres
+});
+BA.atelier.prod.push('faucon'); BA.serre.prod.push('spore'); BA.forge.prod.push('voile'); BA.creuset.prod.push('escarbille');
+for (const k of ['tireur', 'epine', 'pulse', 'lanceur', 'marechal', 'ancien', 'oracle', 'pyrarque']) UN[k].aa = 1;
+for (const k of ['tour', 'ronce', 'phare', 'geyser']) { BA[k].aa = 1; BA[k].det = 7000; }
+for (const k of ['noyau', 'coeur', 'nexus', 'fournaise']) BA[k].det = 6000;
+for (const k of ['marechal', 'ancien', 'oracle', 'pyrarque']) UN[k].det = 5000;
+/** L'équipe eq voit-elle l'unité invisible o ? (un de ses détecteurs est assez près) */
+export function detecte(s, eq, o) { return s.ent.some(d => d.eq === eq && d.pv > 0 && !d.cons && (UN[d.k] || BA[d.k]).det && d2(d, o) <= (UN[d.k] || BA[d.k]).det ** 2); }
+// étape 7 : une capacité active par unité de combat (4 s, recharge 20 s) : vitesse ×1,6, portée +40 %, cadence ×2, garde (dégâts reçus ÷ 2)
+export const CAP = {
+  fantassin: ['Charge', 'vitesse'], tireur: ['Visée', 'portee'], blinde: ['Ancrage', 'garde'], faucon: ['Postcombustion', 'vitesse'],
+  rejeton: ['Ruée', 'vitesse'], epine: ['Salve', 'cadence'], colosse: ['Écorce', 'garde'], spore: ['Nuage', 'garde'],
+  eclat: ['Saut', 'vitesse'], pulse: ['Surcharge', 'cadence'], sentinelle: ['Rempart', 'garde'], voile: ['Éclipse', 'cadence'],
+  tison: ['Embrasement', 'vitesse'], lanceur: ['Pluie de lave', 'portee'], brasero: ['Fournaise', 'garde'], escarbille: ['Essaim', 'vitesse'],
+};
+export const CAP_DUREE = 80, CAP_RECHARGE = 400;
+const CAPU = {};
+function avecCap(e, u) { const c = CAP[e.k]; if (!e.abT || !c) return u; const k = e.k + c[1]; if (!CAPU[k]) CAPU[k] = { ...u, v: c[1] === 'vitesse' ? (u.v * 8 / 5) | 0 : u.v, pt: c[1] === 'portee' ? (u.pt * 7 / 5) | 0 : u.pt, cd: c[1] === 'cadence' ? Math.max(1, u.cd >> 1) : u.cd }; return CAPU[k]; }
 export const POP_MAX = 100;
-export const popDe = k => (UN[k].ch ? 4 : UN[k].pv >= 250 ? 3 : 1);
+// arbre technologique : ce qu'il faut avoir bâti (et fini) avant de construire
+export const PREREQ = {};
+for (const d of Object.values(FA)) { PREREQ[d.bat[0]] = d.ravit; PREREQ[d.bat[1]] = d.bat[0]; PREREQ[d.bat[2]] = d.bat[0]; }
+export const debloque = (s, eq, k) => !PREREQ[k] || s.ent.some(e => e.eq === eq && e.k === PREREQ[k] && !e.cons && e.pv > 0);
+/** L'amélioration du niveau l (0, 1, 2) : au-delà du premier niveau, il faut l'usine de la faction. */
+export const upDebloque = (s, eq, l) => l < 1 || s.ent.some(e => e.eq === eq && e.k === FA[s.fac[eq]].bat[1] && !e.cons && e.pv > 0);
+export const popDe = k => (UN[k].ch ? 4 : UN[k].pv >= 250 ? 3 : UN[k].vol ? 2 : 1);
 /** [population utilisée (files comprises), population disponible] d'une équipe. */
 export function population(s, eq) {
   let u = 0, m = 0;
   for (const e of s.ent) if (e.eq === eq && e.pv > 0) { if (UN[e.k]) u += popDe(e.k); else { if (!e.cons) m += BA[e.k].pop || 0; for (const k of e.file) u += popDe(k); } }
   return [u, Math.min(POP_MAX, m)];
 }
-function hit(s, c, d, k) { c.last = k.eq; if ((UN[k.k] || BA[k.k] || {}).brule) c.feu = Math.max(c.feu || 0, 60); d = Math.max(1, Math.floor(d * 10 / (10 + s.up[c.eq].arm))); if (c.bc > 0) { const perce = FAC_U[k.k] === 'fer' || k.k === 'tour', ds = perce ? Math.floor(d * 3 / 2) : d, a = Math.min(c.bc, ds); c.bc -= a; d = Math.max(0, d - (perce ? Math.ceil(a * 2 / 3) : a)); } c.pv -= d; c.rg = 0; } // Ligue de Fer : munitions perforantes (+50 % sur les boucliers)
+function hit(s, c, d, k) { c.last = k.eq; if ((UN[k.k] || BA[k.k] || {}).brule) c.feu = Math.max(c.feu || 0, 60); d = Math.max(1, Math.floor(d * 10 / (10 + s.up[c.eq].arm))); if (c.abT && CAP[c.k] && CAP[c.k][1] === 'garde') d = Math.ceil(d / 2); if (c.bc > 0) { const perce = FAC_U[k.k] === 'fer' || k.k === 'tour', ds = perce ? Math.floor(d * 6 / 5) : d, a = Math.min(c.bc, ds); c.bc -= a; d = Math.max(0, d - (perce ? Math.ceil(a * 5 / 6) : a)); } c.pv -= d; c.rg = 0; } // Ligue de Fer : munitions perforantes (+20 % sur les boucliers)
 function regen(s, e) {
   const d = UN[e.k] || BA[e.k];
   if (e.bm) { if (e.rg < 60) e.rg++; else if (e.bc < e.bm && s.tick % 2 === 0) e.bc++; }
@@ -230,7 +260,7 @@ function occuper(s, e, v) { for (const i of emprise(e.k, e.x, e.y)) s.g.occ[i] =
 
 
 // réglage d'équilibre : PV des unités par faction (pourcents), mesuré IA contre IA sur les 6 cartes avec le terrain
-export const PV_FAC = { fer: 128, bosquet: 92, echos: 107, cendres: 87 };
+export const PV_FAC = { fer: 128, bosquet: 99, echos: 107, cendres: 87 };
 const FAC_U = {}; for (const [f, d] of Object.entries(FA)) for (const k of [d.ouv, ...d.u]) FAC_U[k] = f;
 FAC_U.marechal = 'fer'; FAC_U.ancien = 'bosquet'; FAC_U.oracle = 'echos'; FAC_U.pyrarque = 'cendres';
 export function ajout(s, eq, k, x, y, fait = 1) {
@@ -266,6 +296,7 @@ export function creer(graine = 1, f0 = 'fer', f1 = 'fer', carte = 0, n0 = 2, n1 
 
 /** Avance e vers (x, y) en contournant les obstacles ; vrai à l'arrivée (ou au plus près si le but est inaccessible). */
 function aller(s, e, x, y, v) {
+  if (UN[e.k] && UN[e.k].vol) { const dx = x - e.x, dy = y - e.y, d = sq(dx * dx + dy * dy); if (d <= v) { e.x = x; e.y = y; return true; } e.x += Math.trunc(dx * v / d); e.y += Math.trunc(dy * v / d); return false; }
   const g = s.g, a = cellule(e.x, e.y), b = cellule(x, y);
   let tx = x, ty = y;
   if (a !== b && !ligne(g, e.x, e.y, x, y)) {
@@ -295,7 +326,8 @@ function aller(s, e, x, y, v) {
 }
 function cible(s, e, r) {
   let b = null, m = r * r + 1; const v = s.vis[e.eq], ne = s.g.niv[cellule(e.x, e.y)];
-  for (const o of s.ent) if (o.eq !== e.eq && o.pv > 0) { const d = d2(e, o); if (d < m) { const c = cellule(o.x, o.y); if (v ? v[c] !== 2 : s.g.niv[c] > ne) continue; m = d; b = o; } }
+  const aa = (UN[e.k] || BA[e.k]).aa;
+  for (const o of s.ent) if (o.eq !== e.eq && o.pv > 0) { const d = d2(e, o); if (d < m) { const c = cellule(o.x, o.y), uo = UN[o.k]; if (v ? v[c] !== 2 : s.g.niv[c] > ne) continue; if (uo && uo.vol && !aa) continue; if (uo && uo.invis && !detecte(s, e.eq, o)) continue; m = d; b = o; } }
   return b;
 }
 function frappe(s, e, c, u) {
@@ -314,11 +346,11 @@ function rec(s, e, u, o) {
   if (d2(e, m) <= 1200 * 1200) { if (++e.w >= 30) { e.w = 0; e.port = 10 + 2 * s.up[e.eq].rec; m.q -= 10; } } else aller(s, e, m.ax ?? m.x, m.ay ?? m.y, u.v);
 }
 function mob(s, e) {
-  const u = UN[e.k], o = e.ordre;
-  if (degager(s, e)) return;
+  const u = avecCap(e, UN[e.k]), o = e.ordre;
+  if (!u.vol && degager(s, e)) return;
   if (o) {
     if (o.t === 'move') { if (aller(s, e, o.x, o.y, u.v)) e.ordre = null; return; }
-    if (o.t === 'att') { const c = s.ent.find(x => x.id === o.c && x.pv > 0); if (!c) e.ordre = null; else { frappe(s, e, c, u); return; } }
+    if (o.t === 'att') { const c = s.ent.find(x => x.id === o.c && x.pv > 0); if (!c || (UN[c.k] && UN[c.k].vol && !u.aa) || (UN[c.k] && UN[c.k].invis && !detecte(s, e.eq, c))) e.ordre = null; else { frappe(s, e, c, u); return; } }
     if (o.t === 'am') { const c = u.deg && cible(s, e, u.vue); if (c) frappe(s, e, c, u); else if (aller(s, e, o.x, o.y, u.v)) e.ordre = null; return; }
     if (o.t === 'bat') { if (aller(s, e, o.x, o.y, u.v) || d2(e, o) <= 1500 * 1500) { if (placeLibre(s, o.k, o.x, o.y)) ajout(s, e.eq, o.k, o.x, o.y, 0); else s.pr[e.eq] += BA[o.k].cout; e.ordre = null; } return; }
     if (o.t === 'rec') { rec(s, e, u, o); return; }
@@ -342,6 +374,8 @@ function sep(s) {
   const U = s.ent.filter(e => !BA[e.k] && e.pv > 0);
   for (let i = 0; i < U.length; i++) for (let j = i + 1; j < U.length; j++) {
     const a = U[i], b = U[j], dx = a.x - b.x, dy = a.y - b.y, dd = dx * dx + dy * dy;
+    if (!UN[a.k].vol !== !UN[b.k].vol) continue;
+    if (UN[a.k].vol) { if (dd >= 640000 || !dd) continue; const d = sq(dd) || 1, p = (800 - d) >> 3; a.x += Math.trunc(dx * p / d); a.y += Math.trunc(dy * p / d); b.x -= Math.trunc(dx * p / d); b.y -= Math.trunc(dy * p / d); continue; }
     if (dd >= 640000) continue;
     if (!dd) { pousser(s, a, 50, 0); continue; }
     const d = sq(dd) || 1, p = (800 - d) >> 3, px = Math.trunc(dx * p / d), py = Math.trunc(dy * p / d);
@@ -355,7 +389,7 @@ function vue(s) {
     const v = s.vis[q];
     for (let i = 0; i < v.length; i++) if (v[i] === 2) v[i] = 1;
     for (const e of s.ent) if (e.eq === q && e.pv > 0) {
-      const r = ((UN[e.k] || BA[e.k]).vue / 1000) | 0, cx = (e.x / 1000) | 0, cy = (e.y / 1000) | 0, c0 = cellule(e.x, e.y), haut = s.g.niv[c0] || s.g.rampe[c0];
+      const r = ((UN[e.k] || BA[e.k]).vue / 1000) | 0, cx = (e.x / 1000) | 0, cy = (e.y / 1000) | 0, c0 = cellule(e.x, e.y), haut = s.g.niv[c0] || s.g.rampe[c0] || (UN[e.k] && UN[e.k].vol);
       for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
         const x = cx + dx, y = cy + dy;
         if (dx * dx + dy * dy <= r * r && x >= 0 && y >= 0 && x < W && y < H && (haut || !s.g.niv[y * W + x] || s.g.rampe[y * W + x])) v[y * W + x] = 2;
@@ -375,7 +409,7 @@ export function relais(s) {
 export function step(s) {
   if (s.fin >= 0) return;
   s.tick++;
-  for (const e of s.ent) { if (e.pv <= 0) continue; if (e.cd) e.cd--; if (e.pc) e.pc--; BA[e.k] ? bat(s, e) : mob(s, e); regen(s, e); }
+  for (const e of s.ent) { if (e.pv <= 0) continue; if (e.cd) e.cd--; if (e.pc) e.pc--; if (e.ab) e.ab--; if (e.abT) e.abT--; BA[e.k] ? bat(s, e) : mob(s, e); regen(s, e); }
   sep(s);
   for (const e of s.ent) if (e.pv <= 0) {
     if (e.eq === 2 && e.last < 2) s.pr[e.last] += 40; // butin des neutres
@@ -424,12 +458,13 @@ export function cmd(s, eq, ids, c) {
     } else if (c.t === 'bat') {
       const b = BA[c.k];
       const x = nombre(c.x) ? Math.round(Math.max(1500, Math.min(W * 1000 - 1500, c.x)) / 1000) * 1000 : 0, y = nombre(c.y) ? Math.round(Math.max(1500, Math.min(H * 1000 - 1500, c.y)) / 1000) * 1000 : 0;
-      if (UN[e.k] && UN[e.k].ouv && b && b.cout && x && y && s.pr[eq] >= b.cout && placeLibre(s, c.k, x, y)) { s.pr[eq] -= b.cout; e.ordre = { t: 'bat', k: c.k, x, y }; break; }
+      if (UN[e.k] && UN[e.k].ouv && b && b.cout && x && y && s.pr[eq] >= b.cout && debloque(s, eq, c.k) && placeLibre(s, c.k, x, y)) { s.pr[eq] -= b.cout; e.ordre = { t: 'bat', k: c.k, x, y }; break; }
     } else if (c.t === 'up') {
       const g = UPG[c.k], l = g && BA[e.k] && BA[e.k].qg ? s.up[eq][c.k] : 9;
-      if (l < 3 && s.pr[eq] >= g.pr * (l + 1) && s.en[eq] >= g.en * (l + 1)) { s.pr[eq] -= g.pr * (l + 1); s.en[eq] -= g.en * (l + 1); s.up[eq][c.k]++; }
+      if (l < 3 && upDebloque(s, eq, l) && s.pr[eq] >= g.pr * (l + 1) && s.en[eq] >= g.en * (l + 1)) { s.pr[eq] -= g.pr * (l + 1); s.en[eq] -= g.en * (l + 1); s.up[eq][c.k]++; }
       break;
     } else if (c.t === 'pouv') { pouvoir(s, e);
+    } else if (c.t === 'cap') { if (CAP[e.k] && !e.ab) { e.abT = CAP_DUREE; e.ab = CAP_RECHARGE; }
     } else if (c.t === 'ral') { if (BA[e.k] && BA[e.k].prod && nombre(c.x) && nombre(c.y)) e.ral = { x: Math.max(500, Math.min(W * 1000 - 500, Math.trunc(c.x))), y: Math.max(500, Math.min(H * 1000 - 500, Math.trunc(c.y))) };
     } else if (c.t === 'stop') { if (!BA[e.k]) e.ordre = null;
     } else if (!BA[e.k]) { const o = ordreNet(s, c); if (o) { e.ordre = o; e.w = 0; } }
@@ -466,7 +501,9 @@ export function ia(s, eq) {
   const W2 = [F.bat[0], F.bat[1], F.bat[2], F.bat[0], F.bat[2], F.bat[1], F.bat[2]], O = [[4, 0], [0, 4], [4, 4], [7, 1], [1, 7], [8, 5], [5, 8]];
   const nb = mi.filter(e => BA[e.k] && !BA[e.k].qg).length;
   if (nb < L.nb && ou.length >= 4 && !ou.some(o => o.ordre && o.ordre.t === 'bat') && s.pr[eq] >= BA[W2[nb]].cout)
-    { const p = chercherPlace(s, W2[nb], noy.x + ux * O[nb][0] * 1000, noy.y + uy * O[nb][1] * 1000); if (p) cmd(s, eq, [ou[0].id], { t: 'bat', k: W2[nb], x: p[0], y: p[1] }); }
+    { let k = W2[nb]; while (!debloque(s, eq, k)) k = PREREQ[k];
+      const enCours = mi.some(e => e.k === k && e.cons) || ou.some(o => o.ordre && o.ordre.t === 'bat' && o.ordre.k === k);
+      const p = !enCours && s.pr[eq] >= BA[k].cout && chercherPlace(s, k, noy.x + ux * O[nb][0] * 1000, noy.y + uy * O[nb][1] * 1000); if (p) cmd(s, eq, [ou[0].id], { t: 'bat', k, x: p[0], y: p[1] }); }
   { const [pu, pm] = population(s, eq), enCours = mi.some(e => e.k === F.ravit && e.cons) || ou.some(o => o.ordre && o.ordre.t === 'bat' && o.ordre.k === F.ravit);
     if (pm < POP_MAX && pu >= pm - 4 && !enCours && ou.length && s.pr[eq] >= BA[F.ravit].cout) { const n = mi.filter(e => e.k === F.ravit).length, p = chercherPlace(s, F.ravit, noy.x - ux * (3 + (n % 3) * 3) * 1000, noy.y - uy * (3 + ((n / 3) | 0) * 3) * 1000) || chercherPlace(s, F.ravit, noy.x + ux * 9000, noy.y - uy * 2000); const o = ou.find(o => !o.ordre || o.ordre.t === 'rec'); if (p && o) cmd(s, eq, [o.id], { t: 'bat', k: F.ravit, x: p[0], y: p[1] }); } }
   for (const b of mi) {
@@ -485,6 +522,7 @@ export function ia(s, eq) {
   else if (en && !st.att && ar.length >= st.th + 2 * (st.w || 0)) { cmd(s, eq, ids(ar), { t: 'am', x: en.x, y: en.y }); st.att = 1; st.w = (st.w || 0) + 1; } // nouvelle vague
   else if (st.att && en) cmd(s, eq, ids(libres), { t: 'am', x: en.x, y: en.y });                                // renforts
   else cmd(s, eq, ids(libres), { t: 'am', x: rally.x, y: rally.y });
+  for (const c of ar) if (CAP[c.k] && !c.ab && s.ent.some(o => o.eq !== eq && o.eq < 2 && d2(o, c) <= 5000 * 5000)) cmd(s, eq, [c.id], { t: 'cap' });
   for (const c of ar) if (UN[c.k].ch && !c.pc && s.ent.some(o => o.eq !== eq && d2(o, c) <= 4000 * 4000)) cmd(s, eq, [c.id], { t: 'pouv' });
   if (L.up && s.pr[eq] > 350) { const k = ['att', 'arm', 'rec'].sort((a, b) => s.up[eq][a] - s.up[eq][b])[0]; cmd(s, eq, [noy.id], { t: 'up', k }); }                                              // rassemblement
 }

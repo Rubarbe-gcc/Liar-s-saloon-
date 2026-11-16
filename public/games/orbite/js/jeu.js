@@ -1,4 +1,4 @@
-import { W, H, UN, BA, FA, UPG, creer, step, cmd, ia, jouerTour, hash, placeLibre, population, popDe } from '../../../shared/orbite/moteur.js';
+import { W, H, UN, BA, FA, UPG, creer, step, cmd, ia, jouerTour, hash, placeLibre, population, popDe, debloque, upDebloque, PREREQ, detecte, CAP } from '../../../shared/orbite/moteur.js';
 import { MISSIONS, etat } from '../../../shared/orbite/campagne.js';
 import { Reseau } from './reseau.js';
 import { creerRendu } from './rendu3d.js';
@@ -11,7 +11,7 @@ const adresseEnLigne = () => (['localhost', '127.0.0.1'].includes(location.hostn
 const THREE = globalThis.THREE || await import('../../../vendor/three/three.module.min.js');
 
 const $ = id => document.getElementById(id);
-const rendu = creerRendu(THREE, $('vue3d'), { W, H, UN, BA, placeLibre }), cv = rendu.canvas, mini2 = $('mini'), gm = mini2.getContext('2d');
+const rendu = creerRendu(THREE, $('vue3d'), { W, H, UN, BA, placeLibre, detecte, CAP }), cv = rendu.canvas, mini2 = $('mini'), gm = mini2.getContext('2d');
 const COL = ['#4cc9f0', '#f25c54', '#d6a84a'], NOMF = { fer: 'Ligue de Fer', bosquet: 'Bosquet', echos: 'Échos', cendres: 'Cendres' };
 const lire = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v === null || v === undefined ? d : v; } catch { return d; } };
 const ecrire = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* stockage plein ou refusé */ } };
@@ -120,19 +120,20 @@ const estOuv = e => UN[e.k] && UN[e.k].ouv;
 const proj = e => rendu.proj(e.x, e.y, BA[e.k] ? 1 : .6);
 
 // ---------- interface (panneaux façon STR) ----------
-const ICO = { ouvrier: '🔧', fantassin: '🪖', tireur: '🎯', blinde: '🚜', marechal: '⭐', semeur: '🌱', rejeton: '🐛', epine: '🌵', colosse: '🦣', ancien: '🌳', tisseur: '🕸️', eclat: '💎', pulse: '🔮', sentinelle: '🗿', oracle: '👁️', gardien: '👾', entrepot: '📦', terrier: '🕳️', diapason: '🎐', braisier: '🏮', porteur: '⛏️', tison: '🔥', lanceur: '☄️', brasero: '🌋', pyrarque: '👹', fournaise: '🏭', atre: '🔥', creuset: '⚗️', geyser: '♨️',
+const ICO = { ouvrier: '🔧', fantassin: '🪖', tireur: '🎯', blinde: '🚜', marechal: '⭐', semeur: '🌱', rejeton: '🐛', epine: '🌵', colosse: '🦣', ancien: '🌳', tisseur: '🕸️', eclat: '💎', pulse: '🔮', sentinelle: '🗿', oracle: '👁️', gardien: '👾', faucon: '🚁', spore: '🎈', voile: '🪁', escarbille: '🦋', entrepot: '📦', terrier: '🕳️', diapason: '🎐', braisier: '🏮', porteur: '⛏️', tison: '🔥', lanceur: '☄️', brasero: '🌋', pyrarque: '👹', fournaise: '🏭', atre: '🔥', creuset: '⚗️', geyser: '♨️',
   noyau: '🏭', caserne: '🏛️', atelier: '⚙️', tour: '🗼', coeur: '🌿', ruche: '🐝', serre: '🏡', ronce: '🌹', nexus: '🔷', foyer: '🔥', forge: '🔨', phare: '💡', att: '⚔️', arm: '🛡️', rec: '⛏️' };
-const NOM = { ouvrier: 'Ouvrier', fantassin: 'Fantassin', tireur: 'Tireur', blinde: 'Blindé', marechal: 'Maréchal', semeur: 'Semeur', rejeton: 'Rejeton', epine: 'Épine', colosse: 'Colosse', ancien: 'Ancien', tisseur: 'Tisseur', eclat: 'Éclat', pulse: 'Pulse', sentinelle: 'Sentinelle', oracle: 'Oracle', gardien: 'Gardien', entrepot: 'Entrepôt', terrier: 'Terrier', diapason: 'Diapason', braisier: 'Braisier', porteur: 'Porteur', tison: 'Tison', lanceur: 'Lanceur', brasero: 'Brasero', pyrarque: 'Pyrarque', fournaise: 'Fournaise', atre: 'Âtre', creuset: 'Creuset', geyser: 'Geyser',
+const NOM = { ouvrier: 'Ouvrier', fantassin: 'Fantassin', tireur: 'Tireur', blinde: 'Blindé', marechal: 'Maréchal', semeur: 'Semeur', rejeton: 'Rejeton', epine: 'Épine', colosse: 'Colosse', ancien: 'Ancien', tisseur: 'Tisseur', eclat: 'Éclat', pulse: 'Pulse', sentinelle: 'Sentinelle', oracle: 'Oracle', gardien: 'Gardien', faucon: 'Faucon', spore: 'Spore', voile: 'Voile', escarbille: 'Escarbille', entrepot: 'Entrepôt', terrier: 'Terrier', diapason: 'Diapason', braisier: 'Braisier', porteur: 'Porteur', tison: 'Tison', lanceur: 'Lanceur', brasero: 'Brasero', pyrarque: 'Pyrarque', fournaise: 'Fournaise', atre: 'Âtre', creuset: 'Creuset', geyser: 'Geyser',
   noyau: 'Noyau', caserne: 'Caserne', atelier: 'Atelier', tour: 'Tour', coeur: 'Cœur', ruche: 'Ruche', serre: 'Serre', ronce: 'Ronce', nexus: 'Nexus', foyer: 'Foyer', forge: 'Forge', phare: 'Phare' };
 const CSSC = ['#4cc9f0', '#f25c54', '#d6a84a'], KEYS = 'qweasdzxc';
 const img = (k, eq = ME) => { try { return `<img src="${rendu.portrait(k, eq)}" alt="">`; } catch (err) { return ICO[k] || '?'; } }; // portrait 3D (repli : emoji)
 function fabriquerCartes() {
   const o = mine(), L = []; if (!o.length) return L;
   const ouv = o.some(estOuv), b0 = o.find(e => BA[e.k] && BA[e.k].prod && !e.cons), qg = o.find(e => BA[e.k] && BA[e.k].qg), ch = o.find(e => UN[e.k] && UN[e.k].ch), unites = o.filter(e => !BA[e.k]);
-  if (ouv) for (const b of [...FA[s.fac[ME]].bat, FA[s.fac[ME]].ravit, FA[s.fac[ME]].qg]) L.push({ ic: img(b), lb: NOM[b], co: BA[b].cout, ok: s.pr[ME] >= BA[b].cout, act: () => { place = b; ciblage = false; } });
+  if (ouv) for (const b of [...FA[s.fac[ME]].bat, FA[s.fac[ME]].ravit, FA[s.fac[ME]].qg]) { const ok = debloque(s, ME, b); L.push({ ic: img(b), lb: NOM[b], co: ok ? BA[b].cout : '🔒 ' + NOM[PREREQ[b]], ok: ok && s.pr[ME] >= BA[b].cout, act: () => { place = b; ciblage = false; } }); }
   if (b0) for (const u of BA[b0.k].prod) L.push({ ic: img(u), lb: NOM[u], co: UN[u].cout + (UN[u].en ? '+' + UN[u].en + '⚡' : ''), ok: s.pr[ME] >= UN[u].cout && (!UN[u].en || s.en[ME] >= UN[u].en) && (() => { const [pu, pm] = population(s, ME); return pu + popDe(u) <= pm; })() && !(UN[u].ch && s.ent.some(x => x.eq === ME && (x.k === u || x.file.includes(u)))), act: () => ordre(o.filter(e => BA[e.k] && BA[e.k].prod && !e.cons).map(e => e.id), { t: 'prod', k: u }) });
-  if (qg) for (const u of Object.keys(UPG)) { const l = s.up[ME][u]; L.push({ ic: ICO[u], lb: `${UPG[u].nom} ${l}/3`, co: l < 3 ? `${UPG[u].pr * (l + 1)}+${UPG[u].en * (l + 1)}⚡` : 'max', ok: l < 3 && s.pr[ME] >= UPG[u].pr * (l + 1) && s.en[ME] >= UPG[u].en * (l + 1), act: () => ordre([qg.id], { t: 'up', k: u }) }); }
+  if (qg) for (const u of Object.keys(UPG)) { const l = s.up[ME][u]; L.push({ ic: ICO[u], lb: `${UPG[u].nom} ${l}/3`, co: l < 3 ? `${UPG[u].pr * (l + 1)}+${UPG[u].en * (l + 1)}⚡` : 'max', ok: l < 3 && upDebloque(s, ME, l) && s.pr[ME] >= UPG[u].pr * (l + 1) && s.en[ME] >= UPG[u].en * (l + 1), act: () => ordre([qg.id], { t: 'up', k: u }) }); }
   if (unites.length && !ouv) L.push({ ic: '⚔️', lb: 'Attaquer', co: 'clic', ok: true, act: () => { ciblage = true; place = null; } });
+  { const cap = unites.filter(e => CAP[e.k]); if (cap.length) { const c = CAP[cap[0].k], pret = cap.filter(e => !e.ab); L.push({ ic: { vitesse: '💨', portee: '🎯', cadence: '⚡', garde: '🛡️' }[c[1]], lb: c[0], co: pret.length ? 'prêt' : Math.ceil(Math.min(...cap.map(e => e.ab)) / 20) + ' s', ok: pret.length > 0, act: () => ordre(pret.map(e => e.id), { t: 'cap' }) }); } }
   if (unites.length) L.push({ ic: '⏹', lb: 'Stop', co: '', ok: true, act: () => ordre(unites.map(e => e.id), { t: 'stop' }) });
   if (ch) L.push({ ic: '✨', lb: ch.pc ? Math.ceil(ch.pc / 20) + ' s' : 'Pouvoir', co: '', ok: !ch.pc, act: () => pouvoirUI() });
   return L.slice(0, 9);

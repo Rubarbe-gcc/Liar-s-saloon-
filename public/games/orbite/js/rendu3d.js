@@ -1,6 +1,6 @@
 // ORBITE NOIRE — rendu 3D (Three.js). THREE est passé en paramètre : global r128 (aperçu) ou module r170 (jeu).
 // Le rendu ne fait que LIRE l'état du moteur (aucune règle de jeu ici).
-export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre }) {
+export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre, detecte, CAP: CAPS = {} }) {
   const REV = parseInt(THREE.REVISION, 10) || 128, LK = REV >= 155 ? Math.PI : 1, V3 = THREE.Vector3;
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lisse = t => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
   const TC = [0x4cc9f0, 0xf25c54, 0xd6a84a];
@@ -454,6 +454,32 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre }) {
       u.an.push(t => { orb.rotation.y = t * 1.2; r.rotation.z = t * .9; }); u.flot = .12; u.hb = 3.3;
     },
     gardien(g, eq, u) { const A = 0xd6a84a; P(g, sph(.4), MT(0x5a4420, { roughness: .8 }), 0, .55, 0, { s: [1, .8, 1.2] }); for (let i = 0; i < 7; i++) { const a = i * .9; P(g, cone(.07, .42, 5), glow(A, .8), Math.cos(a) * .35, .75 + (i % 2) * .15, Math.sin(a) * .35, { r: [Math.sin(a) * 1.0, 0, -Math.cos(a) * 1.0] }); } add(g, sph(.07), glow(0xff5030, 2.5), -.12, .62, .42); P(g, sph(.07), glow(0xff5030, 2.5), .12, .62, .42); for (const [x, z] of [[-.25, .2], [.25, .2], [-.25, -.2], [.25, -.2]]) add(g, cone(.06, .35), MT(0x3a2c14), x, .15, z, { r: [Math.PI, 0, 0] }); u.hb = 1.3; },
+    // --- volants (étape 6) : ils planent à u.alt au-dessus du sol
+    faucon(g, eq, u) {
+      P(g, box(.36, .28, 1.1), ACIER, 0, 0, 0); P(g, box(.3, .14, .4), ACIER2, 0, -.1, .5, { r: [.3, 0, 0] }); P(g, box(.24, .1, .28), glow(0x9fe8ff, 1.4), 0, .1, .42, { ns: true });
+      P(g, box(.06, .3, .4), PEINT(eq), 0, .2, -.45); P(g, box(1.6, .06, .26), ACIER2, 0, 0, -.05); for (const x of [-1, 1]) { P(g, cyl(.06, .06, .5, 8), JOINT, x * .32, -.12, .3, { r: [Math.PI / 2, 0, 0] }); P(g, box(.04, .04, .06), glow(0xffd28a, 2), x * .32, -.12, .58, { ns: true }); }
+      const rot = [];
+      for (const x of [-1, 1]) { const r = new THREE.Group(); r.position.set(x * .78, .05, -.05); g.add(r); P(r, tor(.3, .04, 18), ACIER2, 0, 0, 0, { r: [Math.PI / 2, 0, 0] }); const pal = add(r, box(.56, .015, .08), JOINT, 0, 0, 0, { ns: true }); rot.push(pal); }
+      u.an.push(t => { rot[0].rotation.y = t * 25; rot[1].rotation.y = -t * 25; }); u.alt = 2.2; u.hb = 3.0;
+    },
+    spore(g, eq, u) {
+      P(g, sph(.42, 14, 10), MOUSSE, 0, .2, 0, { s: [1, .85, 1] }); P(g, sph(.3, 12, 8), MOUSSE2, 0, -.1, 0); for (let i = 0; i < 6; i++) { const a = i * 1.05; P(g, sph(.06, 6, 4), SEVE, Math.cos(a) * .4, .15, Math.sin(a) * .4, { ns: true }); }
+      P(g, cone(.08, .25, 6), glow(TC[eq], 1.3), 0, .62, 0);
+      const t1 = []; for (let i = 0; i < 4; i++) { const a = i * 1.57 + .4, p = new THREE.Group(); p.position.set(Math.cos(a) * .18, -.3, Math.sin(a) * .18); g.add(p); P(p, cyl(.025, .01, .6, 5), BOIS2, 0, -.3, 0); t1.push([p, i]); }
+      u.an.push(t => t1.forEach(([p, i]) => { p.rotation.x = Math.sin(t * 2 + i) * .3; p.rotation.z = Math.cos(t * 1.7 + i) * .3; })); u.alt = 2.0; u.hb = 2.9;
+    },
+    voile(g, eq, u) {
+      P(g, oct(.16), glow(CY, 1.5), 0, 0, 0, { s: [1, 1, 1.8] }); P(g, tor(.2, .025, 14), OR, 0, 0, 0);
+      for (const x of [-1, 1]) { P(g, oct(.5), CRIS, x * .5, 0, -.1, { s: [1.2, .05, .7], r: [0, x * .3, x * .15] }); P(g, box(.9, .03, .03), OR, x * .45, .02, .15, { r: [0, x * .3, 0] }); }
+      P(g, cone(.06, .5, 4), CRIS, 0, 0, -.45, { r: [-Math.PI / 2, 0, 0] }); P(g, sph(.05, 6, 4), glow(TC[eq], 2), 0, .1, .3, { ns: true });
+      u.alt = 2.4; u.hb = 3.1;
+    },
+    escarbille(g, eq, u) {
+      P(g, sph(.16, 10, 8), BASALTE, 0, 0, 0, { s: [1, .9, 1.9] }); for (let i = 0; i < 3; i++) P(g, box(.03, .02, .12), LAVE, 0, .12, -.15 + i * .15, { ns: true });
+      P(g, sph(.1, 8, 6), BASALTE, 0, .04, .32); P(g, box(.14, .02, .03), glow(0xffd070, 2), 0, .06, .41, { ns: true }); P(g, sph(.06, 6, 4), glow(TC[eq], 1.8), 0, .16, -.1, { ns: true });
+      const ailes = []; for (const x of [-1, 1]) { const a = new THREE.Group(); a.position.set(x * .12, .05, 0); g.add(a); P(a, cone(.3, .8, 3), LAVE, x * .42, 0, 0, { r: [0, 0, x * Math.PI / 2], s: [1, 1, .15] }); P(a, cone(.24, .7, 3), CUIVRE, x * .4, .01, -.05, { r: [0, 0, x * Math.PI / 2], s: [1, 1, .12] }); ailes.push([a, x]); }
+      u.an.push(t => ailes.forEach(([a, x]) => { a.rotation.z = x * Math.sin(t * 14) * .45; })); u.alt = 1.9; u.hb = 2.7;
+    },
     // --- bâtiments Ligue de Fer : béton, acier, rayures de chantier, lumières
     noyau(g, eq, u) {
       P(g, cyl(1.75, 1.9, .35, 8), BETON, 0, .17, 0, { r: [0, Math.PI / 8, 0] }); P(g, cyl(1.62, 1.62, .06, 8), JAUNE, 0, .37, 0, { r: [0, Math.PI / 8, 0] });
@@ -688,10 +714,10 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre }) {
   const plusTard = (delai, f) => addFx(null, delai, () => {}, f);
   const mb = (c, op = 1) => new THREE.MeshBasicMaterial({ color: lin(c), transparent: true, opacity: op, blending: THREE.AdditiveBlending, depthWrite: false });
   const R = () => Math.random() - .5;
-  const FER_K = new Set(['ouvrier', 'fantassin', 'tireur', 'blinde', 'marechal', 'noyau', 'caserne', 'atelier', 'tour', 'entrepot']);
-  const BOS_K = new Set(['semeur', 'rejeton', 'epine', 'colosse', 'ancien', 'coeur', 'ruche', 'serre', 'ronce', 'terrier']);
-  const ECH_K = new Set(['tisseur', 'eclat', 'pulse', 'sentinelle', 'oracle', 'nexus', 'foyer', 'forge', 'phare', 'diapason']);
-  const CEN_K = new Set(['porteur', 'tison', 'lanceur', 'brasero', 'pyrarque', 'fournaise', 'atre', 'creuset', 'geyser', 'braisier']);
+  const FER_K = new Set(['faucon', 'ouvrier', 'fantassin', 'tireur', 'blinde', 'marechal', 'noyau', 'caserne', 'atelier', 'tour', 'entrepot']);
+  const BOS_K = new Set(['spore', 'semeur', 'rejeton', 'epine', 'colosse', 'ancien', 'coeur', 'ruche', 'serre', 'ronce', 'terrier']);
+  const ECH_K = new Set(['voile', 'tisseur', 'eclat', 'pulse', 'sentinelle', 'oracle', 'nexus', 'foyer', 'forge', 'phare', 'diapason']);
+  const CEN_K = new Set(['escarbille', 'porteur', 'tison', 'lanceur', 'brasero', 'pyrarque', 'fournaise', 'atre', 'creuset', 'geyser', 'braisier']);
   const facDe = k => FER_K.has(k) ? 'fer' : BOS_K.has(k) ? 'bosquet' : ECH_K.has(k) ? 'echos' : CEN_K.has(k) ? 'cendres' : 'neutre';
   const fumeeTex = canvasTex(64, 64, (c, w, h) => { const rnd = alea(77); for (let i = 0; i < 9; i++) { const x = w / 2 + (rnd() - .5) * 22, y = h / 2 + (rnd() - .5) * 22, r = 12 + rnd() * 12, g = c.createRadialGradient(x, y, 0, x, y, r); g.addColorStop(0, 'rgba(255,255,255,.55)'); g.addColorStop(1, 'rgba(255,255,255,0)'); c.fillStyle = g; c.fillRect(0, 0, w, h); } });
   const brulTex = canvasTex(128, 128, (c, w, h) => { const rnd = alea(91); const g = c.createRadialGradient(64, 64, 6, 64, 64, 62); g.addColorStop(0, 'rgba(0,0,0,.85)'); g.addColorStop(.55, 'rgba(10,6,4,.6)'); g.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g; c.fillRect(0, 0, w, h);
@@ -830,24 +856,27 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre }) {
     compacter(g, e.k + ':' + e.eq);
     if (!BA[e.k]) { g.rotation.order = 'YXZ'; u.pool = new THREE.Mesh(poolG, new THREE.MeshBasicMaterial({ color: lin(TC[e.eq]), transparent: true, opacity: .13, depthWrite: false, blending: THREE.AdditiveBlending })); u.pool.rotation.x = -Math.PI / 2; u.pool.scale.setScalar(UN[e.k].pv > 200 ? .8 : .42); scene.add(u.pool); }
     if (UN[e.k] && UN[e.k].ch) { const c = add(g, tor(.55, .035), glow(0xffd84a, 1.6), 0, .06, 0, { r: [Math.PI / 2, 0, 0], ns: true }); u.an.push(t => { c.rotation.z = t; }); }
+    if (UN[e.k] && UN[e.k].invis && e.eq === meVu) { const v = sprite(0x9fe8ff, 1.6, .25); g.add(v); u.an.push(t => { v.material.opacity = .12 + .1 * Math.sin(t * 5); }); }
     if (UN[e.k] && UN[e.k].bm) { u.bulle = new THREE.Mesh(sph(.85, 18, 12), new THREE.MeshBasicMaterial({ color: 0x7fe8ff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending })); u.bulle.position.y = .85; g.add(u.bulle); }
     u.bg = new THREE.Sprite(hbMat(0x0c1016)); u.fg = new THREE.Sprite(hbMat(0x45ff7a)); u.fg.center.set(0, .5); u.bg.renderOrder = 30; u.fg.renderOrder = 31; u.bg.visible = u.fg.visible = false;
     scene.add(g, u.bg, u.fg); return u;
   }
+  let meVu = 0;
   const dir = (a, b) => Math.atan2(b.x - a.x, b.z - a.z);
   const drapeau = new THREE.Group(); drapeau.visible = false; scene.add(drapeau);
   add(drapeau, cyl(.03, .03, 1.4, 6), MT(0xdddddd, { metalness: .6 }), 0, .7, 0, { ns: true }); add(drapeau, box(.45, .28, .02), glow(0x7dff7d, 1.2), .24, 1.25, 0, { ns: true }); add(drapeau, tor(.45, .03, 24), glow(0x7dff7d, 1.4), 0, .05, 0, { r: [Math.PI / 2, 0, 0], ns: true });
   function sync(s, C, dt, t) {
     const idx = new Map(); for (const e of s.ent) idx.set(e.id, e);
     const v = s.vis[C.ME], selSet = new Set(C.sel);
+    meVu = C.ME;
     for (const e of s.ent) {
       let u = ents.get(e.id); if (!u) { u = creerEnt(e); ents.set(e.id, u); u.neuf = s.tick > 3; }
       const x = e.x / 1000, z = e.y / 1000, cell = clamp(Math.floor(z), 0, H - 1) * W + clamp(Math.floor(x), 0, W - 1);
-      const vu = C.tout || e.eq === C.ME || v[cell] === 2; u.vu = vu; u.g.visible = vu; u.hb_ = vu;
+      const vu = C.tout || e.eq === C.ME || (v[cell] === 2 && !(UN[e.k] && UN[e.k].invis && detecte && !detecte(s, C.ME, e))); u.vu = vu; u.g.visible = vu; u.hb_ = vu;
       const y0 = haut(x, z), isB = !!BA[e.k], dx = x - u.px, dz = z - u.pz, bouge = dx * dx + dz * dz > 1e-6;
       if (u.neuf) { u.neuf = false; if (vu) { const c = TC[e.eq]; flash(x, y0 + .6, z, isB ? 5 : 2.2, c, .55); onde(x, y0 + .1, z, isB ? 4 : 2.2, c, .7); etincelles(new V3(x, y0 + .3, z), c, isB ? 14 : 6, 3); } }
       if (u.pool) { u.pool.position.set(x, y0 + .04, z); u.pool.visible = vu; }
-      u.g.position.set(x, y0 + (u.flot ? .25 + Math.sin(t * 2 + e.id) * u.flot : 0) + (bouge && !u.flot && !isB ? Math.abs(Math.sin(t * 9 + e.id)) * .07 : 0), z);
+      u.g.position.set(x, y0 + (u.alt ? u.alt + Math.sin(t * 2 + e.id) * .12 : 0) + (u.flot ? .25 + Math.sin(t * 2 + e.id) * u.flot : 0) + (bouge && !u.flot && !isB ? Math.abs(Math.sin(t * 9 + e.id)) * .07 : 0), z);
       const tg = e.tg !== undefined ? idx.get(e.tg) : null, recent = tg && s.tick - e.ht < 8;
       let cap = u.cap;
       if (recent && !isB) cap = Math.atan2(tg.x / 1000 - x, tg.y / 1000 - z); else if (bouge) cap = Math.atan2(dx, dz);
@@ -859,12 +888,15 @@ export function creerRendu(THREE, hote, { W, H, UN, BA, placeLibre }) {
       if (isB && e.cons && vu) { u.nx = (u.nx || 0) - dt; if (u.nx <= 0) { u.nx = .12; etincelles(new V3(x + (Math.random() - .5) * 1.6, y0 + 2.2 * (1 - e.cons / BA[e.k].tc) + .3, z + (Math.random() - .5) * 1.6), 0xffd080, 2, 2.5); } }
       if (isB && vu && !e.cons && e.pv < e.max * .6) { u.nf = (u.nf || 0) - dt; if (u.nf <= 0) { const grave = e.pv < e.max * .3, fac = facDe(e.k), px = x + R() * u.bw * .5, pz = z + R() * u.bw * .5, py = y0 + u.hb * .7; u.nf = grave ? .18 : .4; if (fac === 'echos') etincelles(new V3(px, py, pz), 0x9fe8ff, 2, 1.5); else { fumee(px, py, pz, grave ? 1.6 : 1.1, 2.4, fac === 'bosquet' ? 0x4a4232 : 0x2a2826, 1, .5); if (grave) feu(px, py - .2, pz, fac === 'bosquet' ? .9 : 1.1, .5, fac === 'bosquet' ? 0xc8ff6a : 0xffd070, fac === 'bosquet' ? 0x3a8a10 : 0xff4a10); } } }
       if (e.feu > 0 && vu) { u.nb = (u.nb || 0) - dt; if (u.nb <= 0) { u.nb = .12; feu(x + R() * .4, y0 + .3 + Math.random() * u.hb * .5, z + R() * .4, isB ? 1 : .55, .35, 0xffd070, 0xff3a00); } }
+      // capacité active : un éclair au déclenchement, une aura tant qu'elle dure
+      if (e.abT && !u.abT && vu) { const c = { vitesse: 0x7ff3ff, portee: 0xffe36e, cadence: 0xff9a40, garde: 0x9dff7a }[(CAPS[e.k] || [])[1]] || 0xffffff; flash(x, y0 + 1, z, 2.4, c, .4); onde(x, y0 + .1, z, 2, c, .5); if (!u.aura) { u.aura = sprite(c, 1.8, .4); u.aura.position.y = .8; u.g.add(u.aura); } u.aura.material.color.set(lin(c)); }
+      u.abT = e.abT; if (u.aura) { u.aura.visible = !!e.abT; if (e.abT) u.aura.material.opacity = .25 + .15 * Math.sin(t * 10); }
       if (u.bulle) u.bulle.material.opacity = e.bc > 0 && e.rg < 10 ? (.06 + .22 * (e.bc / e.bm)) * (1 - e.rg / 10) : 0; // le bouclier ne se voit que quand il encaisse
       // tirs
       if (e.ht !== undefined && e.ht !== u.lastHt) {
         u.lastHt = e.ht;
         if (vu && tg && s.tick - e.ht < 3) {
-          const d = UN[e.k] || BA[e.k], A = new V3(x, y0 + (isB ? e.k === 'tour' || e.k === 'ronce' || e.k === 'phare' || e.k === 'geyser' ? 1.5 : 1 : .8), z), Bp = new V3(tg.x / 1000, haut(tg.x / 1000, tg.y / 1000) + (BA[tg.k] ? 1 : .6), tg.y / 1000);
+          const d = UN[e.k] || BA[e.k], A = new V3(x, y0 + (u.alt || 0) + (isB ? e.k === 'tour' || e.k === 'ronce' || e.k === 'phare' || e.k === 'geyser' ? 1.5 : 1 : .8), z), Bp = new V3(tg.x / 1000, haut(tg.x / 1000, tg.y / 1000) + (BA[tg.k] ? 1 : .6) + ((ents.get(tg.id) || {}).alt || 0), tg.y / 1000);
           const lourd = ['blinde', 'colosse', 'sentinelle', 'marechal', 'ancien', 'oracle', 'tour', 'ronce', 'phare', 'brasero', 'pyrarque', 'geyser'].includes(e.k);
           tir(e.k, e.eq, A, Bp, lourd, Math.hypot(tg.x - e.x, tg.y - e.y) / 1000);
         }

@@ -29,11 +29,11 @@ test('6 cartes : parties sans erreur, tout reste dans le terrain', () => {
     assert.ok(s.ent.every(e => e.x >= 0 && e.x <= 64000 && e.y >= 0 && e.y <= 64000), 'bornes carte ' + c);
   }
 });
-import { hash, jouerTour, cmd, UPG, FA, BA as BAT } from '../public/shared/orbite/moteur.js';
+import { hash, jouerTour, cmd, UPG, FA, BA as BAT, ajout as ajoutT } from '../public/shared/orbite/moteur.js';
 test('améliorations, pouvoirs, renforts, hash', () => {
   const s = creer(4, 'fer', 'fer', 0, 2, 2, { pr: [900, 300], en: [200, 0], depart: [{ eq: 1, role: 0, n: 5 }], renfort: { eq: 1, periode: 100, role: 1, n: 1 } });
   const qg = s.ent.find(e => e.eq === 0 && BAT[e.k].qg);
-  cmd(s, 0, [qg.id], { t: 'up', k: 'att' }); cmd(s, 0, [qg.id], { t: 'up', k: 'att' });
+  cmd(s, 0, [qg.id], { t: 'up', k: 'att' }); ajoutT(s, 0, 'atelier', 20000, 8000); cmd(s, 0, [qg.id], { t: 'up', k: 'att' }); // niveau 2 : il faut l'usine
   assert.equal(s.up[0].att, 2); assert.ok(s.pr[0] < 900);
   assert.equal(s.ent.filter(e => e.eq === 1 && e.k === 'fantassin').length, 5);
   for (let i = 0; i < 200; i++) step(s);
