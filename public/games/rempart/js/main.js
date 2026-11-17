@@ -154,7 +154,7 @@ function lancerNiveau(id, sansFin = false) {
   ia = null;
   monde.charger(partie);
   monde.camera.tourner(0);
-  vitesse = 1; pause = false; accu = 0;
+  vitesse = 1; pause = false; accu = 0; ralenti = 1; ralentiT = 0;
   $('#b-vitesse').textContent = '×1';
   $('#b-vitesse').classList.remove('vite');
   $('#boss').hidden = true;
@@ -606,6 +606,8 @@ function traiter(evts) {
         son.jouer(e.boss ? 'bossMort' : 'mort');
         son.jouer('piece');
         bulle(e.x, (e.y || 0) + 0.9, e.z, `+${e.or}`, e.boss ? 'gros' : '');
+        if (e.boss) { ralentir(0.3, 1.1); monde.camera.secouer(0.6); }
+        if (!partie.sansFin && partie.vague >= partie.totalVagues && !partie.file.length && partie.ennemis.every(o => o.mort)) { ralentir(0.18, 1.6); monde.camera.viser(e.x, e.z, 7, 1.9); } // le dernier Rouilleux tombe
         if (e.boss) annoncer(`${ENNEMIS[e.type].nom} est tombé !`, estAlex() ? 'Pas mal, Alex. Pour une fois.' : `+${e.or} 🪙`);
         if (estAlex() && Math.random() < .08) bulle(e.x, (e.y || 0) + 1.4, e.z, '💥', 'gros');
         break;
@@ -626,6 +628,7 @@ function traiter(evts) {
         else annoncer(`Vague ${e.n}`, e.n === e.total ? 'La dernière !' : e.bonus ? `+${e.bonus} 🪙 d’avance` : '');
         break;
       case 'apparait':
+        if (e.boss && !ENNEMIS[e.type].enfant) cinematiqueBoss(e);
         if (!vus.has(e.type) && !ENNEMIS[e.type].enfant) { vus.add(e.type); sauver(); presenter(e.type); }
         break;
       case 'construit': son.jouer('construit'); break;
@@ -644,6 +647,27 @@ function lancerVague() {
 }
 
 /* ------------------------------------------------------------ boucle */
+// ---------- spectacle : entrée des boss, ralentis ----------
+let ralenti = 1, ralentiT = 0, derniereCine = 0;
+function ralentir(f, d) { ralenti = Math.min(ralenti, f); ralentiT = Math.max(ralentiT, d); }
+const TITRES_BOSS = {
+  broyeur: 'Il dévore les remparts', nuee: 'Mille ailes de rouille', hydre: 'Coupez une tête, deux repoussent',
+  seigneur: 'Le maître de la Fosse', colosse: 'La montagne qui marche', golem: 'L’invulnérable',
+};
+function cinematiqueBoss(e) {
+  const en = partie.ennemis.find(o => o.id === e.id);
+  if (!en || performance.now() - derniereCine < 3000) return;
+  derniereCine = performance.now();
+  monde.camera.viser(en.x, en.z, 8, 2.4);
+  monde.camera.secouer(0.5);
+  ralentir(0.25, 2.2);
+  $('#boss-intro-nom').textContent = ENNEMIS[e.type].nom;
+  $('#boss-intro-sous').textContent = TITRES_BOSS[e.type] || 'Un boss de la Fosse';
+  const c = $('#cinema'); c.hidden = false; rejouerAnim(c, 'joue');
+  clearTimeout(c.minuteur); c.minuteur = setTimeout(() => { c.hidden = true; }, 2700);
+  son.jouer('boss');
+}
+
 function boucle(maintenant) {
   requestAnimationFrame(boucle);
   const dt = Math.max(0, Math.min(0.1, (maintenant - dernier) / 1000)) || 0;
@@ -651,7 +675,8 @@ function boucle(maintenant) {
   if (!partie) return;
   const fini = partie.phase === 'victoire' || partie.phase === 'defaite';
   if (!pause && !fini) {
-    accu += dt * vitesse;
+    accu += dt * vitesse * ralenti;
+    if (ralentiT > 0 && (ralentiT -= dt) <= 0) ralenti = 1;
     let n = 0;
     const max = 10;
     while (accu >= P.DT && n < max) {

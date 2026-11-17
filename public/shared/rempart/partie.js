@@ -141,6 +141,7 @@ export function surChemin(ch, d, decal = 0) {
  * @param {boolean} [o.sansFin]  mode sans fin : toutes les tours, des vagues générées à l'infini
  */
 export function creerPartie(id, { graine = 1, sansFin = false, ameliorations = {}, heros = null } = {}) {
+  if ((trouverNiveau(id) || {}).special) ameliorations = {}; // le mode spécial se joue sans les améliorations de l'Atelier
   let def = trouverNiveau(id);
   if (!def) throw new Error(`niveau inconnu : ${id}`);
   if (sansFin) def = { ...def, tours: ORDRE_TOURS.slice(), force: def.force * SANS_FIN.force };
@@ -315,7 +316,7 @@ export function peutLancer(p) {
 
 export function lancerVague(p) {
   if (!peutLancer(p)) return { ok: false };
-  const bonus = bonusAppel(p);
+  const bonus = Math.round(bonusAppel(p) * (p.def.orFacteur || 1));
   if (bonus) { p.or += bonus; p.stats.bonus += bonus; }
   const index = p.vague;
   const groupes = vaguesDe(p, index);
@@ -396,7 +397,7 @@ function mourir(p, e) {
     const s = statsDe(ph);
     if (s.orBonus && distance2(ph, e) <= s.portee ** 2) bonus = Math.max(bonus, s.orBonus);
   }
-  const gain = e.def.or + bonus;
+  const gain = Math.max(1, Math.round((e.def.or + bonus) * (p.def.orFacteur || 1)));
   p.or += gain;
   p.stats.tues++;
   p.stats.orGagne += gain;

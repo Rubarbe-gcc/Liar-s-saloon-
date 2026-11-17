@@ -100,7 +100,16 @@ export function creerCamera(camera, dom, { surTap = () => {} } = {}) {
   addEventListener('keyup', e => touches.delete(e.key.toLowerCase()));
   addEventListener('blur', () => touches.clear());
 
+  // Plan de cinéma : la caméra plonge sur un point, puis revient où elle était.
+  let retour = null, retourT = 0;
+  function viser(x, z, r = 8, duree = 2) {
+    if (!retour) retour = { ...voulu };
+    Object.assign(voulu, { x, z, r: clamp(r, bornes.rMin, bornes.rMax), phi: 0.6 });
+    retourT = duree;
+  }
+
   function maj(dt) {
+    if (retourT > 0 && (retourT -= dt) <= 0 && retour) { Object.assign(voulu, retour); retour = null; }
     if (touches.has('q')) voulu.theta += dt * 1.6;
     if (touches.has('e')) voulu.theta -= dt * 1.6;
     const p = 420 * dt;
@@ -143,7 +152,7 @@ export function creerCamera(camera, dom, { surTap = () => {} } = {}) {
   }
 
   return {
-    maj, cadrer,
+    maj, cadrer, viser,
     secouer: f => { secousse = Math.min(0.6, secousse + f); },
     tourner: v => { auto = v; },
     get theta() { return cur.theta; },

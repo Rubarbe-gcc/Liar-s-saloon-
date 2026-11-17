@@ -668,11 +668,13 @@ export const NIVEAUX = [
  * Les lieux spéciaux (hors campagne, sans étoiles ni déblocage).
  * MODE SPÉCIAL ALEX : 20 vagues, trois départs, un chemin court, 10 vies : fait pour être presque impossible.
  */
+// plus de Rouilleux au fil des vagues : ×1 à la première, jusqu'à ×(1 + 19 × pas) à la vingtième (les boss restent seuls)
+const plus = (vagues, pas) => vagues.map((v, i) => { const k = 1 + i * pas; return v.map(gr => (gr.n > 2 ? { ...gr, n: Math.round(gr.n * k), ecart: gr.ecart / Math.sqrt(k) } : gr)); });
 export const SPECIAUX = [
   {
     id: 100, nom: 'Spécial Alex', special: true,
     intro: 'Trois portails, un chemin trop court, dix vies et vingt vagues : tous les Rouilleux de la Fosse à la fois. Personne ne l’a encore fini. À toi de jouer, Alex.',
-    ambiance: 'fosse', or: 520, vies: 10, force: 0.18,
+    ambiance: 'fosse', or: 460, vies: 10, force: 0.2, orFacteur: 0.7, // moins d'or : 70 % par Rouilleux et par appel anticipé
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur', 'aimant', 'garnison', 'rayon'],
     carte: [
       'S######^^^^^^######Q',
@@ -688,7 +690,7 @@ export const SPECIAUX = [
       '^.........B###..T..^',
       '^^^^^^^^^^^^^^^^^^^^',
     ],
-    vagues: [
+    vagues: plus([
       [g('rodeur', 10, 1), g('galopin', 5, 1, 4, 1), g('filou', 5, 1, 6, 2)],
       [g('cuirasse', 7, 1.2), g('bourdon', 7, 1, 3, 1), g('givrin', 6, 1.2, 5, 2)],
       [g('furtif', 14, 0.6), g('fouisseur', 10, 0.8, 2, 1), g('pavois', 6, 1.5, 3, 2)],
@@ -709,7 +711,7 @@ export const SPECIAUX = [
       [g('bastion', 24, 0.6), g('bastion', 24, 0.6, 0, 1), g('reparateur', 12, 1.2, 3, 2), g('tisseur', 10, 1.5, 4, 2)],
       [g('seigneur', 1, 1), g('colosse', 1, 1, 6, 1), g('broyeur', 2, 6, 3, 2), g('furtif', 40, 0.3, 4)],
       [g('golem', 1, 1), g('colosse', 1, 1, 0, 1), g('seigneur', 1, 1, 0, 2), g('hydre', 2, 8, 10), g('ruche', 10, 1.5, 6, 1), g('galopin', 60, 0.2, 8, 2), g('bastion', 20, 0.8, 12)],
-    ],
+    ], 0.055),
   },
 ];
 

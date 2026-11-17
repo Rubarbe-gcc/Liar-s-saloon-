@@ -779,6 +779,12 @@ export function creerMonde(canvas, { mobile = false } = {}) {
           const a = v.m.tete.rotation.y, h = v.m.hauteur + 0.2;
           const fx = t.x + Math.sin(a) * 0.45, fz = t.z + Math.cos(a) * 0.45;
           const y0 = v.m.groupe.position.y;
+          if (t.niveau === 4) { // spécialisation : un tir qui en impose
+            const br = TOURS[t.type].branches[t.branche], c = (br && br.couleur) || TOURS[t.type].couleur;
+            effets.lueur(fx, y0 + h + 0.2, fz, c, 9, 0.18);
+            effets.gerbe(fx, y0 + h + 0.2, fz, { n: 8, couleurs: ['#ffffff', c], vitesse: 2.2, haut: 0.8, vie: 0.3, taille: 0.14 });
+            if (Math.random() < 0.25) effets.onde(t.x, y0 + 0.08, t.z, { couleur: c, r1: 0.9, vie: 0.3 });
+          }
           if (e.type === 'mortier') {
             effets.gerbe(t.x + Math.sin(a) * 0.3, y0 + h + 0.35, t.z + Math.cos(a) * 0.3, { n: 6, couleurs: ['#8a8078', '#5a5450'], vitesse: 0.6, haut: 1.5, vie: 0.9, taille: 0.3, croit: 2.2, additif: false, alpha: 0.7 });
             effets.gerbe(t.x, y0 + h + 0.3, t.z, { n: 6, couleurs: MUSEAU.mortier, vitesse: 1.4, vie: 0.25, taille: 0.16 });
