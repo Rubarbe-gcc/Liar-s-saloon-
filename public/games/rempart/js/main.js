@@ -72,6 +72,7 @@ function allerMenu() {
   fermerPanneau();
   if (!demo) demarrerDemo();
   $('#campagne-info').textContent = `⭐ ${totalEtoiles()} / ${NIVEAUX.length * 3} étoiles`;
+  $('#atelier-info').textContent = etoilesLibres() > 0 ? `⭐ ${etoilesLibres()} étoile${etoilesLibres() > 1 ? 's' : ''} à dépenser` : 'Dépensez vos étoiles en améliorations';
   const meilleur = Math.max(0, ...Object.values(progression.records || {}));
   $('#alex-info').textContent = progression.alexGagne ? '👍 Fini ! Respect.' : progression.alex ? `Record : ${progression.alex} vagues sur 20` : '20 vagues presque impossibles';
   $('#sansfin-info').textContent = meilleur ? `Record : ${meilleur} vagues` : 'Des vagues sans fin, un boss toutes les 10';
@@ -148,7 +149,7 @@ function lancerNiveau(id, sansFin = false) {
   fermerPanneau();
   demo = false;
   son.rendreMuet(false);
-  partie = P.creerPartie(id, { graine: (Date.now() % 1e9) | 0, sansFin });
+  partie = P.creerPartie(id, { graine: (Date.now() % 1e9) | 0, sansFin, ameliorations: progression.ameliorations || {} });
   ia = null;
   monde.charger(partie);
   monde.camera.tourner(0);
@@ -509,9 +510,9 @@ function armer(k) {
   document.body.classList.toggle('vise', !!pouvoirArme);
   if (pouvoirArme) annoncer(P.POUVOIRS[k].nom, 'Touchez la carte pour viser');
 }
-for (const b of $('[data-pouvoir]')) b.addEventListener('click', e => { e.stopPropagation(); son.debloquer(); armer(b.dataset.pouvoir); });
+for (const b of $$('[data-pouvoir]')) b.addEventListener('click', e => { e.stopPropagation(); son.debloquer(); armer(b.dataset.pouvoir); });
 function majPouvoirs() {
-  for (const b of $('[data-pouvoir]')) {
+  for (const b of $$('[data-pouvoir]')) {
     const k = b.dataset.pouvoir, d = P.POUVOIRS[k], r = partie && partie.pouvoirs ? partie.pouvoirs[k] : d.premier;
     b.querySelector('i').style.height = (r > 0 ? r / (partie && partie.pouvoirs ? d.recharge : d.premier) * 100 : 0) + '%';
     b.classList.toggle('pret', !(r > 0)); b.classList.toggle('arme', pouvoirArme === k);
@@ -629,6 +630,17 @@ function bouton(sel, f) { $(sel).addEventListener('click', e => { son.debloquer(
 bouton('#b-campagne', () => allerCarte('campagne'));
 bouton('#b-sansfin', () => allerCarte('sansfin'));
 bouton('#b-alex', () => lancerNiveau(100));
+// ---------- l'Atelier des gardiens ----------
+const etoilesLibres = () => totalEtoiles() - P.etoilesDepensees(progression.ameliorations);
+function remplirAtelier() {
+  const am = progression.ameliorations = progression.ameliorations || {};
+  $('#atelier-etoiles').textContent = `⭐ ${etoilesLibres()} à dépenser`;
+  $('#atelier').innerHTML = Object.entries(P.AMELIORATIONS).map(([k, a]) => { const n = am[k] || 0, cout = P.coutAmelio(n), max = n >= P.AMELIO_MAX;
+    return `<div class="amelio"><span class="ic">${a.icone}</span><div><b>${a.nom}</b><small>${a.desc}</small><span class="pips">${[0, 1, 2].map(i => `<i class="${i < n ? 'on' : ''}"></i>`).join('')}</span></div><button class="btn" data-amelio="${k}" ${max || etoilesLibres() < cout ? 'disabled' : ''}>${max ? 'Max' : `⭐ ${cout}`}</button></div>`; }).join('');
+  for (const b of $$('[data-amelio]')) b.addEventListener('click', () => { const k = b.dataset.amelio, n = am[k] || 0; if (n >= P.AMELIO_MAX || etoilesLibres() < P.coutAmelio(n)) return; am[k] = n + 1; sauver(); son.jouer('ameliore'); remplirAtelier(); });
+}
+bouton('#b-atelier', () => { remplirAtelier(); montrer('s-atelier'); });
+bouton('#b-atelier-raz', () => { progression.ameliorations = {}; sauver(); remplirAtelier(); });
 bouton('#b-codex', () => { remplirCodex('tours'); montrer('s-codex'); });
 bouton('#b-aide', () => montrer('s-aide'));
 for (const b of $$('[data-retour]')) b.addEventListener('click', () => { son.jouer('clic'); allerMenu(); });

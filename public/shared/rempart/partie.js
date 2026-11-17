@@ -140,7 +140,7 @@ export function surChemin(ch, d, decal = 0) {
  * @param {number}  [o.graine]
  * @param {boolean} [o.sansFin]  mode sans fin : toutes les tours, des vagues générées à l'infini
  */
-export function creerPartie(id, { graine = 1, sansFin = false } = {}) {
+export function creerPartie(id, { graine = 1, sansFin = false, ameliorations = {} } = {}) {
   let def = trouverNiveau(id);
   if (!def) throw new Error(`niveau inconnu : ${id}`);
   if (sansFin) def = { ...def, tours: ORDRE_TOURS.slice(), force: def.force * SANS_FIN.force };
@@ -148,7 +148,7 @@ export function creerPartie(id, { graine = 1, sansFin = false } = {}) {
   carte.murs = !!def.murs;
   return {
     niveau: id, def, carte, rng: makeRng(graine), graine, sansFin,
-    t: 0, or: Math.round(def.or * FACTEUR_OR_DEPART), vies: def.vies, viesMax: def.vies,
+    t: 0, or: Math.round(def.or * FACTEUR_OR_DEPART * meta(ameliorations).or), vies: def.vies + meta(ameliorations).vies, viesMax: def.vies + meta(ameliorations).vies, meta: meta(ameliorations),
     vague: 0, totalVagues: sansFin ? Infinity : def.vagues.length,
     file: [], compte: null, phase: 'preparation',
     ennemis: [], tours: [], projectiles: [],
@@ -206,11 +206,38 @@ const evt = (p, e) => {
 
 /** Les caractéristiques d'un niveau (1 à 3) ou d'une spécialisation (niveau 4, branche 0 ou 1). */
 export const statsTour = (type, niv, branche = 0) => (niv <= 3 ? TOURS[type].niveaux[niv - 1] : TOURS[type].branches[branche]);
-export const statsDe = t => statsTour(t.type, t.niveau, t.branche ?? 0);
+/**
+ * L'Atelier des gardiens : améliorations permanentes achetées avec les étoiles de la campagne
+ * (3 niveaux, 1 puis 2 puis 3 étoiles). Passées à creerPartie(id, { ameliorations: { cle: niveau } }).
+ */
+export const AMELIORATIONS = {
+  or:       { nom: 'Trésor des gardiens', icone: '🪙', desc: '+6 % d’or au départ par niveau' },
+  vies:     { nom: 'Cœur renforcé',       icone: '❤️', desc: '+2 vies par niveau' },
+  degats:   { nom: 'Ambre affûté',        icone: '⚔️', desc: '+4 % de dégâts des tours par niveau' },
+  cadence:  { nom: 'Rouages huilés',      icone: '⚙️', desc: '+4 % de cadence de tir par niveau' },
+  portee:   { nom: 'Longue-vue',          icone: '🔭', desc: '+4 % de portée par niveau' },
+  revente:  { nom: 'Marchandage',         icone: '🤝', desc: '+8 % à la revente par niveau' },
+  pluie:    { nom: 'Pluie dorée',         icone: '☄️', desc: 'Pluie d’Ambre : +20 % de dégâts et −10 % de recharge par niveau' },
+  gardiens: { nom: 'Garde royale',        icone: '🛡️', desc: 'Gardiens d’Ambre : +1 gardien et +2 s par niveau' },
+};
+export const AMELIO_MAX = 3, coutAmelio = niveau => niveau + 1; // le niveau suivant coûte (niveau actuel + 1) étoiles
+export const etoilesDepensees = am => Object.values(am || {}).reduce((s, n) => s + (n * (n + 1)) / 2, 0);
+function meta(am = {}) {
+  const n = k => Math.max(0, Math.min(AMELIO_MAX, am[k] | 0));
+  return { or: 1 + 0.06 * n('or'), vies: 2 * n('vies'), degats: 1 + 0.04 * n('degats'), cadence: 1 + 0.04 * n('cadence'), portee: 1 + 0.04 * n('portee'), revente: 1 + 0.08 * n('revente'), pluieD: 1 + 0.2 * n('pluie'), pluieR: 1 - 0.1 * n('pluie'), gardiens: n('gardiens') };
+}
+/** Les caractéristiques d'une tour, avec les améliorations permanentes (gardées en cache sur la tour). */
+export const statsDe = t => {
+  const s = statsTour(t.type, t.niveau, t.branche ?? 0), m = t.meta;
+  if (!m || (m.degats === 1 && m.cadence === 1 && m.portee === 1)) return s;
+  const cle = t.niveau + '-' + t.branche;
+  if (t._sk !== cle) { t._sk = cle; t._s = { ...s, degats: s.degats && s.degats * m.degats, brulure: s.brulure && s.brulure * m.degats, cadence: s.cadence && s.cadence * m.cadence, portee: s.portee && s.portee * m.portee }; }
+  return t._s;
+};
 /** Prix du niveau suivant ; au niveau 3, celui de la branche choisie. */
 export const coutAmelioration = (t, branche = 0) => (t.niveau < 3 ? TOURS[t.type].niveaux[t.niveau].cout : t.niveau === 3 ? TOURS[t.type].branches[branche].cout : null);
 export const brancheDe = t => (t.niveau === 4 ? TOURS[t.type].branches[t.branche] : null);
-export const valeurRevente = t => Math.floor(t.investi * REVENTE);
+export const valeurRevente = t => Math.floor(t.investi * Math.min(0.95, REVENTE * (t.meta ? t.meta.revente : 1)));
 
 export function construire(p, empId, type) {
   if (p.phase === 'victoire' || p.phase === 'defaite') return { ok: false, raison: 'fin' };
@@ -223,7 +250,7 @@ export function construire(p, empId, type) {
   p.or -= cout;
   const t = {
     id: p.prochainId++, type, niveau: 1, emp: empId, x: emp.x, z: emp.z,
-    recharge: 0.2, cible: null, mode: 'premier', investi: cout, angle: 0, tirs: 0, degats: 0, branche: null, renfort: 0,
+    recharge: 0.2, cible: null, mode: 'premier', investi: cout, angle: 0, tirs: 0, degats: 0, branche: null, renfort: 0, meta: p.meta,
   };
   p.tours.push(t);
   evt(p, { k: 'construit', tour: t.id, type, x: t.x, z: t.z });
@@ -926,10 +953,11 @@ export function lancerPouvoir(p, k, x, z) {
     for (const ch of p.carte.chemins) for (let dd = 1; dd < ch.total - 1; dd += 0.25) { const q = surChemin(ch, dd); const d2 = (q.x - x) ** 2 + (q.z - z) ** 2; if (d2 < d2min) { d2min = d2; best = q; } }
     if (!best) return { ok: false };
     const tour = { id: p.prochainId++, x: best.x, z: best.z, niveau: 1, branche: null, ralliement: { cle: '1-null', x: best.x, z: best.z }, gardes: [], cible: null };
-    p.renforts.push({ tour, t: d.duree, s: { portee: 3, gardes: d.gardes, pvGarde: d.pvGarde * Math.max(1, p.def.force * 2), degats: d.degats, renfort: 999 } });
+    const mg = p.meta ? p.meta.gardiens : 0;
+    p.renforts.push({ tour, t: d.duree + 2 * mg, s: { portee: 3, gardes: d.gardes + mg, pvGarde: d.pvGarde * Math.max(1, p.def.force * 2), degats: d.degats, renfort: 999 } });
     evt(p, { k: 'gardiens', x: best.x, z: best.z });
   }
-  p.pouvoirs[k] = d.recharge;
+  p.pouvoirs[k] = d.recharge * (k === 'pluie' && p.meta ? p.meta.pluieR : 1);
   return { ok: true };
 }
 function majPouvoirs(p) {
@@ -938,7 +966,7 @@ function majPouvoirs(p) {
   for (const fr of p.frappes) {
     if ((fr.t -= DT) > 0) continue;
     const d = POUVOIRS.pluie, r2 = d.rayon ** 2;
-    for (const e of p.ennemis.slice()) if (!e.mort && !e.sous && (e.x - fr.x) ** 2 + (e.z - fr.z) ** 2 <= r2) infliger(p, e, d.degats * (e.def.boss ? 0.6 : 1), { demi: true });
+    for (const e of p.ennemis.slice()) if (!e.mort && !e.sous && (e.x - fr.x) ** 2 + (e.z - fr.z) ** 2 <= r2) infliger(p, e, d.degats * (p.meta ? p.meta.pluieD : 1) * (e.def.boss ? 0.6 : 1), { demi: true });
     evt(p, { k: 'explosion', x: fr.x, z: fr.z, rayon: d.rayon, pluie: true });
   }
   p.frappes = p.frappes.filter(fr => fr.t > 0);

@@ -32,6 +32,7 @@
       <button class="btn or grand" id="b-campagne"><b>🏰 Campagne</b><small id="campagne-info">Dix-huit lieux, cinquante-quatre étoiles</small></button>
       <button class="btn grand" id="b-sansfin"><b>♾️ Mode sans fin</b><small id="sansfin-info">Des vagues sans fin, un boss toutes les 10</small></button>
       <button class="btn grand alex" id="b-alex"><b>🔥 Mode Spécial Alex</b><small id="alex-info">20 vagues presque impossibles</small></button>
+      <button class="btn grand" id="b-atelier"><b>⭐ L’Atelier des gardiens</b><small id="atelier-info">Dépensez vos étoiles en améliorations</small></button>
       <button class="btn grand" id="b-codex"><b>📖 Le Codex</b><small>Les tours et les Rouilleux</small></button>
       <button class="btn grand" id="b-aide"><b>❔ Comment jouer</b><small>Souris, clavier ou doigts</small></button>
     </div>
@@ -67,6 +68,17 @@
 </section>
 
 <!-- ============================ AIDE ============================ -->
+<section class="ecran fond" id="s-atelier">
+  <header class="entete">
+    <button class="btn fin" data-retour aria-label="Retour">←</button>
+    <h2>L’Atelier des gardiens</h2>
+    <span class="pastille" id="atelier-etoiles">⭐ 0</span>
+  </header>
+  <p class="atelier-intro">Chaque étoile gagnée dans la campagne s’échange ici contre une amélioration qui vaut pour toutes les parties. Le niveau suivant coûte 1, puis 2, puis 3 étoiles.</p>
+  <div class="atelier" id="atelier"></div>
+  <p class="atelier-bas"><button class="btn fin" id="b-atelier-raz">↺ Récupérer toutes mes étoiles</button></p>
+</section>
+
 <section class="ecran fond" id="s-aide">
   <header class="entete">
     <button class="btn fin" data-retour aria-label="Retour">←</button>
