@@ -18,7 +18,7 @@
 export const FACTEUR_DEGATS = 0.8;
 
 /** Réglage global des PV de tous les ennemis et boss (appliqué au chargement). */
-export const FACTEUR_PV = 2;
+export const FACTEUR_PV = 2.5;
 
 /** Réglage global de l'or rapporté par chaque ennemi détruit (appliqué au chargement). */
 export const FACTEUR_OR_ENNEMIS = 1.25;

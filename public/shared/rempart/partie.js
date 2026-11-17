@@ -134,6 +134,20 @@ export function surChemin(ch, d, decal = 0) {
 
 /* ---------------------------------------------------------------- partie */
 
+/** PV des Rouilleux dans un lieu de la campagne : +4 % à chaque lieu. */
+export const pvLieu = id => 0.45 * 1.04 ** (id - 1);
+
+/**
+ * Campagne : `force` (la difficulté du lieu) devient le nombre de Rouilleux,
+ * leurs PV suivent `pvLieu` ; l'or et l'XP par Rouilleux compensent le nombre.
+ */
+function campagne(def) {
+  const pv = pvLieu(def.id), k = def.force / pv;
+  const vagues = def.vagues.map(v => v.map(gr => (ENNEMIS[gr.type].boss ? gr
+    : { ...gr, n: Math.max(1, Math.round(gr.n * k)), ecart: gr.ecart / Math.sqrt(k) })));
+  return { ...def, force: pv, forceBoss: def.force, vagues, orRouilleux: 1 / k };
+}
+
 /**
  * @param {number} id  le lieu
  * @param {object} [o]
@@ -145,6 +159,7 @@ export function creerPartie(id, { graine = 1, sansFin = false, ameliorations = {
   let def = trouverNiveau(id);
   if (!def) throw new Error(`niveau inconnu : ${id}`);
   if (sansFin) def = { ...def, tours: ORDRE_TOURS.slice(), force: def.force * SANS_FIN.force };
+  else if (!def.special) def = campagne(def);
   const carte = analyserCarte(def.carte);
   carte.murs = !!def.murs;
   const p = {
@@ -341,7 +356,7 @@ function apparaitre(p, type, depart, vague, d = 0, decal = null) {
   const ch = def.vole ? p.carte.vols[depart] : p.carte.chemins[depart];
   const echelle = p.sansFin
     ? p.def.force * (def.boss ? SANS_FIN.croissanceBoss : SANS_FIN.croissance) ** vague
-    : p.def.force * (def.boss ? 1 : 1 + 0.045 * vague);
+    : (def.boss ? p.def.forceBoss || p.def.force : p.def.force * (1 + 0.045 * vague));
   const pvMax = Math.round(def.pv * echelle);
   const pos = surChemin(ch, d, 0);
   const e = {
@@ -397,7 +412,7 @@ function mourir(p, e) {
     const s = statsDe(ph);
     if (s.orBonus && distance2(ph, e) <= s.portee ** 2) bonus = Math.max(bonus, s.orBonus);
   }
-  const gain = Math.max(1, Math.round((e.def.or + bonus) * (p.def.orFacteur || 1)));
+  const gain = Math.max(1, Math.round((e.def.or + bonus) * (p.def.orFacteur || 1) * (e.def.boss ? 1 : p.def.orRouilleux || 1)));
   p.or += gain;
   p.stats.tues++;
   p.stats.orGagne += gain;
@@ -769,7 +784,7 @@ function majGarnison(p, t, s, b) {
       if (d > 0.35) { g.x += dx / d * Math.min(d - 0.35, 3 * DT); g.z += dz / d * Math.min(d - 0.35, 3 * DT); }
       brulerContinu(p, e, s.degats * (1 + b.d), t);
       if (!e.mort && (e.bloquePar === g || d < 0.6)) {
-        const frappe = (e.def.boss ? 40 : 6 + 4 * e.def.vies + e.def.armure) * p.def.force;
+        const frappe = (e.def.boss ? 40 : 6 + 4 * e.def.vies + e.def.armure) * (e.def.boss && p.def.forceBoss || p.def.force);
         g.pv -= frappe * DT;
         if (g.pv <= 0) {
           g.mortT = s.renfort;
@@ -1026,7 +1041,7 @@ function gagnerXp(p, h, xp) {
   }
 }
 /** Frappe e et compte l'expérience si le Rouilleux tombe. */
-function frapperHeros(p, h, e, degats) { if (e.mort) return; infliger(p, e, degats, {}); if (e.mort) gagnerXp(p, h, (e.def.or || 5) * (e.def.boss ? 2 : 1) + 4); }
+function frapperHeros(p, h, e, degats) { if (e.mort) return; infliger(p, e, degats, {}); if (e.mort) gagnerXp(p, h, ((e.def.or || 5) * (e.def.boss ? 2 : 1) + 4) * (e.def.boss ? 1 : p.def.orRouilleux || 1)); }
 const autour = (p, x, z, r, air = true) => p.ennemis.filter(e => !e.mort && !e.sous && (air || !enVol(e)) && (e.x - x) ** 2 + (e.z - z) ** 2 <= r * r);
 /** Lance la capacité i (0 ou 1) du héros. */
 export function capaciteHeros(p, i) {
@@ -1081,7 +1096,7 @@ function majHeros(p) {
   for (const o of p.ennemis) {
     if (o.mort || o.sous || enVol(o)) continue;
     const proche = o.bloquePar === h || (o.x - h.x) ** 2 + (o.z - h.z) ** 2 < 0.45 ** 2;
-    if (proche) h.pv -= (o.def.boss ? 45 : 6 + 4 * o.def.vies + o.def.armure) * p.def.force * DT * (o.bloquePar === h ? 1 : 0.5);
+    if (proche) h.pv -= (o.def.boss ? 45 : 6 + 4 * o.def.vies + o.def.armure) * (o.def.boss && p.def.forceBoss || p.def.force) * DT * (o.bloquePar === h ? 1 : 0.5);
   }
   if (!(h.pv > 0) || h.pv <= 0) {
     for (const o of p.ennemis) if (o.bloquePar === h) o.bloquePar = null;

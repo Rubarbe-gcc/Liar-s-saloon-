@@ -7,7 +7,30 @@
  */
 
 import { TOURS, ENNEMIS } from './donnees.js';
-import { construire, ameliorer, coutAmelioration, lancerVague, surChemin, apercuVague } from './partie.js';
+import { construire, ameliorer, coutAmelioration, lancerVague, surChemin, apercuVague, bougerHeros, capaciteHeros, lancerPouvoir } from './partie.js';
+
+/** Le héros et les pouvoirs, joués comme un joueur raisonnable : le héros tient un poste sur le chemin, la Pluie tombe sur le plus gros paquet, les Gardiens retiennent le Rouilleux le plus avancé. */
+function heroiser(p, ia) {
+  const h = p.heros;
+  if (h && h.mortT === 0) {
+    if (!ia.poste) { const ch = p.carte.chemins[0]; ia.poste = surChemin(ch, ch.total * 0.62); bougerHeros(p, ia.poste.x, ia.poste.z); }
+    else if (!h.but && !h.cible && (h.x - ia.poste.x) ** 2 + (h.z - ia.poste.z) ** 2 > 4) bougerHeros(p, ia.poste.x, ia.poste.z);
+    const proches = p.ennemis.filter(e => !e.mort && (e.x - h.x) ** 2 + (e.z - h.z) ** 2 < 6.25).length;
+    if (proches >= 3) capaciteHeros(p, 0);
+    if (proches >= 3 || h.pv < h.pvMax * 0.4) capaciteHeros(p, 1);
+  }
+  if (!p.pouvoirs) return;
+  if (!(p.pouvoirs.pluie > 0)) {
+    let best = null, bn = 3;
+    for (const e of p.ennemis) { if (e.mort) continue; let n = 0; for (const o of p.ennemis) if (!o.mort && (o.x - e.x) ** 2 + (o.z - e.z) ** 2 < 3.2) n++; if (n > bn) { bn = n; best = e; } }
+    if (best) lancerPouvoir(p, 'pluie', best.x, best.z);
+  }
+  if (!(p.pouvoirs.gardiens > 0)) {
+    let e = null, av = 0.6;
+    for (const o of p.ennemis) if (!o.mort && !o.def.vole && o.d / o.ch.total > av) { av = o.d / o.ch.total; e = o; }
+    if (e) lancerPouvoir(p, 'gardiens', e.x, e.z);
+  }
+}
 
 /** Combien de bouts de chemin (sol, air) passent à portée d'un emplacement. */
 export function couverture(carte, emp, portee = 3) {
@@ -75,6 +98,7 @@ export function jouerIA(p, ia) {
   if (p.phase === 'victoire' || p.phase === 'defaite') return;
   if ((ia.attente -= 1) > 0) return;
   ia.attente = 15;
+  heroiser(p, ia);
   if (p.phase === 'preparation' && p.tours.length >= 2) { lancerVague(p); return; }
   if (ia.appelle && p.compte != null && p.compte < 10 && p.ennemis.length === 0) lancerVague(p);
 

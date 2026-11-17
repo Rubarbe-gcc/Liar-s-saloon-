@@ -179,7 +179,8 @@ function lancerNiveau(id, sansFin = false) {
   const avantTypes = new Set(avant ? avant.vagues.flat().map(g => g.type) : []);
   $('#intro-infos').innerHTML = `
     <div class="ligne"><span>Vos tours</span>${def.tours.map(t => `<span class="pastille ${avant && !avant.tours.includes(t) ? 'neuf' : ''}">${TOURS[t].icone} ${TOURS[t].nom}</span>`).join('')}</div>
-    <div class="ligne"><span>${def.vagues.length} vagues de Rouilleux</span>${types.map(t => `<span class="pastille ${avant && !avantTypes.has(t) ? 'neuf' : ''}">${ICONES[t]} ${ENNEMIS[t].nom}</span>`).join('')}</div>`;
+    <div class="ligne"><span>${def.vagues.length} vagues de Rouilleux</span>${types.map(t => `<span class="pastille ${avant && !avantTypes.has(t) ? 'neuf' : ''}">${ICONES[t]} ${ENNEMIS[t].nom}</span>`).join('')}</div>${def.special ? '' : `
+    <div class="ligne"><span>Solidité des Rouilleux</span><span class="pastille ${id > 1 ? 'neuf' : ''}">❤️ ${id > 1 ? `+${Math.round((P.pvLieu(id) / P.pvLieu(1) - 1) * 100)} % de PV` : 'PV de base'}</span></div>`}`;
   $('#m-intro').hidden = false;
 }
 

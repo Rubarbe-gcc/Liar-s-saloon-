@@ -11,8 +11,8 @@ import * as P from '../public/shared/rempart/partie.js';
 import { creerIA, jouerIA, couverture } from '../public/shared/rempart/ia.js';
 
 /** Joue une partie entière avec le joueur automatique. */
-function jouer(id, o = {}, graine = 1) {
-  const p = P.creerPartie(id, { graine });
+function jouer(id, o = {}, graine = 1, heros) {
+  const p = P.creerPartie(id, { graine, heros });
   const ia = creerIA(p, o);
   for (let i = 0; i < 30 * 60 * 40 && p.phase !== 'victoire' && p.phase !== 'defaite'; i++) {
     jouerIA(p, ia);
@@ -111,7 +111,8 @@ test('les vagues : rien ne bouge avant l’appel, puis compte à rebours et bonu
   assert.equal(P.lancerVague(p).ok, false, 'pas deux fois pendant la sortie');
   avancer(p, 3);
   assert.ok(p.ennemis.length > 0);
-  avancer(p, 10);
+  for (let i = 0; i < 60 / P.DT && p.compte == null; i++) P.pas(p);
+  avancer(p, 1);
   assert.ok(p.compte != null && p.compte < P.PAUSE_VAGUES);
   const or = p.or, bonus = P.bonusAppel(p);
   assert.ok(bonus > 0);
@@ -123,7 +124,8 @@ test('les vagues : rien ne bouge avant l’appel, puis compte à rebours et bonu
 test('la vague suivante part toute seule à la fin du compte', () => {
   const p = P.creerPartie(1);
   P.lancerVague(p);
-  avancer(p, 12 + P.PAUSE_VAGUES + 1);
+  for (let i = 0; i < 60 / P.DT && p.compte == null; i++) P.pas(p);
+  avancer(p, P.PAUSE_VAGUES + 1);
   assert.equal(p.vague, 2);
   assert.equal(p.stats.bonus, 0);
 });
@@ -205,16 +207,16 @@ test('équilibre : un joueur raisonnable gagne chaque niveau, un joueur paresseu
   let faciles = 0; // lieux où le bon joueur finit avec 3 étoiles
   for (const n of NIVEAUX) {
     for (const graine of [1, 2]) {
-      const bon = jouer(n.id, {}, graine);
+      const bon = jouer(n.id, {}, graine, 'chevalier');
       assert.equal(bon.phase, 'victoire', `${n.nom} (graine ${graine}) : le bon joueur perd à la vague ${bon.vague}`);
       assert.ok(P.etoiles(bon) >= 1);
       if (graine === 1 && P.etoiles(bon) === 3) faciles++;
     }
-    const paresseux = jouer(n.id, { maxTours: 4, ameliore: false });
+    const paresseux = jouer(n.id, { maxTours: 4, ameliore: false }, 1, 'chevalier');
     assert.equal(paresseux.phase, 'defaite', `${n.nom} : quatre tours sans amélioration suffisent`);
     // Dès la Passe des Géants, une seule sorte de tour ne suffit plus.
     if (n.id < 4) continue;
-    const rafales = jouer(n.id, { types: ['rafale'], maxTours: 5 });
+    const rafales = jouer(n.id, { types: ['rafale'], maxTours: 5 }, 1, 'chevalier');
     assert.ok(P.etoiles(rafales) <= 2, `${n.nom} : cinq Rafales suffisent`);
   }
   // Pas trop facile : le bon joueur ne prend pas 3 étoiles partout.
@@ -583,7 +585,7 @@ test('héros : se déplace, se bat, gagne des niveaux, capacités en recharge, r
     assert.ok(p.heros && p.heros.niveau === 1);
     const q = P.surChemin(p.carte.chemins[0], 8);
     P.lancerVague(p); P.bougerHeros(p, q.x, q.z);
-    avancer(p, 30);
+    avancer(p, 45);
     assert.ok(p.stats.tues > 0, type + ' détruit des Rouilleux');
     assert.ok(p.heros.niveau > 1 || p.heros.xp > 0, type + ' gagne de l’expérience');
     const r = P.capaciteHeros(p, 1);
