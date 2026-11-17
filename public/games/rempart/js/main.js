@@ -73,6 +73,7 @@ function allerMenu() {
   if (!demo) demarrerDemo();
   $('#campagne-info').textContent = `⭐ ${totalEtoiles()} / ${NIVEAUX.length * 3} étoiles`;
   const meilleur = Math.max(0, ...Object.values(progression.records || {}));
+  $('#alex-info').textContent = progression.alexGagne ? '👍 Fini ! Respect.' : progression.alex ? `Record : ${progression.alex} vagues sur 20` : '20 vagues presque impossibles';
   $('#sansfin-info').textContent = meilleur ? `Record : ${meilleur} vagues` : 'Des vagues sans fin, un boss toutes les 10';
   montrer('s-menu');
 }
@@ -161,7 +162,8 @@ function lancerNiveau(id, sansFin = false) {
   majHUD(true);
   // La présentation du lieu.
   const def = partie.def, avant = defNiveau(id - 1);
-  $('#intro-num').textContent = sansFin ? `Mode sans fin · lieu ${id}` : `Lieu ${id} sur ${NIVEAUX.length}`;
+  $('#intro-num').textContent = sansFin ? `Mode sans fin · lieu ${id}` : def.special ? '🔥 MODE SPÉCIAL ALEX' : `Lieu ${id} sur ${NIVEAUX.length}`;
+  pouces(!!def.special); document.body.classList.toggle('alex', !!def.special);
   $('#intro-nom').textContent = def.nom;
   $('#intro-texte').textContent = def.intro;
   if (sansFin) {
@@ -194,6 +196,19 @@ function finir() {
     $('#b-suivant').hidden = true;
     $('#b-rejouer').querySelector('b').textContent = '↻ Rejouer';
     if (record) son.jouer('victoire');
+    setTimeout(() => { $('#m-fin').hidden = false; }, 1400);
+    return;
+  }
+  if (partie.def.special) {
+    pouces(false); document.body.classList.remove('alex');
+    const gagne = partie.phase === 'victoire', tenu = gagne ? 20 : Math.max(0, partie.vague - 1);
+    progression.alex = Math.max(progression.alex || 0, tenu); if (gagne) progression.alexGagne = true; sauver();
+    fermerPanneau();
+    $('#fin-titre').textContent = gagne ? '👍 ALEX A FINI LE MODE SPÉCIAL 👍' : 'Perdu, Alex.';
+    $('#fin-etoiles').hidden = true;
+    $('#fin-texte').innerHTML = gagne ? `Impossible… et pourtant. <b>${partie.vies} / ${partie.viesMax}</b> vies. Respect.` : `Tu as tenu <b>${tenu} vague${tenu > 1 ? 's' : ''} sur 20</b>. Record : <b>${progression.alex}</b>.<br>On en reparle quand tu passes la vague 10 ?`;
+    $('#b-suivant').hidden = true; $('#b-rejouer').querySelector('b').textContent = '↻ Encore';
+    for (let i = 0; i < (gagne ? 12 : 4); i++) setTimeout(pouce, i * 180);
     setTimeout(() => { $('#m-fin').hidden = false; }, 1400);
     return;
   }
@@ -277,6 +292,22 @@ function rejouerAnim(el, cls) {
   void el.offsetWidth;
   el.classList.add(cls);
 }
+
+// ---------- MODE SPÉCIAL ALEX : chambrage (jamais d'insulte) et pouces 👍 ----------
+const CHAMBRE = {
+  vague: ['Alex, accroche-toi, ça va piquer', 'Même un grille-pain défendrait mieux ce Cœur', 'Tu transpires déjà, Alex ?', 'Les Rouilleux ont entendu parler de toi. Ils rigolent.', 'Respire, Alex. Ou pas.', 'Tu veux que j’appelle ta grand-mère pour t’aider ?', 'Allez, encore une petite vague, champion'],
+  fuite: ['Oups. Alex a encore laissé la porte ouverte', 'Il est passé où, ton mur ?', 'Alex, c’est un Cœur, pas un paillasson', 'Ils passent comme au supermarché', 'Joli trou dans la défense, Alex', 'Un de plus. Tu fais exprès ?'],
+  boss: ['Le boss te salue, Alex. Il a faim.', 'Tu le sens venir, celui-là ?', 'Bonne chance. Vraiment. Tu vas en avoir besoin.'],
+};
+const auHasard = l => l[Math.floor(Math.random() * l.length)];
+const estAlex = () => partie && partie.def && partie.def.special;
+let minuteurPouce = 0;
+function pouce() { // un 👍 qui surgit quelque part à l'écran
+  const z = document.getElementById('pouces'); if (!z || !estAlex()) return;
+  const p = document.createElement('span'); p.textContent = '👍'; p.style.left = (8 + Math.random() * 84) + '%'; p.style.top = (12 + Math.random() * 70) + '%'; p.style.fontSize = (40 + Math.random() * 70) + 'px'; p.style.setProperty('--r', (Math.random() * 50 - 25) + 'deg');
+  z.append(p); setTimeout(() => p.remove(), 1700);
+}
+function pouces(on) { clearInterval(minuteurPouce); if (on) minuteurPouce = setInterval(() => { if (!pause && Math.random() < .55) pouce(); }, 2600); }
 
 function annoncer(texte, sous = '', danger = false) {
   const a = $('#annonce');
@@ -505,21 +536,24 @@ function traiter(evts) {
         son.jouer(e.boss ? 'bossMort' : 'mort');
         son.jouer('piece');
         bulle(e.x, (e.y || 0) + 0.9, e.z, `+${e.or}`, e.boss ? 'gros' : '');
-        if (e.boss) annoncer(`${ENNEMIS[e.type].nom} est tombé !`, `+${e.or} 🪙`);
+        if (e.boss) annoncer(`${ENNEMIS[e.type].nom} est tombé !`, estAlex() ? 'Pas mal, Alex. Pour une fois.' : `+${e.or} 🪙`);
+        if (estAlex() && Math.random() < .08) bulle(e.x, (e.y || 0) + 1.4, e.z, '💥', 'gros');
         break;
       case 'division': son.jouer('division'); break;
       case 'soin': if (e.n) son.jouer('soin'); break;
       case 'fuite':
         son.jouer('fuite');
         rejouerAnim($('#j-vies'), 'choc');
+        if (estAlex()) { annoncer(auHasard(CHAMBRE.fuite), `Encore ${partie.vies} vie${partie.vies > 1 ? 's' : ''}`, true); rejouerAnim(document.body, 'secousse'); if (Math.random() < .5) pouce(); }
         bulle(e.x, 1.8, e.z, `−${e.vies} ❤️`, 'rouge');
         break;
       case 'vague':
         son.jouer('vague');
         if (e.boss.length) {
           setTimeout(() => son.jouer('boss'), 400);
-          annoncer(`${ENNEMIS[e.boss[0]].nom} approche !`, `Vague ${e.n}${Number.isFinite(e.total) ? ` / ${e.total}` : ``}`, true);
-        } else annoncer(`Vague ${e.n}`, e.n === e.total ? 'La dernière !' : e.bonus ? `+${e.bonus} 🪙 d’avance` : '');
+          annoncer(`${ENNEMIS[e.boss[0]].nom} approche !`, estAlex() ? auHasard(CHAMBRE.boss) : `Vague ${e.n}${Number.isFinite(e.total) ? ` / ${e.total}` : ``}`, true);
+        } else if (estAlex()) annoncer(`Vague ${e.n} / ${e.total}`, auHasard(CHAMBRE.vague), e.n > 10);
+        else annoncer(`Vague ${e.n}`, e.n === e.total ? 'La dernière !' : e.bonus ? `+${e.bonus} 🪙 d’avance` : '');
         break;
       case 'apparait':
         if (!vus.has(e.type) && !ENNEMIS[e.type].enfant) { vus.add(e.type); sauver(); presenter(e.type); }
@@ -570,6 +604,7 @@ function boucle(maintenant) {
 function bouton(sel, f) { $(sel).addEventListener('click', e => { son.debloquer(); son.jouer('clic'); f(e); }); }
 bouton('#b-campagne', () => allerCarte('campagne'));
 bouton('#b-sansfin', () => allerCarte('sansfin'));
+bouton('#b-alex', () => lancerNiveau(100));
 bouton('#b-codex', () => { remplirCodex('tours'); montrer('s-codex'); });
 bouton('#b-aide', () => montrer('s-aide'));
 for (const b of $$('[data-retour]')) b.addEventListener('click', () => { son.jouer('clic'); allerMenu(); });
@@ -578,7 +613,7 @@ bouton('#b-postes', () => { $('#m-intro').hidden = true; });
 bouton('#b-pause', () => basculerPause());
 bouton('#b-reprendre', () => basculerPause(false));
 bouton('#b-recommencer', () => lancerNiveau(partie.niveau, partie.sansFin));
-bouton('#b-quitter', () => allerCarte(partie.sansFin ? 'sansfin' : 'campagne'));
+bouton('#b-quitter', () => { pouces(false); document.body.classList.remove('alex'); allerCarte(partie.sansFin ? 'sansfin' : 'campagne'); });
 bouton('#b-suivant', () => lancerNiveau(partie.niveau + 1));
 bouton('#b-rejouer', () => lancerNiveau(partie.niveau, partie.sansFin));
 bouton('#b-carte', () => allerCarte(partie.sansFin ? 'sansfin' : 'campagne'));

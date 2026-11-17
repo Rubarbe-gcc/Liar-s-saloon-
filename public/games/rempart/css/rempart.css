@@ -278,3 +278,14 @@ kbd{display:inline-block;padding:1px 6px;border-radius:6px;background:rgba(255,2
   .boutons{gap:6px;margin-top:4px;}
   .astuce{display:none;}
 }
+
+/* ---------- MODE SPÉCIAL ALEX ---------- */
+.btn.alex{background:linear-gradient(135deg,#5a0a0a,#c0261a 55%,#ff7a1a);border-color:#ffb36a;box-shadow:0 0 18px #ff4a1a88;}
+.btn.alex b{letter-spacing:.04em;text-shadow:0 2px 0 #4a0000;}
+body.alex #s-jeu::after{content:'';position:fixed;inset:0;pointer-events:none;z-index:3;background:radial-gradient(ellipse at center,transparent 55%,rgba(150,0,0,.35) 100%);animation:alexPouls 2.4s ease-in-out infinite;}
+@keyframes alexPouls{50%{opacity:.55;}}
+body.secousse{animation:secousse .45s;}
+@keyframes secousse{15%{transform:translate(-9px,4px) rotate(-.4deg);}30%{transform:translate(8px,-5px) rotate(.4deg);}45%{transform:translate(-6px,3px);}60%{transform:translate(5px,-2px);}80%{transform:translate(-2px,1px);}}
+#pouces{position:fixed;inset:0;pointer-events:none;z-index:60;}
+#pouces span{position:absolute;transform:translate(-50%,-50%) rotate(var(--r,0deg));animation:pouce 1.7s ease-out forwards;filter:drop-shadow(0 4px 10px rgba(0,0,0,.6));}
+@keyframes pouce{0%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(var(--r,0deg));}15%{opacity:1;transform:translate(-50%,-50%) scale(1.25) rotate(var(--r,0deg));}30%{transform:translate(-50%,-50%) scale(1) rotate(var(--r,0deg));}80%{opacity:1;}100%{opacity:0;transform:translate(-50%,-90%) scale(.9) rotate(var(--r,0deg));}}

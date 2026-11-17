@@ -551,3 +551,12 @@ test('mode sans fin : des vagues sans fin, de plus en plus fortes, un boss toute
   assert.equal(p.phase, 'defaite');
   assert.ok(p.vague > 10, `il tient au moins 10 vagues (${p.vague})`);
 });
+
+test('mode Spécial Alex : lieu hors campagne, 20 vagues, 3 départs, 10 vies', async () => {
+  const { SPECIAUX, NIVEAUX: N } = await import('../public/shared/rempart/niveaux.js');
+  const a = SPECIAUX.find(n => n.id === 100);
+  assert.ok(a && a.special && !N.includes(a));
+  const p = P.creerPartie(100, { graine: 3 });
+  assert.equal(p.totalVagues, 20); assert.equal(p.vies, 10);
+  assert.ok(p.carte.chemins.length >= 3 || p.carte.departs.length >= 3, 'trois départs');
+});

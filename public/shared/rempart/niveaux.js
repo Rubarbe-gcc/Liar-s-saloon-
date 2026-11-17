@@ -664,4 +664,53 @@ export const NIVEAUX = [
   },
 ];
 
-export const niveau = id => NIVEAUX.find(n => n.id === id);
+/**
+ * Les lieux spéciaux (hors campagne, sans étoiles ni déblocage).
+ * MODE SPÉCIAL ALEX : 20 vagues, trois départs, un chemin court, 10 vies : fait pour être presque impossible.
+ */
+export const SPECIAUX = [
+  {
+    id: 100, nom: 'Spécial Alex', special: true,
+    intro: 'Trois portails, un chemin trop court, dix vies et vingt vagues : tous les Rouilleux de la Fosse à la fois. Personne ne l’a encore fini. À toi de jouer, Alex.',
+    ambiance: 'fosse', or: 520, vies: 10, force: 0.18,
+    tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur', 'aimant', 'garnison', 'rayon'],
+    carte: [
+      'S######^^^^^^######Q',
+      '^.T...#.T..T.#...T.^',
+      '^.....#......#.....^',
+      '^.T...#..T...#..T..^',
+      'R######......#.....^',
+      '^.T...#..T...#..T..^',
+      '^.....########.....^',
+      '^..T.T.......#T.T..^',
+      '^.....T......#.T...^',
+      '^.T......T..T#.....^',
+      '^.........B###..T..^',
+      '^^^^^^^^^^^^^^^^^^^^',
+    ],
+    vagues: [
+      [g('rodeur', 10, 1), g('galopin', 5, 1, 4, 1), g('filou', 5, 1, 6, 2)],
+      [g('cuirasse', 7, 1.2), g('bourdon', 7, 1, 3, 1), g('givrin', 6, 1.2, 5, 2)],
+      [g('furtif', 14, 0.6), g('fouisseur', 10, 0.8, 2, 1), g('pavois', 6, 1.5, 3, 2)],
+      [g('bondisseur', 16, 0.5), g('scarabee', 10, 0.8, 2, 1), g('reparateur', 3, 2.5, 4, 2), g('bastion', 6, 1.5, 4, 2)],
+      [g('broyeur', 1, 1), g('cliquet', 40, 0.2, 3, 1), g('brouilleur', 4, 2, 5, 2)],
+      [g('ruche', 4, 2.5), g('grappe', 10, 1, 2, 1), g('mue', 8, 1.2, 3, 2)],
+      [g('dirigeable', 6, 2), g('galopin', 30, 0.3, 2, 1), g('givrin', 16, 0.6, 3, 2)],
+      [g('bastion', 10, 1.2), g('reparateur', 5, 2, 3), g('bastion', 10, 1.2, 0, 1), g('furtif', 20, 0.4, 3, 2)],
+      [g('nuee', 2, 4), g('scarabee', 20, 0.5, 2, 1), g('brouilleur', 6, 1.8, 3, 2)],
+      [g('hydre', 1, 1), g('seigneur', 1, 1, 10, 1), g('cliquet', 50, 0.18, 4, 2)],
+      [g('cuirasse', 24, 0.5), g('pavois', 12, 0.9, 2, 1), g('tisseur', 6, 2, 3, 2)],
+      [g('ruche', 6, 2), g('dirigeable', 8, 1.8, 2, 1), g('bourdon', 30, 0.3, 3, 2)],
+      [g('fouisseur', 24, 0.4), g('furtif', 24, 0.4, 2, 1), g('mue', 14, 0.8, 3, 2)],
+      [g('bastion', 16, 0.9), g('reparateur', 8, 1.5, 2, 1), g('givrin', 30, 0.35, 3, 2)],
+      [g('colosse', 1, 1), g('golem', 1, 1, 8, 1), g('galopin', 40, 0.25, 4, 2)],
+      [g('cliquet', 80, 0.12), g('scarabee', 30, 0.35, 2, 1), g('brouilleur', 10, 1.2, 3, 2)],
+      [g('nuee', 4, 3), g('ruche', 8, 1.8, 2, 1), g('hydre', 1, 1, 10, 2)],
+      [g('bastion', 24, 0.6), g('bastion', 24, 0.6, 0, 1), g('reparateur', 12, 1.2, 3, 2), g('tisseur', 10, 1.5, 4, 2)],
+      [g('seigneur', 1, 1), g('colosse', 1, 1, 6, 1), g('broyeur', 2, 6, 3, 2), g('furtif', 40, 0.3, 4)],
+      [g('golem', 1, 1), g('colosse', 1, 1, 0, 1), g('seigneur', 1, 1, 0, 2), g('hydre', 2, 8, 10), g('ruche', 10, 1.5, 6, 1), g('galopin', 60, 0.2, 8, 2), g('bastion', 20, 0.8, 12)],
+    ],
+  },
+];
+
+export const niveau = id => NIVEAUX.find(n => n.id === id) || SPECIAUX.find(n => n.id === id);
