@@ -149,7 +149,8 @@ function lancerNiveau(id, sansFin = false) {
   fermerPanneau();
   demo = false;
   son.rendreMuet(false);
-  partie = P.creerPartie(id, { graine: (Date.now() % 1e9) | 0, sansFin, ameliorations: progression.ameliorations || {} });
+  partie = P.creerPartie(id, { graine: (Date.now() % 1e9) | 0, sansFin, ameliorations: progression.ameliorations || {}, heros: progression.heros || 'chevalier' });
+  herosDeplace = false; choixHeros(); majHeros(true);
   ia = null;
   monde.charger(partie);
   monde.camera.tourner(0);
@@ -253,7 +254,7 @@ function fermerModales() {
 let dernierHUD = {};
 function majHUD(force = false) {
   if (!partie || demo) return;
-  majPouvoirs();
+  majPouvoirs(); majHeros();
   const p = partie;
   const h = { vies: p.vies, or: p.or, vague: p.sansFin ? `${p.vague} ♾️` : `${p.vague}/${p.totalVagues}` };
   if (force || h.vies !== dernierHUD.vies) $('#h-vies').textContent = h.vies;
@@ -519,10 +520,54 @@ function majPouvoirs() {
   }
 }
 
+// ---------- le héros : choix avant le lieu, panneau, déplacement, capacités ----------
+let herosDeplace = false;
+function choixHeros() {
+  const choisi = progression.heros || 'chevalier';
+  $('#choix-heros').innerHTML = `<p class="titre-choix">Votre héros</p>` + Object.entries(P.HEROS).map(([k, h]) =>
+    `<button class="heros-choix ${k === choisi ? 'actif' : ''}" data-heros="${k}" style="--c:${h.couleur}"><span>${h.icone}</span><b>${h.nom}</b><small>${h.desc}</small></button>`).join('');
+  for (const b of $$('[data-heros]')) b.addEventListener('click', () => { progression.heros = b.dataset.heros; sauver(); son.jouer('clic'); if (partie) P.changerHeros(partie, b.dataset.heros); choixHeros(); majHeros(true); });
+}
+function deplacerHeros() {
+  if (!partie || !partie.heros || partie.heros.mortT > 0) { son.jouer('refus'); return; }
+  herosDeplace = !herosDeplace; pouvoirArme = null; fermerPanneau();
+  document.body.classList.toggle('vise', herosDeplace);
+  if (herosDeplace) annoncer(P.HEROS[partie.heros.type].nom, 'Touchez la carte pour l’y envoyer');
+}
+function capHeros(i) {
+  if (!partie || !partie.heros) return;
+  if (P.capaciteHeros(partie, i).ok) son.jouer('ameliore'); else son.jouer('refus');
+}
+$('#heros-portrait').addEventListener('click', e => { e.stopPropagation(); son.debloquer(); deplacerHeros(); });
+for (const b of $$('[data-cap]')) b.addEventListener('click', e => { e.stopPropagation(); son.debloquer(); capHeros(+b.dataset.cap); });
+let herosSig = '';
+function majHeros(force = false) {
+  const h = partie && partie.heros;
+  $('#heros-hud').hidden = !h || demo;
+  if (!h) return;
+  const d = P.HEROS[h.type];
+  const sig = h.type + h.niveau;
+  if (force || sig !== herosSig) {
+    herosSig = sig;
+    $('#heros-ic').textContent = d.icone; $('#heros-niv').textContent = h.niveau; $('#heros-nom').textContent = d.nom;
+    $('#heros-hud').style.setProperty('--c', d.couleur);
+    $$('[data-cap]').forEach((b, i) => { b.querySelector('span').textContent = d.caps[i].icone; b.title = `${d.caps[i].nom} (touche ${i ? 'C' : 'W'})`; });
+  }
+  $('#heros-pv').style.width = (h.pv / h.pvMax * 100) + '%';
+  $('#heros-xp').style.width = (h.niveau >= P.HEROS_NIV_MAX ? 100 : h.xp / P.xpPourNiveau(h.niveau) * 100) + '%';
+  $('#heros-portrait').classList.toggle('mort', h.mortT > 0); $('#heros-portrait').classList.toggle('arme', herosDeplace);
+  $$('[data-cap]').forEach((b, i) => { const r = h.cd[i]; b.querySelector('i').style.height = (r > 0 ? r / d.caps[i].recharge * 100 : 0) + '%'; b.classList.toggle('pret', !(r > 0) && !(h.mortT > 0)); });
+}
+
 monde.surTap = (x, y) => {
   if (ecran !== 'jeu' || demo || !partie || pause) return;
   if (partie.phase === 'victoire' || partie.phase === 'defaite') return;
   son.debloquer();
+  if (herosDeplace) {
+    const pt = monde.sol(x, y); herosDeplace = false; document.body.classList.remove('vise');
+    if (pt && P.bougerHeros(partie, pt.x, pt.z)) son.jouer('clic'); else son.jouer('refus');
+    return;
+  }
   if (pouvoirArme) {
     const pt = monde.sol(x, y), k = pouvoirArme; pouvoirArme = null; document.body.classList.remove('vise');
     if (pt && P.lancerPouvoir(partie, k, pt.x, pt.z).ok) son.jouer(k === 'pluie' ? 'explosion' : 'construit'); else son.jouer('refus');
@@ -681,6 +726,9 @@ addEventListener('keydown', e => {
   if (k === 'f') { basculerVitesse(); return; }
   if (k === 'n' || k === 'enter') { e.preventDefault(); lancerVague(); return; }
   if (/^[1-9]$/.test(k) && selection && !selection.tour) { batir(ORDRE_TOURS[+k - 1]); return; }
+  if (k === 'h') { deplacerHeros(); return; }
+  if (k === 'w') { capHeros(0); return; }
+  if (k === 'c') { capHeros(1); return; }
   if (k === 'a') { armer('pluie'); return; }
   if (k === 'z') { armer('gardiens'); return; }
   if (k === 'u') ameliorerSelection();

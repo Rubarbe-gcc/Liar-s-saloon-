@@ -1,3 +1,4 @@
+const HEROS_COUL = { chevalier: '#5a8cff', archere: '#5aff8c', mage: '#ffb347', meca: '#c8c8d8' };
 /**
  * REMPART — le monde en 3D : terrain en relief, décor, emplacements, Cœur
  * d'Ambre, portails, ciel ; et la mise en scène de la partie (tours,
@@ -7,7 +8,7 @@
 import * as THREE from '../../../vendor/three/three.module.min.js';
 import { TOURS, ALTITUDE } from '../../../shared/rempart/donnees.js';
 import { makeRng } from '../../../shared/hasard.js';
-import { creerGarde, creerTour, animerTour, creerEnnemi, animerEnnemi, libererEnnemi, piece, cyl, boite, octa, boule, cone, mat, lueur, OR, GLACE } from './modeles3d.js';
+import { creerHeros3d, creerGarde, creerTour, animerTour, creerEnnemi, animerEnnemi, libererEnnemi, piece, cyl, boite, octa, boule, cone, mat, lueur, OR, GLACE } from './modeles3d.js';
 import { creerEffets } from './effets3d.js';
 import { creerCamera } from './camera.js';
 
@@ -164,6 +165,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
   let hauteur = () => 0;
   let socles = [], capteurs = [], base = null, portails = [], eau = null, nuages = [], feuillages = [];
   const vuesTours = new Map(), vuesEnnemis = new Map(), vuesProj = new Map(), vuesMines = new Map(), vuesRenforts = new Map();
+  let vueHeros = null; // { type, m, fond, barre }
   const gMine = new THREE.CylinderGeometry(0.16, 0.2, 0.08, 8), mMine = new THREE.MeshStandardMaterial({ color: '#4a4030', metalness: 0.6, roughness: 0.4, flatShading: true });
   const gVoyant = new THREE.SphereGeometry(0.045, 6, 4), mVoyant = new THREE.MeshBasicMaterial({ color: '#ff3a1a' });
   const reserveProj = {};
@@ -489,7 +491,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
     for (const v of vuesEnnemis.values()) { niveau.remove(v.m.groupe); libererEnnemi(v.m); }
     for (const v of vuesProj.values()) rendreProj(v);
     for (const m of vuesMines.values()) scene.remove(m);
-    for (const g of vuesRenforts.values()) niveau.remove(g); vuesTours.clear(); vuesEnnemis.clear(); vuesProj.clear(); vuesMines.clear(); vuesRenforts.clear();
+    if (vueHeros) { niveau.remove(vueHeros.m); vueHeros = null; } for (const g of vuesRenforts.values()) niveau.remove(g); vuesTours.clear(); vuesEnnemis.clear(); vuesProj.clear(); vuesMines.clear(); vuesRenforts.clear();
     effets.vider();
     if (niveau) scene.remove(niveau);
     for (const j of jetables) j.dispose?.();
@@ -635,6 +637,25 @@ export function creerMonde(canvas, { mobile = false } = {}) {
       if (Math.random() < dt * 4) effets.gerbe(g.x, 0.6, g.z, { n: 1, couleurs: ['#ffd36a'], vitesse: 0.4, haut: 0.8, vie: 0.5, taille: 0.08 });
     }
     for (const [id, gm] of vuesRenforts) if (!vusR.has(id)) { niveau.remove(gm); vuesRenforts.delete(id); }
+
+    // Le héros
+    const h = p.heros;
+    if (h && (!vueHeros || vueHeros.type !== h.type)) {
+      if (vueHeros) niveau.remove(vueHeros.m);
+      const HC = HEROS_COUL[h.type] || '#ffffff', m = creerHeros3d(h.type, HC);
+      const fond = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.07), new THREE.MeshBasicMaterial({ color: '#111', depthTest: false })), barre = new THREE.Mesh(new THREE.PlaneGeometry(0.58, 0.05), new THREE.MeshBasicMaterial({ color: HC, depthTest: false }));
+      fond.renderOrder = barre.renderOrder = 20; fond.position.y = barre.position.y = 1.05; barre.position.z = 0.001; m.add(fond, barre); niveau.add(m);
+      vueHeros = { type: h.type, m, fond, barre };
+    }
+    if (vueHeros && h) {
+      const vm = vueHeros.m; vm.visible = !(h.mortT > 0);
+      vm.position.x += (h.x - vm.position.x) * Math.min(1, dt * 12); vm.position.z += (h.z - vm.position.z) * Math.min(1, dt * 12);
+      vm.position.y = h.but ? Math.abs(Math.sin(temps * 9)) * 0.05 : 0;
+      vm.rotation.y += (Math.atan2(Math.sin(h.angle - vm.rotation.y), Math.cos(h.angle - vm.rotation.y))) * Math.min(1, dt * 10);
+      vueHeros.fond.quaternion.copy(camera.quaternion); vueHeros.barre.quaternion.copy(camera.quaternion);
+      vueHeros.fond.quaternion.premultiply(vm.quaternion.clone().invert()); vueHeros.barre.quaternion.copy(vueHeros.fond.quaternion);
+      const f = Math.max(0.001, h.pv / h.pvMax); vueHeros.barre.scale.x = f; vueHeros.barre.position.x = -0.29 * (1 - f);
+    } else if (vueHeros && !h) { niveau.remove(vueHeros.m); vueHeros = null; }
 
     // Rouilleux
     vues.clear();
@@ -827,6 +848,19 @@ export function creerMonde(canvas, { mobile = false } = {}) {
           effets.gerbe(e.x, 0.1, e.z, { n: 14, couleurs: ['#6a5040', '#8a7058', '#4a3a2a'], vitesse: 1.8, haut: 2, vie: 0.8, taille: 0.12, grav: 8, additif: false, sol: true });
           effets.gerbe(e.x, 0.2, e.z, { n: 5, couleurs: ['#8a7a68'], vitesse: 0.5, haut: 1, vie: 1, taille: 0.4, croit: 2, additif: false, alpha: 0.5 });
           break;
+        case 'herosTir': {
+          const c = HEROS_COUL[e.type] || '#fff';
+          if (e.type === 'mage') { effets.gerbe(e.x1, 0.4, e.z1, { n: 14, couleurs: ['#fff2a8', c], vitesse: 2.4, haut: 1, vie: 0.4, taille: 0.18 }); effets.onde(e.x1, 0.08, e.z1, { couleur: c, r1: e.zone || 0.8, vie: 0.3 }); }
+          else if (e.type === 'chevalier') effets.gerbe(e.x1, 0.35, e.z1, { n: 6, couleurs: ['#ffffff', c], vitesse: 1.6, haut: 0.6, vie: 0.25, taille: 0.1 });
+          else effets.eclair([{ x: e.x, y: 0.55, z: e.z }, { x: e.x1, y: 0.35, z: e.z1 }], { coeur: '#ffffff', halo: c, ampl: 0.01, vie: 0.12 });
+          break;
+        }
+        case 'herosCap': { const c = HEROS_COUL[e.type] || '#fff'; effets.onde(e.x, 0.1, e.z, { couleur: c, r1: Math.max(1, e.rayon), vie: 0.5 }); effets.gerbe(e.x, 0.5, e.z, { n: 30, couleurs: ['#ffffff', c], vitesse: 3 + e.rayon, haut: 1.5, vie: 0.6, taille: 0.2 }); break; }
+        case 'herosVolee': for (const q of e.cibles) effets.eclair([{ x: e.x, y: 0.6, z: e.z }, { x: q.x, y: 0.35, z: q.z }], { coeur: '#ffffff', halo: '#5aff8c', ampl: 0.01, vie: 0.2 }); break;
+        case 'herosTrait': effets.eclair([{ x: e.x, y: 0.6, z: e.z }, { x: e.x1, y: 0.4, z: e.z1 }], { coeur: '#ffffff', halo: '#5aff8c', ampl: 0.03, vie: 0.35 }); effets.gerbe(e.x1, 0.4, e.z1, { n: 20, couleurs: ['#ffffff', '#5aff8c'], vitesse: 3, vie: 0.5 }); break;
+        case 'herosNiveau': effets.gerbe(e.x, 0.6, e.z, { n: 40, couleurs: ['#fff2a8', '#ffd36a', '#ffffff'], vitesse: 2.5, haut: 3, vie: 0.9, taille: 0.18 }); effets.onde(e.x, 0.1, e.z, { couleur: '#ffd36a', r1: 1.6, vie: 0.7 }); break;
+        case 'herosTombe': effets.gerbe(e.x, 0.4, e.z, { n: 24, couleurs: ['#6a625a', '#9a8a7a'], vitesse: 1.6, haut: 1.2, vie: 0.9, taille: 0.25, additif: false, alpha: 0.7 }); break;
+        case 'herosRevient': effets.onde(e.x, 0.1, e.z, { couleur: '#ffd36a', r1: 1.4, vie: 0.6 }); break;
         case 'pluieAnnonce':
           effets.onde(e.x, 0.1, e.z, { couleur: '#ffd36a', r1: e.rayon, vie: 0.9 });
           for (let i = 0; i < 14; i++) { const a = Math.random() * 6.28, d = Math.random() * e.rayon; effets.gerbe(e.x + Math.cos(a) * d, 6 + Math.random() * 2, e.z + Math.sin(a) * d, { n: 2, couleurs: ['#fff2a8', '#ffb347'], vitesse: 0.3, haut: -9, vie: 0.8, taille: 0.22, grav: 6 }); }

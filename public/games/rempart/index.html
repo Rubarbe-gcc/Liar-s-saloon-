@@ -130,6 +130,12 @@
   <div class="boss" id="boss" hidden><span id="boss-nom"></span><div class="boss-jauge"><i id="boss-pv"></i></div></div>
   <div class="annonce" id="annonce" aria-live="polite"></div>
   <div class="nouveau" id="nouveau" hidden></div>
+  <div class="heros-hud" id="heros-hud" hidden>
+    <button class="heros-portrait" id="heros-portrait" title="Déplacer le héros (touche H) : puis touchez la carte"><span id="heros-ic">🛡️</span><b id="heros-niv">1</b></button>
+    <div class="heros-infos"><small id="heros-nom"></small><div class="heros-jauge pv"><i id="heros-pv"></i></div><div class="heros-jauge xp"><i id="heros-xp"></i></div></div>
+    <button class="pouvoir petit" data-cap="0" title="Capacité (touche W)"><span>💥</span><i></i><small>W</small></button>
+    <button class="pouvoir petit" data-cap="1" title="Capacité (touche C)"><span>✨</span><i></i><small>C</small></button>
+  </div>
   <div class="pouvoirs" id="pouvoirs">
     <button class="pouvoir" data-pouvoir="pluie" title="Pluie d’Ambre (touche A) : touchez la carte pour viser"><span>☄️</span><i></i><small>A</small></button>
     <button class="pouvoir" data-pouvoir="gardiens" title="Gardiens d’Ambre (touche Z) : touchez près du chemin"><span>🛡️</span><i></i><small>Z</small></button>
@@ -150,6 +156,7 @@
     <h2 id="intro-nom"></h2>
     <p id="intro-texte"></p>
     <div class="intro-infos" id="intro-infos"></div>
+    <div class="choix-heros" id="choix-heros"></div>
     <button class="btn or grand" id="b-postes"><b>À vos postes !</b></button>
   </div>
 </div>

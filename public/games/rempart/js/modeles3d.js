@@ -810,4 +810,42 @@ export function libererEnnemi(m) {
 
 /* ============================================================ DÉCOR */
 
+/** Les héros (plus grands que les gardes, chacun sa silhouette ; un anneau lumineux sous les pieds). */
+export function creerHeros3d(type, couleur) {
+  const g = new THREE.Group(), coul = mat('heros' + type, { color: couleur }), peau = mat('peau', { color: '#e8c39a' });
+  piece(geo('anneauHeros', () => new THREE.RingGeometry(0.32, 0.4, 28).rotateX(-Math.PI / 2)), lueur(couleur, 1.4), 0, 0.03, 0, g);
+  if (type === 'chevalier') {
+    piece(geo('capsHeros', () => new THREE.CapsuleGeometry(0.14, 0.26, 4, 10)), METAL, 0, 0.32, 0, g);
+    piece(boite(0.3, 0.12, 0.2), coul, 0, 0.44, 0, g);
+    piece(boule(0.12, 10, 8), mat('casqueHeros', { color: '#d8dce8', metalness: 0.8, roughness: 0.3 }), 0, 0.64, 0, g);
+    piece(boite(0.02, 0.1, 0.16), coul, 0, 0.78, 0, g);
+    piece(boite(0.22, 0.3, 0.04), coul, -0.17, 0.36, 0.13, g).rotation.y = 0.3;
+    piece(cone(0.06, 0.06, 4), OR, -0.17, 0.4, 0.16, g).rotation.x = Math.PI / 2;
+    const ep = piece(boite(0.03, 0.42, 0.02), mat('lame', { color: '#e8eef8', metalness: 0.9, roughness: 0.2 }), 0.2, 0.42, 0.06, g); ep.rotation.z = -0.4;
+    piece(boite(0.32, 0.4, 0.02), coul, 0, 0.36, -0.13, g).rotation.x = 0.15;
+  } else if (type === 'archere') {
+    piece(cone(0.17, 0.5, 8), coul, 0, 0.27, 0, g);
+    piece(boule(0.09, 10, 8), peau, 0, 0.58, 0, g);
+    piece(cone(0.12, 0.22, 8), coul, 0, 0.68, -0.02, g);
+    const arc = piece(geo('arcHeros', () => new THREE.TorusGeometry(0.22, 0.012, 4, 16, Math.PI)), BOIS, 0.17, 0.42, 0.08, g); arc.rotation.set(0, Math.PI / 2, Math.PI / 2);
+    piece(cyl(0.035, 0.03, 0.28, 6), CUIVRE, -0.07, 0.48, -0.12, g).rotation.x = 0.3;
+  } else if (type === 'mage') {
+    piece(cone(0.2, 0.56, 10), coul, 0, 0.3, 0, g);
+    piece(boule(0.085, 10, 8), peau, 0, 0.63, 0, g);
+    piece(cone(0.14, 0.34, 8), mat('chapeauMage', { color: '#5a2a8a' }), 0, 0.85, 0, g).rotation.z = 0.15;
+    piece(cyl(0.015, 0.015, 0.75, 5), BOIS, 0.19, 0.38, 0.05, g);
+    piece(octa(0.07), lueur('#ffcf6a', 2), 0.19, 0.8, 0.05, g);
+  } else {
+    piece(geo('capsHeros', () => new THREE.CapsuleGeometry(0.14, 0.26, 4, 10)), mat('salopette', { color: '#5a6a8a' }), 0, 0.32, 0, g);
+    piece(boule(0.1, 10, 8), peau, 0, 0.6, 0, g);
+    piece(boite(0.2, 0.05, 0.04), lueur('#7fe8ff', 1.6), 0, 0.63, 0.08, g);
+    piece(boite(0.2, 0.24, 0.12), METAL, 0, 0.4, -0.14, g);
+    piece(cyl(0.008, 0.008, 0.3, 4), METAL_SOMBRE, 0.06, 0.6, -0.16, g);
+    piece(boule(0.025, 6, 4), lueur('#ff5a3a', 2), 0.06, 0.76, -0.16, g);
+    piece(boite(0.04, 0.3, 0.04), CUIVRE, 0.2, 0.32, 0.06, g).rotation.z = -0.5;
+  }
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  return g;
+}
+
 export { piece, cyl, boite, boule, octa, cone, tore, mat, lueur, OR, METAL, CUIVRE, GLACE };

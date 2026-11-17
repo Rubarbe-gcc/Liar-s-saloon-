@@ -576,3 +576,22 @@ test('pouvoirs : Pluie d’Ambre (dégâts de zone, recharge) et Gardiens d’Am
   assert.equal(p.renforts.length, 0, 'les gardiens repartent');
   assert.ok(p.ennemis.every(o => !o.bloquePar || o.bloquePar.pv > 0));
 });
+
+test('héros : se déplace, se bat, gagne des niveaux, capacités en recharge, revient au Cœur', () => {
+  for (const type of Object.keys(P.HEROS)) {
+    const p = P.creerPartie(1, { graine: 4, heros: type });
+    assert.ok(p.heros && p.heros.niveau === 1);
+    const q = P.surChemin(p.carte.chemins[0], 8);
+    P.lancerVague(p); P.bougerHeros(p, q.x, q.z);
+    avancer(p, 30);
+    assert.ok(p.stats.tues > 0, type + ' détruit des Rouilleux');
+    assert.ok(p.heros.niveau > 1 || p.heros.xp > 0, type + ' gagne de l’expérience');
+    const r = P.capaciteHeros(p, 1);
+    if (r.ok) assert.equal(P.capaciteHeros(p, 1).ok, false, 'en recharge');
+  }
+  const p = P.creerPartie(1, { graine: 4, heros: 'chevalier' });
+  p.heros.pv = 0.0001; P.lancerVague(p);
+  const q = P.surChemin(p.carte.chemins[0], 3); P.bougerHeros(p, q.x, q.z); avancer(p, 40);
+  assert.ok(p.heros.mortT > 0 || p.heros.pv > 0);
+  const sans = P.creerPartie(1, { graine: 4 }); assert.equal(sans.heros, undefined, 'sans héros par défaut (bot, équilibre)');
+});

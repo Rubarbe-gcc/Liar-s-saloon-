@@ -140,13 +140,13 @@ export function surChemin(ch, d, decal = 0) {
  * @param {number}  [o.graine]
  * @param {boolean} [o.sansFin]  mode sans fin : toutes les tours, des vagues générées à l'infini
  */
-export function creerPartie(id, { graine = 1, sansFin = false, ameliorations = {} } = {}) {
+export function creerPartie(id, { graine = 1, sansFin = false, ameliorations = {}, heros = null } = {}) {
   let def = trouverNiveau(id);
   if (!def) throw new Error(`niveau inconnu : ${id}`);
   if (sansFin) def = { ...def, tours: ORDRE_TOURS.slice(), force: def.force * SANS_FIN.force };
   const carte = analyserCarte(def.carte);
   carte.murs = !!def.murs;
-  return {
+  const p = {
     niveau: id, def, carte, rng: makeRng(graine), graine, sansFin,
     t: 0, or: Math.round(def.or * FACTEUR_OR_DEPART * meta(ameliorations).or), vies: def.vies + meta(ameliorations).vies, viesMax: def.vies + meta(ameliorations).vies, meta: meta(ameliorations),
     vague: 0, totalVagues: sansFin ? Infinity : def.vagues.length,
@@ -155,6 +155,8 @@ export function creerPartie(id, { graine = 1, sansFin = false, ameliorations = {
     prochainId: 1, evts: [], phares: [], mines: [],
     stats: { tues: 0, fuites: 0, orGagne: 0, bonus: 0, tirs: 0, degats: 0 },
   };
+  if (heros) p.heros = creerHeros(p, heros);
+  return p;
 }
 
 /* ------------------------------------------------------------ sans fin */
@@ -978,6 +980,115 @@ function majPouvoirs(p) {
   p.renforts = p.renforts.filter(r => r.t > 0);
 }
 
+/* ------------------------------------------------------------ le héros */
+/**
+ * Un héros par partie (choisi avant le lieu) : on le déplace sur la carte, il se bat seul,
+ * gagne de l'expérience (les Rouilleux détruits près de lui) et des niveaux (1 à 10),
+ * a deux capacités avec recharge, et revient au Cœur 15 s après être tombé.
+ * creerPartie(id, { heros: 'chevalier' | 'archere' | 'mage' | 'meca' }).
+ */
+export const HEROS = {
+  chevalier: { nom: 'Bran le Bouclier', icone: '🛡️', couleur: '#5a8cff', desc: 'Au corps à corps : il bloque les Rouilleux et encaisse.', pv: 650, degats: 30, cadence: 1.2, portee: 0.9, vitesse: 2.2, bloque: true,
+    caps: [{ nom: 'Coup de bouclier', icone: '💥', recharge: 14, t: 'choc', rayon: 1.6, degats: 70, etourdit: 1.6 }, { nom: 'Second souffle', icone: '❤️‍🩹', recharge: 35, t: 'soin', part: 0.6 }] },
+  archere: { nom: 'Ysa la Flèche', icone: '🏹', couleur: '#5aff8c', desc: 'Longue portée, touche les volants, très rapide.', pv: 340, degats: 34, cadence: 1.7, portee: 3.3, vitesse: 2.8, air: true,
+    caps: [{ nom: 'Volée', icone: '🎯', recharge: 12, t: 'volee', n: 8, degats: 45 }, { nom: 'Flèche de cœur', icone: '🏹', recharge: 22, t: 'trait', degats: 420 }] },
+  mage: { nom: 'Lumen, mage d’ambre', icone: '🔮', couleur: '#ffb347', desc: 'Ses éclats explosent sur une zone ; ses sorts gèlent et brûlent.', pv: 300, degats: 42, cadence: 0.8, portee: 2.9, vitesse: 2.2, air: true, zone: 0.9,
+    caps: [{ nom: 'Nova d’ambre', icone: '✨', recharge: 16, t: 'nova', rayon: 2.3, degats: 170 }, { nom: 'Prison de résine', icone: '🧊', recharge: 24, t: 'gel', rayon: 1.9, duree: 3.5 }] },
+  meca: { nom: 'Pivot le Mécano', icone: '🔧', couleur: '#c8c8d8', desc: 'Tire vite, pose des mines et électrise les Rouilleux autour de lui.', pv: 430, degats: 16, cadence: 3, portee: 2.3, vitesse: 2.4, air: true,
+    caps: [{ nom: 'Pluie de mines', icone: '💣', recharge: 18, t: 'mines', n: 5, degats: 90, rayon: 0.9 }, { nom: 'Décharge', icone: '⚡', recharge: 20, t: 'choc', rayon: 2.1, degats: 110, etourdit: 1 }] },
+};
+export const HEROS_NIV_MAX = 10;
+export const xpPourNiveau = n => Math.round(60 * n ** 1.6); // XP pour passer du niveau n au suivant
+const forceHeros = h => 1 + 0.12 * (h.niveau - 1);
+function creerHeros(p, type) {
+  const d = HEROS[type]; if (!d) return null;
+  const x = p.carte.base.x, z = p.carte.base.z;
+  return { type, id: p.prochainId++, x, z, but: null, pv: d.pv, pvMax: d.pv, niveau: 1, xp: 0, recharge: 0, mortT: 0, cible: null, cd: [4, 8], angle: 0 };
+}
+/** Change de héros avant la première vague. */
+export function changerHeros(p, type) { if (p.vague > 0 || !HEROS[type]) return false; p.heros = creerHeros(p, type); return true; }
+/** Envoie le héros en (x, z) (dans la carte). */
+export function bougerHeros(p, x, z) {
+  const h = p.heros; if (!h || h.mortT > 0) return false;
+  h.but = { x: Math.max(0.3, Math.min(p.carte.W - 0.3, x)), z: Math.max(0.3, Math.min(p.carte.H - 0.3, z)) };
+  if (h.cible && h.cible.bloquePar === h) h.cible.bloquePar = null;
+  h.cible = null;
+  return true;
+}
+function gagnerXp(p, h, xp) {
+  if (h.niveau >= HEROS_NIV_MAX) return;
+  h.xp += xp;
+  while (h.niveau < HEROS_NIV_MAX && h.xp >= xpPourNiveau(h.niveau)) {
+    h.xp -= xpPourNiveau(h.niveau); h.niveau++;
+    const avant = h.pvMax; h.pvMax = Math.round(HEROS[h.type].pv * forceHeros(h)); h.pv += h.pvMax - avant;
+    evt(p, { k: 'herosNiveau', niveau: h.niveau, x: h.x, z: h.z });
+  }
+}
+/** Frappe e et compte l'expérience si le Rouilleux tombe. */
+function frapperHeros(p, h, e, degats) { if (e.mort) return; infliger(p, e, degats, {}); if (e.mort) gagnerXp(p, h, (e.def.or || 5) * (e.def.boss ? 2 : 1) + 4); }
+const autour = (p, x, z, r, air = true) => p.ennemis.filter(e => !e.mort && !e.sous && (air || !enVol(e)) && (e.x - x) ** 2 + (e.z - z) ** 2 <= r * r);
+/** Lance la capacité i (0 ou 1) du héros. */
+export function capaciteHeros(p, i) {
+  const h = p.heros; if (!h || h.mortT > 0 || h.cd[i] > 0 || p.phase === 'victoire' || p.phase === 'defaite') return { ok: false };
+  const d = HEROS[h.type], c = d.caps[i], f = forceHeros(h);
+  if (!c) return { ok: false };
+  if (c.t === 'choc' || c.t === 'nova') for (const e of autour(p, h.x, h.z, c.rayon, c.t === 'nova')) { frapperHeros(p, h, e, c.degats * f); if (c.etourdit && !e.mort) etourdir(e, c.etourdit); }
+  else if (c.t === 'soin') h.pv = Math.min(h.pvMax, h.pv + h.pvMax * c.part);
+  else if (c.t === 'volee') { const l = autour(p, h.x, h.z, d.portee + 0.5).sort((a, b) => b.d - a.d).slice(0, c.n); for (const e of l) frapperHeros(p, h, e, c.degats * f); evt(p, { k: 'herosVolee', x: h.x, z: h.z, cibles: l.map(e => ({ x: e.x, z: e.z })) }); }
+  else if (c.t === 'trait') { const e = autour(p, h.x, h.z, d.portee + 1).sort((a, b) => b.pv - a.pv)[0]; if (!e) return { ok: false }; frapperHeros(p, h, e, c.degats * f); evt(p, { k: 'herosTrait', x: h.x, z: h.z, x1: e.x, z1: e.z }); }
+  else if (c.t === 'gel') for (const e of autour(p, h.x, h.z, c.rayon)) ralentir(e, 0.7, c.duree);
+  else if (c.t === 'mines') for (let k = 0; k < c.n; k++) {
+    let best = null, d2min = Infinity; const a = (k / c.n) * Math.PI * 2, tx = h.x + Math.cos(a) * 1.4, tz = h.z + Math.sin(a) * 1.4;
+    for (const ch of p.carte.chemins) for (let dd = 1; dd < ch.total - 0.5; dd += 0.5) { const q = surChemin(ch, dd); const d2 = (q.x - tx) ** 2 + (q.z - tz) ** 2; if (d2 < d2min) { d2min = d2; best = q; } }
+    if (best && d2min < 9) { const m = { id: p.prochainId++, tour: -1, x: best.x, z: best.z, degats: c.degats * f, rayon: c.rayon, arme: 0.4 }; p.mines.push(m); evt(p, { k: 'mine', id: m.id, tour: -1, x: m.x, z: m.z }); }
+  }
+  h.cd[i] = c.recharge;
+  evt(p, { k: 'herosCap', type: h.type, t: c.t, i, x: h.x, z: h.z, rayon: c.rayon || 0 });
+  return { ok: true };
+}
+function majHeros(p) {
+  const h = p.heros; if (!h) return;
+  const d = HEROS[h.type], f = forceHeros(h);
+  h.cd = h.cd.map(c => Math.max(0, c - DT));
+  if (h.mortT > 0) { if ((h.mortT -= DT) <= 0) { h.mortT = 0; h.pv = h.pvMax; h.x = p.carte.base.x; h.z = p.carte.base.z; h.but = null; evt(p, { k: 'herosRevient', x: h.x, z: h.z }); } return; }
+  // déplacement
+  if (h.but) {
+    const dx = h.but.x - h.x, dz = h.but.z - h.z, dist = Math.hypot(dx, dz), pasD = d.vitesse * DT;
+    if (dist <= pasD) { h.x = h.but.x; h.z = h.but.z; h.but = null; } else { h.x += dx / dist * pasD; h.z += dz / dist * pasD; h.angle = Math.atan2(dx, dz); }
+    if (h.but) return; // il marche : il ne se bat pas
+  }
+  // cible : le Rouilleux le plus avancé à portée
+  let e = h.cible;
+  if (!e || e.mort || e.sous || (!d.air && enVol(e)) || (e.x - h.x) ** 2 + (e.z - h.z) ** 2 > (d.portee + 0.4) ** 2) {
+    if (e && e.bloquePar === h) e.bloquePar = null;
+    e = h.cible = null;
+    let best = -1;
+    for (const o of p.ennemis) { if (o.mort || o.sous || !o.revele || (!d.air && enVol(o))) continue; if ((o.x - h.x) ** 2 + (o.z - h.z) ** 2 > d.portee ** 2) continue; if (o.d > best) { best = o.d; e = o; } }
+    h.cible = e;
+    if (e && d.bloque && !e.def.boss && !e.bloquePar && !enVol(e)) e.bloquePar = h;
+  }
+  if (e) {
+    h.angle = Math.atan2(e.x - h.x, e.z - h.z);
+    if (d.bloque) { const dx = e.x - h.x, dz = e.z - h.z, dd = Math.hypot(dx, dz); if (dd > 0.4) { h.x += dx / dd * Math.min(dd - 0.4, 2.5 * DT); h.z += dz / dd * Math.min(dd - 0.4, 2.5 * DT); } }
+    if ((h.recharge -= DT) <= 0) {
+      h.recharge = 1 / d.cadence;
+      if (d.zone) { for (const o of autour(p, e.x, e.z, d.zone)) frapperHeros(p, h, o, d.degats * f); evt(p, { k: 'herosTir', type: h.type, x: h.x, z: h.z, x1: e.x, z1: e.z, zone: d.zone }); }
+      else { frapperHeros(p, h, e, d.degats * f); evt(p, { k: 'herosTir', type: h.type, x: h.x, z: h.z, x1: e.x, z1: e.z }); }
+    }
+  }
+  // les coups reçus : celui qu'il bloque, et ceux qui le frôlent
+  for (const o of p.ennemis) {
+    if (o.mort || o.sous || enVol(o)) continue;
+    const proche = o.bloquePar === h || (o.x - h.x) ** 2 + (o.z - h.z) ** 2 < 0.45 ** 2;
+    if (proche) h.pv -= (o.def.boss ? 45 : 6 + 4 * o.def.vies + o.def.armure) * p.def.force * DT * (o.bloquePar === h ? 1 : 0.5);
+  }
+  if (!(h.pv > 0) || h.pv <= 0) {
+    for (const o of p.ennemis) if (o.bloquePar === h) o.bloquePar = null;
+    h.cible = null; h.mortT = 15; h.pv = 0;
+    evt(p, { k: 'herosTombe', x: h.x, z: h.z });
+  } else if (!e && !h.but) h.pv = Math.min(h.pvMax, h.pv + h.pvMax * 0.02 * DT); // il souffle quand rien ne se passe
+}
+
 export function pas(p) {
   if (p.phase === 'victoire' || p.phase === 'defaite') return;
   p.t += DT;
@@ -992,6 +1103,7 @@ export function pas(p) {
   majProjectiles(p);
   majMines(p);
   majPouvoirs(p);
+  majHeros(p);
   p.ennemis = p.ennemis.filter(e => !e.mort);
 
   if (p.vies <= 0) {
