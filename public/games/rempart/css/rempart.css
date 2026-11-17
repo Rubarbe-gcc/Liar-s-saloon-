@@ -289,3 +289,14 @@ body.secousse{animation:secousse .45s;}
 #pouces{position:fixed;inset:0;pointer-events:none;z-index:60;}
 #pouces span{position:absolute;transform:translate(-50%,-50%) rotate(var(--r,0deg));animation:pouce 1.7s ease-out forwards;filter:drop-shadow(0 4px 10px rgba(0,0,0,.6));}
 @keyframes pouce{0%{opacity:0;transform:translate(-50%,-50%) scale(.2) rotate(var(--r,0deg));}15%{opacity:1;transform:translate(-50%,-50%) scale(1.25) rotate(var(--r,0deg));}30%{transform:translate(-50%,-50%) scale(1) rotate(var(--r,0deg));}80%{opacity:1;}100%{opacity:0;transform:translate(-50%,-90%) scale(.9) rotate(var(--r,0deg));}}
+
+/* ---------- pouvoirs ---------- */
+.pouvoirs{position:absolute;left:12px;bottom:12px;display:flex;gap:8px;z-index:5;}
+.pouvoir{position:relative;width:58px;height:58px;border-radius:50%;border:2px solid #8a6a2a;background:radial-gradient(#3a2a14,#1a120a);overflow:hidden;cursor:pointer;font-size:26px;box-shadow:0 4px 10px rgba(0,0,0,.5);}
+.pouvoir span{position:relative;z-index:2;}
+.pouvoir i{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.65);z-index:3;transition:height .2s linear;}
+.pouvoir small{position:absolute;right:6px;bottom:3px;font-size:10px;color:#ffd36a;z-index:4;font-weight:800;}
+.pouvoir.pret{border-color:#ffd36a;box-shadow:0 0 14px #ffb34788;animation:pretP 1.6s ease-in-out infinite;}
+.pouvoir.arme{border-color:#fff;box-shadow:0 0 22px #fff8;transform:scale(1.1);}
+@keyframes pretP{50%{box-shadow:0 0 22px #ffd36acc;}}
+body.vise #s-jeu canvas{cursor:crosshair;}

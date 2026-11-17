@@ -163,7 +163,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
   let carte = null, amb = AMBIANCES.printemps;
   let hauteur = () => 0;
   let socles = [], capteurs = [], base = null, portails = [], eau = null, nuages = [], feuillages = [];
-  const vuesTours = new Map(), vuesEnnemis = new Map(), vuesProj = new Map(), vuesMines = new Map();
+  const vuesTours = new Map(), vuesEnnemis = new Map(), vuesProj = new Map(), vuesMines = new Map(), vuesRenforts = new Map();
   const gMine = new THREE.CylinderGeometry(0.16, 0.2, 0.08, 8), mMine = new THREE.MeshStandardMaterial({ color: '#4a4030', metalness: 0.6, roughness: 0.4, flatShading: true });
   const gVoyant = new THREE.SphereGeometry(0.045, 6, 4), mVoyant = new THREE.MeshBasicMaterial({ color: '#ff3a1a' });
   const reserveProj = {};
@@ -489,7 +489,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
     for (const v of vuesEnnemis.values()) { niveau.remove(v.m.groupe); libererEnnemi(v.m); }
     for (const v of vuesProj.values()) rendreProj(v);
     for (const m of vuesMines.values()) scene.remove(m);
-    vuesTours.clear(); vuesEnnemis.clear(); vuesProj.clear(); vuesMines.clear();
+    for (const g of vuesRenforts.values()) niveau.remove(g); vuesTours.clear(); vuesEnnemis.clear(); vuesProj.clear(); vuesMines.clear(); vuesRenforts.clear();
     effets.vider();
     if (niveau) scene.remove(niveau);
     for (const j of jetables) j.dispose?.();
@@ -623,6 +623,18 @@ export function creerMonde(canvas, { mobile = false } = {}) {
       for (const f of v.faisceaux) niveau.remove(f);
       vuesTours.delete(id);
     }
+
+    // Les Gardiens d'Ambre (pouvoir) : leurs gardes, sans tour
+    const vusR = new Set();
+    for (const r of p.renforts || []) for (const g of r.tour.gardes) {
+      vusR.add(g.id); let gm = vuesRenforts.get(g.id);
+      if (!gm) { gm = creerGarde(); gm.scale.setScalar(1.15); niveau.add(gm); vuesRenforts.set(g.id, gm); effets.gerbe(g.x, 0.4, g.z, { n: 16, couleurs: ['#ffe9a0', '#ffc24a'], vitesse: 2, haut: 1.4, vie: 0.6, taille: 0.15 }); }
+      gm.visible = g.pv > 0; if (!gm.visible) continue;
+      gm.position.set(g.x, g.cible ? Math.abs(Math.sin(temps * 10 + g.id)) * 0.05 : 0, g.z);
+      if (g.cible) gm.rotation.y = Math.atan2(g.cible.x - g.x, g.cible.z - g.z);
+      if (Math.random() < dt * 4) effets.gerbe(g.x, 0.6, g.z, { n: 1, couleurs: ['#ffd36a'], vitesse: 0.4, haut: 0.8, vie: 0.5, taille: 0.08 });
+    }
+    for (const [id, gm] of vuesRenforts) if (!vusR.has(id)) { niveau.remove(gm); vuesRenforts.delete(id); }
 
     // Rouilleux
     vues.clear();
@@ -815,7 +827,15 @@ export function creerMonde(canvas, { mobile = false } = {}) {
           effets.gerbe(e.x, 0.1, e.z, { n: 14, couleurs: ['#6a5040', '#8a7058', '#4a3a2a'], vitesse: 1.8, haut: 2, vie: 0.8, taille: 0.12, grav: 8, additif: false, sol: true });
           effets.gerbe(e.x, 0.2, e.z, { n: 5, couleurs: ['#8a7a68'], vitesse: 0.5, haut: 1, vie: 1, taille: 0.4, croit: 2, additif: false, alpha: 0.5 });
           break;
+        case 'pluieAnnonce':
+          effets.onde(e.x, 0.1, e.z, { couleur: '#ffd36a', r1: e.rayon, vie: 0.9 });
+          for (let i = 0; i < 14; i++) { const a = Math.random() * 6.28, d = Math.random() * e.rayon; effets.gerbe(e.x + Math.cos(a) * d, 6 + Math.random() * 2, e.z + Math.sin(a) * d, { n: 2, couleurs: ['#fff2a8', '#ffb347'], vitesse: 0.3, haut: -9, vie: 0.8, taille: 0.22, grav: 6 }); }
+          break;
+        case 'gardiens':
+          effets.onde(e.x, 0.1, e.z, { couleur: '#ffe9a0', r1: 1.2, vie: 0.6 });
+          break;
         case 'explosion':
+          if (e.pluie) { effets.gerbe(e.x, 0.3, e.z, { n: 40, couleurs: ['#fff2a8', '#ffd36a', '#ff9a2a'], vitesse: 4.5, haut: 2.5, vie: 0.7, taille: 0.3, frein: 0.05 }); effets.onde(e.x, 0.1, e.z, { couleur: '#ffd36a', r1: e.rayon * 1.4, vie: 0.5 }); }
           effets.gerbe(e.x, 0.2, e.z, { n: 26, couleurs: ['#fff2a8', '#ffb347', '#ff6a2a', '#ff3a1a'], vitesse: 3.2 * e.rayon, haut: 1.4, vie: 0.5, taille: 0.3, frein: 0.05, croit: 0.3 });
           effets.gerbe(e.x, 0.3, e.z, { n: 10, couleurs: ['#6a625a', '#4a4440', '#8a8078'], vitesse: 1.2, haut: 1.2, vie: 1.3, taille: 0.45, croit: 2.2, additif: false, alpha: 0.75, frein: 0.4 });
           effets.gerbe(e.x, 0.2, e.z, { n: 8, couleurs: ['#5a4030', '#3a2a20'], vitesse: 3, haut: 2, vie: 1, taille: 0.09, grav: 9, frein: 0.6, additif: false, sol: true });
@@ -946,6 +966,13 @@ export function creerMonde(canvas, { mobile = false } = {}) {
 
   /* --------------------------------------------------------- choix */
   const rayon = new THREE.Raycaster(), ndc = new THREE.Vector2(), plan = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.3), point = new THREE.Vector3();
+  /** Le point du sol sous le pointeur (pour viser un pouvoir). */
+  function sol(cx, cy) {
+    const r = canvas.getBoundingClientRect();
+    ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
+    rayon.setFromCamera(ndc, camera);
+    return rayon.ray.intersectPlane(plan, point) ? { x: point.x, z: point.z } : null;
+  }
   function choisir(cx, cy) {
     const r = canvas.getBoundingClientRect();
     ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1);
@@ -969,7 +996,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
   }
 
   return {
-    charger, rendre, evenements, choisir, projeter, selectionner, montrerPortee,
+    charger, rendre, evenements, choisir, sol, projeter, selectionner, montrerPortee,
     cacherPortee: () => { portee.visible = false; },
     camera: cam, redimensionner,
     set surTap(f) { surTap = f; },

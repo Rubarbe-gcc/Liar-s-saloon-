@@ -252,6 +252,7 @@ function fermerModales() {
 let dernierHUD = {};
 function majHUD(force = false) {
   if (!partie || demo) return;
+  majPouvoirs();
   const p = partie;
   const h = { vies: p.vies, or: p.or, vague: p.sansFin ? `${p.vague} ♾️` : `${p.vague}/${p.totalVagues}` };
   if (force || h.vies !== dernierHUD.vies) $('#h-vies').textContent = h.vies;
@@ -295,9 +296,9 @@ function rejouerAnim(el, cls) {
 
 // ---------- MODE SPÉCIAL ALEX : chambrage (jamais d'insulte) et pouces 👍 ----------
 const CHAMBRE = {
-  vague: ['Alex, accroche-toi, ça va piquer', 'Même un grille-pain défendrait mieux ce Cœur', 'Tu transpires déjà, Alex ?', 'Les Rouilleux ont entendu parler de toi. Ils rigolent.', 'Respire, Alex. Ou pas.', 'Tu veux que j’appelle ta grand-mère pour t’aider ?', 'Allez, encore une petite vague, champion'],
-  fuite: ['Oups. Alex a encore laissé la porte ouverte', 'Il est passé où, ton mur ?', 'Alex, c’est un Cœur, pas un paillasson', 'Ils passent comme au supermarché', 'Joli trou dans la défense, Alex', 'Un de plus. Tu fais exprès ?'],
-  boss: ['Le boss te salue, Alex. Il a faim.', 'Tu le sens venir, celui-là ?', 'Bonne chance. Vraiment. Tu vas en avoir besoin.'],
+  vague: ['Alex, accroche-toi, ça va piquer', 'Même un grille-pain défendrait mieux ce Cœur', 'Tu transpires déjà, Alex ?', 'Les Rouilleux ont entendu parler de toi. Ils rigolent.', 'Respire, Alex. Ou pas.', 'Tu veux que j’appelle ta grand-mère pour t’aider ?', 'Allez, encore une petite vague, champion', 'Alex, espèce de quiche, c’est maintenant que ça se joue', 'Bouge-toi, tête de nœud', 'T’es prêt, gros nul ? Ils arrivent', 'Allez la brêle, montre ce que tu sais faire', 'Même pas peur, Alex ? Menteur.'],
+  fuite: ['Oups. Alex a encore laissé la porte ouverte', 'Il est passé où, ton mur ?', 'Alex, c’est un Cœur, pas un paillasson', 'Ils passent comme au supermarché', 'Joli trou dans la défense, Alex', 'Un de plus. Tu fais exprès ?', 'Boulet !', 'Alex, t’es une vraie brêle', 'Quelle quiche…', 'Tocard ! Il est passé tranquille', 'T’as les mains en mousse ou quoi ?', 'Bravo le manche', 'Pied de chaise, va !', 'Ah le nullos, encore un'],
+  boss: ['Le boss te salue, Alex. Il a faim.', 'Tu le sens venir, celui-là ?', 'Bonne chance. Vraiment. Tu vas en avoir besoin.', 'Celui-là va te manger tout cru, la quiche', 'Prépare les mouchoirs, boulet'],
 };
 const auHasard = l => l[Math.floor(Math.random() * l.length)];
 const estAlex = () => partie && partie.def && partie.def.special;
@@ -499,10 +500,33 @@ function fermerPanneau() {
   monde.selectionner(null);
 }
 
+// ---------- pouvoirs : on arme, puis on touche la carte ----------
+let pouvoirArme = null;
+function armer(k) {
+  if (!partie || demo || partie.phase === 'victoire' || partie.phase === 'defaite') return;
+  if ((partie.pouvoirs || {})[k] > 0) { son.jouer('refus'); return; }
+  pouvoirArme = pouvoirArme === k ? null : k; fermerPanneau();
+  document.body.classList.toggle('vise', !!pouvoirArme);
+  if (pouvoirArme) annoncer(P.POUVOIRS[k].nom, 'Touchez la carte pour viser');
+}
+for (const b of $('[data-pouvoir]')) b.addEventListener('click', e => { e.stopPropagation(); son.debloquer(); armer(b.dataset.pouvoir); });
+function majPouvoirs() {
+  for (const b of $('[data-pouvoir]')) {
+    const k = b.dataset.pouvoir, d = P.POUVOIRS[k], r = partie && partie.pouvoirs ? partie.pouvoirs[k] : d.premier;
+    b.querySelector('i').style.height = (r > 0 ? r / (partie && partie.pouvoirs ? d.recharge : d.premier) * 100 : 0) + '%';
+    b.classList.toggle('pret', !(r > 0)); b.classList.toggle('arme', pouvoirArme === k);
+  }
+}
+
 monde.surTap = (x, y) => {
   if (ecran !== 'jeu' || demo || !partie || pause) return;
   if (partie.phase === 'victoire' || partie.phase === 'defaite') return;
   son.debloquer();
+  if (pouvoirArme) {
+    const pt = monde.sol(x, y), k = pouvoirArme; pouvoirArme = null; document.body.classList.remove('vise');
+    if (pt && P.lancerPouvoir(partie, k, pt.x, pt.z).ok) son.jouer(k === 'pluie' ? 'explosion' : 'construit'); else son.jouer('refus');
+    return;
+  }
   const emp = monde.choisir(x, y);
   if (emp == null) { if (selection) fermerPanneau(); return; }
   son.jouer('clic');
@@ -645,6 +669,8 @@ addEventListener('keydown', e => {
   if (k === 'f') { basculerVitesse(); return; }
   if (k === 'n' || k === 'enter') { e.preventDefault(); lancerVague(); return; }
   if (/^[1-9]$/.test(k) && selection && !selection.tour) { batir(ORDRE_TOURS[+k - 1]); return; }
+  if (k === 'a') { armer('pluie'); return; }
+  if (k === 'z') { armer('gardiens'); return; }
   if (k === 'u') ameliorerSelection();
   if (k === 'x' || k === 'delete' || k === 'backspace') vendreSelection();
   if (k === 't') cibleSelection();

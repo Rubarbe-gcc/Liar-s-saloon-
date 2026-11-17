@@ -904,6 +904,52 @@ function majProjectiles(p) {
 
 /* ------------------------------------------------------------------ pas */
 
+/* ------------------------------------------------------------ pouvoirs du joueur */
+/**
+ * Deux pouvoirs, prêts au bout de « premier » secondes puis toutes les « recharge » secondes :
+ * la Pluie d'Ambre (dégâts de zone là où l'on touche, au sol comme en l'air, après un court délai)
+ * et les Gardiens d'Ambre (des gardes posés sur le chemin le plus proche, qui bloquent puis repartent).
+ */
+export const POUVOIRS = {
+  pluie: { nom: 'Pluie d’Ambre', icone: '☄️', desc: 'Des éclats d’ambre s’abattent là où vous touchez.', recharge: 40, premier: 10, delai: 0.9, rayon: 1.8, degats: 150 },
+  gardiens: { nom: 'Gardiens d’Ambre', icone: '🛡️', desc: 'Trois gardiens bloquent le chemin le plus proche pendant 12 s.', recharge: 30, premier: 6, duree: 12, gardes: 3, pvGarde: 180, degats: 22 },
+};
+const initPouvoirs = p => { if (!p.pouvoirs) { p.pouvoirs = {}; for (const [k, d] of Object.entries(POUVOIRS)) p.pouvoirs[k] = d.premier; p.frappes = []; p.renforts = []; } };
+/** Lance un pouvoir en (x, z). Renvoie { ok } (ok faux s'il se recharge ou si rien n'est possible là). */
+export function lancerPouvoir(p, k, x, z) {
+  initPouvoirs(p);
+  const d = POUVOIRS[k];
+  if (!d || p.pouvoirs[k] > 0 || p.phase === 'victoire' || p.phase === 'defaite') return { ok: false };
+  if (k === 'pluie') { p.frappes.push({ x, z, t: d.delai }); evt(p, { k: 'pluieAnnonce', x, z, rayon: d.rayon }); }
+  else {
+    let best = null, d2min = 3 ** 2;
+    for (const ch of p.carte.chemins) for (let dd = 1; dd < ch.total - 1; dd += 0.25) { const q = surChemin(ch, dd); const d2 = (q.x - x) ** 2 + (q.z - z) ** 2; if (d2 < d2min) { d2min = d2; best = q; } }
+    if (!best) return { ok: false };
+    const tour = { id: p.prochainId++, x: best.x, z: best.z, niveau: 1, branche: null, ralliement: { cle: '1-null', x: best.x, z: best.z }, gardes: [], cible: null };
+    p.renforts.push({ tour, t: d.duree, s: { portee: 3, gardes: d.gardes, pvGarde: d.pvGarde * Math.max(1, p.def.force * 2), degats: d.degats, renfort: 999 } });
+    evt(p, { k: 'gardiens', x: best.x, z: best.z });
+  }
+  p.pouvoirs[k] = d.recharge;
+  return { ok: true };
+}
+function majPouvoirs(p) {
+  initPouvoirs(p);
+  for (const k in p.pouvoirs) if (p.pouvoirs[k] > 0) p.pouvoirs[k] = Math.max(0, p.pouvoirs[k] - DT);
+  for (const fr of p.frappes) {
+    if ((fr.t -= DT) > 0) continue;
+    const d = POUVOIRS.pluie, r2 = d.rayon ** 2;
+    for (const e of p.ennemis.slice()) if (!e.mort && !e.sous && (e.x - fr.x) ** 2 + (e.z - fr.z) ** 2 <= r2) infliger(p, e, d.degats * (e.def.boss ? 0.6 : 1), { demi: true });
+    evt(p, { k: 'explosion', x: fr.x, z: fr.z, rayon: d.rayon, pluie: true });
+  }
+  p.frappes = p.frappes.filter(fr => fr.t > 0);
+  for (const r of p.renforts) {
+    r.t -= DT;
+    majGarnison(p, r.tour, r.s, { d: 0, c: 0 });
+    if (r.t <= 0) for (const g of r.tour.gardes) { if (g.cible && g.cible.bloquePar === g) g.cible.bloquePar = null; g.pv = 0; }
+  }
+  p.renforts = p.renforts.filter(r => r.t > 0);
+}
+
 export function pas(p) {
   if (p.phase === 'victoire' || p.phase === 'defaite') return;
   p.t += DT;
@@ -917,6 +963,7 @@ export function pas(p) {
   majTours(p);
   majProjectiles(p);
   majMines(p);
+  majPouvoirs(p);
   p.ennemis = p.ennemis.filter(e => !e.mort);
 
   if (p.vies <= 0) {

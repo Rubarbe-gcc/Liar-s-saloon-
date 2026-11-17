@@ -560,3 +560,19 @@ test('mode Spécial Alex : lieu hors campagne, 20 vagues, 3 départs, 10 vies', 
   assert.equal(p.totalVagues, 20); assert.equal(p.vies, 10);
   assert.ok(p.carte.chemins.length >= 3 || p.carte.departs.length >= 3, 'trois départs');
 });
+
+test('pouvoirs : Pluie d’Ambre (dégâts de zone, recharge) et Gardiens d’Ambre (bloquent, puis repartent)', () => {
+  const p = P.creerPartie(1, { graine: 2 });
+  P.lancerVague(p);
+  avancer(p, 12);
+  assert.equal(P.lancerPouvoir(p, 'pluie', 0, 0).ok, true);
+  assert.equal(P.lancerPouvoir(p, 'pluie', 0, 0).ok, false, 'en recharge');
+  const e = p.ennemis[0], pv = e.pv;
+  assert.equal(P.lancerPouvoir(p, 'gardiens', e.x, e.z).ok, true);
+  assert.ok(p.renforts.length === 1 && p.renforts[0].tour.gardes.length === 0 || p.renforts[0].tour.gardes.length <= 3);
+  avancer(p, 2);
+  assert.ok(p.renforts[0].tour.gardes.length === 3, 'trois gardiens');
+  avancer(p, 12);
+  assert.equal(p.renforts.length, 0, 'les gardiens repartent');
+  assert.ok(p.ennemis.every(o => !o.bloquePar || o.bloquePar.pv > 0));
+});
