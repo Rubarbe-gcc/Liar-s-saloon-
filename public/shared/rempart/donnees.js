@@ -360,6 +360,32 @@ export const ENNEMIS = {
     pv: 4600, vitesse: 0.4, armure: 8, or: 300, vies: 12, taille: 1.4,
     boss: true, resisteRalenti: 0.6, carapace: { toutes: 10, duree: 3 }, brouille: { rayon: 2.5, toutes: 8, duree: 3 },
   },
+  // Nouveaux Rouilleux (18/11/2026).
+  sapeur: {
+    nom: 'Sapeur', desc: 'Un tonneau de poudre sur pattes. Quand il tombe, il explose et étourdit les tours autour de lui : abattez-le loin de vos tours.',
+    pv: 70, vitesse: 1.3, armure: 1, or: 9, vies: 1, taille: 0.42, explose: { rayon: 1.8, duree: 2.5 },
+  },
+  etendard: {
+    nom: 'Porte-étendard', desc: 'Il brandit la bannière de la Fosse : les Rouilleux autour de lui avancent 35 % plus vite.',
+    pv: 120, vitesse: 1.1, armure: 2, or: 12, vies: 1, taille: 0.5, etendard: { rayon: 2, vitesse: 0.35 },
+  },
+  chapardeur: {
+    nom: 'Chapardeur', desc: 'Un petit voleur très rapide : s’il atteint le Cœur, il emporte aussi 30 pièces d’or.',
+    pv: 48, vitesse: 2.5, armure: 0, or: 5, vies: 1, taille: 0.36, chaparde: 30,
+  },
+  glouton: {
+    nom: 'Glouton', desc: 'Il dévore les carcasses des Rouilleux qui tombent près de lui : il se soigne et grossit. Abattez-le d’abord.',
+    pv: 170, vitesse: 0.9, armure: 2, or: 14, vies: 2, taille: 0.6, devore: { rayon: 1.6, part: 0.35, max: 3 },
+  },
+  libellule: {
+    nom: 'Libellule de cuivre', desc: 'Un volant vif qui esquive un tir sur trois. Les tirs de zone ne la ratent pas.',
+    pv: 55, vitesse: 2.2, armure: 0, or: 7, vies: 1, taille: 0.38, vole: true, esquive: 0.33,
+  },
+  horloger: {
+    nom: 'Le Grand Horloger', desc: 'Un automate géant à balancier. Toutes les 12 secondes, il remonte le temps et retrouve les PV qu’il avait 4 secondes plus tôt : frappez fort juste après.',
+    pv: 4400, vitesse: 0.4, armure: 6, or: 300, vies: 12, taille: 1.4,
+    boss: true, resisteRalenti: 0.6, retour: { toutes: 12, recul: 4 }, ponte: { type: 'chapardeur', n: 2, toutes: 7, seuil: 0.6 },
+  },
 };
 
 // Application du facteur de PV, ennemis et boss.
@@ -368,7 +394,7 @@ for (const e of Object.values(ENNEMIS)) {
   e.or = Math.round(e.or * FACTEUR_OR_ENNEMIS);
 }
 
-export const ORDRE_ENNEMIS = ['rodeur', 'filou', 'cuirasse', 'bourdon', 'grappe', 'grappillon', 'tisseur', 'furtif', 'fouisseur', 'pavois', 'bondisseur', 'dirigeable', 'mue', 'broyeur', 'nuee', 'hydre', 'tete', 'seigneur', 'cliquet', 'bastion', 'reparateur', 'scarabee', 'colosse', 'brouilleur', 'galopin', 'givrin', 'ruche', 'golem'];
+export const ORDRE_ENNEMIS = ['rodeur', 'filou', 'cuirasse', 'bourdon', 'grappe', 'grappillon', 'tisseur', 'furtif', 'fouisseur', 'pavois', 'bondisseur', 'dirigeable', 'mue', 'broyeur', 'nuee', 'hydre', 'tete', 'seigneur', 'cliquet', 'bastion', 'reparateur', 'scarabee', 'colosse', 'brouilleur', 'galopin', 'givrin', 'ruche', 'golem', 'sapeur', 'etendard', 'chapardeur', 'glouton', 'libellule', 'horloger'];
 
 /** Hauteur de vol (en cases). */
 export const ALTITUDE = 1.6;

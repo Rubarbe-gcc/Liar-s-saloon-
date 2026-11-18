@@ -183,7 +183,7 @@ export const SANS_FIN = {
   croissance: 1.07,    // les PV des Rouilleux grimpent de 7 % par vague
   croissanceBoss: 1.04,
   tousLesBoss: 10,     // un boss toutes les 10 vagues
-  boss: ['broyeur', 'nuee', 'hydre', 'colosse', 'golem', 'seigneur'],
+  boss: ['broyeur', 'nuee', 'hydre', 'colosse', 'golem', 'horloger', 'seigneur'],
 };
 
 /** Les Rouilleux qu'on peut croiser à la vague i (de plus en plus variés). */
@@ -370,8 +370,10 @@ function apparaitre(p, type, depart, vague, d = 0, decal = null) {
     sautT: def.saut ? def.saut.toutes * (0.4 + p.rng() * 0.6) : 0, saute: 0, calme: 99, enrage: false,
     brouilleT: def.brouille ? def.brouille.toutes * 0.5 : 0, carapaceT: 0, carapaceCycle: def.carapace ? def.carapace.toutes : 0,
     cloueT: 0, bloquePar: null,
+    retourT: def.retour ? def.retour.toutes : 0, histo: def.retour ? [] : null, histoT: 0,
   };
   if (def.bouclierInitial) e.bouclier = def.bouclierInitial * echelle;
+  e.base = pvMax; e.gros = 1;
   const p2 = surChemin(ch, d, e.decal);
   e.x = e.px = p2.x; e.z = e.pz = p2.z;
   p.ennemis.push(e);
@@ -417,6 +419,28 @@ function mourir(p, e) {
   p.stats.tues++;
   p.stats.orGagne += gain;
   evt(p, { k: 'mort', id: e.id, type: e.type, x: e.x, y: e.y, z: e.z, or: gain, boss: !!e.def.boss });
+  // Le Sapeur explose : les tours autour de lui sont étourdies.
+  const ex = e.def.explose;
+  if (ex) {
+    const touchees = p.tours.filter(t => distance2(t, e) <= ex.rayon ** 2);
+    for (const t of touchees) t.brouilleT = Math.max(t.brouilleT || 0, ex.duree);
+    evt(p, { k: 'explosion', x: e.x, z: e.z, rayon: ex.rayon, n: 0, sapeur: true });
+    evt(p, { k: 'brouille', id: e.id, x: e.x, z: e.z, rayon: ex.rayon, tours: touchees.map(t => t.id) });
+  }
+  // Le Glouton dévore la carcasse d'un Rouilleux tombé près de lui.
+  if (!e.def.boss) {
+    for (const o of p.ennemis) {
+      const dv = o.def.devore;
+      if (!dv || o.mort || o === e || distance2(o, e) > dv.rayon ** 2) continue;
+      const plafond = o.base * dv.max;
+      if (o.pvMax >= plafond) { o.pv = Math.min(o.pvMax, o.pv + e.pvMax * dv.part); continue; }
+      const gain = Math.min(plafond - o.pvMax, e.pvMax * dv.part);
+      o.pvMax += gain; o.pv += gain + e.pvMax * dv.part * 0.5; o.pv = Math.min(o.pv, o.pvMax);
+      o.gros = o.pvMax / o.base;
+      evt(p, { k: 'devore', id: o.id, x: o.x, z: o.z, gros: o.gros });
+      break;
+    }
+  }
   const div = e.def.division;
   if (div) {
     for (let i = 0; i < div.n; i++) {
@@ -427,8 +451,18 @@ function mourir(p, e) {
 }
 
 function bougerEnnemis(p) {
+  const etendards = p.ennemis.filter(o => !o.mort && o.def.etendard);
   for (const e of p.ennemis) {
     if (e.mort) continue;
+    // Le Grand Horloger remonte le temps : il retrouve les PV d'il y a quelques secondes.
+    if (e.def.retour) {
+      if ((e.histoT -= DT) <= 0) { e.histoT = 0.5; e.histo.push(e.pv); if (e.histo.length > e.def.retour.recul * 2) e.histo.shift(); }
+      if ((e.retourT -= DT) <= 0) {
+        e.retourT = e.def.retour.toutes;
+        const avant = e.histo[0];
+        if (avant > e.pv) { evt(p, { k: 'retour', id: e.id, x: e.x, z: e.z, pv: Math.round(avant - e.pv) }); e.pv = avant; }
+      }
+    }
     e.px = e.x; e.pz = e.z;
     if (e.ralentiT > 0) { e.ralentiT -= DT; if (e.ralentiT <= 0) e.ralenti = 0; }
     if (e.cloueT > 0) e.cloueT -= DT;
@@ -481,6 +515,12 @@ function bougerEnnemis(p) {
       }
     }
     if (e.def.affole) v *= 1 + e.def.affole * (1 - e.pv / e.pvMax);
+    // La bannière du Porte-étendard presse les Rouilleux autour de lui.
+    if (etendards.length && !e.def.boss) {
+      let bonus = 0;
+      for (const o of etendards) if (o !== e && distance2(o, e) <= o.def.etendard.rayon ** 2) bonus = Math.max(bonus, o.def.etendard.vitesse);
+      v *= 1 + bonus;
+    }
     // Arrêté par un garde de Garnison (sauf pendant un bond).
     const g = e.bloquePar;
     if (g && g.pv > 0 && g.cible === e && !(e.saute > 0)) v = 0;
@@ -491,7 +531,9 @@ function bougerEnnemis(p) {
       e.mort = true;
       p.vies = Math.max(0, p.vies - e.def.vies);
       p.stats.fuites++;
-      evt(p, { k: 'fuite', id: e.id, type: e.type, vies: e.def.vies, x: p.carte.base.x, z: p.carte.base.z });
+      const vol = e.def.chaparde ? Math.min(p.or, e.def.chaparde) : 0;
+      p.or -= vol;
+      evt(p, { k: 'fuite', id: e.id, type: e.type, vies: e.def.vies, vol, x: p.carte.base.x, z: p.carte.base.z });
       continue;
     }
     const pos = surChemin(e.ch, e.d, e.decal);
@@ -917,6 +959,8 @@ function majProjectiles(p) {
     pr.x = pr.tx; pr.y = pr.ty; pr.z = pr.tz;
     pr.fini = true;
     if (!e || e.mort) { evt(p, { k: 'rate', x: pr.x, y: pr.y, z: pr.z, p: pr.k }); continue; }
+    // La Libellule esquive les tirs qui ne visent qu'elle.
+    if (e.def.esquive && !pr.zone && p.rng() < e.def.esquive) { evt(p, { k: 'esquive', x: e.x, y: e.y + 0.3, z: e.z }); continue; }
     const src = tourDe(pr.tour);
     if (pr.k === 'eclat') {
       const cibles = pr.zone ? p.ennemis.filter(o => !o.mort && distance2(o, e) <= pr.zone ** 2) : [e];

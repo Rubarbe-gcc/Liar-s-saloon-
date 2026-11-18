@@ -684,6 +684,7 @@ export function creerMonde(canvas, { mobile = false } = {}) {
       const frein = e.ralenti * (1 - (e.def.resisteRalenti || 0));
       const cache = !e.revele;
       animerEnnemi(v.m, temps, dt, { vitesse: e.etourdiT > 0 ? 0 : (1 - frein) * (e.def.vitesse / 1.5), ralenti: e.ralentiT > 0 ? e.ralenti : 0, cache, sous: e.sous, bouclier: e.bouclier, carapace: e.carapaceT > 0 });
+      if (e.gros > 1) v.m.corps.scale.setScalar(v.m.echelle * e.gros ** 0.33);
       const r = e.pv / e.pvMax;
       v.barre.visible = r < 0.999 && !demo && !cache && !e.sous;
       if (v.barre.visible) {
@@ -817,6 +818,17 @@ export function creerMonde(canvas, { mobile = false } = {}) {
         case 'brouille':
           effets.onde(e.x, 0.2, e.z, { couleur: '#c86aff', r0: 0.2, r1: e.rayon, vie: 0.6, opacite: 0.7 });
           for (const id of e.tours) { const t = p.tours.find(x => x.id === id); if (t) effets.gerbe(t.x, 1.2, t.z, { n: 8, couleurs: ['#c86aff', '#ffffff'], vitesse: 2, vie: 0.35, taille: 0.1 }); }
+          break;
+        case 'retour':
+          effets.onde(e.x, 0.2, e.z, { couleur: '#ffd86a', r0: 2.4, r1: 0.4, vie: 0.8 });
+          effets.gerbe(e.x, 1.6, e.z, { n: 30, couleurs: ['#ffd86a', '#ffffff', '#b8963a'], vitesse: 3, vie: 0.7, taille: 0.16 });
+          effets.lueur(e.x, 1.5, e.z, '#ffd86a', 10, 0.5);
+          break;
+        case 'devore':
+          effets.gerbe(e.x, 0.6, e.z, { n: 14, couleurs: ['#6a8a3a', '#a0522d', '#5a5a5a'], vitesse: 1.6, haut: 1, vie: 0.5, taille: 0.1, grav: 6, additif: false });
+          break;
+        case 'esquive':
+          effets.gerbe(e.x, e.y, e.z, { n: 5, couleurs: ['#ffffff', '#c87a3a'], vitesse: 1.5, vie: 0.25, taille: 0.06 });
           break;
         case 'carapace':
           effets.onde(e.x, 0.2, e.z, { couleur: '#b06aff', r0: 0.5, r1: 2.2, vie: 0.6 });

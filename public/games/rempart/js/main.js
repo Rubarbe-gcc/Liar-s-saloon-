@@ -17,8 +17,8 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const mobile = matchMedia('(pointer: coarse)').matches;
 
-export const ICONES = { rodeur: '🪲', filou: '💨', cuirasse: '🛡️', bourdon: '🐝', grappe: '🫧', grappillon: '🫧', tisseur: '💚', furtif: '👻', fouisseur: '🪱', pavois: '🔰', bondisseur: '🦗', dirigeable: '🎈', mue: '🦀', broyeur: '⚙️', nuee: '👑', hydre: '🐉', tete: '🐍', seigneur: '💀', cliquet: '🔩', bastion: '🧱', reparateur: '🔧', scarabee: '🐞', colosse: '🗿', brouilleur: '📡', galopin: '🐀', givrin: '🧊', ruche: '🪺', golem: '🌑' };
-const COULEUR_ENNEMI = { rodeur: '#a0522d', filou: '#c0703a', cuirasse: '#5b5f66', bourdon: '#d9a53a', grappe: '#5f9a6e', grappillon: '#6fb07e', tisseur: '#5b3a5a', furtif: '#2a2440', fouisseur: '#7a5a3a', pavois: '#4a5a7a', bondisseur: '#8a9a3a', dirigeable: '#a87a4a', mue: '#4f8a6a', broyeur: '#5a4a3e', nuee: '#3a2350', hydre: '#3a5a4a', tete: '#3a5a4a', seigneur: '#7a2a1a', cliquet: '#b0884a', bastion: '#6a6a72', reparateur: '#c89a4a', scarabee: '#c8a040', colosse: '#8a4a24', brouilleur: '#4a4a5a', galopin: '#7a6a5a', givrin: '#b8d8ec', ruche: '#a8783a', golem: '#1a1620' };
+export const ICONES = { rodeur: '🪲', filou: '💨', cuirasse: '🛡️', bourdon: '🐝', grappe: '🫧', grappillon: '🫧', tisseur: '💚', furtif: '👻', fouisseur: '🪱', pavois: '🔰', bondisseur: '🦗', dirigeable: '🎈', mue: '🦀', broyeur: '⚙️', nuee: '👑', hydre: '🐉', tete: '🐍', seigneur: '💀', cliquet: '🔩', bastion: '🧱', reparateur: '🔧', scarabee: '🐞', colosse: '🗿', brouilleur: '📡', galopin: '🐀', givrin: '🧊', ruche: '🪺', golem: '🌑', sapeur: '🧨', etendard: '🚩', chapardeur: '🪙', glouton: '🐛', libellule: '🪰', horloger: '⏳' };
+const COULEUR_ENNEMI = { rodeur: '#a0522d', filou: '#c0703a', cuirasse: '#5b5f66', bourdon: '#d9a53a', grappe: '#5f9a6e', grappillon: '#6fb07e', tisseur: '#5b3a5a', furtif: '#2a2440', fouisseur: '#7a5a3a', pavois: '#4a5a7a', bondisseur: '#8a9a3a', dirigeable: '#a87a4a', mue: '#4f8a6a', broyeur: '#5a4a3e', nuee: '#3a2350', hydre: '#3a5a4a', tete: '#3a5a4a', seigneur: '#7a2a1a', cliquet: '#b0884a', bastion: '#6a6a72', reparateur: '#c89a4a', scarabee: '#c8a040', colosse: '#8a4a24', brouilleur: '#4a4a5a', galopin: '#7a6a5a', givrin: '#b8d8ec', ruche: '#a8783a', golem: '#1a1620', sapeur: '#8a5a2a', etendard: '#b8323a', chapardeur: '#d8b040', glouton: '#6a8a3a', libellule: '#c87a3a', horloger: '#b8963a' };
 const NOMS_SPECIAUX = { canons: 'Deux canons', zone: 'Gel en zone', brise: 'Brise-armure' };
 
 /* ------------------------------------------------------------ état */
@@ -34,6 +34,15 @@ let vitesse = 1, pause = false, accu = 0, dernier = performance.now();
 let selection = null;         // { emp } ou { tour }
 let bossEnVie = null;
 let ecran = 'menu';
+
+// Remise à zéro unique pour tout le monde (18/11/2026) : la campagne a été refaite.
+try {
+  if (localStorage.getItem('rempart.remise') !== '1') {
+    localStorage.removeItem('rempart.progression');
+    localStorage.removeItem('rempart.vus');
+    localStorage.setItem('rempart.remise', '1');
+  }
+} catch {}
 
 const progression = (() => {
   try { return { etoiles: {}, records: {}, ...JSON.parse(localStorage.getItem('rempart.progression') || '{}') }; } catch { return { etoiles: {}, records: {} }; }
@@ -597,6 +606,9 @@ function traiter(evts) {
       case 'rayon': son.jouer('rayon'); break;
       case 'gardeTombe': son.jouer('garde'); break;
       case 'carapace': son.jouer('bouclier'); break;
+      case 'retour': son.jouer('soin'); annoncer('Le Grand Horloger remonte le temps !', `+${e.pv} PV`); break;
+      case 'devore': son.jouer('soin'); bulle(e.x, 1.2, e.z, '😋'); break;
+      case 'esquive': if (Math.random() < 0.35) bulle(e.x, (e.y || 0) + 0.6, e.z, 'raté !'); break;
       case 'saut': son.jouer('saut'); break;
       case 'mine': son.jouer('mine'); break;
       case 'rage': son.jouer('boss'); annoncer(`${ENNEMIS[e.type].nom} enrage !`, 'Plus rapide, plus solide', true); break;
@@ -619,6 +631,7 @@ function traiter(evts) {
         rejouerAnim($('#j-vies'), 'choc');
         if (estAlex()) { annoncer(auHasard(CHAMBRE.fuite), `Encore ${partie.vies} vie${partie.vies > 1 ? 's' : ''}`, true); rejouerAnim(document.body, 'secousse'); if (Math.random() < .5) pouce(); }
         bulle(e.x, 1.8, e.z, `−${e.vies} ❤️`, 'rouge');
+        if (e.vol) bulle(e.x, 2.4, e.z, `−${e.vol} 🪙`, 'rouge');
         break;
       case 'vague':
         son.jouer('vague');
@@ -653,7 +666,7 @@ let ralenti = 1, ralentiT = 0, derniereCine = 0;
 function ralentir(f, d) { ralenti = Math.min(ralenti, f); ralentiT = Math.max(ralentiT, d); }
 const TITRES_BOSS = {
   broyeur: 'Il dévore les remparts', nuee: 'Mille ailes de rouille', hydre: 'Coupez une tête, deux repoussent',
-  seigneur: 'Le maître de la Fosse', colosse: 'La montagne qui marche', golem: 'L’invulnérable',
+  seigneur: 'Le maître de la Fosse', colosse: 'La montagne qui marche', golem: 'L’invulnérable', horloger: 'Le maître du temps',
 };
 function cinematiqueBoss(e) {
   const en = partie.ennemis.find(o => o.id === e.id);

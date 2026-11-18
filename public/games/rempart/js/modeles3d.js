@@ -692,6 +692,98 @@ const ENNEMIS3D = {
     });
     return { brasDouble: bras, haut: 2.4, rythme: 2 };
   },
+  sapeur(g, m) {
+    // Un tonneau de poudre cerclé de fer, une mèche allumée.
+    const tonneau = piece(cyl(0.2, 0.2, 0.36, 10), m('#8a5a2a'), 0, 0.34, 0, g);
+    tonneau.rotation.x = Math.PI / 2;
+    for (const z of [-0.12, 0.12]) piece(cyl(0.21, 0.21, 0.04, 10), m(FER, { metalness: 0.6 }), 0, 0.34, z, g).rotation.x = Math.PI / 2;
+    piece(cyl(0.012, 0.012, 0.16, 4), m('#3a2a1a'), 0, 0.6, -0.05, g);
+    const antenne = piece(boule(0.04, 6, 4), lueur('#ff8a1a', 3), 0, 0.69, -0.05, g);
+    antenne.castShadow = false;
+    yeux(g, '#ff5a1a', 0.07, 0.38, 0.19, 0.03);
+    return { pattes: pattes(g, 4, m(FER), 0.16, 0.22, 0.18, 0.04), haut: 0.75, rythme: 10, antenne };
+  },
+  etendard(g, m) {
+    // Un petit porteur qui brandit une grande bannière rouge.
+    piece(boule(0.2, 9, 7), m(ROUILLE), 0, 0.3, 0, g).scale.set(1, 0.9, 1);
+    yeux(g, '#ffd23f', 0.07, 0.34, 0.18);
+    const bras = new THREE.Group();
+    bras.position.set(0.16, 0.36, 0);
+    piece(cyl(0.015, 0.015, 0.9, 5), m(FER, { metalness: 0.6 }), 0, 0.42, 0, bras);
+    const drap = piece(boite(0.32, 0.22, 0.01), m('#b8323a', { side: THREE.DoubleSide }), -0.17, 0.74, 0, bras);
+    drap.castShadow = false;
+    piece(boule(0.035, 6, 4), OR, 0, 0.88, 0, bras);
+    g.add(bras);
+    return { pattes: pattes(g, 4, m(FER), 0.16, 0.22, 0.18, 0.04), haut: 1.1, rythme: 8, bras };
+  },
+  chapardeur(g, m) {
+    // Un furet de laiton qui serre une bourse.
+    const corps = piece(boule(0.13, 8, 6), m('#d8b040', { metalness: 0.5 }), 0, 0.2, 0, g);
+    corps.scale.set(0.9, 0.8, 1.5);
+    piece(boule(0.09, 8, 6), m('#b8902a', { metalness: 0.5 }), 0, 0.24, 0.2, g);
+    piece(boule(0.09, 7, 5), m('#5a3a1a'), 0, 0.34, -0.08, g);
+    piece(boule(0.03, 6, 4), OR, 0, 0.43, -0.08, g);
+    yeux(g, '#5affb0', 0.04, 0.27, 0.27, 0.025);
+    const queue = piece(cyl(0.012, 0.03, 0.3, 4), m('#b8902a'), 0, 0.22, -0.28, g);
+    queue.rotation.x = -1.2;
+    return { pattes: pattes(g, 4, m(FER), 0.08, 0.18, 0.13, 0.03), haut: 0.5, rythme: 22, queue };
+  },
+  glouton(g, m) {
+    // Une grosse chenille de ferraille, une gueule de broyeur.
+    const vert = m('#6a8a3a', { metalness: 0.3 }), sombre = m('#3a4a22');
+    const boules = [0.2, 0, -0.2, -0.38].map((z, i) => piece(boule(0.2 - i * 0.025, 9, 7), i % 2 ? sombre : vert, 0, 0.22, z, g));
+    piece(boite(0.26, 0.06, 0.06), m('#9a9a9a', { metalness: 0.8 }), 0, 0.16, 0.38, g);
+    yeux(g, '#ffef5a', 0.08, 0.32, 0.34, 0.04);
+    return { pattes: pattes(g, 6, m(FER), 0.17, 0.18, 0.12, 0.04), haut: 0.6, rythme: 6, boules };
+  },
+  libellule(g, m) {
+    // Une libellule de cuivre : long corps, quatre ailes fines.
+    const corps = piece(geo('capsLibellule', () => new THREE.CapsuleGeometry(0.05, 0.42, 4, 8)), m('#c87a3a', { metalness: 0.6 }), 0, 0, -0.05, g);
+    corps.rotation.x = Math.PI / 2;
+    piece(boule(0.08, 8, 6), m('#8a4a1a', { metalness: 0.6 }), 0, 0, 0.22, g);
+    yeux(g, '#5ad8ff', 0.05, 0.03, 0.27, 0.035);
+    const aile = geo('aileLibellule', () => new THREE.PlaneGeometry(0.4, 0.08));
+    const matAile = mat('aileLibellule', { color: '#bfefff', transparent: true, opacity: 0.5, side: THREE.DoubleSide, roughness: 0.1 });
+    const ailes = [];
+    for (const z of [0.1, -0.02]) for (const s of [-1, 1]) {
+      const pivot = new THREE.Group();
+      pivot.position.set(s * 0.04, 0.04, z);
+      const a = piece(aile, matAile, s * 0.2, 0, 0, pivot);
+      a.rotation.x = -Math.PI / 2;
+      a.castShadow = false;
+      g.add(pivot);
+      ailes.push({ pivot, s });
+    }
+    return { ailes, haut: 0.35, vol: true };
+  },
+  horloger(g, m) {
+    // Le Grand Horloger : une horloge de parquet qui marche, un balancier et un rouage.
+    const bois = m('#5a3a22'), laiton = m('#b8963a', { metalness: 0.7, roughness: 0.3 });
+    for (const s of [-1, 1]) piece(boite(0.32, 0.7, 0.36), bois, s * 0.32, 0.35, 0, g);
+    piece(boite(1.0, 1.5, 0.6), bois, 0, 1.4, 0, g);
+    piece(cyl(0.38, 0.38, 0.06, 20), m('#f0e8d0'), 0, 1.75, 0.31, g).rotation.x = Math.PI / 2;
+    piece(cyl(0.4, 0.4, 0.04, 20), laiton, 0, 1.75, 0.3, g).rotation.x = Math.PI / 2;
+    for (const [l, a] of [[0.28, 0.6], [0.2, -1.2]]) {
+      const aig = piece(boite(0.03, l, 0.02), m('#1a1a1a'), Math.sin(a) * l / 2, 1.75 + Math.cos(a) * l / 2, 0.35, g);
+      aig.rotation.z = -a;
+    }
+    piece(boite(0.5, 0.6, 0.02), lueur('#ffd86a', 1.2), 0, 1.0, 0.31, g).castShadow = false;
+    const cle = new THREE.Group();
+    cle.position.set(0, 1.28, 0.33);
+    piece(cyl(0.012, 0.012, 0.4, 4), laiton, 0, -0.2, 0, cle);
+    piece(cyl(0.09, 0.09, 0.03, 12), laiton, 0, -0.42, 0, cle).rotation.x = Math.PI / 2;
+    g.add(cle);
+    const broyeur = new THREE.Group();
+    broyeur.position.set(0, 2.3, -0.05);
+    piece(cyl(0.3, 0.3, 0.08, 12), laiton, 0, 0, 0, broyeur).rotation.z = Math.PI / 2;
+    for (let i = 0; i < 10; i++) {
+      const a = i * Math.PI / 5;
+      piece(boite(0.08, 0.1, 0.1), laiton, 0, Math.cos(a) * 0.32, Math.sin(a) * 0.32, broyeur).rotation.x = a;
+    }
+    g.add(broyeur);
+    yeux(g, '#ffd86a', 0.2, 2.05, 0.31, 0.05);
+    return { cle, broyeur, haut: 2.7, rythme: 2, chenilles: true };
+  },
   broyeur(g, m) {
     for (const s of [-1, 1]) piece(boite(0.24, 0.34, 1.2), m('#262626'), s * 0.5, 0.17, 0, g);
     piece(boite(0.86, 0.6, 1.0), m('#5a4a3e', { metalness: 0.45 }), 0, 0.6, -0.05, g);
@@ -741,7 +833,7 @@ export function creerEnnemi(type, taille) {
   groupe.add(corps);
   const { liste, m } = matsPropres();
   const anim = ENNEMIS3D[type](corps, m);
-  const echelle = ['broyeur', 'nuee', 'hydre', 'seigneur', 'dirigeable', 'colosse', 'bastion', 'golem', 'ruche'].includes(type) ? 1 : taille / 0.45;
+  const echelle = ['broyeur', 'nuee', 'hydre', 'seigneur', 'dirigeable', 'colosse', 'bastion', 'golem', 'ruche', 'horloger'].includes(type) ? 1 : taille / 0.45;
   corps.scale.setScalar(echelle);
   return { groupe, corps, anim, mats: liste, haut: anim.haut * echelle, echelle, flash: 0, phase: Math.random() * 10 };
 }
