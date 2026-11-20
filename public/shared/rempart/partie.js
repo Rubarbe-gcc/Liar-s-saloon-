@@ -137,7 +137,7 @@ export function surChemin(ch, d, decal = 0) {
 /** Coup de pouce en or dans la campagne (20/11/2026) : départ et Rouilleux détruits. */
 export const OR_CAMPAGNE = { depart: 1.15, rouilleux: 1.2 };
 /** Nombre de Rouilleux (hors boss) d'un lieu de la campagne : il monte doucement de lieu en lieu. */
-export const nombreLieu = id => 128 + 7 * (id - 1);
+export const nombreLieu = id => 143 + 8 * (id - 1);
 
 /** PV des Rouilleux dans un lieu de la campagne : +2 % à chaque lieu. */
 export const pvLieu = id => 0.45 * 1.02 ** (id - 1);

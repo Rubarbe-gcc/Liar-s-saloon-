@@ -406,7 +406,7 @@ export const NIVEAUX = [
   {
     id: 12, nom: 'L’Île aux Brumes',
     intro: 'Le chemin fait le tour d’une île perdue dans la brume. Bâtissez sur l’île : une tour au milieu tient les deux rives. Les Scarabées de laiton arrivent par le ciel.',
-    ambiance: 'brume', or: 520, vies: 20, force: 0.46,
+    ambiance: 'brume', or: 520, vies: 20, force: 0.55,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur'],
     carte: [
       '~~~~~~~~~~~~~~~~~~~~',
@@ -481,7 +481,7 @@ export const NIVEAUX = [
   {
     id: 14, nom: 'La Jungle des Lianes',
     intro: 'Une jungle épaisse où deux sentiers se croisent. Des Galopins y filent d’autant plus vite qu’ils sont blessés, et des Brouilleurs coupent vos tours. Trois nouvelles tours rejoignent le Rempart.',
-    ambiance: 'jungle', or: 540, vies: 20, force: 0.31, allege: 0.3,
+    ambiance: 'jungle', or: 540, vies: 20, force: 0.31, allege: 0.55,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur', 'aimant', 'garnison', 'rayon'],
     carte: [
       '**^^****^^**^^***^^*',
