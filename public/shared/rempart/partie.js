@@ -136,19 +136,40 @@ export function surChemin(ch, d, decal = 0) {
 
 /** Coup de pouce en or dans la campagne (20/11/2026) : départ et Rouilleux détruits. */
 export const OR_CAMPAGNE = { depart: 1.15, rouilleux: 1.2 };
+/** Nombre de Rouilleux (hors boss) d'un lieu de la campagne : il monte doucement de lieu en lieu. */
+export const nombreLieu = id => 128 + 7 * (id - 1);
 
-/** PV des Rouilleux dans un lieu de la campagne : +4 % à chaque lieu. */
-export const pvLieu = id => 0.45 * 1.04 ** (id - 1);
+/** PV des Rouilleux dans un lieu de la campagne : +2 % à chaque lieu. */
+export const pvLieu = id => 0.45 * 1.02 ** (id - 1);
+
+/** Les Rouilleux légers qui remplacent une part des costauds (`allege` du lieu). */
+const LEGER_SOL = 'rodeur', LEGER_AIR = 'bourdon';
 
 /**
- * Campagne : `force` (la difficulté du lieu) devient le nombre de Rouilleux,
- * leurs PV suivent `pvLieu` ; l'or et l'XP par Rouilleux compensent le nombre.
+ * Campagne (20/11/2026) : le nombre de Rouilleux suit `nombreLieu`, leurs PV `pvLieu`.
+ * La difficulté du lieu se règle avec `allege` (0 à 1) : la part des Rouilleux costauds
+ * remplacés par des Rôdeurs (au sol) ou des Bourdons (en l'air). L'or total du lieu reste
+ * celui prévu par ses vagues ; les boss gardent leur force d'origine (`force` du lieu).
  */
 function campagne(def) {
-  const pv = pvLieu(def.id), k = def.force / pv;
-  const vagues = def.vagues.map(v => v.map(gr => (ENNEMIS[gr.type].boss ? gr
-    : { ...gr, n: Math.max(1, Math.round(gr.n * k)), ecart: gr.ecart / Math.sqrt(k) })));
-  return { ...def, force: pv, forceBoss: def.force, vagues, orRouilleux: OR_CAMPAGNE.rouilleux / k, or: Math.round(def.or * OR_CAMPAGNE.depart) };
+  const pv = pvLieu(def.id), a = def.allege || 0;
+  const seuil = ENNEMIS[LEGER_SOL].pv * 1.4;
+  let orBase = 0, base = 0;
+  for (const v of def.vagues) for (const gr of v) if (!ENNEMIS[gr.type].boss) { base += gr.n; orBase += gr.n * ENNEMIS[gr.type].or; }
+  const k = nombreLieu(def.id) / base;
+  let orNouveau = 0;
+  const vagues = def.vagues.map(v => v.flatMap(gr => {
+    const d = ENNEMIS[gr.type];
+    if (d.boss) return [gr];
+    const n = Math.max(1, Math.round(gr.n * k)), ecart = gr.ecart / Math.sqrt(k);
+    const leger = d.pv > seuil ? Math.round(n * a) : 0;
+    const out = [];
+    if (n - leger > 0) out.push({ ...gr, n: n - leger, ecart });
+    if (leger > 0) out.push({ ...gr, type: d.vole ? LEGER_AIR : LEGER_SOL, n: leger, ecart });
+    for (const o of out) orNouveau += o.n * ENNEMIS[o.type].or;
+    return out;
+  }));
+  return { ...def, force: pv, forceBoss: def.force, vagues, orRouilleux: OR_CAMPAGNE.rouilleux * orBase / orNouveau, or: Math.round(def.or * OR_CAMPAGNE.depart) };
 }
 
 /**

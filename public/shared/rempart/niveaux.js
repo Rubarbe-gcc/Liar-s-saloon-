@@ -49,7 +49,7 @@ export const NIVEAUX = [
   {
     id: 2, nom: 'Les Collines Rousses',
     intro: 'Sur les hauteurs, les Bourdons survolent les collines. Gardez des tours qui visent le ciel.',
-    ambiance: 'automne', or: 260, vies: 20, force: 1.1,
+    ambiance: 'automne', or: 260, vies: 20, force: 0.95,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'braise'],
     carte: [
       '^^S^^***....*..^^^^^',
@@ -81,7 +81,7 @@ export const NIVEAUX = [
   {
     id: 3, nom: 'Le Marais aux Lucioles',
     intro: 'Deux passages traversent le marais. Et quelque chose bourdonne très fort au fond des roseaux…',
-    ambiance: 'marais', or: 320, vies: 20, force: 0.41,
+    ambiance: 'marais', or: 320, vies: 20, force: 0.33,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise'],
     carte: [
       '~~^^**.....R...**~~~',
@@ -443,7 +443,7 @@ export const NIVEAUX = [
   {
     id: 13, nom: 'Les Ruines d’Ambrelune',
     intro: 'Les ruines de l’ancienne cité des gardiens. Deux routes s’y rejoignent juste avant le Cœur : le Colosse de Rouille et le Seigneur Rouille arrivent ensemble pour l’assaut final.',
-    ambiance: 'ruines', or: 540, vies: 20, force: 0.2,
+    ambiance: 'ruines', or: 540, vies: 20, force: 0.2, allege: 0.4,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur'],
     carte: [
       '**^^o**^^^^**o^^^**^',
@@ -481,7 +481,7 @@ export const NIVEAUX = [
   {
     id: 14, nom: 'La Jungle des Lianes',
     intro: 'Une jungle épaisse où deux sentiers se croisent. Des Galopins y filent d’autant plus vite qu’ils sont blessés, et des Brouilleurs coupent vos tours. Trois nouvelles tours rejoignent le Rempart.',
-    ambiance: 'jungle', or: 540, vies: 20, force: 0.31,
+    ambiance: 'jungle', or: 540, vies: 20, force: 0.31, allege: 0.3,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur', 'aimant', 'garnison', 'rayon'],
     carte: [
       '**^^****^^**^^***^^*',
@@ -553,7 +553,7 @@ export const NIVEAUX = [
   {
     id: 16, nom: 'Le Cimetière des Machines',
     intro: 'Une casse immense où dorment les vieilles machines. Trois routes y mènent au Cœur, des Ruches volantes y lâchent leurs Rôdeurs, et le Golem d’Obsidienne s’y réveille.',
-    ambiance: 'casse', or: 580, vies: 20, force: 0.17,
+    ambiance: 'casse', or: 580, vies: 20, force: 0.17, allege: 0.3,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur', 'aimant', 'garnison', 'rayon'],
     carte: [
       'o^^**^^^^R^^**^^o^^^',
