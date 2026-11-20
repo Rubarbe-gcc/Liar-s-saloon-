@@ -134,6 +134,9 @@ export function surChemin(ch, d, decal = 0) {
 
 /* ---------------------------------------------------------------- partie */
 
+/** Coup de pouce en or dans la campagne (20/11/2026) : départ et Rouilleux détruits. */
+export const OR_CAMPAGNE = { depart: 1.15, rouilleux: 1.2 };
+
 /** PV des Rouilleux dans un lieu de la campagne : +4 % à chaque lieu. */
 export const pvLieu = id => 0.45 * 1.04 ** (id - 1);
 
@@ -145,7 +148,7 @@ function campagne(def) {
   const pv = pvLieu(def.id), k = def.force / pv;
   const vagues = def.vagues.map(v => v.map(gr => (ENNEMIS[gr.type].boss ? gr
     : { ...gr, n: Math.max(1, Math.round(gr.n * k)), ecart: gr.ecart / Math.sqrt(k) })));
-  return { ...def, force: pv, forceBoss: def.force, vagues, orRouilleux: 1 / k };
+  return { ...def, force: pv, forceBoss: def.force, vagues, orRouilleux: OR_CAMPAGNE.rouilleux / k, or: Math.round(def.or * OR_CAMPAGNE.depart) };
 }
 
 /**

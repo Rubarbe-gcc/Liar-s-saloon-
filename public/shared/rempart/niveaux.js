@@ -19,7 +19,7 @@ export const NIVEAUX = [
   {
     id: 1, nom: 'Le Gué aux Saules',
     intro: 'Les premiers Rouilleux remontent la rivière. Montrez-leur que le Cœur d’Ambre a des gardiens.',
-    ambiance: 'printemps', or: 230, vies: 20, force: 1.2,
+    ambiance: 'printemps', or: 230, vies: 20, force: 1.35,
     tours: ['rafale', 'mortier', 'givre'],
     carte: [
       '^^**....*.....**^^^^',
@@ -49,7 +49,7 @@ export const NIVEAUX = [
   {
     id: 2, nom: 'Les Collines Rousses',
     intro: 'Sur les hauteurs, les Bourdons survolent les collines. Gardez des tours qui visent le ciel.',
-    ambiance: 'automne', or: 260, vies: 20, force: 0.72,
+    ambiance: 'automne', or: 260, vies: 20, force: 1.1,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'braise'],
     carte: [
       '^^S^^***....*..^^^^^',
@@ -81,7 +81,7 @@ export const NIVEAUX = [
   {
     id: 3, nom: 'Le Marais aux Lucioles',
     intro: 'Deux passages traversent le marais. Et quelque chose bourdonne très fort au fond des roseaux…',
-    ambiance: 'marais', or: 320, vies: 20, force: 0.47,
+    ambiance: 'marais', or: 320, vies: 20, force: 0.41,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise'],
     carte: [
       '~~^^**.....R...**~~~',
@@ -115,7 +115,7 @@ export const NIVEAUX = [
   {
     id: 4, nom: 'La Passe des Géants',
     intro: 'Un long défilé de pierre. Les Rouilleux y envoient leurs machines les plus lourdes, et des Furtifs qu’on ne voit qu’à la lumière d’un Phare.',
-    ambiance: 'montagne', or: 340, vies: 20, force: 0.95,
+    ambiance: 'montagne', or: 340, vies: 20, force: 1.05,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare'],
     carte: [
       '^^^^^**^^^^^**^^^^^^',
@@ -149,7 +149,7 @@ export const NIVEAUX = [
   {
     id: 5, nom: 'Le Lac Miroir',
     intro: 'Le lac reflète un ciel noir de Bourdons. Deux rives, deux passages : tenez les deux.',
-    ambiance: 'crepuscule', or: 380, vies: 20, force: 0.34,
+    ambiance: 'crepuscule', or: 380, vies: 20, force: 0.31,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare'],
     carte: [
       '^^**....^^^....**^^^',
@@ -185,7 +185,7 @@ export const NIVEAUX = [
   {
     id: 6, nom: 'La Fosse de Rouille',
     intro: 'Au cœur de leur repaire, le chemin s’enroule jusqu’au dernier fragment d’Ambre. Tout ce qu’ils ont, ils l’envoient.',
-    ambiance: 'fosse', or: 420, vies: 20, force: 1.15,
+    ambiance: 'fosse', or: 420, vies: 20, force: 1.27,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare'],
     carte: [
       '^^^^**^^^^^^**^^^^^^',
@@ -222,7 +222,7 @@ export const NIVEAUX = [
   {
     id: 7, nom: 'Les Dunes d’Ocre',
     intro: 'Le désert de la vallée. Les Rouilleux y bondissent de dune en dune, et des Dirigeables blindés passent dans le ciel. Le Harpon est fait pour eux.',
-    ambiance: 'desert', or: 440, vies: 20, force: 0.8,
+    ambiance: 'desert', or: 440, vies: 20, force: 0.66,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon'],
     carte: [
       '^^^^oo^^^^^^^^oo^^^^',
@@ -258,7 +258,7 @@ export const NIVEAUX = [
   {
     id: 8, nom: 'Le Glacier Bleu',
     intro: 'Deux pistes de glace mènent au Cœur. Les Mues s’y réparent à toute vitesse : ne les lâchez pas. Le Piégeur sème ses mines sous leurs pas.',
-    ambiance: 'glacier', or: 460, vies: 20, force: 0.57,
+    ambiance: 'glacier', or: 460, vies: 20, force: 0.7,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur'],
     carte: [
       '^^^^**^^^^^^^^^^^^^^',
@@ -295,7 +295,7 @@ export const NIVEAUX = [
   {
     id: 9, nom: 'La Forêt d’Ébène',
     intro: 'Une forêt où il fait toujours nuit. Deux sentiers s’y rejoignent au dernier moment, et l’Hydre de Fer rôde entre les troncs.',
-    ambiance: 'nuit', or: 480, vies: 20, force: 0.25,
+    ambiance: 'nuit', or: 480, vies: 20, force: 0.31,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur'],
     carte: [
       '^^^^**^^^^^**^^^^^^^',
@@ -370,7 +370,7 @@ export const NIVEAUX = [
   {
     id: 11, nom: 'Les Gorges de Cuivre',
     intro: 'Un canyon étroit où le chemin se tord en S. Les parois cachent la vue : une tour ne voit que ce qui est en face d’elle (le Mortier tire par-dessus, et les volants restent visibles). Les Cliquets y filent comme le vent, et les Bastions avancent comme des murs.',
-    ambiance: 'canyon', murs: true, or: 500, vies: 20, force: 0.61,
+    ambiance: 'canyon', murs: true, or: 500, vies: 20, force: 0.66,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur'],
     carte: [
       '^^^^^^^^^^^^^^^^^^^^',
@@ -406,7 +406,7 @@ export const NIVEAUX = [
   {
     id: 12, nom: 'L’Île aux Brumes',
     intro: 'Le chemin fait le tour d’une île perdue dans la brume. Bâtissez sur l’île : une tour au milieu tient les deux rives. Les Scarabées de laiton arrivent par le ciel.',
-    ambiance: 'brume', or: 520, vies: 20, force: 0.41,
+    ambiance: 'brume', or: 520, vies: 20, force: 0.46,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur'],
     carte: [
       '~~~~~~~~~~~~~~~~~~~~',
@@ -443,7 +443,7 @@ export const NIVEAUX = [
   {
     id: 13, nom: 'Les Ruines d’Ambrelune',
     intro: 'Les ruines de l’ancienne cité des gardiens. Deux routes s’y rejoignent juste avant le Cœur : le Colosse de Rouille et le Seigneur Rouille arrivent ensemble pour l’assaut final.',
-    ambiance: 'ruines', or: 540, vies: 20, force: 0.22,
+    ambiance: 'ruines', or: 540, vies: 20, force: 0.2,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur'],
     carte: [
       '**^^o**^^^^**o^^^**^',
@@ -481,7 +481,7 @@ export const NIVEAUX = [
   {
     id: 14, nom: 'La Jungle des Lianes',
     intro: 'Une jungle épaisse où deux sentiers se croisent. Des Galopins y filent d’autant plus vite qu’ils sont blessés, et des Brouilleurs coupent vos tours. Trois nouvelles tours rejoignent le Rempart.',
-    ambiance: 'jungle', or: 540, vies: 20, force: 0.37,
+    ambiance: 'jungle', or: 540, vies: 20, force: 0.31,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur', 'aimant', 'garnison', 'rayon'],
     carte: [
       '**^^****^^**^^***^^*',
@@ -590,7 +590,7 @@ export const NIVEAUX = [
   {
     id: 17, nom: 'La Baie des Marées',
     intro: 'Une digue serpente entre les vagues. Le ciel se couvre de Ruches, de Scarabées et de Dirigeables : gardez des tours qui visent les airs.',
-    ambiance: 'marees', or: 600, vies: 20, force: 0.48,
+    ambiance: 'marees', or: 600, vies: 20, force: 0.52,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur', 'aimant', 'garnison', 'rayon'],
     carte: [
       '~~~~~~~~~~~~~~~~~~~~',
@@ -627,7 +627,7 @@ export const NIVEAUX = [
   {
     id: 18, nom: 'La Citadelle d’Ambre',
     intro: 'La dernière forteresse des gardiens, où le Cœur d’Ambre repose au centre. Deux routes l’encerclent. Le Golem, le Colosse et le Seigneur Rouille viennent ensemble pour la bataille finale.',
-    ambiance: 'citadelle', or: 620, vies: 20, force: 0.39,
+    ambiance: 'citadelle', or: 620, vies: 20, force: 0.47,
     tours: ['rafale', 'mortier', 'givre', 'perce', 'foudre', 'braise', 'phare', 'harpon', 'piegeur', 'aimant', 'garnison', 'rayon'],
     carte: [
       '^^^^^^^^^^^^^^^^^^^^',

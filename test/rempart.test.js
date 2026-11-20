@@ -220,7 +220,8 @@ test('équilibre : un joueur raisonnable gagne chaque niveau, un joueur paresseu
     assert.ok(P.etoiles(rafales) <= 2, `${n.nom} : cinq Rafales suffisent`);
   }
   // Pas trop facile : le bon joueur ne prend pas 3 étoiles partout.
-  assert.ok(faciles <= 3, `${faciles} lieux sur ${NIVEAUX.length} finis avec 3 étoiles par le bon joueur : trop facile`);
+  // Depuis le coup de pouce en or (20/11/2026), un peu plus de marge : au plus 8 lieux à 3 étoiles pour le bon joueur.
+  assert.ok(faciles <= 8, `${faciles} lieux sur ${NIVEAUX.length} finis avec 3 étoiles par le bon joueur : trop facile`);
 });
 
 /** Une partie vide (aucune vague prévue) où l'on pose ce qu'on veut. */
