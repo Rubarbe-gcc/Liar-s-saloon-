@@ -8,7 +8,7 @@
 
 import {
   DT, PROGRAMMES, DEFENSES, BRECHE, COULEURS, NOEUDS, LISTE_PROGRAMMES, LISTE_DEFENSES,
-  TECHS, LISTE_TECHS, AMELIORATIONS, LISTE_AMELIORATIONS, NIV_MAX, EVENEMENTS,
+  TECHS, LISTE_TECHS, AMELIORATIONS, LISTE_AMELIORATIONS, NIV_MAX, EVENEMENTS, NIVEAUX,
 } from '../../../shared/parefeu/donnees.js';
 import { creerPartie, pas, verifier, commande } from '../../../shared/parefeu/partie.js';
 import { ami, frontiere, recharge, voit, allies, action, source, coutDe, rechargeDe, prixUp, prixTech, up, tech, evenement } from '../../../shared/parefeu/regles.js';
@@ -75,7 +75,8 @@ const NOTES_MODE = {
   '2v2': 'Toi et un allié de l’ordinateur contre deux ordinateurs. Tu peux poser tes défenses chez ton allié.',
 };
 const modeSolo = choix('solo-mode', (v) => { $('solo-mode-note').textContent = NOTES_MODE[v]; });
-const niveauSolo = choix('solo-niveau');
+const niveauSolo = choix('solo-niveau', (v) => { $('solo-niveau-note').textContent = NIVEAUX[v]?.desc || ''; });
+$('solo-niveau-note').textContent = NIVEAUX.normal.desc;
 const evSolo = choix('solo-ev');
 const reelSolo = choix('solo-reel', (v) => { $('solo-reel-note').textContent = v === 'oui' ? 'Tape de vraies commandes (ping, curl, scp, ufw, apt…) : chacune t’explique ce qu’elle fait.' : 'Joue avec les boutons autour des nœuds.'; });
 let derniereConf = null;

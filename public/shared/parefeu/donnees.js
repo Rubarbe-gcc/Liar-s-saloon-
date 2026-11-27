@@ -199,8 +199,14 @@ export const EVENEMENTS = {
 };
 export const LISTE_EVENEMENTS = Object.keys(EVENEMENTS);
 
+/**
+ * Une personne qui tape ses commandes, un geste à la fois (`reflexion` =
+ * secondes entre deux gestes, `hesite` = chance de ne rien faire) :
+ * Facile n'a jamais touché un ordinateur (lent, hésitant), Normal sait taper
+ * mais cherche ses touches, Difficile connaît son clavier par cœur (vif, sûr).
+ */
 export const NIVEAUX = {
-  facile:    { nom: 'Facile', ameliore: 0.2, parfait: 0.25, reflexion: 1.3, defense: 0.4, focus: 0.45, breche: [1, 3], revenu: 0.85, reserve: 10 },
-  normal:    { nom: 'Normal', ameliore: 0.5, parfait: 0.5, reflexion: 0.75, defense: 0.75, focus: 0.7, breche: [2, 4], revenu: 1, reserve: 18 },
-  difficile: { nom: 'Difficile', ameliore: 0.8, parfait: 0.75, reflexion: 0.35, defense: 0.95, focus: 0.9, breche: [3, 5], revenu: 1.22, reserve: 24 },
+  facile:    { nom: 'Facile', desc: 'N’a jamais touché un ordinateur', ameliore: 0.15, parfait: 0.12, reflexion: 2.6, hesite: 0.4, defense: 0.45, focus: 0.5, breche: [1, 2], revenu: 0.9, reserve: 10 },
+  normal:    { nom: 'Normal', desc: 'Sait taper, mais cherche ses touches', ameliore: 0.5, parfait: 0.45, reflexion: 1.3, hesite: 0.12, defense: 0.78, focus: 0.72, breche: [2, 4], revenu: 1, reserve: 18 },
+  difficile: { nom: 'Difficile', desc: 'Connaît son clavier par cœur', ameliore: 0.85, parfait: 0.8, reflexion: 0.72, hesite: 0, defense: 0.95, focus: 0.9, breche: [3, 5], revenu: 1.2, reserve: 24 },
 };

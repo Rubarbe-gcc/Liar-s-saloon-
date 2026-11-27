@@ -178,12 +178,18 @@ function ameliorer(E, j, N) {
   return false;
 }
 
+/**
+ * Une décision = un seul geste, comme une personne qui tape une commande à la
+ * fois. On regarde d'abord s'il faut se défendre, sinon on attaque, sinon on
+ * améliore. Le rythme (combien de temps entre deux gestes) vient de `reflexion`
+ * dans donnees.js : lent pour qui n'a jamais touché un ordinateur, vif pour qui
+ * connaît son clavier. Le joueur hésite parfois (`hesite`) et ne fait rien.
+ */
 export function decider(E, j) {
   const N = NIVEAUX[E.joueurs[j].ia] || NIVEAUX.normal;
-  const defendu = defendre(E, j, N);
-  // Une défense prend la décision, sauf quand les cycles débordent.
-  const attaque = !defendu || E.joueurs[j].res > 80 ? attaquer(E, j, N) : false;
-  if (!defendu && !attaque) ameliorer(E, j, N);
-  else if (E.joueurs[j].res > 110) ameliorer(E, j, N);
+  if (N.hesite && alea(E) < N.hesite) return;   // il réfléchit, cherche ses touches…
+  if (defendre(E, j, N)) return;
+  if (attaquer(E, j, N)) return;
+  ameliorer(E, j, N);
 }
 
