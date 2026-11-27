@@ -8,7 +8,7 @@
 
 import { DT, PROGRAMMES, DEFENSES, BRECHE, COULEURS, NOEUDS, LISTE_PROGRAMMES, LISTE_DEFENSES } from '../../../shared/parefeu/donnees.js';
 import { creerPartie, pas, verifier, commande } from '../../../shared/parefeu/partie.js';
-import { ami, frontiere, recharge, voit, allies, action } from '../../../shared/parefeu/regles.js';
+import { ami, frontiere, recharge, voit, allies, action, source } from '../../../shared/parefeu/regles.js';
 import { creerRendu } from './rendu.js';
 import * as son from './sons.js';
 import * as enligne from './enligne.js';
@@ -102,17 +102,17 @@ function remplirAide() {
     <h3>&gt; Les cycles</h3>
     <p>Ta ressource monte toute seule (3 par seconde), et plus vite avec chaque nœud que tu tiens : serveur +${NOEUDS.serveur.revenu}, relais +${NOEUDS.relais.revenu}, Nexus (au centre) +${NOEUDS.nexus.revenu}.</p>
     <h3>&gt; Les mini-défis</h3>
-    <p>Chaque action se gagne : une <b>combinaison</b> de flèches, de lettres et de chiffres à reproduire. Plus l’action est forte, plus elle est longue (3 symboles pour un ver, 6 pour une saturation). Le temps passé, l’action ne part pas (et ne coûte rien). Sans aucune faute, elle est <b>parfaite</b> : +25 % de dégâts ou de durée, +1 charge de pare-feu. La partie continue pendant le défi !</p>
+    <p>Chaque action se gagne : une <b>combinaison</b> à reproduire, soit que des flèches, soit que des lettres, soit que des chiffres. Plus l’action est forte, plus elle est longue (3 symboles pour un ver, 6 pour une saturation). Le temps passé, l’action ne part pas (et ne coûte rien). Sans aucune faute, elle est <b>parfaite</b> : +25 % de dégâts ou de durée, +1 charge de pare-feu. La partie continue pendant le défi !</p>
     <h3>&gt; Attaquer</h3>
-    <p>Touche un nœud <b>voisin</b> d’un des tiens (les cibles possibles ont un cercle pointillé), puis un programme. Il voyage le long du lien. Quand un nœud n’a plus de PV, il passe à toi. Le Noyau ne touche que ses serveurs : prends d’abord un serveur.</p>
+    <p>Touche un nœud <b>voisin</b> d’un des tiens (les cibles possibles ont un cercle pointillé) : les programmes s’ouvrent en cercle autour de lui, touches-en un. Il voyage le long du lien. Quand un nœud n’a plus de PV, il passe à toi. Le Noyau ne touche que ses serveurs : prends d’abord un serveur.</p>
     <div class="cartes">${LISTE_PROGRAMMES.map((k) => carte(PROGRAMMES[k])).join('')}${carte(BRECHE)}</div>
     <h3>&gt; Défendre</h3>
-    <p>Touche un de tes nœuds (ou un de ton allié), puis une défense. Les défenses adverses sont cachées (<b>?</b>) tant qu’une sonde ne les a pas révélées.</p>
+    <p>Touche un de tes nœuds (ou un de ton allié) : les défenses s’ouvrent autour de lui. Les défenses adverses sont cachées (<b>?</b>) tant qu’une sonde ne les a pas révélées.</p>
     <div class="cartes">${LISTE_DEFENSES.map((k) => carte(DEFENSES[k])).join('')}</div>
     <h3>&gt; La surchauffe</h3>
     <p>Au bout de 3 minutes tout frappe 1,5 fois plus fort, puis 2 fois (5 min) et 3 fois (7 min). À 10 minutes, l’équipe qui tient le plus de nœuds gagne.</p>
     <h3>&gt; Touches</h3>
-    <p><kbd>1</kbd>–<kbd>5</kbd> : programmes (sur une cible) ou défenses (sur un nœud à toi) · <kbd>B</kbd> : brèche · dans une combinaison : flèches (ou <kbd>ZQSD</kbd>), lettres et chiffres, <kbd>Échap</kbd> pour renoncer · <kbd>Espace</kbd> : ton Noyau · <kbd>Tab</kbd> : cible suivante · <kbd>Échap</kbd> : pause.</p>`;
+    <p><kbd>1</kbd>–<kbd>5</kbd> : programmes (sur une cible) ou défenses (sur un nœud à toi) · <kbd>B</kbd> : brèche · dans une combinaison : flèches (ou <kbd>ZQSD</kbd>), lettres ou chiffres, <kbd>Échap</kbd> pour renoncer · <kbd>Espace</kbd> : ton Noyau · <kbd>Tab</kbd> : cible suivante · <kbd>Échap</kbd> : pause.</p>`;
 }
 remplirAide();
 
@@ -222,7 +222,8 @@ if (/^(localhost|127.0.0.1)$/.test(location.hostname)) window.__parefeu = () => 
   const coeur = J ? E.noeuds[J.noyau] : null;
   const danger = vivant && coeur && coeur.proprio === moi ? Math.max(0, 1 - coeur.pv / coeur.max / 0.45) : 0;
   const zone = zoneHud();
-  rendu.dessiner(E, vivant || !J ? moi : moi, { now: t / 1000, dt, selection, attaquables, danger, zone });
+  rendu.dessiner(E, moi, { now: t / 1000, dt, selection, attaquables, danger, zone });
+  placerMenu(E);
   hud(E, moi, t);
   defis.maj(t);
 
@@ -294,7 +295,7 @@ function info(E, moi) {
   const el = $('h-info');
   const J = E.joueurs[moi];
   if (!J.vivant) { el.innerHTML = E.fini ? 'Partie terminée.' : 'Tu regardes la fin de la partie.'; return; }
-  if (selection < 0) { el.innerHTML = 'Touche un nœud <b>voisin</b> pour l’attaquer, ou un des tiens pour le défendre.'; return; }
+  if (selection < 0) { el.innerHTML = 'Touche un nœud <b>voisin</b> pour l’attaquer, ou un des tiens pour le défendre : les actions s’ouvrent autour.'; return; }
   const nd = E.noeuds[selection];
   const type = nd.eteint ? 'NOYAU ÉTEINT' : NOEUDS[nd.type].nom.toUpperCase();
   const qui = nd.proprio < 0 ? 'neutre' : nd.proprio === moi ? 'à toi' : esc(E.joueurs[nd.proprio].nom);
@@ -314,10 +315,29 @@ function info(E, moi) {
   el.innerHTML = `<b style="color:${col}">${type}</b> ${qui} · PV ${Math.ceil(nd.pv)}/${nd.max}${def}${rev ? ` · +${rev}/s` : ''}${portee}`;
 }
 
+/** Le menu suit son nœud, sans sortir de l'écran. */
+function placerMenu(E) {
+  const cache = defis.actif() ? 'none' : '';
+  if ($('h-actions').style.display !== cache) $('h-actions').style.display = cache;
+  if (!boutons.length || selection < 0) return;
+  const W = innerWidth, H = innerHeight;
+  const R = W < 560 ? 64 : 74;
+  const p = rendu.ecran(E.noeuds[selection].x, E.noeuds[selection].y);
+  const m = R + 32;
+  const cx = Math.max(m, Math.min(W - m, p.x));
+  const cy = Math.max(m, Math.min(H - m, p.y));
+  for (const x of boutons) {
+    const l = `${Math.round(cx + x.dx * R)}px`, t = `${Math.round(cy + x.dy * R)}px`;
+    if (x.b.style.left !== l) x.b.style.left = l;
+    if (x.b.style.top !== t) x.b.style.top = t;
+  }
+}
+
 function majActions(E, moi) {
   const J = E.joueurs[moi];
   let mode = null;
-  if (J.vivant && !E.fini && selection >= 0) mode = ami(E, moi, selection) ? 'def' : 'att';
+  // Le menu ne s'ouvre que là où l'on peut agir : ses nœuds, ou une cible à portée.
+  if (J.vivant && !E.fini && selection >= 0) mode = ami(E, moi, selection) ? 'def' : source(E, moi, selection) >= 0 ? 'att' : null;
   if (mode !== modeActions) {
     modeActions = mode;
     const liste = mode === 'att' ? [...LISTE_PROGRAMMES, 'breche'] : mode === 'def' ? LISTE_DEFENSES : [];
@@ -332,9 +352,16 @@ function majActions(E, moi) {
       const c = k === 'breche' ? '#ffb02e' : mode === 'att' ? COULEURS[moi] : '#7dff9b';
       b.style.setProperty('--c', c);
       b.innerHTML = `<span class="k">${A.touche}</span><span class="g">${A.glyphe}</span><span class="n">${A.court || A.nom}</span><span class="p">${A.cout}</span><span class="cd"></span>`;
-      b.addEventListener('pointerdown', (e) => { e.preventDefault(); agir(k); });
+      b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); agir(k); });
       box.appendChild(b);
       return { b, k, A, cd: b.querySelector('.cd'), etat: '' };
+    });
+    // En cercle, en partant du haut.
+    boutons.forEach((x, i) => {
+      const a = -Math.PI / 2 + (i * Math.PI * 2) / boutons.length;
+      x.dx = Math.cos(a); x.dy = Math.sin(a);
+      x.b.style.setProperty('--dx0', `${-x.dx * 60}px`);
+      x.b.style.setProperty('--dy0', `${-x.dy * 60}px`);
     });
   }
   for (const x of boutons) {

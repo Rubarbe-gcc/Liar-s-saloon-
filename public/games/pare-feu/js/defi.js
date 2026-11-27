@@ -1,10 +1,11 @@
 /**
  * PARE-FEU — le mini-défi qu'il faut réussir pour lancer une action.
  *
- * Une combinaison à reproduire : un enchaînement de flèches, de lettres et de
- * chiffres, d'autant plus long que l'action est forte (`defi` + 1 symboles).
- * Au clavier : les flèches (ou ZQSD/WASD), les lettres et les chiffres ; au
- * doigt : le pavé (les 4 flèches et les 4 lettres/chiffres du défi).
+ * Une combinaison à reproduire, d'un seul genre tiré au hasard : que des
+ * flèches, que des lettres ou que des chiffres, d'autant plus longue que
+ * l'action est forte (`defi` + 1 symboles), sur un pavé de 4 symboles.
+ * Au clavier : les flèches (ou ZQSD/WASD), les lettres ou les chiffres ; au
+ * doigt : les 4 boutons du pavé.
  * La partie continue pendant le défi. Une erreur ne fait pas échouer, mais
  * l'action n'est plus « parfaite » ; le temps écoulé, elle est perdue.
  * La brèche est une combinaison de 5 où chaque bon symbole compte (score).
@@ -13,25 +14,23 @@
 const $ = (id) => document.getElementById(id);
 const FLECHES = ['←', '↑', '→', '↓'];
 const TOUCHES_FLECHES = { ArrowLeft: '←', ArrowUp: '↑', ArrowRight: '→', ArrowDown: '↓', q: '←', a: '←', z: '↑', w: '↑', d: '→', s: '↓' };
-// Sans Z, Q, S, D, W, A : ces lettres servent de flèches.
-const LETTRES = 'BCEFGHJKLMNPRTUVXY';
+const LETTRES = 'ABCDEFGHJKLMNPRSTUVXYZ';
 const CHIFFRES = '123456789';
 const hasard = (n) => Math.floor(Math.random() * n);
 const melanger = (t) => { for (let i = t.length - 1; i > 0; i--) { const j = hasard(i + 1); [t[i], t[j]] = [t[j], t[i]]; } return t; };
 
-/** Une combinaison de `n` symboles et son pavé. */
-export function combinaison(n) {
-  const lettres = melanger([...LETTRES]).slice(0, 2);
-  const chiffres = melanger([...CHIFFRES]).slice(0, 2);
-  const autres = [...lettres, ...chiffres];
+/** Une combinaison de `n` symboles d'un seul genre, et son pavé de 4. */
+export function combinaison(n, genre = ['fleches', 'lettres', 'chiffres'][hasard(3)]) {
+  const pave = genre === 'fleches' ? [...FLECHES]
+    : melanger([...(genre === 'lettres' ? LETTRES : CHIFFRES)]).slice(0, 4).sort();
   const suite = [];
   for (let i = 0; i < n; i++) {
-    let s;
-    do s = Math.random() < 0.45 ? FLECHES[hasard(4)] : autres[hasard(4)];
-    while (i > 0 && s === suite[i - 1] && Math.random() < 0.7);
-    suite.push(s);
+    let x;
+    do x = pave[hasard(4)];
+    while (i > 0 && x === suite[i - 1] && Math.random() < 0.6);
+    suite.push(x);
   }
-  return { suite, pave: [...FLECHES, ...melanger(autres)] };
+  return { genre, suite, pave };
 }
 
 /**
@@ -44,8 +43,8 @@ export function creerDefis(o) {
   function rendre() {
     $('df-zone').innerHTML = `<div class="suite">${d.suite.map((c, k) => `<span class="case ${FLECHES.includes(c) ? 'fl' : /\d/.test(c) ? 'ch' : 'le'} ${k < d.i ? 'ok' : k === d.i ? 'cur' : ''}">${c}</span>`).join('')}</div>`;
     const pave = $('df-pave');
-    pave.className = 'pave mixte';
-    pave.innerHTML = d.pave.map((c) => `<button data-v="${c}" class="${FLECHES.includes(c) ? 'fl' : ''}">${c}</button>`).join('');
+    pave.className = `pave mixte ${d.genre}`;
+    pave.innerHTML = d.pave.map((c) => `<button data-v="${c}">${c}</button>`).join('');
   }
 
   function majCases() {
@@ -99,7 +98,8 @@ export function creerDefis(o) {
       const c = combinaison(n);
       d = { ...c, i: 0, fautes: 0, fin: o2.fin, debut: performance.now(), breche: !!o2.breche, temps: o2.breche ? o2.temps : 1.2 + n * 0.8 };
       $('df-titre').textContent = o2.titre;
-      $('df-consigne').textContent = o2.breche ? 'Chaque bon symbole frappe' : `Combinaison de ${n}`;
+      const noms = { fleches: 'flèches', lettres: 'lettres', chiffres: 'chiffres' };
+      $('df-consigne').textContent = o2.breche ? `Chaque bon symbole frappe (${noms[d.genre]})` : `${n} ${noms[d.genre]}`;
       $('ov-defi').style.setProperty('--c', o2.couleur || '#ffb02e');
       rendre();
       $('ov-defi').hidden = false;
@@ -111,8 +111,9 @@ export function creerDefis(o) {
     touche(k) {
       if (!d) return false;
       if (k === 'Escape') { o.son('refus'); terminer(false); return true; }
-      if (k in TOUCHES_FLECHES) { entree(TOUCHES_FLECHES[k]); return true; }
-      if (/^[a-z0-9]$/i.test(k)) { entree(k.toUpperCase()); return true; }
+      if (d.genre === 'fleches') { if (k in TOUCHES_FLECHES) { entree(TOUCHES_FLECHES[k]); return true; } return false; }
+      if (d.genre === 'lettres' && /^[a-z]$/i.test(k)) { entree(k.toUpperCase()); return true; }
+      if (d.genre === 'chiffres' && /^[0-9]$/.test(k)) { entree(k); return true; }
       return false;
     },
 
