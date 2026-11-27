@@ -59,6 +59,13 @@
         <button data-v="difficile">Difficile</button>
       </div>
     </div>
+    <div class="champ"><span class="etiquette">Mode réel · apprends de vraies commandes</span>
+      <div class="choix" id="solo-reel">
+        <button data-v="non" class="is-active">Non · au doigt</button>
+        <button data-v="oui">Oui · au clavier</button>
+      </div>
+      <p class="note" id="solo-reel-note">Joue avec les boutons autour des nœuds.</p>
+    </div>
     <div class="champ"><span class="etiquette">Événements au hasard</span>
       <div class="choix" id="solo-ev">
         <button data-v="oui" class="is-active">Oui</button>
@@ -147,6 +154,14 @@
   </header>
   <div class="alerte" id="h-alerte" hidden></div>
   <div class="evenement" id="h-ev" hidden></div>
+  <section class="terminal" id="terminal" hidden>
+    <div class="term-sortie" id="term-sortie"></div>
+    <div class="term-invite">
+      <span class="term-prompt" id="term-prompt">root@noyau:~$</span>
+      <input id="term-saisie" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Commande">
+      <button class="term-aide" id="term-help" aria-label="Aide">?</button>
+    </div>
+  </section>
   <footer class="hud-bas">
     <div class="info"><span id="h-info">Touche un nœud du réseau.</span></div>
   </footer>

@@ -13,6 +13,7 @@ import { creerPartie, pas, commande, verifier, vuePour, empreinte, simuler, maxD
 import { frontiere, source, voit, allies } from '../public/shared/parefeu/regles.js';
 import { PROGRAMMES, DEFENSES, BRECHE, DT, DUREE_MAX, NIVEAUX, PARFAIT, TECHS, AMELIORATIONS, EVENEMENTS, LISTE_TECHS } from '../public/shared/parefeu/donnees.js';
 import * as serveur from '../server/parefeu.js';
+import { interpreter, adresses, completer, COMMANDES, LISTE_COMMANDES } from '../public/shared/parefeu/terminal.js';
 
 /** Avance de `s` secondes. */
 function avancer(E, s) { for (let i = 0; i < Math.round(s / DT); i++) pas(E); }
@@ -411,6 +412,82 @@ test('la prédiction : les programmes avancent mais n’arrivent pas', () => {
   assert.ok(E.progs[0].t < 1);
   assert.equal(E.noeuds[cible].pv, pv);
   assert.equal(source(E, 0, cible) >= 0, true);
+});
+
+
+test('mode réel : de vraies commandes, une adresse par nœud, cible et parfait', () => {
+  const E = duel();
+  const ips = adresses(E);
+  // Toutes différentes, une par nœud.
+  assert.equal(new Set(ips).size, E.noeuds.length);
+  assert.match(ips[E.joueurs[0].noyau], /^10\.0\.1\.\d$/);
+  const parIp = new Map(ips.map((ip, id) => [id, ip]));
+  const { cible } = preparerAttaque(E);
+  const ip = parIp.get(cible);
+  const moi = E.joueurs[0].noyau;
+  // Jouer une commande : renvoie l'action, sans toucher au moteur lui-même.
+  const run = (l, c = moi) => interpreter(E, 0, l, c);
+
+  // ping -> sonde ; -c la rend parfaite.
+  E.noeuds[cible].proprio = 1; // un vrai propriétaire pour sonder
+  let r = run('ping ' + ip);
+  assert.ok(r.action && r.action.t === 'sonde' && r.action.cible === cible && !r.action.parfait);
+  r = run('ping -c 4 ' + ip);
+  assert.equal(r.action.parfait, true);
+
+  // curl -> ver.
+  assert.equal(run('curl ' + ip).action.t, 'ver');
+  // scp -> cheval ; traceroute -> saturation ; rsync -> rançon ; telnet -> brèche.
+  assert.equal(run('scp f ' + ip + ':/tmp').action.t, 'cheval');
+  assert.equal(run('traceroute ' + ip).action.t, 'saturation');
+  assert.equal(run('rsync ' + ip + ':/c .').action.t, 'rancon');
+  assert.equal(run('telnet ' + ip).action.t, 'breche');
+  assert.equal(run('telnet ' + ip + ' 23').action.score, 5, 'le bon port : brèche parfaite');
+
+  // Chaque commande explique ce qu'elle fait en vrai.
+  assert.ok(run('curl ' + ip).sortie.some((x) => x.c === 'vrai' && /curl/.test(x.t)));
+
+  // Une adresse à soi, hors de portée, ou inconnue : pas d'action, un vrai message.
+  assert.equal(run('curl ' + parIp.get(moi)).action, undefined);
+  assert.equal(run('curl 9.9.9.9').action, undefined);
+
+  // Défense : sur la machine courante (un nœud à soi).
+  E.joueurs[0].res = 100;
+  r = run('sudo ufw enable', moi);
+  assert.ok(r.action && r.action.t === 'parefeu' && r.action.cible === moi);
+  assert.equal(run('sudo ufw default deny incoming', moi).action.parfait, true);
+  // ufw sur une machine pas à soi : refus.
+  assert.equal(run('sudo ufw enable', cible).action, undefined);
+
+  // ssh change la machine courante (vers une des siennes seulement).
+  const sMoi = E.noeuds.find((n) => n.proprio === 0 && n.type === 'serveur');
+  assert.equal(run('ssh ' + parIp.get(sMoi.id)).courant, sMoi.id);
+  assert.equal(run('ssh ' + ip).courant, undefined, 'pas chez l’adversaire');
+
+  // apt install -> amélioration de nœud (sudo obligatoire).
+  r = run('sudo apt install tourelle', moi);
+  assert.ok(r.action && r.action.t === 'up' && r.action.k === 'tourelle' && r.action.cible === moi);
+  assert.equal(run('apt install tourelle', moi).action, undefined, 'sans sudo : refus');
+
+  // man explique ; une faute propose la bonne commande ; clear efface.
+  assert.ok(run('man ping').sortie.some((x) => /envoie/.test(x.t)));
+  assert.ok(run('pign ' + ip).sortie.some((x) => /ping/.test(x.t)));
+  assert.equal(run('clear').effacer, true);
+
+  // Complétion : la commande, puis l'adresse.
+  assert.deepEqual(completer(E, 'pin').choix, ['ping']);
+  assert.ok(completer(E, 'ping 10.0.1.').choix.includes(parIp.get(moi)));
+
+  // Toutes les commandes qui jouent ont une forme parfaite valide.
+  for (const C of Object.values(COMMANDES)) assert.ok(C.base.test(C.exemple.replace(/^sudo /, 'sudo ')) || C.base.test(C.exemple), C.cmd + ' base');
+  for (const C of Object.values(COMMANDES)) assert.ok(C.expert.test(C.expertEx), C.cmd + ' expert : ' + C.expertEx);
+});
+
+test('mode réel : rien n’est une vraie technique d’attaque', () => {
+  // On n'emploie que des commandes d'usage courant, inoffensives.
+  const dangereux = ['nmap', 'metasploit', 'hydra', 'sqlmap', 'nc', 'ncat', 'netcat', 'hping', 'aircrack', 'john', 'dd', 'mkfs', 'kill'];
+  for (const c of LISTE_COMMANDES) assert.ok(!dangereux.includes(c), 'commande interdite : ' + c);
+  for (const C of Object.values(COMMANDES)) assert.ok(['ping', 'curl', 'scp', 'traceroute', 'rsync', 'telnet', 'ufw', 'clamscan', 'mkdir', 'gpg', 'apt'].includes(C.cmd), C.cmd);
 });
 
 /* ------------------------------ en ligne ------------------------------ */

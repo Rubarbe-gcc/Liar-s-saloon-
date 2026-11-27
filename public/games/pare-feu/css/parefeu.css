@@ -93,7 +93,8 @@ input:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(46,242,255,.3
 .aide .carte b { color: #fff; }
 .aide .carte .g { font-size: 18px; margin-right: 6px; }
 .aide .carte small { display: block; color: var(--pale); margin-top: 3px; }
-.aide kbd { border: 1px solid var(--pale); border-radius: 3px; padding: 0 5px; font: inherit; font-size: 12px; }
+.aide kbd, .aide code { border: 1px solid var(--pale); border-radius: 3px; padding: 0 5px; font: inherit; font-size: 12px; }
+.aide code { border-color: rgba(46,242,255,.4); color: var(--cyan); }
 
 /* ------------------------------ HUD ------------------------------ */
 .hud-haut { position: absolute; left: 0; right: 0; top: 0; padding: calc(8px + var(--haut)) 10px 8px; display: flex; gap: 10px; align-items: flex-start; pointer-events: none;
@@ -255,4 +256,30 @@ input:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(46,242,255,.3
   .labo-btn { padding: 6px 8px; font-size: 12px; }
   .evenement { top: calc(92px + var(--haut)); font-size: 11px; max-width: calc(100% - 20px); white-space: normal; text-align: center; }
   .alerte:not([hidden]) ~ .evenement { top: calc(124px + var(--haut)); }
+}
+
+/* ------------------------------ Mode réel : le terminal ------------------------------ */
+.terminal { position: absolute; left: 0; right: 0; bottom: 0; z-index: 8; display: flex; flex-direction: column;
+  max-height: 44%; background: linear-gradient(0deg, rgba(2, 6, 12, .97), rgba(2, 6, 12, .9)); border-top: 1px solid var(--bord);
+  box-shadow: 0 -6px 30px rgba(0, 0, 0, .6); padding: 6px 8px calc(6px + var(--bas)); font-size: 12.5px; }
+.term-sortie { flex: 1; overflow-y: auto; white-space: pre-wrap; word-break: break-word; line-height: 1.45; margin-bottom: 4px; min-height: 48px; }
+.term-sortie .l { display: block; }
+.term-sortie .cmd { color: #fff; }
+.term-sortie .cmd::before { content: '$ '; color: var(--vert); }
+.term-sortie .ok { color: var(--vert); }
+.term-sortie .ko { color: var(--rouge); }
+.term-sortie .info { color: var(--ambre); }
+.term-sortie .vrai { color: var(--pale); font-style: italic; }
+.term-sortie .vrai::before { content: 'ℹ '; font-style: normal; }
+.term-invite { display: flex; align-items: center; gap: 8px; }
+.term-prompt { color: var(--cyan); white-space: nowrap; text-shadow: 0 0 6px var(--cyan); }
+#term-saisie { flex: 1; background: transparent; border: none; color: #fff; font: inherit; outline: none; padding: 6px 0; caret-color: var(--vert); user-select: text; -webkit-user-select: text; }
+.term-aide { width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--bord); background: rgba(8, 16, 30, .8); color: var(--cyan); cursor: pointer; flex: none; }
+.jeu.reel .hud-bas { background: none; }
+.jeu.reel .info { display: none; }
+.jeu.reel .radial { display: none !important; }
+.jeu.reel .alerte { top: calc(64px + var(--haut)); }
+@media (max-width: 560px) {
+  .terminal { max-height: 46%; font-size: 12px; }
+  .term-prompt { font-size: 11px; }
 }

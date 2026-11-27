@@ -17,6 +17,7 @@ import * as son from './sons.js';
 import * as enligne from './enligne.js';
 import { creerDefis } from './defi.js';
 import * as perso from './perso.js';
+import { creerConsole } from './console.js';
 import * as succes from '../../../shared/succes.js';
 
 const $ = (id) => document.getElementById(id);
@@ -76,6 +77,7 @@ const NOTES_MODE = {
 const modeSolo = choix('solo-mode', (v) => { $('solo-mode-note').textContent = NOTES_MODE[v]; });
 const niveauSolo = choix('solo-niveau');
 const evSolo = choix('solo-ev');
+const reelSolo = choix('solo-reel', (v) => { $('solo-reel-note').textContent = v === 'oui' ? 'Tape de vraies commandes (ping, curl, scp, ufw, apt…) : chacune t’explique ce qu’elle fait.' : 'Joue avec les boutons autour des nœuds.'; });
 let derniereConf = null;
 
 $('b-solo').addEventListener('click', () => { son.debloquer(); son.jouer('clic'); $('solo-nom').value = nomPrefere(); aller('s-solo'); });
@@ -88,16 +90,16 @@ $('b-lancer').addEventListener('click', () => {
   son.debloquer();
   const nom = $('solo-nom').value.trim() || nomPrefere() || 'ROOT';
   retenirNom(nom);
-  derniereConf = { mode: modeSolo(), niveau: niveauSolo(), nom, evenements: evSolo() !== 'non' };
+  derniereConf = { mode: modeSolo(), niveau: niveauSolo(), nom, evenements: evSolo() !== 'non', reel: reelSolo() === 'oui' };
   lancerSolo(derniereConf);
 });
 
-function lancerSolo({ mode, niveau, nom, evenements = true }) {
+function lancerSolo({ mode, niveau, nom, evenements = true, reel = false }) {
   const n = mode === 'ffa3' ? 3 : (mode === 'ffa4' || mode === '2v2') ? 4 : 2;
   const joueurs = [{ nom }];
   for (let k = 1; k < n; k++) joueurs.push({ ia: niveau });
   const E = creerPartie({ joueurs, mode: mode === '2v2' ? '2v2' : 'ffa', evenements, graine: (Date.now() ^ (Math.random() * 1e9)) >>> 0 });
-  demarrer({ E, moi: 0, enligne: false, envoyer: (c) => commande(E, 0, c) });
+  demarrer({ E, moi: 0, enligne: false, reel, envoyer: (c) => commande(E, 0, c) });
 }
 
 /* ---------------------------- Personnaliser ---------------------------- */
@@ -209,6 +211,14 @@ function remplirAide() {
     <h3>&gt; Défendre</h3>
     <p>Touche un de tes nœuds (ou un de ton allié) : les défenses s’ouvrent autour de lui. Les défenses adverses sont cachées (<b>?</b>) tant qu’une sonde ne les a pas révélées.</p>
     <div class="cartes">${LISTE_DEFENSES.map((k) => carte(DEFENSES[k])).join('')}</div>
+    <h3>&gt; Le mode réel (apprentissage)</h3>
+    <p>Dans « Contre l’ordinateur », choisis <b>Mode réel</b> : tu joues en tapant de <b>vraies commandes</b> dans un terminal, et chacune t’explique ce qu’elle fait pour de bon. Ce sont des commandes d’usage courant, employées ici de façon imagée — aucune vraie technique d’attaque.</p>
+    <div class="cartes">
+      <div class="carte"><b>Attaquer</b> une adresse<small><code>ping</code> sonde · <code>curl</code> ver · <code>scp</code> cheval · <code>traceroute</code> saturation · <code>rsync</code> rançon · <code>telnet</code> brèche</small></div>
+      <div class="carte"><b>Défendre</b> ta machine<small><code>ufw</code> pare-feu · <code>clamscan</code> antivirus · <code>mkdir</code> leurre · <code>gpg</code> chiffrement · <code>apt upgrade</code> correctif</small></div>
+      <div class="carte"><b>Se repérer</b><small><code>arp -a</code> les cibles · <code>ip a</code> tes machines · <code>ssh &lt;ip&gt;</code> changer de machine · <code>sudo apt install &lt;nom&gt;</code> améliorer · <code>man &lt;cmd&gt;</code> comprendre</small></div>
+    </div>
+    <p>La <b>bonne option</b> rend l’action parfaite (ex. <code>ping -c 4</code>). <kbd>Tab</kbd> complète, <kbd>↑</kbd> rappelle, <b>help</b> liste tout.</p>
     <h3>&gt; Le Laboratoire</h3>
     <p>Le bouton <b>⬆ LABO</b> (touche <kbd>U</kbd>) ouvre le Laboratoire : quinze technologies à trois niveaux, payées en cycles, pour tout ton réseau. En attaque : vers et chevaux plus forts, saturation plus longue, rançon plus gourmande, sonde plus longue, brèche plus forte, programmes plus rapides, recharges plus courtes. En défense : pare-feu renforcé, antivirus plus rapide, leurre vorace, chiffrement quantique, correctif express, auto-réparation. Et l’Overclock, qui augmente tes revenus.</p>
     <h3>&gt; Améliorer un nœud</h3>
@@ -230,6 +240,7 @@ remplirAide();
 
 /** @type {{E:any, moi:number, enligne:boolean, envoyer:(c:any)=>any, pause?:boolean, vitesse?:number, finie?:boolean, elimineVu?:boolean, avancer?:(dt:number)=>any[]}|null} */
 let S = null;
+let reel = false;
 /** Les couleurs des joueurs de la partie (la mienne personnalisée). */
 let palette = [...COULEURS];
 const couleurDe = (j) => (j >= 0 ? palette[j] : '#6b7a99');
@@ -255,12 +266,19 @@ function demarrer(session) {
   aller('s-jeu', false);
   pile.length = 0;
   pile.push('s-menu');
+  reel = !!S.reel;
+  $('s-jeu').classList.toggle('reel', reel);
+  $('terminal').hidden = !reel;
+  if (reel) terminal.demarrer(S.E, S.moi);
   son.lancerNappe();
 }
 function quitterPartie() {
   rendu.style(null, null);
   palette = [...COULEURS];
   laboOuvert(false);
+  reel = false;
+  $('s-jeu').classList.remove('reel');
+  $('terminal').hidden = true;
   if (S?.enligne) enligne.quitterPartie();
   S = null;
   defis.fermer();
@@ -425,7 +443,7 @@ function info(E, moi) {
   const el = $('h-info');
   const J = E.joueurs[moi];
   if (!J.vivant) { el.innerHTML = E.fini ? 'Partie terminée.' : 'Tu regardes la fin de la partie.'; return; }
-  if (selection < 0) { el.innerHTML = 'Touche un nœud <b>voisin</b> pour l’attaquer, ou un des tiens pour le défendre : les actions s’ouvrent autour.'; return; }
+  if (selection < 0) { el.innerHTML = reel ? 'Tape une commande (<b>help</b> pour la liste, <b>arp -a</b> pour les cibles).' : 'Touche un nœud <b>voisin</b> pour l’attaquer, ou un des tiens pour le défendre : les actions s’ouvrent autour.'; return; }
   const nd = E.noeuds[selection];
   const type = nd.eteint ? 'NOYAU ÉTEINT' : NOEUDS[nd.type].nom.toUpperCase();
   const qui = nd.proprio < 0 ? 'neutre' : nd.proprio === moi ? 'à toi' : esc(E.joueurs[nd.proprio].nom);
@@ -636,6 +654,22 @@ function agir(k) {
 }
 
 const defis = creerDefis({ son: (n, e) => son.jouer(n, e) });
+const terminal = creerConsole({
+  etat: () => S && S.E,
+  moi: () => S && S.moi,
+  pseudo: () => (S && S.E && S.E.joueurs[S.moi]?.nom) || 'root',
+  envoyer: (c) => jouerCommande(c),
+});
+
+/** En mode réel : un ordre tapé au terminal (avec son mini-défi éventuel). */
+function jouerCommande(c) {
+  if (!S) return;
+  if (c.t === 'up' || c.t === 'tech' || c.t === 'breche') { S.envoyer(c); if (c.t !== 'breche') son.jouer('capture', 0.1); return; }
+  // Attaques et défenses : la commande donne déjà le « parfait », pas de combinaison en plus.
+  S.envoyer(c);
+  const x = boutons.find((b) => b.k === c.t);
+  if (x) { x.b.classList.remove('flash'); void x.b.offsetWidth; x.b.classList.add('flash'); }
+}
 
 /* ------------------------------------------------------------------ */
 /* Entrées                                                             */
@@ -648,6 +682,7 @@ $('scene').addEventListener('pointerdown', (e) => {
   const n = rendu.noeudSous(S.E, e.clientX, e.clientY);
   if (n !== selection) { son.jouer('clic'); menuUp = false; }
   selection = n;
+  if (reel && n >= 0 && ami(S.E, S.moi, n)) terminal.choisir(S.E, n);
 });
 
 function cibleSuivante() {
@@ -661,7 +696,7 @@ function cibleSuivante() {
 
 addEventListener('keydown', (e) => {
   if (!S || ecran !== 's-jeu') return;
-  if (e.target instanceof HTMLInputElement) return;
+  if (e.target instanceof HTMLInputElement) { if (e.key === 'Escape') { e.preventDefault(); basculerPause(); } return; }
   const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
   if (defis.actif()) {
     if (!e.repeat && defis.touche(k)) e.preventDefault();
