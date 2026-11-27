@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="theme-color" content="#03060c">
+<meta name="description" content="PARE-FEU — hacking en temps réel. Lance tes programmes sur le réseau adverse, défends ton Noyau. Chacun pour soi jusqu’à quatre ou 2 contre 2, contre l’ordinateur ou en ligne.">
+<title>PARE-FEU · Hacking en temps réel</title>
+<link rel="icon" href="/games/pare-feu/icons/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="/games/pare-feu/manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Pare-feu">
+<link rel="stylesheet" href="/games/pare-feu/css/parefeu.css">
+<script src="/maj.js" defer></script>
+</head>
+<body>
+
+<canvas id="scene" aria-label="Le réseau"></canvas>
+<div class="crt" aria-hidden="true"></div>
+
+<!-- ============================ MENU ============================ -->
+<section class="ecran is-active" id="s-menu">
+  <div class="menu">
+    <p class="surtitre">&gt; connexion établie_</p>
+    <h1 class="logo" data-texte="PARE-FEU">PARE-FEU</h1>
+    <p class="slogan">Hacking en temps réel · attaque leur réseau, garde ton Noyau</p>
+    <div class="boutons">
+      <button class="btn grand primaire" id="b-solo"><b>▶ Contre l’ordinateur</b><small>Chacun pour soi ou 2 contre 2, trois niveaux</small></button>
+      <button class="btn grand" id="b-enligne"><b>◉ En ligne</b><small>Jusqu’à quatre, avec des bots si besoin</small></button>
+      <button class="btn grand" id="b-aide"><b>? Comment jouer</b><small>Programmes, défenses, brèche</small></button>
+    </div>
+    <div class="menu-bas">
+      <button class="btn fin" id="b-son" aria-pressed="true">♪ Sons</button>
+      <a class="btn fin" href="/">← L’arcade</a>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ SOLO ============================ -->
+<section class="ecran" id="s-solo">
+  <div class="panneau">
+    <header class="entete"><button class="btn fin" data-retour aria-label="Retour">←</button><h2>Contre l’ordinateur</h2></header>
+    <div class="champ"><span class="etiquette">Mode</span>
+      <div class="choix" id="solo-mode">
+        <button data-v="ffa2" class="is-active">1 contre 1</button>
+        <button data-v="ffa3">Chacun pour soi · 3</button>
+        <button data-v="ffa4">Chacun pour soi · 4</button>
+        <button data-v="2v2">2 contre 2</button>
+      </div>
+      <p class="note" id="solo-mode-note">Toi contre un ordinateur.</p>
+    </div>
+    <div class="champ"><span class="etiquette">Niveau de l’ordinateur</span>
+      <div class="choix" id="solo-niveau">
+        <button data-v="facile">Facile</button>
+        <button data-v="normal" class="is-active">Normal</button>
+        <button data-v="difficile">Difficile</button>
+      </div>
+    </div>
+    <label class="champ"><span class="etiquette">Ton pseudo</span><input id="solo-nom" maxlength="14" autocomplete="off" spellcheck="false" placeholder="ROOT"></label>
+    <button class="btn grand primaire" id="b-lancer"><b>⏎ Lancer l’intrusion</b></button>
+  </div>
+</section>
+
+<!-- ============================ EN LIGNE ============================ -->
+<section class="ecran" id="s-enligne">
+  <div class="panneau">
+    <header class="entete"><button class="btn fin" data-retour aria-label="Retour">←</button><h2>En ligne</h2></header>
+    <p class="note" id="en-statut">Connexion…</p>
+    <div id="en-porte">
+      <label class="champ"><span class="etiquette">Ton pseudo</span><input id="en-nom" maxlength="14" autocomplete="off" spellcheck="false" placeholder="ROOT"></label>
+      <button class="btn grand primaire" id="en-creer"><b>+ Ouvrir une salle</b><small>Tu reçois un code à partager</small></button>
+      <div class="rejoindre">
+        <input id="en-code" maxlength="4" autocomplete="off" spellcheck="false" placeholder="CODE" aria-label="Code de la salle">
+        <button class="btn" id="en-rejoindre">Rejoindre</button>
+      </div>
+    </div>
+    <div id="en-salon" hidden>
+      <p class="code-salle">Salle <b id="en-code-salle">----</b> <button class="btn fin" id="en-copier">Copier le lien</button></p>
+      <ul class="joueurs" id="en-joueurs"></ul>
+      <div id="en-hote">
+        <div class="champ"><span class="etiquette">Mode</span>
+          <div class="choix" id="en-mode">
+            <button data-v="ffa" class="is-active">Chacun pour soi</button>
+            <button data-v="2v2">2 contre 2</button>
+          </div>
+        </div>
+        <div class="champ"><span class="etiquette">Bots</span>
+          <div class="ligne-bots">
+            <button class="btn fin" id="en-moins">−</button>
+            <span id="en-nb-bots">0</span>
+            <button class="btn fin" id="en-plus">+</button>
+            <div class="choix petit" id="en-niveau">
+              <button data-v="facile">Facile</button>
+              <button data-v="normal" class="is-active">Normal</button>
+              <button data-v="difficile">Difficile</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="note" id="en-note"></p>
+      <button class="btn grand primaire" id="en-lancer"><b>⏎ Lancer la partie</b></button>
+      <button class="btn fin" id="en-quitter">Quitter la salle</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ AIDE ============================ -->
+<section class="ecran" id="s-aide">
+  <div class="panneau large">
+    <header class="entete"><button class="btn fin" data-retour aria-label="Retour">←</button><h2>Comment jouer</h2></header>
+    <div class="aide" id="aide"></div>
+  </div>
+</section>
+
+<!-- ============================ PARTIE ============================ -->
+<section class="ecran jeu" id="s-jeu">
+  <header class="hud-haut">
+    <div class="cycles">
+      <div class="cycles-val"><b id="h-res">0</b><span>cycles</span><i id="h-rev">+0/s</i></div>
+      <div class="jauge"><i id="h-jauge"></i></div>
+    </div>
+    <div class="joueurs-hud" id="h-joueurs"></div>
+    <div class="hud-droite">
+      <span class="chrono" id="h-chrono">0:00</span>
+      <span class="surchauffe" id="h-surchauffe" hidden></span>
+      <button class="btn fin icone" id="b-pause" aria-label="Pause">❚❚</button>
+    </div>
+  </header>
+  <div class="alerte" id="h-alerte" hidden></div>
+  <footer class="hud-bas">
+    <div class="info"><span id="h-info">Touche un nœud du réseau.</span></div>
+    <div class="actions" id="h-actions"></div>
+  </footer>
+</section>
+
+<!-- Le mini-défi de chaque action -->
+<div class="ov defi" id="ov-defi" hidden>
+  <div class="boite">
+    <p class="titre" id="df-titre">DÉFI</p>
+    <p class="consigne"><span id="df-consigne"></span> <button class="btn fin" id="df-annuler" aria-label="Annuler">✕</button></p>
+    <div id="df-zone"></div>
+    <div class="temps"><i id="df-temps"></i></div>
+    <div class="pave" id="df-pave"></div>
+  </div>
+</div>
+
+<!-- Pause -->
+<div class="ov" id="ov-pause" hidden>
+  <div class="boite">
+    <p class="titre">❚❚ PAUSE</p>
+    <div class="boutons">
+      <button class="btn grand primaire" id="p-reprendre"><b>▶ Reprendre</b></button>
+      <button class="btn grand" id="p-aide"><b>? Comment jouer</b></button>
+      <button class="btn grand" id="p-quitter"><b>✕ Abandonner</b></button>
+    </div>
+  </div>
+</div>
+
+<!-- Éliminé, la partie continue -->
+<div class="ov leger" id="ov-elimine" hidden>
+  <div class="boite">
+    <p class="titre rouge glitch" data-texte="NOYAU PERDU">NOYAU PERDU</p>
+    <p id="el-texte">Ton Noyau est tombé.</p>
+    <div class="boutons">
+      <button class="btn grand primaire" id="el-regarder"><b>◉ Regarder la fin</b></button>
+      <button class="btn grand" id="el-menu"><b>← Menu</b></button>
+    </div>
+  </div>
+</div>
+
+<!-- Fin -->
+<div class="ov" id="ov-fin" hidden>
+  <div class="boite large">
+    <p class="titre glitch" id="fin-titre" data-texte="ACCÈS TOTAL">ACCÈS TOTAL</p>
+    <p id="fin-texte"></p>
+    <table class="bilan" id="fin-bilan"></table>
+    <div class="boutons">
+      <button class="btn grand primaire" id="fin-rejouer"><b>↻ Rejouer</b></button>
+      <button class="btn grand" id="fin-menu"><b>← Menu</b></button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script type="module" src="/games/pare-feu/js/main.js"></script>
+</body>
+</html>

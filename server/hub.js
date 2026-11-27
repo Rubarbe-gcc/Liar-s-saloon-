@@ -43,8 +43,9 @@ import * as tennis from './tennis.js';
 import * as rugby from './rugby.js';
 import * as maximenu from './maximenu.js';
 import * as handball from './handball.js';
+import * as parefeu from './parefeu.js';
 
-const GAMES = { saloon, zenith, echo, brasier, skullking, fiesta, street, velours, foot, basket, boxe, tennis, maximenu, handball, rugby };
+const GAMES = { saloon, zenith, echo, brasier, skullking, fiesta, street, velours, foot, basket, boxe, tennis, maximenu, handball, rugby, parefeu };
 const DEFAULT_GAME = 'saloon';
 
 /** Temps pendant lequel une place attend son joueur après une coupure. */
