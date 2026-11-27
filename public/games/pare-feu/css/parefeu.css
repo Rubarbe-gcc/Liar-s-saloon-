@@ -207,3 +207,52 @@ input:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(46,242,255,.3
   .ov.defi { padding-bottom: calc(40px + var(--bas)); }
   .ov.defi .boite { padding: 10px; }
 }
+
+/* ------------------------------ Laboratoire ------------------------------ */
+.labo-btn { border-color: #ffd54a; color: #ffd54a; text-shadow: 0 0 8px rgba(255, 213, 74, .6); }
+.labo-btn.peut { animation: clign 1.2s infinite; box-shadow: 0 0 14px rgba(255, 213, 74, .5); }
+.labo { position: fixed; z-index: 35; right: 10px; top: calc(70px + var(--haut)); width: 340px; max-height: calc(100% - 150px - var(--haut)); display: flex; flex-direction: column; gap: 8px;
+  background: var(--verre); border: 1px solid #ffd54a; border-radius: 10px; padding: 10px; box-shadow: 0 0 40px rgba(255, 213, 74, .18); }
+.labo header { display: flex; align-items: center; gap: 10px; }
+.labo header b { color: #ffd54a; letter-spacing: .08em; text-shadow: 0 0 10px rgba(255, 213, 74, .6); }
+.labo header span { margin-left: auto; color: #fff; font-size: 13px; }
+.onglets-labo { display: flex; gap: 6px; }
+.onglets-labo button { flex: 1; padding: 6px; border-radius: 5px; border: 1px solid rgba(111, 134, 168, .4); background: rgba(8, 16, 30, .8); font-size: 12px; cursor: pointer; }
+.onglets-labo button.is-active { border-color: #ffd54a; color: #fff; background: rgba(255, 213, 74, .16); }
+.techs { display: grid; gap: 6px; overflow-y: auto; }
+.tech { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 8px; text-align: left; padding: 7px 9px; border-radius: 6px; border: 1px solid rgba(111, 134, 168, .35); background: rgba(0, 0, 0, .35); cursor: pointer; }
+.tech .g { font-size: 20px; color: #ffd54a; text-align: center; }
+.tech b { display: block; font-size: 13px; color: #fff; }
+.tech small { display: block; font-size: 11px; color: var(--pale); }
+.tech .niv { color: #ffd54a; font-size: 11px; letter-spacing: .1em; }
+.tech .prix { font-size: 13px; color: var(--vert); min-width: 3ch; text-align: right; }
+.tech.pret { border-color: #ffd54a; box-shadow: 0 0 10px -3px #ffd54a; }
+.tech.pauvre .prix { color: var(--rouge); }
+.tech.max { opacity: .55; cursor: default; }
+.tech:active:not(.max) { scale: .98; }
+.act.max .p { color: #ffd54a; }
+.act.solde .p { color: #ffd54a; }
+
+/* ------------------------------ Événements ------------------------------ */
+.evenement { position: absolute; left: 50%; top: calc(64px + var(--haut)); transform: translateX(-50%); padding: 5px 12px; border: 1px solid #ffd54a; border-radius: 4px;
+  background: rgba(40, 30, 0, .75); color: #fff; font-size: 12px; white-space: nowrap; box-shadow: 0 0 18px rgba(255, 213, 74, .35); }
+.evenement b { color: #ffd54a; margin-right: 6px; }
+.evenement i { font-style: normal; color: #ffd54a; margin-left: 6px; }
+.alerte:not([hidden]) ~ .evenement { top: calc(98px + var(--haut)); }
+
+/* ------------------------------ Personnaliser ------------------------------ */
+.perso { display: grid; gap: 12px; max-height: 66vh; overflow-y: auto; }
+.perso h3 { margin: 0; color: var(--cyan); font-size: 14px; letter-spacing: .08em; }
+.tuiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; }
+.tuile { display: grid; justify-items: center; gap: 4px; padding: 8px 6px; border-radius: 7px; border: 1px solid rgba(111, 134, 168, .35); background: rgba(0, 0, 0, .35); cursor: pointer; font-size: 12px; text-align: center; }
+.tuile canvas { width: 64px; height: 40px; }
+.tuile.choisie { border-color: var(--cyan); box-shadow: 0 0 14px -2px var(--cyan); color: #fff; }
+.tuile.verrou { opacity: .5; cursor: default; }
+.tuile small { color: var(--pale); font-size: 10px; }
+
+@media (max-width: 560px) {
+  .labo { left: 8px; right: 8px; width: auto; top: auto; bottom: calc(8px + var(--bas)); max-height: 58%; }
+  .labo-btn { padding: 6px 8px; font-size: 12px; }
+  .evenement { top: calc(92px + var(--haut)); font-size: 11px; max-width: calc(100% - 20px); white-space: normal; text-align: center; }
+  .alerte:not([hidden]) ~ .evenement { top: calc(124px + var(--haut)); }
+}

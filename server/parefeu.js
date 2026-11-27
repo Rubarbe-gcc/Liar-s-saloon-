@@ -155,7 +155,7 @@ export class Salle {
     const k = this.indexOf(id);
     if (k < 0 || !this.E || this.E.fini || !c || typeof c.t !== 'string') return;
     if (this.places[k].bot) return;
-    commande(this.E, k, { t: c.t, cible: Number(c.cible), score: Number(c.score), parfait: c.parfait === true });
+    commande(this.E, k, { t: c.t, k: typeof c.k === 'string' ? c.k : undefined, cible: Number(c.cible), score: Number(c.score), parfait: c.parfait === true });
     this.touch();
   }
 

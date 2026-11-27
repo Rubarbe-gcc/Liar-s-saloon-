@@ -9,16 +9,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { creerCarte } from '../public/shared/parefeu/carte.js';
-import { creerPartie, pas, commande, verifier, vuePour, empreinte, simuler } from '../public/shared/parefeu/partie.js';
+import { creerPartie, pas, commande, verifier, vuePour, empreinte, simuler, maxDe } from '../public/shared/parefeu/partie.js';
 import { frontiere, source, voit, allies } from '../public/shared/parefeu/regles.js';
-import { PROGRAMMES, DEFENSES, BRECHE, DT, DUREE_MAX, NIVEAUX, PARFAIT } from '../public/shared/parefeu/donnees.js';
+import { PROGRAMMES, DEFENSES, BRECHE, DT, DUREE_MAX, NIVEAUX, PARFAIT, TECHS, AMELIORATIONS, EVENEMENTS, LISTE_TECHS } from '../public/shared/parefeu/donnees.js';
 import * as serveur from '../server/parefeu.js';
 
 /** Avance de `s` secondes. */
 function avancer(E, s) { for (let i = 0; i < Math.round(s / DT); i++) pas(E); }
 
 /** Une partie à deux humains (personne ne joue tout seul). */
-const duel = () => creerPartie({ joueurs: [{ nom: 'A' }, { nom: 'B' }], graine: 7 });
+const duel = () => creerPartie({ joueurs: [{ nom: 'A' }, { nom: 'B' }], graine: 7, evenements: false });
 
 /** Donne au joueur j un nœud voisin de la cible, pour pouvoir l'attaquer. */
 function noeudDe(E, j, type) { return E.noeuds.find((n) => n.proprio === j && n.type === type && !n.eteint); }
@@ -236,6 +236,117 @@ test('mini-défi parfait : l’action vaut plus ; chaque action a un défi d’a
   assert.ok(PROGRAMMES.ver.defi < PROGRAMMES.saturation.defi && DEFENSES.correctif.defi < DEFENSES.antivirus.defi);
 });
 
+test('le Laboratoire : trois niveaux par technologie, payés en cycles, et leurs effets', () => {
+  const E = duel();
+  assert.ok(LISTE_TECHS.length >= 15);
+  assert.ok(LISTE_TECHS.some((k) => TECHS[k].cote === 'att') && LISTE_TECHS.some((k) => TECHS[k].cote === 'def'));
+  E.joueurs[0].res = 1000;
+  for (let n = 0; n < 3; n++) { assert.ok(commande(E, 0, { t: 'tech', k: 'ver' }).ok); pas(E); }
+  assert.equal(E.joueurs[0].tech.ver, 3);
+  assert.match(verifier(E, 0, { t: 'tech', k: 'ver' }).raison, /maximum/);
+  assert.ok(E.joueurs[0].res < 1000 - TECHS.ver.couts.reduce((a, b) => a + b, 0) + 10);
+  const { cible } = preparerAttaque(E);
+  const nd = E.noeuds[cible];
+  const pv = nd.pv;
+  commande(E, 0, { t: 'ver', cible });
+  avancer(E, 1.2);
+  assert.ok(Math.abs(pv - nd.pv - (PROGRAMMES.ver.degats + 6)) < 0.01, 'ver mutant : +6');
+  // Recharge et vitesse
+  E.joueurs[0].res = 1000;
+  commande(E, 0, { t: 'tech', k: 'recharge' }); pas(E);
+  E.joueurs[0].cd = {};
+  commande(E, 0, { t: 'cheval', cible }); pas(E);
+  assert.ok(Math.abs(E.joueurs[0].cd.cheval - E.temps + DT - PROGRAMMES.cheval.recharge * 0.88) < 0.06);
+  // Défense : pare-feu renforcé et chiffrement quantique
+  E.joueurs[1].res = 1000;
+  commande(E, 1, { t: 'tech', k: 'parefeu' }); pas(E);
+  nd.pf = 0;
+  commande(E, 1, { t: 'parefeu', cible }); pas(E);
+  assert.equal(nd.pf, DEFENSES.parefeu.charges + 1);
+  // Économie : l'overclock
+  const r0 = E.joueurs[1].revenu;
+  commande(E, 1, { t: 'tech', k: 'overclock' }); pas(E); pas(E);
+  assert.ok(Math.abs(E.joueurs[1].revenu - r0 * 1.1) < 0.01);
+});
+
+test('améliorer un nœud : blindage, rendement, tourelle, bouclier ; tout est perdu à la prise', () => {
+  const E = duel();
+  E.joueurs[1].res = 1000;
+  const { cible } = preparerAttaque(E);
+  const nd = E.noeuds[cible];
+  assert.equal(verifier(E, 0, { t: 'up', k: 'blindage', cible }).ok, false, 'pas chez les autres');
+  const max0 = nd.max;
+  commande(E, 1, { t: 'up', k: 'blindage', cible }); pas(E);
+  assert.equal(nd.max, Math.round(max0 * 1.35));
+  const r0 = E.joueurs[1].revenu;
+  commande(E, 1, { t: 'up', k: 'rendement', cible }); pas(E); pas(E);
+  assert.ok(Math.abs(E.joueurs[1].revenu - r0 - 0.8) < 0.01);
+  commande(E, 1, { t: 'up', k: 'tourelle', cible }); pas(E);
+  const pv = nd.pv;
+  commande(E, 0, { t: 'ver', cible });
+  let tir = false;
+  for (let i = 0; i < 40; i++) { pas(E); tir ||= E.evts.some((e) => e.k === 'tourelle'); }
+  assert.ok(tir && nd.pv === pv, 'la tourelle abat le ver');
+  commande(E, 1, { t: 'up', k: 'bouclier', cible }); pas(E);
+  nd.pf = 0;
+  avancer(E, 15);
+  assert.ok(nd.pf >= 1, 'le bouclier recharge le pare-feu');
+  for (const k of Object.keys(AMELIORATIONS)) assert.equal(AMELIORATIONS[k].couts.length, 3);
+  nd.pv = 1; nd.pf = 0; nd.up.tourelle = 0;
+  E.joueurs[0].cd = {};
+  E.joueurs[0].res = 100;
+  commande(E, 0, { t: 'cheval', cible });
+  avancer(E, 3);
+  assert.equal(nd.proprio, 0);
+  assert.deepEqual(Object.values(nd.up), [0, 0, 0, 0, 0]);
+  assert.equal(nd.max, maxDe(nd));
+});
+
+test('les événements : ils arrivent, durent, et changent la partie', () => {
+  const E = creerPartie({ joueurs: [{ nom: 'A' }, { nom: 'B' }], graine: 2 });
+  assert.ok(E.evProchain >= 40 && E.evProchain <= 60);
+  avancer(E, E.evProchain + 0.1);
+  assert.ok(E.ev && EVENEMENTS[E.ev.k], 'un événement a commencé');
+  const fin = E.ev.fin;
+  avancer(E, fin - E.temps + 0.1);
+  assert.equal(E.ev, null);
+  assert.ok(E.evProchain > E.temps + 30);
+  const forcer = (k) => { E.ev = { k, debut: E.temps, fin: E.temps + EVENEMENTS[k].duree }; };
+  // Marché noir : 40 % de moins.
+  forcer('soldes');
+  E.joueurs[0].res = Math.ceil(PROGRAMMES.cheval.cout * 0.6);
+  const cible = frontiere(E, 0)[0];
+  assert.ok(verifier(E, 0, { t: 'cheval', cible }).ok);
+  // Panne : le pare-feu ne filtre plus.
+  const D = creerPartie({ joueurs: [{ nom: 'A' }, { nom: 'B' }], graine: 3, evenements: false });
+  const { cible: c2 } = preparerAttaque(D);
+  D.noeuds[c2].pf = 3;
+  D.ev = { k: 'panne', debut: 0, fin: 99 };
+  commande(D, 0, { t: 'ver', cible: c2 });
+  avancer(D, 1.2);
+  assert.equal(D.noeuds[c2].pf, 3);
+  assert.ok(D.noeuds[c2].pv < D.noeuds[c2].max);
+  // Fuite : on voit tout.
+  D.ev = { k: 'fuite', debut: 0, fin: 99 };
+  assert.ok(voit(D, 0, c2));
+  // La cache : le premier qui prend le nœud empoche la prime.
+  const C = creerPartie({ joueurs: [{ nom: 'A' }, { nom: 'B' }], graine: 4, evenements: false });
+  const n = frontiere(C, 0)[0];
+  C.ev = { k: 'cache', debut: 0, fin: 99, n };
+  C.noeuds[n].pv = 1;
+  C.noeuds[n].touche = 1e9;
+  C.joueurs[0].res = 50;
+  commande(C, 0, { t: 'ver', cible: n });
+  let tresor = null;
+  for (let i = 0; i < 80 && !tresor; i++) { pas(C); tresor = C.evts.find((e) => e.k === 'tresor'); }
+  assert.ok(tresor);
+  assert.ok(C.joueurs[0].res > 50 - PROGRAMMES.ver.cout + EVENEMENTS.cache.prime - 1);
+  assert.equal(C.ev, null);
+  // Sans événements : rien n'arrive.
+  const S = simuler({ joueurs: [{ ia: 'normal' }, { ia: 'normal' }], graine: 9, evenements: false }, 120);
+  assert.equal(S.ev, null);
+});
+
 test('prendre un Noyau élimine son joueur et finit le duel', () => {
   const E = duel();
   const coeur = E.noeuds[E.joueurs[1].noyau];
@@ -283,6 +394,7 @@ test('l’ordinateur : une partie à quatre va au bout, à tous les niveaux', ()
     assert.ok(E.fini, ia);
     assert.ok(E.temps <= DUREE_MAX);
     assert.ok(E.joueurs.reduce((s, J) => s + J.stats.lances, 0) > 50);
+    if (ia !== 'facile') assert.ok(E.joueurs.reduce((s, J) => s + J.stats.ameliorations, 0) > 0, 'l’ordinateur s’améliore');
   }
   const E = simuler({ mode: '2v2', joueurs: [{ ia: 'normal' }, { ia: 'normal' }, { ia: 'normal' }, { ia: 'normal' }], graine: 5 });
   assert.ok(E.fini && (E.gagnant === 0 || E.gagnant === 1));

@@ -8,14 +8,23 @@
  * coordonnées de la carte.
  */
 
-import { COULEURS, COULEUR_NEUTRE, DEFENSES, PROGRAMMES } from '../../../shared/parefeu/donnees.js';
-import { voit, allies } from '../../../shared/parefeu/regles.js';
+import { COULEURS, COULEUR_NEUTRE, DEFENSES, AMELIORATIONS, LISTE_AMELIORATIONS, EVENEMENTS, TECHS } from '../../../shared/parefeu/donnees.js';
+import { voit, allies, evenement, up } from '../../../shared/parefeu/regles.js';
 
 const RAYON = { noyau: 30, nexus: 27, serveur: 18, relais: 15 };
 const MIN_PX = { noyau: 13, nexus: 12, serveur: 9, relais: 8 };
 const ETENDUE = 900;
 
-const couleur = (j) => (j >= 0 ? COULEURS[j] : COULEUR_NEUTRE);
+/** Les couleurs des joueurs (la sienne peut être personnalisée) et son style. */
+let PALETTE = [...COULEURS];
+let STYLE = { j: -1, forme: 'hexa', trainee: 'ligne' };
+const couleur = (j) => (j >= 0 ? PALETTE[j] : COULEUR_NEUTRE);
+/** Une couleur de l'arc-en-ciel (teinte h en degrés), en #rrggbb. */
+function arcEnCiel(h) {
+  const f = (n) => { const k = (n + h / 30) % 12; const v = 0.5 - 0.5 * Math.max(-1, Math.min(k - 3, 9 - k, 1)); return Math.round(255 * v).toString(16).padStart(2, '0'); };
+  return '#' + f(0) + f(8) + f(4);
+}
+
 function rgba(hex, a) {
   const n = parseInt(hex.slice(1), 16);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
@@ -37,6 +46,35 @@ function lueur(hex) {
   return c;
 }
 
+/** Le contour d'un Noyau selon la forme choisie. */
+function contourNoyau(g, x, y, r, forme, now) {
+  switch (forme) {
+    case 'cercle': g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); return;
+    case 'losange': polygone(g, x, y, r * 1.1, 4, 0); return;
+    case 'octo': polygone(g, x, y, r, 8, Math.PI / 8); return;
+    case 'triangle': polygone(g, x, y, r * 1.15, 3, -Math.PI / 2); return;
+    case 'etoile': {
+      g.beginPath();
+      for (let i = 0; i < 10; i++) {
+        const a = -Math.PI / 2 + (i * Math.PI) / 5, rr = i % 2 ? r * 0.55 : r * 1.12;
+        if (i) g.lineTo(x + rr * Math.cos(a), y + rr * Math.sin(a)); else g.moveTo(x + rr * Math.cos(a), y + rr * Math.sin(a));
+      }
+      g.closePath();
+      return;
+    }
+    case 'oeil': {
+      const k = 0.55 + 0.1 * Math.sin(now * 2);
+      g.beginPath();
+      g.moveTo(x - r * 1.2, y);
+      g.quadraticCurveTo(x, y - r * 2.2 * k, x + r * 1.2, y);
+      g.quadraticCurveTo(x, y + r * 2.2 * k, x - r * 1.2, y);
+      g.closePath();
+      return;
+    }
+    default: polygone(g, x, y, r, 6, Math.PI / 6);
+  }
+}
+
 function polygone(g, x, y, r, n, rot = 0) {
   g.beginPath();
   for (let i = 0; i < n; i++) {
@@ -56,6 +94,7 @@ export function creerRendu(canvas) {
   let secousse = 0;
   let flash = { c: '#fff', a: 0 };
   let glitch = 0;
+  let annonce = null;
   const parts = [];
   const eclairs = [];
   const textes = [];
@@ -133,6 +172,21 @@ export function creerRendu(canvas) {
   /** Les événements d'une image deviennent des effets. */
   function effets(evts, E, moi) {
     for (const e of evts) {
+      if (e.k === 'evenement') {
+        const V = EVENEMENTS[e.ev];
+        annonce = { s: V.glyphe + ' ' + V.nom, sous: V.aide, t: 0 };
+        glitch = Math.max(glitch, 0.35);
+        flash = e.ev === 'panne' ? { c: '#000000', a: 0.6 } : { c: '#ffd54a', a: 0.15 };
+        continue;
+      }
+      if (e.k === 'tech') {
+        if (e.j === moi) {
+          const core = E.noeuds[E.joueurs[moi].noyau];
+          onde(core.x, core.y, '#ffd54a', 120, 0.7, 3);
+          texte(core.x, core.y - 60, '▲ ' + TECHS[e.tech].nom.toUpperCase() + ' ' + e.niv, '#ffd54a');
+        }
+        continue;
+      }
       const nd = E.noeuds[e.n];
       if (!nd && e.k !== 'elimine' && e.k !== 'fin') continue;
       const cj = couleur(e.j);
@@ -150,7 +204,7 @@ export function creerRendu(canvas) {
           if (pourMoi) texte(nd.x, nd.y - 34, 'INFILTRÉ', '#ff3df0');
           break;
         case 'impact': {
-          const dg = Math.round(PROGRAMMES[e.type].degats * E.mult * (e.fort ? 1.25 : 1));
+          const dg = e.dg ?? 0;
           if (e.fort) onde(nd.x, nd.y, '#ffd54a', 55, 0.4, 3);
           flashNoeud.set(nd.id, { t: 0.18, c: '#ffffff' });
           etincelles(nd.x, nd.y, cj, e.type === 'cheval' ? 14 : 7, 160, 0.45, 2.5);
@@ -178,6 +232,23 @@ export function creerRendu(canvas) {
           secousse = 18;
           glitch = 0.7;
           flash = { c: moi >= 0 && allies(E, moi, e.p) ? '#ff3b5c' : couleur(e.j), a: 0.55 };
+          break;
+        }
+        case 'tourelle':
+          eclair(nd.x, nd.y, e.x, e.y, '#ffd54a', 0.18, 4);
+          etincelles(e.x, e.y, '#ffd54a', 8, 140, 0.35, 2);
+          break;
+        case 'bouclier': onde(nd.x, nd.y, '#9fe8ff', 40, 0.4, 2); break;
+        case 'up':
+          onde(nd.x, nd.y, '#ffd54a', 70, 0.6, 4);
+          for (let i = 0; i < 12; i++) parts.push({ k: 'p', x: nd.x + (Math.random() - 0.5) * 40, y: nd.y + 10, vx: 0, vy: -50 - Math.random() * 40, vie: 0.7, t: 0, c: '#ffd54a', r: 2.5, plus: true });
+          if (pourMoi) texte(nd.x, nd.y - 44, '▲ ' + AMELIORATIONS[e.up].nom.toUpperCase() + ' ' + e.niv, '#ffd54a');
+          break;
+        case 'tresor': {
+          const core = E.noeuds[E.joueurs[e.j].noyau];
+          for (let i = 0; i < 16; i++) parts.push({ k: 'f', x: nd.x, y: nd.y, x2: core.x, y2: core.y, t: -i * 0.05, vie: 1, c: '#ffd54a' });
+          texte(nd.x, nd.y - 44, '+' + e.v + ' ◈', '#ffd54a', true);
+          onde(nd.x, nd.y, '#ffd54a', 160, 0.8, 5);
           break;
         }
         case 'zap': {
@@ -298,12 +369,23 @@ export function creerRendu(canvas) {
       const ux = (b.x - a.x) / p.len, uy = (b.y - a.y) / p.len;
       const queue = p.type === 'sonde' ? 70 : p.type === 'ver' ? 34 : 46;
       const qb = ecran(x - ux * Math.min(queue, t * p.len), y - uy * Math.min(queue, t * p.len));
-      const c = p.devie ? '#b48cff' : couleur(p.j);
-      const gr = g.createLinearGradient(q.x, q.y, qb.x, qb.y);
+      const tr = p.j === STYLE.j ? STYLE.trainee : 'ligne';
+      let c = p.devie ? '#b48cff' : couleur(p.j);
+      if (tr === 'arcenciel' && !p.devie) c = arcEnCiel((now * 160 + p.id * 47) % 360);
+      const qq = tr === 'comete' ? ecran(x - ux * Math.min(queue * 2, t * p.len), y - uy * Math.min(queue * 2, t * p.len)) : qb;
+      const gr = g.createLinearGradient(q.x, q.y, qq.x, qq.y);
       gr.addColorStop(0, rgba(c, 0.95)); gr.addColorStop(1, rgba(c, 0));
-      g.strokeStyle = gr; g.lineWidth = Math.max(2, (p.type === 'ver' ? 3 : 5) * s);
-      g.beginPath(); g.moveTo(q.x, q.y); g.lineTo(qb.x, qb.y); g.stroke();
-      const r = Math.max(5, 16 * s) * (p.type === 'ver' ? 0.8 : 1.2);
+      g.strokeStyle = gr;
+      const ep = Math.max(2, (p.type === 'ver' ? 3 : 5) * s) * (tr === 'comete' ? 1.8 : 1);
+      g.lineWidth = ep;
+      if (tr === 'pointilles') g.setLineDash([4, 5]);
+      if (tr === 'double') {
+        const nx = -(qq.y - q.y), ny = qq.x - q.x, nl = Math.hypot(nx, ny) || 1, d = ep * 0.9;
+        for (const sg of [-1, 1]) { g.beginPath(); g.moveTo(q.x + (nx / nl) * d * sg, q.y + (ny / nl) * d * sg); g.lineTo(qq.x + (nx / nl) * d * sg, qq.y + (ny / nl) * d * sg); g.stroke(); }
+      } else { g.beginPath(); g.moveTo(q.x, q.y); g.lineTo(qq.x, qq.y); g.stroke(); }
+      g.setLineDash([]);
+      if (tr === 'etincelles' && Math.random() < 0.35) parts.push({ k: 'p', x, y, vx: (Math.random() - 0.5) * 60, vy: (Math.random() - 0.5) * 60, vie: 0.35, t: 0, c, r: 1.6 });
+      const r = Math.max(5, 16 * s) * (p.type === 'ver' ? 0.8 : 1.2) * (tr === 'comete' ? 1.4 : 1) * (p.fort ? 1.2 : 1);
       g.drawImage(lueur(c), q.x - r * 1.6, q.y - r * 1.6, r * 3.2, r * 3.2);
       g.fillStyle = '#fff';
       g.strokeStyle = c;
@@ -354,12 +436,16 @@ export function creerRendu(canvas) {
       const rot = nd.type === 'relais' ? 0 : nd.type === 'serveur' ? Math.PI / 6 : nd.type === 'nexus' ? now * 0.2 : Math.PI / 6;
       const grad = g.createRadialGradient(x, y, 0, x, y, r);
       grad.addColorStop(0, rgba(c, 0.55)); grad.addColorStop(1, 'rgba(4,10,20,.95)');
-      polygone(g, x, y, r, cotes, rot);
+      const formeNoyau = nd.type === 'noyau' && nd.base === STYLE.j && STYLE.forme !== 'hexa' ? STYLE.forme : null;
+      const trace = () => (formeNoyau ? contourNoyau(g, x, y, r, formeNoyau, now) : polygone(g, x, y, r, cotes, rot));
+      trace();
       g.fillStyle = grad; g.fill();
-      g.strokeStyle = fl ? fl.c : c; g.lineWidth = fl ? 3 : 2; g.stroke();
+      g.strokeStyle = fl ? fl.c : c; g.lineWidth = (fl ? 3 : 2) + up(nd, 'blindage') * 1.2; g.stroke();
+      if (up(nd, 'blindage')) { polygone(g, x, y, r * 0.8, cotes, rot); g.strokeStyle = rgba(c, 0.35); g.lineWidth = 1; g.stroke(); }
       if (nd.type === 'noyau' && !nd.eteint) {
         polygone(g, x, y, r * 0.62, 3, -now * 1.2); g.strokeStyle = rgba(c, 0.9); g.lineWidth = 1.5; g.stroke();
-        polygone(g, x, y, r * 1.22, 6, Math.PI / 6); g.strokeStyle = rgba(c, 0.45); g.lineWidth = 1; g.stroke();
+        if (formeNoyau) contourNoyau(g, x, y, r * 1.22, formeNoyau, now); else polygone(g, x, y, r * 1.22, 6, Math.PI / 6);
+        g.strokeStyle = rgba(c, 0.45); g.lineWidth = 1; g.stroke();
         g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, r * 0.16 * (1 + 0.25 * Math.sin(now * 4)), 0, Math.PI * 2); g.fill();
       } else if (nd.type === 'nexus') {
         for (let i = 0; i < 4; i++) {
@@ -375,7 +461,7 @@ export function creerRendu(canvas) {
       if (fl) {
         g.globalCompositeOperation = 'lighter';
         g.globalAlpha = Math.min(1, fl.t * 4);
-        polygone(g, x, y, r, cotes, rot); g.fillStyle = fl.c; g.fill();
+        trace(); g.fillStyle = fl.c; g.fill();
         g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
         fl.t -= dt; if (fl.t <= 0) flashNoeud.delete(nd.id);
       }
@@ -449,6 +535,34 @@ export function creerRendu(canvas) {
           g.lineTo(cx + Math.cos(a - 2.3) * 8, cy + Math.sin(a - 2.3) * 8);
           g.stroke();
         }
+      }
+      // Les améliorations : de petits badges au-dessus du nœud.
+      const ups = LISTE_AMELIORATIONS.filter((k) => up(nd, k) > 0);
+      if (ups.length) {
+        const tb = Math.max(9, 11 * s);
+        g.font = 'bold ' + tb + 'px ui-monospace, monospace';
+        const w = tb * 1.6;
+        ups.forEach((k, i) => {
+          const bx = x + (i - (ups.length - 1) / 2) * w, by = y - rd - tb * 0.9;
+          g.fillStyle = 'rgba(4,10,20,.85)'; g.beginPath(); g.arc(bx, by, tb * 0.75, 0, Math.PI * 2); g.fill();
+          g.strokeStyle = '#ffd54a'; g.lineWidth = 1; g.stroke();
+          g.fillStyle = '#ffd54a'; g.fillText(AMELIORATIONS[k].glyphe, bx, by + 0.5);
+          for (let l = 0; l < up(nd, k); l++) g.fillRect(bx - 4 + l * 3.2, by + tb * 0.85, 2, 2);
+        });
+        if (up(nd, 'tourelle')) {
+          const a = now * 2;
+          g.strokeStyle = 'rgba(255,213,74,.7)'; g.lineWidth = 2;
+          g.beginPath(); g.moveTo(x + Math.cos(a) * r * 0.5, y + Math.sin(a) * r * 0.5); g.lineTo(x + Math.cos(a) * (r + 6), y + Math.sin(a) * (r + 6)); g.stroke();
+        }
+      }
+      // La cache de données.
+      if (E.ev && E.ev.k === 'cache' && E.ev.n === nd.id && E.ev.fin > E.temps) {
+        const k = (now * 1.5) % 1;
+        g.strokeStyle = 'rgba(255,213,74,' + (1 - k) + ')'; g.lineWidth = 3;
+        g.beginPath(); g.arc(x, y, rd + 6 + k * 30, 0, Math.PI * 2); g.stroke();
+        g.font = '900 ' + Math.max(11, 15 * s) + 'px ui-monospace, monospace';
+        g.fillStyle = '#ffd54a';
+        g.fillText('◈ +' + EVENEMENTS.cache.prime, x, y - rd - Math.max(14, 20 * s));
       }
       if (nd.type === 'noyau' && !nd.eteint && nd.base >= 0) {
         g.font = `bold ${Math.max(9, 12 * s)}px ui-monospace, monospace`;
@@ -526,6 +640,35 @@ export function creerRendu(canvas) {
       g.fillStyle = flash.c; g.globalAlpha = flash.a; g.fillRect(0, 0, W, H); g.globalAlpha = 1;
       flash.a *= Math.pow(0.03, dt);
     }
+    // Panne : l'écran clignote ; tempête : des traînées de données.
+    if (evenement(E, 'panne')) {
+      g.fillStyle = 'rgba(0,0,0,' + (0.3 + (Math.sin(now * 23) > 0.6 ? 0.2 : 0)) + ')';
+      g.fillRect(0, 0, W, H);
+    }
+    if (evenement(E, 'tempete')) {
+      g.strokeStyle = 'rgba(46,242,255,.14)'; g.lineWidth = 1;
+      for (let i = 0; i < 14; i++) { const yy = ((now * 300 + i * 97) % (H + 60)) - 30, xx = (i * 173) % W; g.beginPath(); g.moveTo(xx, yy); g.lineTo(xx - 40, yy - 70); g.stroke(); }
+    }
+    if (annonce) {
+      annonce.t += dt;
+      const k = annonce.t / 2.4;
+      if (k >= 1) annonce = null;
+      else {
+        const al = k < 0.1 ? k / 0.1 : k > 0.75 ? (1 - k) / 0.25 : 1;
+        const tt = Math.min(34, W / 14);
+        g.globalAlpha = al;
+        g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.font = '900 ' + tt + 'px ui-monospace, monospace';
+        const yy = zone.haut + 50;
+        g.fillStyle = 'rgba(0,0,0,.55)'; g.fillRect(0, yy - tt, W, tt * 2.6);
+        g.fillStyle = '#ff3df0'; g.fillText(annonce.s, W / 2 + 3, yy);
+        g.fillStyle = '#2ef2ff'; g.fillText(annonce.s, W / 2 - 3, yy);
+        g.fillStyle = '#ffffff'; g.fillText(annonce.s, W / 2, yy);
+        g.font = Math.max(12, tt * 0.42) + 'px ui-monospace, monospace';
+        g.fillStyle = '#ffd54a'; g.fillText(annonce.sous, W / 2, yy + tt * 0.95);
+        g.globalAlpha = 1;
+      }
+    }
     if (o.danger > 0) {
       const v = g.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.35, W / 2, H / 2, Math.max(W, H) * 0.75);
       v.addColorStop(0, 'rgba(255,0,40,0)'); v.addColorStop(1, `rgba(255,0,40,${0.28 * o.danger * (0.6 + 0.4 * Math.sin(now * 8))})`);
@@ -544,6 +687,8 @@ export function creerRendu(canvas) {
   taille();
   return {
     taille, dessiner, effets, noeudSous, ecran,
+    /** La palette des joueurs et le style du joueur j (personnalisation). */
+    style: (palette, st) => { PALETTE = palette ? [...palette] : [...COULEURS]; STYLE = st || { j: -1, forme: 'hexa', trainee: 'ligne' }; },
     secouer: (v) => { secousse = Math.max(secousse, v); },
     eclairer: (c, a) => { flash = { c, a }; },
   };

@@ -29,7 +29,8 @@
     <div class="boutons">
       <button class="btn grand primaire" id="b-solo"><b>▶ Contre l’ordinateur</b><small>Chacun pour soi ou 2 contre 2, trois niveaux</small></button>
       <button class="btn grand" id="b-enligne"><b>◉ En ligne</b><small>Jusqu’à quatre, avec des bots si besoin</small></button>
-      <button class="btn grand" id="b-aide"><b>? Comment jouer</b><small>Programmes, défenses, brèche</small></button>
+      <button class="btn grand" id="b-perso"><b>◈ Personnaliser</b><small id="perso-info">Couleur, Noyau, traînée</small></button>
+      <button class="btn grand" id="b-aide"><b>? Comment jouer</b><small>Programmes, défenses, Laboratoire, événements</small></button>
     </div>
     <div class="menu-bas">
       <button class="btn fin" id="b-son" aria-pressed="true">♪ Sons</button>
@@ -56,6 +57,12 @@
         <button data-v="facile">Facile</button>
         <button data-v="normal" class="is-active">Normal</button>
         <button data-v="difficile">Difficile</button>
+      </div>
+    </div>
+    <div class="champ"><span class="etiquette">Événements au hasard</span>
+      <div class="choix" id="solo-ev">
+        <button data-v="oui" class="is-active">Oui</button>
+        <button data-v="non">Non</button>
       </div>
     </div>
     <label class="champ"><span class="etiquette">Ton pseudo</span><input id="solo-nom" maxlength="14" autocomplete="off" spellcheck="false" placeholder="ROOT"></label>
@@ -106,6 +113,15 @@
   </div>
 </section>
 
+<!-- ============================ PERSONNALISER ============================ -->
+<section class="ecran" id="s-perso">
+  <div class="panneau large">
+    <header class="entete"><button class="btn fin" data-retour aria-label="Retour">←</button><h2>Personnaliser</h2></header>
+    <p class="note" id="perso-stats"></p>
+    <div class="perso" id="perso"></div>
+  </div>
+</section>
+
 <!-- ============================ AIDE ============================ -->
 <section class="ecran" id="s-aide">
   <div class="panneau large">
@@ -125,10 +141,12 @@
     <div class="hud-droite">
       <span class="chrono" id="h-chrono">0:00</span>
       <span class="surchauffe" id="h-surchauffe" hidden></span>
+      <button class="btn fin labo-btn" id="b-labo" aria-label="Laboratoire">⬆ LABO</button>
       <button class="btn fin icone" id="b-pause" aria-label="Pause">❚❚</button>
     </div>
   </header>
   <div class="alerte" id="h-alerte" hidden></div>
+  <div class="evenement" id="h-ev" hidden></div>
   <footer class="hud-bas">
     <div class="info"><span id="h-info">Touche un nœud du réseau.</span></div>
   </footer>
@@ -144,6 +162,18 @@
     <div class="temps"><i id="df-temps"></i></div>
     <div class="pave" id="df-pave"></div>
   </div>
+</div>
+
+<!-- Le Laboratoire : les technologies (la partie continue) -->
+<div class="labo" id="ov-labo" hidden>
+  <header><b>⬆ LABORATOIRE</b><span id="labo-res"></span><button class="btn fin" id="labo-fermer" aria-label="Fermer">✕</button></header>
+  <div class="onglets-labo" id="labo-onglets">
+    <button data-v="att" class="is-active">Attaque</button>
+    <button data-v="def">Défense</button>
+    <button data-v="eco">Économie</button>
+  </div>
+  <div class="techs" id="labo-techs"></div>
+  <p class="note">Améliorer un nœud : touche-le, puis ⬆ dans son menu.</p>
 </div>
 
 <!-- Pause -->

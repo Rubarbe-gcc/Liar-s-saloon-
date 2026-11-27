@@ -11,8 +11,8 @@
  * Tout passe par `commande`, comme pour un humain, et le hasard par `alea(E)`.
  */
 
-import { PROGRAMMES, DEFENSES, BRECHE, NIVEAUX } from './donnees.js';
-import { allies, ami, frontiere, recharge, voit, alea } from './regles.js';
+import { PROGRAMMES, DEFENSES, BRECHE, NIVEAUX, LISTE_TECHS } from './donnees.js';
+import { allies, ami, frontiere, recharge, voit, alea, prixTech, prixUp, up } from './regles.js';
 import { commande, verifier } from './partie.js';
 
 const VALEUR = { noyau: 6, nexus: 4, serveur: 3, relais: 2.4, eteint: 2 };
@@ -100,6 +100,7 @@ function score(E, j, n, focusJ) {
   if (nd.av > E.temps) s *= 0.4;
   if (nd.proprio >= 0 && nd.proprio === focusJ) s *= 1.5;
   if (nd.proprio < 0) s *= E.temps < 60 ? 1.2 : 0.8;
+  if (E.ev && E.ev.k === 'cache' && E.ev.n === n) s *= 3;
   return s * (0.85 + 0.3 * alea(E));
 }
 
@@ -151,10 +152,38 @@ function attaquer(E, j, N) {
   return false;
 }
 
+/** Les technologies que l'ordinateur préfère, dans l'ordre. */
+const PREFERES = ['overclock', 'ver', 'regen', 'parefeu', 'recharge', 'vitesse', 'cheval', 'antivirus', 'correctif', 'chiffrement', 'saturation', 'rancon', 'leurre', 'breche', 'sonde'];
+
+/** Quand il a de quoi, l'ordinateur achète une amélioration. */
+function ameliorer(E, j, N) {
+  const J = E.joueurs[j];
+  if (alea(E) > N.ameliore) return false;
+  const choix = [];
+  PREFERES.forEach((k, i) => { const p = prixTech(E, j, k); if (p < Infinity) choix.push({ c: { t: 'tech', k }, p, w: 1 / (1 + i * 0.15) }); });
+  for (const nd of E.noeuds) {
+    if (nd.proprio !== j) continue;
+    const coeur = nd.type === 'noyau' && !nd.eteint;
+    const expose = nd.liens.some((v) => !ami(E, j, v));
+    const vouloir = coeur ? ['blindage', 'bouclier', 'tourelle'] : expose ? ['tourelle', 'propulseur', 'bouclier'] : ['rendement'];
+    for (const k of vouloir) {
+      const p = prixUp(nd, k);
+      if (p < Infinity) choix.push({ c: { t: 'up', k, cible: nd.id }, p, w: (coeur ? 1.2 : 0.7) / (1 + up(nd, k)) });
+    }
+  }
+  const abordables = choix.filter((x) => J.res >= x.p + N.reserve + 20);
+  if (!abordables.length) return false;
+  let tot = abordables.reduce((s, x) => s + x.w, 0) * alea(E);
+  for (const x of abordables) { tot -= x.w; if (tot <= 0) return commande(E, j, x.c).ok; }
+  return false;
+}
+
 export function decider(E, j) {
   const N = NIVEAUX[E.joueurs[j].ia] || NIVEAUX.normal;
   const defendu = defendre(E, j, N);
   // Une défense prend la décision, sauf quand les cycles débordent.
-  if (!defendu || E.joueurs[j].res > 80) attaquer(E, j, N);
+  const attaque = !defendu || E.joueurs[j].res > 80 ? attaquer(E, j, N) : false;
+  if (!defendu && !attaque) ameliorer(E, j, N);
+  else if (E.joueurs[j].res > 110) ameliorer(E, j, N);
 }
 

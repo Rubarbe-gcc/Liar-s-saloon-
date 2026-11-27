@@ -3,7 +3,7 @@
  * Partagé par le moteur, l'ordinateur et l'affichage.
  */
 
-import { PROGRAMMES, DEFENSES, BRECHE } from './donnees.js';
+import { PROGRAMMES, DEFENSES, BRECHE, TECHS, AMELIORATIONS, NIV_MAX } from './donnees.js';
 
 /** Deux joueurs sont alliés (ou le même). -1 = neutre, allié de personne. */
 export function allies(E, a, b) {
@@ -59,7 +59,7 @@ export function recharge(E, j, type) {
 /** j voit-il les défenses de ce nœud ? (les siennes, celles d'un allié, ou révélées par une sonde) */
 export function voit(E, j, n) {
   const p = E.noeuds[n].proprio;
-  if (p < 0 || allies(E, j, p)) return true;
+  if (p < 0 || allies(E, j, p) || evenement(E, 'fuite')) return true;
   return (E.joueurs[j].revele[p] || 0) > E.temps;
 }
 
@@ -84,4 +84,37 @@ export function alea(E) {
   t = Math.imul(t ^ (t >>> 15), t | 1);
   t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+}
+
+/** L'événement en cours est-il celui-ci ? */
+export const evenement = (E, k) => !!E.ev && E.ev.k === k && E.ev.fin > E.temps;
+
+/** Le niveau d'une technologie du joueur j (0 à 3). */
+export const tech = (E, j, k) => (j >= 0 && E.joueurs[j].tech?.[k]) || 0;
+
+/** Le niveau d'une amélioration d'un nœud (0 à 3). */
+export const up = (nd, k) => nd.up?.[k] || 0;
+
+/** Ce que coûte une action (programme, défense, brèche) pour j maintenant. */
+export function coutDe(E, j, t) {
+  const A = action(t);
+  if (!A) return Infinity;
+  return Math.ceil(A.cout * (evenement(E, 'soldes') ? 0.6 : 1));
+}
+
+/** Sa recharge, raccourcie par le Compilateur. */
+export const rechargeDe = (E, j, t) => (action(t)?.recharge || 0) * (1 - 0.12 * tech(E, j, 'recharge'));
+
+/** Le prix du prochain niveau d'une technologie (Infinity : au maximum). */
+export function prixTech(E, j, k) {
+  const T = TECHS[k];
+  const n = tech(E, j, k);
+  return T && n < NIV_MAX ? T.couts[n] : Infinity;
+}
+
+/** Le prix du prochain niveau d'une amélioration de nœud. */
+export function prixUp(nd, k) {
+  const A = AMELIORATIONS[k];
+  const n = up(nd, k);
+  return A && n < NIV_MAX ? A.couts[n] : Infinity;
 }
