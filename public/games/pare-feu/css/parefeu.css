@@ -277,7 +277,9 @@ input:focus { border-color: var(--cyan); box-shadow: 0 0 10px rgba(46,242,255,.3
 .term-aide { width: 30px; height: 30px; border-radius: 6px; border: 1px solid var(--bord); background: rgba(8, 16, 30, .8); color: var(--cyan); cursor: pointer; flex: none; }
 .jeu.reel .hud-bas { background: none; }
 .jeu.reel .info { display: none; }
-.jeu.reel .radial { display: none !important; }
+.jeu.reel .radial .act .p { display: none; }
+.jeu.reel .radial .act .n { font-size: 11px; font-weight: 700; }
+.jeu.reel .radial .act { border-style: dashed; }
 .jeu.reel .alerte { top: calc(64px + var(--haut)); }
 @media (max-width: 560px) {
   .terminal { max-height: 46%; font-size: 12px; }

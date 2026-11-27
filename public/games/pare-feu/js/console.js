@@ -5,8 +5,8 @@
  * complétion (Tab) et l'affichage.
  */
 
-import { interpreter, completer, adresses } from '../../../shared/parefeu/terminal.js';
-import { NOEUDS } from '../../../shared/parefeu/donnees.js';
+import { interpreter, completer, adresses, COMMANDES } from '../../../shared/parefeu/terminal.js';
+import { NOEUDS, AMELIORATIONS } from '../../../shared/parefeu/donnees.js';
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
@@ -87,6 +87,25 @@ export function creerConsole(o) {
       invite();
       defiler();
       saisie.focus();
+    },
+    /**
+     * Pré-remplit l'invite avec la vraie commande d'une action (sans la lancer) :
+     * on la lit, puis on la valide. k = clé d'action (ver, parefeu…) ou
+     * d'amélioration (tourelle…). `cible` : le nœud visé, pour y mettre son IP.
+     */
+    proposer(k, cible) {
+      const E = o.etat();
+      if (!E) return;
+      if (AMELIORATIONS[k]) { saisie.value = `sudo apt install ${k}`; saisie.focus(); return; }
+      const C = COMMANDES[k];
+      if (!C) return;
+      let ex = C.exemple;
+      if (cible != null && cible >= 0) ex = ex.replace(/10\.0\.\d+\.\d+/, adresses(E)[cible]);
+      saisie.value = ex;
+      saisie.focus();
+      saisie.setSelectionRange(ex.length, ex.length);
+      ligne(`↳ ${C.cmd} : ${C.vrai}`, 'vrai');
+      defiler();
     },
     focus() { saisie.focus(); },
     sortieEl: sortie,

@@ -18,6 +18,7 @@ import * as enligne from './enligne.js';
 import { creerDefis } from './defi.js';
 import * as perso from './perso.js';
 import { creerConsole } from './console.js';
+import { COMMANDES } from '../../../shared/parefeu/terminal.js';
 import * as succes from '../../../shared/succes.js';
 
 const $ = (id) => document.getElementById(id);
@@ -213,7 +214,7 @@ function remplirAide() {
     <p>Touche un de tes nœuds (ou un de ton allié) : les défenses s’ouvrent autour de lui. Les défenses adverses sont cachées (<b>?</b>) tant qu’une sonde ne les a pas révélées.</p>
     <div class="cartes">${LISTE_DEFENSES.map((k) => carte(DEFENSES[k])).join('')}</div>
     <h3>&gt; Le mode réel (apprentissage)</h3>
-    <p>Dans « Contre l’ordinateur », choisis <b>Mode réel</b> : tu joues en tapant de <b>vraies commandes</b> dans un terminal, et chacune t’explique ce qu’elle fait pour de bon. Ce sont des commandes d’usage courant, employées ici de façon imagée — aucune vraie technique d’attaque.</p>
+    <p>Dans « Contre l’ordinateur », choisis <b>Mode réel</b> : tu joues en tapant de <b>vraies commandes</b> dans un terminal, et chacune t’explique ce qu’elle fait pour de bon. Ce sont des commandes d’usage courant, employées ici de façon imagée — aucune vraie technique d’attaque. <b>Touche un nœud</b> pour voir les commandes possibles autour de lui (attaque ou défense) : un clic écrit la commande dans le terminal, à toi de la lancer.</p>
     <div class="cartes">
       <div class="carte"><b>Attaquer</b> une adresse<small><code>ping</code> sonde · <code>curl</code> ver · <code>scp</code> cheval · <code>traceroute</code> saturation · <code>rsync</code> rançon · <code>telnet</code> brèche</small></div>
       <div class="carte"><b>Défendre</b> ta machine<small><code>ufw</code> pare-feu · <code>clamscan</code> antivirus · <code>mkdir</code> leurre · <code>gpg</code> chiffrement · <code>apt upgrade</code> correctif</small></div>
@@ -576,7 +577,9 @@ function majActions(E, moi) {
       else { A = action(k); c = k === 'breche' ? '#ffb02e' : mode === 'att' ? couleurDe(moi) : '#7dff9b'; }
       b.className = 'act';
       b.style.setProperty('--c', c);
-      b.innerHTML = `<span class="k">${A.touche}</span><span class="g">${A.glyphe}</span><span class="n">${A.court || A.nom}</span><span class="p"></span><span class="cd"></span>`;
+      const nomBtn = reel && COMMANDES[k] ? COMMANDES[k].cmd : (A.court || A.nom);
+      b.innerHTML = `<span class="k">${A.touche}</span><span class="g">${A.glyphe}</span><span class="n">${nomBtn}</span><span class="p"></span><span class="cd"></span>`;
+      if (reel && COMMANDES[k]) b.title = `${COMMANDES[k].cmd} — ${COMMANDES[k].vrai}`;
       b.addEventListener('pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); agir(k); });
       box.appendChild(b);
       return { b, k, A, cd: b.querySelector('.cd'), p: b.querySelector('.p'), etat: '', texte: '' };
@@ -622,6 +625,8 @@ function agir(k) {
   if (!S || selection < 0 || defis.actif()) return;
   const { E, moi } = S;
   if (k === '⬆' || k === '↩') { menuUp = k === '⬆'; son.jouer('clic'); return; }
+  // Mode réel : un clic ne lance rien, il écrit la vraie commande dans le terminal.
+  if (reel && (COMMANDES[k] || AMELIORATIONS[k])) { son.jouer('clic'); terminal.proposer(k, selection); return; }
   if (AMELIORATIONS[k]) {
     const c = { t: 'up', k, cible: selection };
     const v = verifier(E, moi, c);
